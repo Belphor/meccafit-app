@@ -22,6 +22,7 @@
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
 
 # debug
@@ -30,12 +31,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (secrets); allow committed templates
+.env.local
+.env.test.local
+.env.production.local
+
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+.vercel
