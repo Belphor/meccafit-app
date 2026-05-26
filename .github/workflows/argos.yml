@@ -34,19 +34,29 @@ jobs:
 
       - name: Materialize .env.local for ARGOS
         shell: bash
+        env:
+          SECRET_ENV_LOCAL_B64: ${{ secrets.ENV_LOCAL_B64 }}
+          SECRET_ENV_LOCAL: ${{ secrets.ENV_LOCAL }}
+          SECRET_NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SECRET_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SECRET_NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SECRET_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          SECRET_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SECRET_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SECRET_FORGE_KEY: ${{ secrets.FORGE_KEY }}
         run: |
           set -euo pipefail
 
           write_individual() {
             local url anon pub svc forge
-            url="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
-            [ -z "$url" ] && url="${{ secrets.SUPABASE_URL }}"
-            anon="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
-            [ -z "$anon" ] && anon="${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
-            [ -z "$anon" ] && anon="${{ secrets.SUPABASE_ANON_KEY }}"
-            pub="${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
-            svc="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-            forge="${{ secrets.FORGE_KEY }}"
+            url="${SECRET_NEXT_PUBLIC_SUPABASE_URL:-}"
+            [ -z "$url" ] && url="${SECRET_SUPABASE_URL:-}"
+            anon="${SECRET_NEXT_PUBLIC_SUPABASE_ANON_KEY:-}"
+            [ -z "$anon" ] && anon="${SECRET_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}"
+            [ -z "$anon" ] && anon="${SECRET_SUPABASE_ANON_KEY:-}"
+            pub="${SECRET_NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-}"
+            svc="${SECRET_SUPABASE_SERVICE_ROLE_KEY:-}"
+            forge="${SECRET_FORGE_KEY:-}"
 
             if [ -z "$url" ] || [ -z "$anon" ]; then
               return 1
@@ -63,18 +73,18 @@ jobs:
             return 0
           }
 
-          if [ -n "${{ secrets.ENV_LOCAL_B64 }}" ]; then
-            echo "${{ secrets.ENV_LOCAL_B64 }}" | base64 -d > .env.local
+          if [ -n "${SECRET_ENV_LOCAL_B64:-}" ]; then
+            printf '%s' "$SECRET_ENV_LOCAL_B64" | base64 -d > .env.local
             echo "Fonte: ENV_LOCAL_B64 (base64)"
-          elif [ -n "${{ secrets.ENV_LOCAL }}" ]; then
-            printf '%s\n' "${{ secrets.ENV_LOCAL }}" > .env.local
+          elif [ -n "${SECRET_ENV_LOCAL:-}" ]; then
+            printf '%s\n' "$SECRET_ENV_LOCAL" > .env.local
             echo "Fonte: ENV_LOCAL (multiline)"
           elif write_individual; then
             true
           else
             echo "Nenhum secret Actions encontrado."
-            echo "Crie ENV_LOCAL (conteúdo do .env.local) OU secrets individuais."
-            echo "Settings → Secrets and variables → Actions → Repository secrets"
+            echo "Repository secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, FORGE_KEY"
+            echo "Ou ENV_LOCAL_B64 (base64 do .env.local)"
             exit 1
           fi
 
