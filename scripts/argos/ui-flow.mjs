@@ -234,10 +234,18 @@ if (clienteSession) {
 }
 
 // 10. Rotas Next (páginas com botões)
+function isRouteStatusOk(route, status) {
+  if (route === "/") return status === 200;
+  // /dashboard sem sessão deve redirecionar (middleware) — 307/308 é comportamento esperado
+  return status === 200 || status === 307 || status === 308;
+}
+
 for (const route of ["/", "/dashboard", "/dashboard?subgrupo=geral"]) {
   try {
     const res = await fetch(`${appUrl}${route}`, { redirect: "manual" });
-    res.status === 200 ? pass(`route:${route}`) : fail(`route:${route}`, `status=${res.status}`);
+    isRouteStatusOk(route, res.status)
+      ? pass(`route:${route}`)
+      : fail(`route:${route}`, `status=${res.status}`);
   } catch (err) {
     fail(`route:${route}`, err.message);
   }

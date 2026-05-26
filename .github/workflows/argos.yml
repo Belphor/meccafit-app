@@ -1,0 +1,71 @@
+name: ARGOS Security
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+concurrency:
+  group: argos-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  argos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Materialize .env.local for ARGOS
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FORGE_KEY: ${{ secrets.FORGE_KEY }}
+        run: node scripts/ci/write-env-local.mjs
+
+      - name: Build Next.js (UI route probes)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Start app for UI route probes
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          npm run start > /tmp/meccafit-app.log 2>&1 &
+          echo $! > /tmp/meccafit-app.pid
+          for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:3000/ > /dev/null; then
+              echo "App ready on :3000"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App failed to start — log:"
+          tail -n 80 /tmp/meccafit-app.log || true
+          exit 1
+
+      - name: Run ARGOS test suite
+        run: npm run argos:test
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -f /tmp/meccafit-app.pid ]; then
+            kill "$(cat /tmp/meccafit-app.pid)" 2>/dev/null || true
+          fi
