@@ -1,0 +1,30 @@
+---
+description: IRIS — design system térmico e inputs de peso
+globs: src/**/*.tsx,src/**/*.css
+alwaysApply: false
+---
+
+# IRIS — Design System
+
+## Tokens obrigatórios
+
+- Fundo: `bg-black` (preto absoluto).
+- Painéis: `bg-neutral-950/60 backdrop-blur-md`.
+- Bordas: `border-orange-500/15` (finas, sutis).
+- Texto térmico: classe `.plasma-viscous-text` para títulos hero.
+
+## Inputs de peso (Treino)
+
+- Debounce no input; validação estrita no **`onBlur`**.
+- Bloquear: null, vazio, negativo, zero, NaN, `> 9999.99`.
+- Feedback visual claro antes de persistir (ARGOS + PLUTUS: não disparar RPC inválida).
+
+## Mural (MIDAS)
+
+- Exibir atleta + linhagem; soberano observador não aparece no feed.
+- Cards otimizados para leitura rápida e compartilhamento.
+
+## Performance (HERMES)
+
+- Evitar re-renders desnecessários; `useMemo`/`useCallback` em listas do dashboard.
+- `key` estável em workspaces que trocam subgrupo.

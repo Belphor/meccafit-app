@@ -57,6 +57,7 @@ export type Database = {
           musculo: Database["public"]["Enums"]["subgrupo_muscular"];
           estagio: Database["public"]["Enums"]["estagio_forca"];
           max_peso: number;
+          vtc_atual: number;
           vtc_total: number;
           total_sessoes: number;
           ultima_evolucao_em: string | null;
@@ -69,6 +70,7 @@ export type Database = {
           musculo: Database["public"]["Enums"]["subgrupo_muscular"];
           estagio?: Database["public"]["Enums"]["estagio_forca"];
           max_peso?: number;
+          vtc_atual?: number;
           vtc_total?: number;
           total_sessoes?: number;
           ultima_evolucao_em?: string | null;
@@ -81,6 +83,7 @@ export type Database = {
           musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
           estagio?: Database["public"]["Enums"]["estagio_forca"];
           max_peso?: number;
+          vtc_atual?: number;
           vtc_total?: number;
           total_sessoes?: number;
           ultima_evolucao_em?: string | null;
@@ -144,63 +147,132 @@ export type Database = {
           },
         ];
       };
-      historico_treino: {
+      balanco_termico_diario: {
         Row: {
-          id: string;
-          cliente_id: string;
-          matriz_forca_id: string | null;
-          musculo: Database["public"]["Enums"]["subgrupo_muscular"];
-          exercicio_id: string;
-          exercicio_nome: string;
-          peso: number;
-          repeticoes: number;
-          series: number;
-          vtc_gerado: number;
-          status: string;
-          registrado_em: string;
-          created_at: string;
+          user_id: string;
+          data_treino: string;
+          vtc_total: number;
+          updated_at: string;
         };
         Insert: {
-          id?: string;
-          cliente_id: string;
-          matriz_forca_id?: string | null;
-          musculo: Database["public"]["Enums"]["subgrupo_muscular"];
-          exercicio_id?: string;
-          exercicio_nome?: string;
-          peso: number;
-          repeticoes?: number;
-          series?: number;
-          status?: string;
-          registrado_em?: string;
-          created_at?: string;
+          user_id: string;
+          data_treino: string;
+          vtc_total?: number;
+          updated_at?: string;
         };
         Update: {
-          id?: string;
-          cliente_id?: string;
-          matriz_forca_id?: string | null;
-          musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
-          exercicio_id?: string;
-          exercicio_nome?: string;
-          peso?: number;
-          repeticoes?: number;
-          series?: number;
-          status?: string;
-          registrado_em?: string;
-          created_at?: string;
+          user_id?: string;
+          data_treino?: string;
+          vtc_total?: number;
+          updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "historico_treino_cliente_id_fkey";
+            foreignKeyName: "balanco_termico_diario_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      historico_treinos: {
+        Row: {
+          id: number;
+          user_id: string | null;
+          cliente_id: string | null;
+          exercicio_id: number;
+          exercicio_nome: string;
+          musculo: string;
+          peso: number | null;
+          peso_atual: number;
+          repeticoes: number;
+          series: number;
+          status: string | null;
+          registrado_em: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          user_id?: string | null;
+          cliente_id?: string | null;
+          exercicio_id: number;
+          exercicio_nome: string;
+          musculo: string;
+          peso?: number | null;
+          peso_atual: number;
+          repeticoes?: number;
+          series?: number;
+          status?: string | null;
+          registrado_em?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          user_id?: string | null;
+          cliente_id?: string | null;
+          exercicio_id?: number;
+          exercicio_nome?: string;
+          musculo?: string;
+          peso?: number | null;
+          peso_atual?: number;
+          repeticoes?: number;
+          series?: number;
+          status?: string | null;
+          registrado_em?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "historico_treinos_cliente_id_fkey";
             columns: ["cliente_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
+        ];
+      };
+      invite_tokens: {
+        Row: {
+          id: string;
+          token_hash: string;
+          forjador_id: string | null;
+          expires_at: string;
+          used_at: string | null;
+          used_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          token_hash: string;
+          forjador_id?: string | null;
+          expires_at: string;
+          used_at?: string | null;
+          used_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          token_hash?: string;
+          forjador_id?: string | null;
+          expires_at?: string;
+          used_at?: string | null;
+          used_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
           {
-            foreignKeyName: "historico_treino_matriz_forca_id_fkey";
-            columns: ["matriz_forca_id"];
+            foreignKeyName: "invite_tokens_forjador_id_fkey";
+            columns: ["forjador_id"];
             isOneToOne: false;
-            referencedRelation: "matriz_forca";
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invite_tokens_used_by_fkey";
+            columns: ["used_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -270,7 +342,7 @@ export type Database = {
       registrar_treino_com_status: {
         Args: {
           p_user_id: string;
-          p_exercicio_id: string;
+          p_exercicio_id?: string | null;
           p_peso_atual: number;
           p_musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
           p_repeticoes?: number;
@@ -285,9 +357,54 @@ export type Database = {
           payload: Json;
         }[];
       };
+      argos_fetch_mural_comunidade: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: {
+          id: number;
+          exercicio_nome: string;
+          peso: number;
+          series: number;
+          registrado_em: string;
+          atleta_nome: string;
+          nome_linhagem: string;
+        }[];
+      };
+      fetch_dashboard_bundle: {
+        Args: {
+          p_musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
+          p_mural_limit?: number;
+        };
+        Returns: Json;
+      };
+      argos_compute_vtc_30d: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      argos_compute_session_vtc_today: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      argos_validate_invite_token: {
+        Args: {
+          p_token: string;
+        };
+        Returns: boolean;
+      };
+      argos_consume_invite_token: {
+        Args: {
+          p_token: string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: {
-      user_role: "forjador" | "cliente";
+      user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
       estagio_forca: "cinzas" | "faisca" | "brasa" | "labareda" | "fogo_cosmico_sagrado";
       subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "pernas";
     };

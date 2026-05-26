@@ -1,8 +1,17 @@
-import type { ClienteDashboardTab } from "@/src/types/portal.types";
+import type { ClienteDashboardTab } from "@/types/portal.types";
+
+export const DEFAULT_DASHBOARD_SUBGRUPO = "peitoral-superior" as const;
+
+export function resolveClienteDashboardRoute(
+  subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
+): string {
+  return `/dashboard?subgrupo=${encodeURIComponent(subgrupo)}`;
+}
 
 export const internalRoutes = {
   cliente: {
     root: "/cliente",
+    dashboard: "/dashboard",
     matrixAlma: "/cliente/matrix-da-alma",
     portalBrasa: "/cliente/portal-de-brasa",
     irisEvolucao: "/cliente/iris-evolucao",

@@ -1,0 +1,40 @@
+---
+description: ARGOS — RLS, RPC, zero trust, mural e validação de dados
+globs: supabase/**/*.sql,src/lib/**/*.ts,lib/**/*.ts,scripts/argos/**/*
+alwaysApply: false
+---
+
+# ARGOS — Regras Inegociáveis
+
+## Zero confiança no client
+
+- Nunca confie em `userId`/`cliente_id` vindo do client. Use `auth.uid()` em RLS e RPCs.
+- RPC `registrar_treino_com_status` exige `(SELECT auth.uid()) = p_user_id`.
+- Mutations client-side devem alinhar sessão via `getActiveSupabaseSession()` + guards em `supabase.ts`.
+
+## Anti-escalada
+
+- Trigger em `profiles` bloqueia alteração direta de `role` e `forjador_id`.
+- Cliente não pode INSERT/UPDATE profiles de terceiros.
+
+## Mural comunitário
+
+- RPC `argos_fetch_mural_comunidade` — feed de SUPERAÇÕES para autenticados.
+- Forjador Soberano **lê** mas **nunca publica**: `p.role IS DISTINCT FROM 'forjador_soberano'`.
+- Limites: default 48, max 100.
+
+## Integridade de valores
+
+- Peso: `> 0` e `<= 9999.99` — validar na RPC, trigger e client (`historico-treino.ts`).
+- Chave da Forja: `FORGE_KEY` em `.env.local` — somente server-side (`lib/forge-config.server.ts` + Server Actions).
+
+## RLS helpers
+
+Funções auxiliares precisam de `GRANT EXECUTE TO authenticated`:
+`argos_is_self_or_forjador`, `argos_can_read_profile`, `argos_is_forjador_soberano`, etc.
+
+## Ao alterar schema
+
+1. Nova migration em `supabase/migrations/`.
+2. Atualizar `database.types.ts`.
+3. Rodar `npm run argos:test`.

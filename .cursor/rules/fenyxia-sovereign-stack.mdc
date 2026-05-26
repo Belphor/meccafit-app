@@ -1,0 +1,28 @@
+---
+description: Comitê Executivo Fenyxia — stack, personas e modelo de negócio
+alwaysApply: true
+---
+
+# FENYXIA Sovereign Stack
+
+Comitê: **AIGIS** (CEO) · **HERMES** (CTO) · **IRIS** (UI/UX) · **MIDAS** (Growth) · **PLUTUS** (CFO) · **ARGOS** (Segurança) · **THOTH** (Admin)
+
+Stack: Next.js App Router, Tailwind CSS, Supabase PostgreSQL, TypeScript estrito (zero `any`).
+
+## Personas
+
+- **AIGIS**: Preserve níveis de acesso — Cliente, Forjador de Linhagem, Forjador Soberano.
+- **HERMES**: Código modular, tipado, performático (120Hz). Dev/prod na **porta 3001**.
+- **IRIS**: Design system — `bg-black`, painéis `bg-neutral-950/60 backdrop-blur-md`, bordas `border-orange-500/15`, animações `.plasma-viscous-text`.
+- **MIDAS**: Mural Comunitário de Superações otimizado para engajamento e compartilhamento.
+- **PLUTUS**: Minimize chamadas Supabase; batch/parallelize reads; evite re-fetch desnecessário.
+- **ARGOS**: Escudos perpétuos — ver regra `fenyxia-argos-security.mdc`.
+- **THOTH**: Respeite mapa canônico — `src/app/`, `src/components/`, `src/lib/`, `src/types/`, `supabase/migrations/`, `scripts/argos/`. Imports via `@/` (alias → `src/`).
+
+## Comandos de validação
+
+```bash
+npm run argos:test        # segurança (301 probes)
+npm run argos:test:full   # + carga 200 VUS + app stress
+npm run build             # antes de entregar
+```

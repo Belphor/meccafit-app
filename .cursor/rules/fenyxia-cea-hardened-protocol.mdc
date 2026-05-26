@@ -1,0 +1,76 @@
+---
+description: CEA Hardened Protocol v1.0.0 — 7 Directors always active (governance gate)
+alwaysApply: true
+---
+
+# Fenyxia Ecosystem — CEA Hardened Protocol v1.0.0
+
+**Architecture:** Sovereign Stack (Next.js 16 App Router, Tailwind, Supabase)  
+**Mode:** Comitê Executivo Avançado — 7 Directors always active
+
+Before generating or refactoring code, apply **all** director rules below. Output must respect **IRIS** (visual), **HERMES** (performance/types), and **ARGOS** (zero-trust). No `any`. No client-side business-rule authority.
+
+Cross-rules: `fenyxia-argos-security.mdc` · `fenyxia-iris-ui.mdc`
+
+## CEO — AIGIS
+
+- Access tiers: **Cliente**, **Forjador de Linhagem**, **Forjador Soberano**.
+- Premium wording; deny cheap-looking layouts.
+
+## CTO — HERMES
+
+- Zero `any` in TypeScript — strict explicit types or generics.
+- Optimize state to avoid mobile jank (120Hz target).
+- Date/timestamp logic must survive background tab throttling.
+
+## UI/UX — IRIS
+
+- Base: `bg-black` (solid black).
+- Panels: `bg-neutral-950/60 backdrop-blur-md`.
+- Borders: `border-orange-500/15` (ultra-thin, static).
+- Glow: `shadow-[0_0_30px_rgba(245,158,11,0.04)]`.
+- Hero brand: **RENASÇA HOJE** → `.plasma-viscous-text` @ 4s, no borders.
+- Cardio steps: 0–49% Fusão Latente · 50–99% Braseiro Ativo · 100% Incandescência `#FFD700`.
+
+## Growth — MIDAS
+
+- Daily interaction: simple, dopamine-driven loops.
+- Community feed auto-populated post-milestone (server-safe).
+
+## CFO — PLUTUS
+
+- Minimize Supabase queries; combine reads when possible.
+- Avoid re-renders that re-trigger DB calls.
+
+## Security — ARGOS
+
+- Zero client-side validation of business rules or status strings.
+- Mutations + status (superação) via Postgres RPC `registrar_treino_com_status` only.
+- UI may react to RPC `status` response — never pre-decide superação on client.
+- Enforce RLS dynamically; never trust client `userId`.
+
+## Admin — THOTH
+
+- Canonical paths: `src/middleware.ts`, `src/app/dashboard/page.tsx`, `src/components/dashboard/`.
+- Modular, clean files; imports via `@/`.
+
+## Pre-ship checklist
+
+```bash
+npm run argos:test   # security probes
+npm run build        # type + compile gate
+```
+
+## Compliance audit (baseline 2026-05-18)
+
+| Director | Status | Action if touching area |
+|----------|--------|-------------------------|
+| AIGIS | OK | Keep tier wording in portal/dashboard |
+| HERMES | OK | No `any` in `src/` |
+| IRIS | OK | Cardio + dashboard on tokens; `/pratica` is lesson sandbox (exempt) |
+| MIDAS | OK | Mural post-superação via delayed callback |
+| PLUTUS | Review | Batch dashboard reads; audit new `useEffect` fetches |
+| ARGOS | OK | Superação UI only after RPC `status === "SUPERAÇÃO"` |
+| THOTH | OK | Canonical `src/` layout |
+
+**Known gaps:** `training-superacao.ts` is test/utility only (not used in UI). Apply pending migrations on remote Supabase if not yet deployed.

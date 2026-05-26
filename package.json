@@ -3,13 +3,34 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -p 3000",
+    "lint": "eslint",
+    "argos:audit": "node scripts/argos/security-audit.mjs",
+    "argos:rls": "node scripts/argos/rls-integration.mjs",
+    "argos:test": "npm run argos:audit && npm run argos:rls && npm run argos:unit && npm run argos:sql && npm run argos:adversarial && npm run argos:matrix && npm run argos:ui",
+    "argos:ui": "node scripts/argos/ui-flow.mjs",
+    "argos:matrix": "node scripts/argos/security-matrix.mjs",
+    "argos:test:full": "npm run argos:test && npm run argos:load:200 && npm run argos:app:stress",
+    "argos:app:stress": "node scripts/argos/app-stress.mjs --vus 400 --duration 45 --app-url http://127.0.0.1:3000",
+    "argos:unit": "node scripts/argos/unit-smoke.mjs",
+    "argos:sql": "node scripts/argos/sql-verify.mjs",
+    "argos:adversarial": "node scripts/argos/adversarial.mjs",
+    "argos:load": "node scripts/argos/load-test.mjs",
+    "argos:load:200": "node scripts/argos/load-test-auth.mjs --vus 200 --duration 30 --ramp 10 --latency-budget 100 --app-url http://127.0.0.1:3000",
+    "argos:load:auth": "node scripts/argos/load-test-auth.mjs",
+    "argos:latency": "node scripts/argos/latency-probe.mjs --budget 100",
+    "db:apply:latency": "node scripts/apply-latency-migration.mjs",
+    "db:apply:thermal": "node scripts/apply-thermal-gravity-migration.mjs",
+    "reset:test-training": "node scripts/reset-test-training.mjs",
+    "seed:test-users": "node scripts/seed-test-users.mjs",
+    "argos:load:5k": "node scripts/argos/load-test.mjs --vus 5000 --duration 30 --ramp 10"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
+    "html2canvas": "^1.4.1",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4"
@@ -21,6 +42,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
+    "pg": "^8.21.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

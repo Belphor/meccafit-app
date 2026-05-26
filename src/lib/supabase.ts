@@ -1,13 +1,15 @@
 import {
-  createClient,
   type PostgrestError,
   type Session,
   type SupabaseClient,
 } from "@supabase/supabase-js";
-import type { Database, Enums } from "@/src/types/database.types";
+import { createBrowserClient } from "@supabase/ssr";
+import { requireSupabasePublicEnv } from "@/lib/supabase-env";
+import { resolveHistoricoExercicioId } from "@/lib/exercise-rpc";
+import type { Database, Enums } from "@/types/database.types";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
-type ProtectedTableName = "matriz_forca" | "fenix_pureza_diaria" | "historico_treino";
+type ProtectedTableName = "matriz_forca" | "fenix_pureza_diaria" | "historico_treinos";
 type ProtectedInsert<TableName extends ProtectedTableName> =
   Database["public"]["Tables"][TableName]["Insert"];
 type ProtectedUpdate<TableName extends ProtectedTableName> =
@@ -44,7 +46,7 @@ export type RegistrarTreinoStatus = "SUPERAÇÃO" | "CONCLUÍDO";
 
 export type RegistrarTreinoInput = {
   clienteId: AuthUserId;
-  exercicioId: string;
+  exercicioId?: string | number | null;
   pesoAtual: number;
   musculo?: Enums<"subgrupo_muscular">;
   repeticoes?: number;
@@ -63,16 +65,9 @@ export type RegistrarTreinoResult = {
 let client: TypedSupabaseClient | null = null;
 
 function createSupabaseClient(): TypedSupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const { url: supabaseUrl, publicKey: supabaseAnonKey } = requireSupabasePublicEnv();
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY antes de usar o Supabase."
-    );
-  }
-
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -143,18 +138,37 @@ export function normalizeSupabaseError(error: unknown): SupabaseGuardError {
   };
 }
 
+/** Sessão local (cookies/storage) — sem round-trip ao Auth. Use em reads. */
 export async function getActiveSupabaseSession(): Promise<Session | null> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
+  if (!session?.user.id || !session.access_token) return null;
+  return session;
+}
+
+/** Valida JWT no servidor Supabase — use só em mutações sensíveis. */
+export async function getVerifiedSupabaseSession(): Promise<Session | null> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) return null;
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user.id || session.user.id !== user.id) return null;
   return session;
 }
 
 export async function requireActiveSessionForProtectedMutation<
   TableName extends ProtectedTableName,
 >(payload: ProtectedMutationPayload<TableName>): Promise<SupabaseGuardResult<Session>> {
-  const session = await getActiveSupabaseSession();
+  const session = await getVerifiedSupabaseSession();
 
   if (!session?.user.id || !session.access_token) {
     return {
@@ -196,7 +210,8 @@ export async function withSupabaseRlsGuard<Data>(
         data: null,
         error: {
           code: "SUPABASE_ERROR",
-          message: "O Supabase não retornou dados para esta operação.",
+          message:
+            "O Supabase não retornou dados para esta operação. Se o treino foi salvo mas a SUPERAÇÃO não apareceu, aplique a migration registrar_treino_superacao no projeto Supabase.",
         },
       };
     }
@@ -227,12 +242,13 @@ export async function registrarTreinoComStatus(
   const repeticoes = input.repeticoes ?? 1;
   const series = input.series ?? 1;
   const exercicioNome = input.exercicioNome ?? "Treino geral";
+  const exercicioId = resolveHistoricoExercicioId(input.exercicioId);
 
   return withProtectedSupabaseMutation(
     {
       cliente_id: input.clienteId,
       musculo,
-      exercicio_id: input.exercicioId,
+      exercicio_id: exercicioId > 0 ? exercicioId : undefined,
       exercicio_nome: exercicioNome,
       peso: input.pesoAtual,
       repeticoes,
@@ -241,7 +257,7 @@ export async function registrarTreinoComStatus(
     async () => {
       const { data, error } = await supabase.rpc("registrar_treino_com_status", {
         p_user_id: input.clienteId,
-        p_exercicio_id: input.exercicioId,
+        p_exercicio_id: exercicioId > 0 ? String(exercicioId) : null,
         p_peso_atual: input.pesoAtual,
         p_musculo: musculo,
         p_repeticoes: repeticoes,
@@ -249,18 +265,19 @@ export async function registrarTreinoComStatus(
         p_exercicio_nome: exercicioNome,
       });
 
-      const row = Array.isArray(data) ? data[0] : null;
+      const row = Array.isArray(data) ? data[0] : data;
 
       return {
-        data: row
-          ? {
-              status: row.status === "SUPERAÇÃO" ? "SUPERAÇÃO" : "CONCLUÍDO",
-              max_peso_atual: row.max_peso_atual,
-              peso_atual: row.peso_atual,
-              vtc_gerado: row.vtc_gerado,
-              payload: row.payload,
-            }
-          : null,
+        data:
+          row && typeof row === "object"
+            ? {
+                status: row.status === "SUPERAÇÃO" ? "SUPERAÇÃO" : "CONCLUÍDO",
+                max_peso_atual: Number(row.max_peso_atual),
+                peso_atual: Number(row.peso_atual),
+                vtc_gerado: Number(row.vtc_gerado),
+                payload: row.payload,
+              }
+            : null,
         error,
       };
     },

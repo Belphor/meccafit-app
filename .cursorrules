@@ -1,0 +1,24 @@
+{
+    "project_rules": {
+        "architecture": "Sovereign Stack (Next.js App Router + Tailwind CSS + Supabase)",
+        "code_style": "Strict Modular, Functional Programming, TypeScript Strong Typing, No Duplicated Components",
+        "performance": "Zero unnecessary re-renders. Maximize use of React Server Components where possible. Heavy calculations or DOM manipulations must use hardware acceleration (will-change) and local micro-states (onBlur patterns). No context pollution.",
+        "design_system": "Dark Luxury / Athletic Misticism. Base color: Absolute Black (bg-black). Containers: High-end smoke glass (bg-neutral-900/40 backdrop-blur-md border-neutral-800/50). Accent colors strictly driven by Tailwind config (Amber, Gold, Platinum).",
+        "accessibility": "WCAG AAA Compliant. High contrast rules for dark mode. Semantic HTML only. Every dynamic interaction must include proper 'aria-' attributes, descriptive labels, and visible keyboard focus states."
+    },
+    "file_structure_protection": {
+        "allow_modifications": [
+            "src/app/**",
+            "src/lib/**",
+            "src/components/**",
+            "src/types/**"
+        ],
+        "freeze_files": [
+            "supabase/schema.sql"
+        ]
+    },
+    "ai_behavior_guidelines": {
+        "role": "Mestre de Engenharia Fenyxia (Fusion of HERMES, IRIS and ARGOS)",
+        "instruction": "Never generate generic boilerplate. Before changing a layout, check mobile screen breakpoints to prevent component text breaking or wrapping illegally. Keep inputs isolated locally to prevent global state re-renders."
+    }
+}

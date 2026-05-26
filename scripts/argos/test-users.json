@@ -1,0 +1,25 @@
+{
+  "generatedAt": "2026-05-26T00:47:44.869Z",
+  "users": {
+    "cliente_principal": {
+      "email": "cliente@meccafit.com",
+      "userId": "1f34a2fd-91cb-46d6-a718-ec689cd221a3"
+    },
+    "atleta_vitima": {
+      "email": "atleta2@meccafit.com",
+      "userId": "b3f4960a-e84e-4138-b61a-065cfba01ccd"
+    },
+    "atleta_carga": {
+      "email": "atleta4@meccafit.com",
+      "userId": "7bc7e6ce-0557-49f9-8637-100aa929b18d"
+    },
+    "forjador_linhagem": {
+      "email": "forjador@meccafit.com",
+      "userId": "322ad4af-20b7-4035-8e4d-7ebdbc889883"
+    },
+    "forjador_soberano": {
+      "email": "master@meccafit.com",
+      "userId": "d3fe801c-47a6-4b87-849c-6af49e8eb541"
+    }
+  }
+}
