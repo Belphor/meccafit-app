@@ -33,16 +33,52 @@ jobs:
         run: npm ci
 
       - name: Materialize .env.local for ARGOS
-        env:
-          ENV_LOCAL: ${{ secrets.ENV_LOCAL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          FORGE_KEY: ${{ secrets.FORGE_KEY }}
-        run: node scripts/ci/write-env-local.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          write_individual() {
+            local url anon pub svc forge
+            url="${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+            [ -z "$url" ] && url="${{ secrets.SUPABASE_URL }}"
+            anon="${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+            [ -z "$anon" ] && anon="${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
+            [ -z "$anon" ] && anon="${{ secrets.SUPABASE_ANON_KEY }}"
+            pub="${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
+            svc="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            forge="${{ secrets.FORGE_KEY }}"
+
+            if [ -z "$url" ] || [ -z "$anon" ]; then
+              return 1
+            fi
+
+            {
+              echo "NEXT_PUBLIC_SUPABASE_URL=$url"
+              echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$anon"
+              [ -n "$pub" ] && echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$pub"
+              [ -n "$svc" ] && echo "SUPABASE_SERVICE_ROLE_KEY=$svc"
+              [ -n "$forge" ] && echo "FORGE_KEY=$forge"
+            } > .env.local
+            echo "Fonte: secrets individuais"
+            return 0
+          }
+
+          if [ -n "${{ secrets.ENV_LOCAL_B64 }}" ]; then
+            echo "${{ secrets.ENV_LOCAL_B64 }}" | base64 -d > .env.local
+            echo "Fonte: ENV_LOCAL_B64 (base64)"
+          elif [ -n "${{ secrets.ENV_LOCAL }}" ]; then
+            printf '%s\n' "${{ secrets.ENV_LOCAL }}" > .env.local
+            echo "Fonte: ENV_LOCAL (multiline)"
+          elif write_individual; then
+            true
+          else
+            echo "Nenhum secret Actions encontrado."
+            echo "Crie ENV_LOCAL (conteúdo do .env.local) OU secrets individuais."
+            echo "Settings → Secrets and variables → Actions → Repository secrets"
+            exit 1
+          fi
+
+          node scripts/ci/validate-env-local.mjs
 
       - name: Build Next.js (UI route probes)
         run: npm run build
