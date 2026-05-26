@@ -138,7 +138,7 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
     () => ({
       phaseTier: payload.phase_tier,
       phaseLabel: PHASE_TIER_LABELS[payload.phase_tier],
-      phaseOneProgress: payload.phase_progress,
+      phaseOneProgress: payload.phase_progress ?? null,
       cosmeticPreferences: payload.custom_preferences,
       phaseOneComplete,
       thermalGravity,

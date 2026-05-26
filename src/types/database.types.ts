@@ -13,32 +13,44 @@ export type Database = {
         Row: {
           id: string;
           updated_at: string;
+          created_at: string;
           full_name: string | null;
           nome_linhagem: string | null;
           data_nascimento: string;
           role: Database["public"]["Enums"]["user_role"];
           forjador_id: string | null;
           status_altar: string;
+          phase_tier: number;
+          phase_setup_at: string;
+          custom_preferences: Json;
         };
         Insert: {
           id: string;
           updated_at?: string;
+          created_at?: string;
           full_name?: string | null;
           nome_linhagem?: string | null;
           data_nascimento: string;
           role?: Database["public"]["Enums"]["user_role"];
           forjador_id?: string | null;
           status_altar?: string;
+          phase_tier?: number;
+          phase_setup_at?: string;
+          custom_preferences?: Json;
         };
         Update: {
           id?: string;
           updated_at?: string;
+          created_at?: string;
           full_name?: string | null;
           nome_linhagem?: string | null;
           data_nascimento?: string;
           role?: Database["public"]["Enums"]["user_role"];
           forjador_id?: string | null;
           status_altar?: string;
+          phase_tier?: number;
+          phase_setup_at?: string;
+          custom_preferences?: Json;
         };
         Relationships: [
           {

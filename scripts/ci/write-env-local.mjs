@@ -5,25 +5,29 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const REQUIRED = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-];
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const anonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || anonKey;
+const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+const forgeKey = process.env.FORGE_KEY?.trim();
 
-const OPTIONAL = ["SUPABASE_SERVICE_ROLE_KEY", "FORGE_KEY"];
-
-const missing = REQUIRED.filter((key) => !process.env[key]?.trim());
-if (missing.length > 0) {
-  console.error("write-env-local: variáveis obrigatórias ausentes:", missing.join(", "));
-  console.error("Configure GitHub Secrets ou exporte no shell antes de correr.");
+if (!url || !anonKey) {
+  console.error("write-env-local: NEXT_PUBLIC_SUPABASE_URL e chave pública ausentes.");
+  console.error(
+    "Secrets GitHub: NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY (ou PUBLISHABLE_KEY).",
+  );
   process.exit(1);
 }
 
-const lines = [];
-for (const key of [...REQUIRED, ...OPTIONAL]) {
-  const value = process.env[key]?.trim();
-  if (value) lines.push(`${key}=${value}`);
-}
+const lines = [
+  `NEXT_PUBLIC_SUPABASE_URL=${url}`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY=${anonKey}`,
+];
+if (publishableKey) lines.push(`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${publishableKey}`);
+if (serviceRole) lines.push(`SUPABASE_SERVICE_ROLE_KEY=${serviceRole}`);
+if (forgeKey) lines.push(`FORGE_KEY=${forgeKey}`);
 
 const target = resolve(process.cwd(), ".env.local");
 writeFileSync(target, `${lines.join("\n")}\n`, "utf8");
