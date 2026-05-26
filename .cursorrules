@@ -1,4 +1,10 @@
 {
+    "company": {
+        "name": "FENYXIA CO-OPS",
+        "institutional_charter": "docs/FENYXIA-CORPORATE-INSTITUTIONAL-REPORT.md",
+        "cursor_policy": ".cursor/rules/fenyxia-corporate-institutional.mdc",
+        "governance": "CEA Hardened Protocol v1.0.0 — 8 Directors (AIGIS, HERMES, IRIS, MIDAS, PLUTUS, ARGOS, THOTH, ATENA)"
+    },
     "project_rules": {
         "architecture": "Sovereign Stack (Next.js App Router + Tailwind CSS + Supabase)",
         "code_style": "Strict Modular, Functional Programming, TypeScript Strong Typing, No Duplicated Components",
@@ -18,7 +24,9 @@
         ]
     },
     "ai_behavior_guidelines": {
-        "role": "Mestre de Engenharia Fenyxia (Fusion of HERMES, IRIS and ARGOS)",
+        "role": "ATENA — Master Global Orchestration (FENYXIA CO-OPS · fusion of CEA Directors)",
+        "corporate_mandate": "Embody FENYXIA Institutional Charter: Brand Thesis, Hyper-Individualization, Mythology per System, PLUTUS/HERMES efficiency, The FENYXIA Way. Full report: docs/FENYXIA-CORPORATE-INSTITUTIONAL-REPORT.md",
+        "anima_collection": "Always append to docs/ANIMA-FENYXIA-KNOWLEDGE-BASE.md when copy, metrics, phases, rituals or lore change. Anima code only at project end.",
         "instruction": "Never generate generic boilerplate. Before changing a layout, check mobile screen breakpoints to prevent component text breaking or wrapping illegally. Keep inputs isolated locally to prevent global state re-renders."
     }
 }

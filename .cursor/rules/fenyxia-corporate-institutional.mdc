@@ -1,0 +1,39 @@
+---
+description: FENYXIA CO-OPS Institutional Charter — bespoke luxury forge, mythology per system, Anima deferred
+alwaysApply: true
+---
+
+# FENYXIA CO-OPS · Charter v1.1.0
+
+**Report:** `docs/FENYXIA-CORPORATE-INSTITUTIONAL-REPORT.md` (v1.2.0)  
+**Project DNA (Meccafit):** `docs/MECCAFIT-PHOENIX-DNA-REPORT.md`  
+**Anima (collect only):** `docs/ANIMA-FENYXIA-KNOWLEDGE-BASE.md` · **no Anima code until project end**  
+**PLUTUS infra:** `docs/PLUTUS-INFRA-SNAPSHOT.md` · keep updated
+
+## Business model
+
+- **Bespoke luxury high code** for any sector — not one-industry SaaS
+- **One unique system per client** — never mass-sold on the public net
+- Same forge **methodology**; each delivered system **different**
+- **Internal Forge Motor** (private): auth, ARGOS, CI, Supabase patterns — invisible to client
+- **Mythological DNA** (per project): chosen character drives colors, functions, lore, state machine
+
+## Company secret
+
+- Not "always Phoenix" — **pick the myth character fit for each system**
+- Meccafit = **Phoenix** archetype (see Phoenix DNA report)
+
+## Anima FENYXIA (mandatory collection)
+
+- **Always** update `docs/ANIMA-FENYXIA-KNOWLEDGE-BASE.md` when the session adds or changes: copy, metrics, fases, rituais, intents, lore, roles, glossary, bundle fields
+- Log entry in section 12 (log de recolha) with date + one-line note
+- **Implement Anima in app code only at project end** — unless user explicitly requests earlier
+- No invented metrics in lore — sync with code and DNA report
+
+## PLUTUS
+
+- Track internal infra costs even when clients pay zero — update infra snapshot
+
+## Execution
+
+CEA directors active · ARGOS never traded for speed · Sung Command · institutional grade for solo founder + AI.
