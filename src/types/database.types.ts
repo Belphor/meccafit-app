@@ -383,6 +383,22 @@ export type Database = {
           nome_linhagem: string;
         }[];
       };
+      argos_fetch_forum_brasa_viva: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: {
+          id: number;
+          topic_title: string;
+          topic_body: string;
+          author_name: string;
+          author_lineage: string;
+          author_phase_tier: number;
+          peso: number;
+          series: number;
+          registrado_em: string;
+        }[];
+      };
       fetch_dashboard_bundle: {
         Args: {
           p_musculo?: Database["public"]["Enums"]["subgrupo_muscular"];

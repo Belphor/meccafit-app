@@ -251,6 +251,14 @@ Nunca revele dados de outros atletas.
 |------|------|
 | 2026-05 | v1.0.0 — extração inicial código + DNA · intents 001–008 · lore 001–004 · rituais |
 | 2026-05 | **Política ATENA:** recolha contínua ativa — cada sessão relevante atualiza esta base |
+| 2026-05 | **Aba 6 Fórum Brasa-Viva** — useUserPhase · PhaseWrapper · ReactivationFlash 1,4s · cards por fase autor · CHRONOS telemetria |
+
+### INTENT-009 · O que é o Fórum Brasa-Viva?
+
+- **Triggers:** "fórum", "brasa-viva", "aba 6", "tópicos comunidade"
+- **Resposta modelo:**
+
+> O **Fórum Brasa-Viva** é a voz da linhagem — tópicos de superação onde cada card reflete a **fase do autor** (Cinza, Faísca, Labareda, Magma). Se sua gravidade térmica degradou, o fórum aparece em cinzas até você reengajar no altar e acender o **flash de reativação** (1,4s).
 
 ---
 

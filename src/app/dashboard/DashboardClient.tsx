@@ -38,6 +38,7 @@ import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
+import { mapMuralPostsToForumTopics } from "@/lib/forum-brasa-viva-data";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
 
@@ -49,12 +50,12 @@ const EvolucaoSelfiePanel = dynamic(
   { loading: () => <DashboardLoading message="Abrindo evolução..." /> },
 );
 
-const MuralPanel = dynamic(
+const ForumBrasaVivaPanel = dynamic(
   () =>
-    import("@/components/dashboard/MuralPanel").then((module) => ({
-      default: module.MuralPanel,
+    import("@/features/forum-brasa-viva/ForumBrasaVivaView").then((module) => ({
+      default: module.ForumBrasaVivaView,
     })),
-  { loading: () => <DashboardLoading message="Abrindo mural..." /> },
+  { loading: () => <DashboardLoading message="Abrindo Fórum Brasa-Viva..." /> },
 );
 
 type VideoModalState = {
@@ -227,7 +228,7 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
         return;
       }
       void refreshCommunityMural();
-      setActiveTab("mural");
+      setActiveTab("forum");
     },
     [profile?.role, refreshCommunityMural],
   );
@@ -297,7 +298,7 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
           <div className="z-[1]">
             <DashboardTabNav
               activeTab={activeTab}
-              muralCount={muralPosts.length}
+              forumCount={muralPosts.length}
               onTabChange={setActiveTab}
             />
 
@@ -325,9 +326,14 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
               </div>
             ) : null}
 
-            {activeTab === "mural" ? (
+            {activeTab === "forum" ? (
               <div className={DASHBOARD_TAB_CONTENT}>
-                <MuralPanel posts={muralPosts} />
+                <ForumBrasaVivaPanel
+                  userId={userId}
+                  profileRow={profileRow}
+                  liveSessionVtcKg={liveSessionVtcKg}
+                  initialTopics={mapMuralPostsToForumTopics(muralPosts)}
+                />
               </div>
             ) : null}
           </div>
