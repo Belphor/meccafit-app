@@ -54,7 +54,7 @@ export function resolveForumCardPhase(tier: number): ForumCardPhase {
   return "cinza";
 }
 
-/** NEMESIS-safe — classe de degradação só após hidratação (30% saturação = 70% perda). */
+/** HERMES — classe de degradação só após hidratação (30% saturação = 70% perda). */
 export const FORUM_PHASE_INACTIVE_FILTER =
   "saturate-[0.3] brightness-[0.88] contrast-[0.96] transition-[filter] duration-500 ease-out";
 

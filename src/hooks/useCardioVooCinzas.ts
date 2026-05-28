@@ -28,9 +28,12 @@ export function useCardioVooCinzas({ userId, goalMs }: UseCardioVooCinzasOptions
 
   useEffect(() => {
     if (!userId) return;
-    const restored = readCardioSession(userId);
-    setSession(restored ?? createInitialCardioSession(userId, goalMs));
-    completionFiredRef.current = restored?.status === "completed";
+
+    queueMicrotask(() => {
+      const restored = readCardioSession(userId);
+      setSession(restored ?? createInitialCardioSession(userId, goalMs));
+      completionFiredRef.current = restored?.status === "completed";
+    });
   }, [userId, goalMs]);
 
   const persist = useCallback((next: CardioSessionSnapshot) => {

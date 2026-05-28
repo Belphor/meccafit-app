@@ -251,7 +251,9 @@ Nunca revele dados de outros atletas.
 |------|------|
 | 2026-05 | v1.0.0 — extração inicial código + DNA · intents 001–008 · lore 001–004 · rituais |
 | 2026-05 | **Política ATENA:** recolha contínua ativa — cada sessão relevante atualiza esta base |
-| 2026-05 | **Aba 6 Fórum Brasa-Viva** — useUserPhase · PhaseWrapper · ReactivationFlash 1,4s · cards por fase autor · CHRONOS telemetria |
+| 2026-05 | **Aba 6 Fórum Brasa-Viva** — PhoenixPhaseEngine · PhaseWrapper · cards por fase autor |
+| 2026-05 | CEA consolidado — CHRONOS/NEMESIS/APOLO removidos; telemetria sob HERMES |
+| 2026-05 | ARGOS hardening — phase_tier lock · invite server-only · PhoenixPhaseEngine (≠ Anima IA) |
 
 ### INTENT-009 · O que é o Fórum Brasa-Viva?
 

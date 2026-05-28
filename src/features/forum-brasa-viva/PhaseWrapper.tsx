@@ -14,7 +14,7 @@ type PhaseWrapperProps = {
 };
 
 /**
- * IRIS — aplica degradação de 70% (saturate 30%) apenas após hidratação (NEMESIS-safe).
+ * IRIS/HERMES — aplica degradação de 70% (saturate 30%) apenas após hidratação.
  */
 export function PhaseWrapper({
   children,

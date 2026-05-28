@@ -9,6 +9,7 @@ import {
 export type ThermalGravityMetricsRow = {
   vtc_30d: number;
   session_vtc_today: number;
+  available: boolean;
 };
 
 export async function fetchThermalGravityMetrics(
@@ -20,16 +21,22 @@ export async function fetchThermalGravityMetrics(
     supabase.rpc("argos_compute_session_vtc_today", { p_user_id: userId }),
   ]);
 
+  if (vtc30Result.error || sessionResult.error) {
+    return { vtc_30d: 0, session_vtc_today: 0, available: false };
+  }
+
   return {
     vtc_30d: Number(vtc30Result.data ?? 0),
     session_vtc_today: Number(sessionResult.data ?? 0),
+    available: true,
   };
 }
 
 export function buildThermalGravityState(
   phaseTier: unknown,
   metrics: ThermalGravityMetricsRow,
-): ThermalGravityState {
+): ThermalGravityState | null {
+  if (!metrics.available) return null;
   return evaluateThermalGravity(phaseTier, metrics);
 }
 
@@ -38,6 +45,9 @@ export function enrichProfileRowWithThermalGravity(
   metrics: ThermalGravityMetricsRow,
 ): Record<string, unknown> {
   const state = buildThermalGravityState(profileRow.phase_tier, metrics);
+  if (!state) {
+    return { ...profileRow };
+  }
   return {
     ...profileRow,
     ...thermalGravityToProfileFields(state),

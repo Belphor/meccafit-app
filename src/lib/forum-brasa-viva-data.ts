@@ -7,7 +7,7 @@ import type {
 } from "@/features/forum-brasa-viva/types";
 import { resolvePhaseTier } from "@/lib/custom-preferences";
 import type { MuralPost } from "@/lib/mock-data";
-import { getActiveSupabaseSession, supabase, withSupabaseRlsGuard } from "@/lib/supabase";
+import { getActiveSupabaseSession, supabase } from "@/lib/supabase";
 
 export const FORUM_BRASA_VIVA_DEFAULT_LIMIT = 48;
 
@@ -61,38 +61,36 @@ export async function fetchForumBrasaVivaTopics(
     return { data: [], error: "Sessão expirada. Retorne ao Portal de Brasa." };
   }
 
-  return withSupabaseRlsGuard(async () => {
-    const boundedLimit = Math.min(100, Math.max(1, limit));
+  const boundedLimit = Math.min(100, Math.max(1, limit));
 
-    const { data, error } = await supabase.rpc("argos_fetch_forum_brasa_viva", {
-      p_limit: boundedLimit,
-    });
+  const { data, error } = await supabase.rpc("argos_fetch_forum_brasa_viva", {
+    p_limit: boundedLimit,
+  });
 
-    if (!error && Array.isArray(data)) {
-      return {
-        data: (data as ForumBrasaVivaRpcRow[]).map(mapRpcRowToTopic),
-        error: null,
-      };
-    }
-
-    if (!isMissingForumRpc(error)) {
-      return { data: [], error: error?.message ?? "Falha ao carregar o Fórum Brasa-Viva." };
-    }
-
-    const { data: muralRows, error: muralError } = await supabase.rpc(
-      "argos_fetch_mural_comunidade",
-      { p_limit: boundedLimit },
-    );
-
-    if (muralError) {
-      return { data: [], error: muralError.message ?? "Falha ao carregar tópicos." };
-    }
-
+  if (!error && Array.isArray(data)) {
     return {
-      data: mapMuralFallbackRows((muralRows ?? []) as CommunityMuralRow[]),
+      data: (data as ForumBrasaVivaRpcRow[]).map(mapRpcRowToTopic),
       error: null,
     };
-  });
+  }
+
+  if (!isMissingForumRpc(error)) {
+    return { data: [], error: error?.message ?? "Falha ao carregar o Fórum Brasa-Viva." };
+  }
+
+  const { data: muralRows, error: muralError } = await supabase.rpc(
+    "argos_fetch_mural_comunidade",
+    { p_limit: boundedLimit },
+  );
+
+  if (muralError) {
+    return { data: [], error: muralError.message ?? "Falha ao carregar tópicos." };
+  }
+
+  return {
+    data: mapMuralFallbackRows((muralRows ?? []) as CommunityMuralRow[]),
+    error: null,
+  };
 }
 
 export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTopic[] {

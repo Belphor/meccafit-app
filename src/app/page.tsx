@@ -13,6 +13,7 @@ import {
   checkForgeIgnitionAvailable,
   validateForgeIgnitionKey,
 } from "@/app/actions/forge-ignition";
+import { requestForjadorCadastroOtp } from "@/app/actions/forge-registration";
 import { PortalEmberCurtain } from "@/components/portal/PortalEmberCurtain";
 import { PrimeiroAcessoFenyxiaPanel } from "@/components/portal/PrimeiroAcessoFenyxiaPanel";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
@@ -278,21 +279,17 @@ export default function PortalDeBrasaPage() {
     setFeedback({ status: "loading", message: PORTAL_COPY.forgeRegisterLoading });
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const result = await requestForjadorCadastroOtp({
+        forgeKey: forgeCode.trim(),
         email: normalizedCorporateEmail,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            full_name: normalizedForjadorName,
-            nome_linhagem: normalizedLineageName,
-          },
-        },
+        forjadorName: normalizedForjadorName,
+        lineageName: normalizedLineageName,
       });
 
       setFeedback(
-        error
-          ? { status: "error", message: mapAuthError(error) }
-          : { status: "success", message: PORTAL_COPY.forgeRegisterSuccess },
+        result.ok
+          ? { status: "success", message: result.message }
+          : { status: "error", message: result.message },
       );
     } catch {
       setFeedback({ status: "error", message: PORTAL_COPY.forgeRegisterError });

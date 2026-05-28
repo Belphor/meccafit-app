@@ -88,6 +88,12 @@ async function runMatrix() {
   const anon = createClientAnon();
   const cliente = await signIn("cliente@meccafit.com", "senha123");
   const soberano = await signIn("master@meccafit.com", "senha123");
+  let forjador = null;
+  try {
+    forjador = await signIn("forjador@meccafit.com", "senha123");
+  } catch {
+    // seed opcional
+  }
 
   // --- ANON: SELECT all tables (6) ---
   for (const table of TABLES) {
@@ -111,6 +117,8 @@ async function runMatrix() {
     { fn: "argos_compute_vtc_30d", args: { p_user_id: OTHER_USER_ID } },
     { fn: "argos_compute_session_vtc_today", args: { p_user_id: OTHER_USER_ID } },
     { fn: "argos_upsert_balanco_termico_diario", args: { p_user_id: OTHER_USER_ID, p_vtc_delta: 9999 } },
+    { fn: "argos_validate_invite_token", args: { p_token: "probe" } },
+    { fn: "argos_consume_invite_for_user", args: { p_token: "probe", p_user_id: OTHER_USER_ID } },
   ]) {
     const { error } = await anon.rpc(rpc.fn, rpc.args);
     error ? pass(`anon:rpc:${rpc.fn}`) : fail(`anon:rpc:${rpc.fn}`, "rpc permitido");
@@ -161,6 +169,81 @@ async function runMatrix() {
       .update(escalationPayloads[i])
       .eq("id", cliente.userId);
     error ? pass(`cliente:escalate:${i}`) : fail(`cliente:escalate:${i}`, "escalada permitida");
+  }
+
+  const phaseEscalationPayloads = [{ phase_tier: 5 }, { phase_tier: 4 }];
+  for (let i = 0; i < phaseEscalationPayloads.length; i += 1) {
+    const { error } = await cliente.client
+      .from("profiles")
+      .update(phaseEscalationPayloads[i])
+      .eq("id", cliente.userId);
+    error ? pass(`cliente:phase_escalate:${i}`) : fail(`cliente:phase_escalate:${i}`, "phase_tier edit ok");
+  }
+
+  async function assertPhaseEscalationBlocked(label, session) {
+    const { data: profile } = await session.client
+      .from("profiles")
+      .select("phase_tier")
+      .eq("id", session.userId)
+      .maybeSingle();
+    const current = Number(profile?.phase_tier ?? 1);
+    const targets = [1, 2, 3, 4, 5].filter((tier) => tier !== current);
+    for (let i = 0; i < targets.length; i += 1) {
+      const { error } = await session.client
+        .from("profiles")
+        .update({ phase_tier: targets[i] })
+        .eq("id", session.userId);
+      error ? pass(`${label}:phase_escalate:${targets[i]}`) : fail(`${label}:phase_escalate:${targets[i]}`, "phase_tier edit ok");
+    }
+  }
+
+  await assertPhaseEscalationBlocked("soberano", soberano);
+  if (forjador) {
+    await assertPhaseEscalationBlocked("forjador", forjador);
+
+    const { data: forjadorPhase, error: forjadorPhaseErr } = await forjador.client.rpc(
+      "argos_advance_phase_if_eligible",
+      { p_user_id: forjador.userId },
+    );
+    const excluded =
+      !forjadorPhaseErr &&
+      forjadorPhase &&
+      typeof forjadorPhase === "object" &&
+      forjadorPhase.gamification_excluded === true &&
+      forjadorPhase.advanced === false;
+    excluded
+      ? pass("forjador:advance:gamification_excluded")
+      : fail("forjador:advance:gamification_excluded", JSON.stringify(forgadorPhase));
+  }
+
+  // --- CLIENTE: invite RPCs server-only (2) ---
+  for (const rpc of [
+    { fn: "argos_validate_invite_token", args: { p_token: "probe" } },
+    { fn: "argos_consume_invite_for_user", args: { p_token: "probe", p_user_id: cliente.userId } },
+  ]) {
+    const { error } = await cliente.client.rpc(rpc.fn, rpc.args);
+    error ? pass(`cliente:rpc:${rpc.fn}:blocked`) : fail(`cliente:rpc:${rpc.fn}:blocked`, "rpc permitido");
+  }
+
+  // --- Forum Brasa-Viva: anon bloqueado, cliente permitido, sem forjadores no feed ---
+  {
+    const { error: anonForumErr } = await anon.rpc("argos_fetch_forum_brasa_viva", { p_limit: 10 });
+    anonForumErr ? pass("anon:rpc:argos_fetch_forum_brasa_viva") : fail("anon:rpc:argos_fetch_forum_brasa_viva", "rpc permitido");
+
+    const { data: forumRows, error: forumErr } = await cliente.client.rpc("argos_fetch_forum_brasa_viva", {
+      p_limit: 48,
+    });
+    const rows = Array.isArray(forumRows) ? forumRows : [];
+    const hasForjadorAuthor = rows.some(
+      (r) =>
+        r.author_name === "Mestre Supremo" ||
+        r.author_name === "Forjador Linhagem" ||
+        r.author_name?.includes("Forjador"),
+    );
+    const forumOk = !forumErr && rows.length <= 100 && !hasForjadorAuthor;
+    forumOk
+      ? pass("forum:cliente:no_forjador_authors")
+      : fail("forum:cliente:no_forjador_authors", `err=${forumErr?.message} forjador=${hasForjadorAuthor} rows=${rows.length}`);
   }
 
   // --- CLIENTE: historico_treinos mutations on other (insert/update/delete) x payloads (5*3=15) ---
@@ -398,6 +481,19 @@ async function runMatrix() {
     const rows = Array.isArray(data) ? data : [];
     const ok = !error && rows.length <= 100 && !rows.some((r) => r.atleta_nome === "Mestre Supremo");
     ok ? pass(`mass:mural:limit:${i}`) : fail(`mass:mural:limit:${i}`, `rows=${rows.length}`);
+  }
+
+  // --- Mass: forum limit boundary (20 variants) ---
+  for (let i = 0; i < 20; i += 1) {
+    const { data, error } = await cliente.client.rpc("argos_fetch_forum_brasa_viva", {
+      p_limit: i,
+    });
+    const rows = Array.isArray(data) ? data : [];
+    const ok =
+      !error &&
+      rows.length <= 100 &&
+      !rows.some((r) => r.author_name === "Mestre Supremo" || r.author_name === "Forjador Linhagem");
+    ok ? pass(`mass:forum:limit:${i}`) : fail(`mass:forum:limit:${i}`, `rows=${rows.length}`);
   }
 }
 

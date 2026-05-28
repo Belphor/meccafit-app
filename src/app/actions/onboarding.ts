@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { validateInviteToken } from "@/app/actions/invite-onboarding";
 import { isDevInviteToken } from "@/lib/invite-config.server";
 import { mapAuthError } from "@/lib/portal-auth.server";
@@ -10,21 +9,23 @@ import {
   type PrimeiroAcessoInput,
   type PrimeiroAcessoResult,
 } from "@/lib/portal-onboarding";
+import { createServiceRoleClient } from "@/lib/supabase-admin.server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export type { PrimeiroAcessoInput, PrimeiroAcessoResult };
 
-async function consumeInviteAfterSignup(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  inviteToken: string,
-): Promise<boolean> {
+async function consumeInviteAfterSignup(userId: string, inviteToken: string): Promise<boolean> {
   const normalized = inviteToken.trim();
   if (isDevInviteToken(normalized)) {
     return true;
   }
 
-  const { data, error } = await supabase.rpc("argos_consume_invite_token", {
+  const admin = createServiceRoleClient();
+  if (!admin) return false;
+
+  const { data, error } = await admin.rpc("argos_consume_invite_for_user", {
     p_token: normalized,
+    p_user_id: userId,
   });
 
   return !error && data === true;
@@ -111,7 +112,7 @@ export async function registerPrimeiroAcesso(
         return { ok: false, message: PORTAL_COPY.onboardingConfirmEmail };
       }
 
-      const consumed = await consumeInviteAfterSignup(supabase, normalizedInvite);
+      const consumed = await consumeInviteAfterSignup(signInData.user.id, normalizedInvite);
       if (!consumed) {
         await supabase.auth.signOut();
         return { ok: false, message: PORTAL_COPY.onboardingInviteInvalid };
@@ -126,7 +127,7 @@ export async function registerPrimeiroAcesso(
       return { ok: true };
     }
 
-    const consumed = await consumeInviteAfterSignup(supabase, normalizedInvite);
+    const consumed = await consumeInviteAfterSignup(data.user.id, normalizedInvite);
     if (!consumed) {
       await supabase.auth.signOut();
       return { ok: false, message: PORTAL_COPY.onboardingInviteInvalid };
@@ -142,18 +143,4 @@ export async function registerPrimeiroAcesso(
   } catch {
     return { ok: false, message: PORTAL_COPY.onboardingSignupFailed };
   }
-}
-
-/** Promove forjador após cadastro corporativo validado — só service_role. */
-export async function bootstrapForjadorProfile(userId: string): Promise<boolean> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !serviceKey) return false;
-
-  const admin = createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { error } = await admin.rpc("argos_bootstrap_forjador", { p_user_id: userId });
-  return !error;
 }

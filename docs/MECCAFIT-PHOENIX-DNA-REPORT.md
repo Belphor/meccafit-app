@@ -98,7 +98,7 @@
 |--------|-------------------------|
 | Portal | `src/app/page.tsx` |
 | Dashboard | `src/app/dashboard/` · `DashboardClient.tsx` |
-| Motor fase | `AnimaFenixEngine.tsx` · `thermal-gravity.ts` |
+| Motor fase | `PhoenixPhaseEngine.tsx` · `thermal-gravity.ts` |
 | API bundle | `src/app/api/dashboard/bundle/route.ts` |
 | Config IRIS | `src/lib/dashboard-config.ts` |
 | Segurança | `supabase/migrations/*argos*` · `scripts/argos/` |

@@ -42,6 +42,41 @@ function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
   return pending?.id ?? subgroup.exercises[0]?.id ?? 1;
 }
 
+function resolveTreinoSessionHydration(
+  sessionScope: { userId: string; subgroupId: string },
+  subgroup: MuscleSubgroup,
+) {
+  const snapshot = readAltarVtcSession(sessionScope);
+  if (!snapshot) {
+    return {
+      baseVtcTotal: 0,
+      completedSetsByExerciseId: {} as Record<number, number>,
+      lastSavedWeight: 0,
+      maxLoadsByExerciseId: {} as Record<number, number>,
+      shouldPersistStale: false,
+    };
+  }
+
+  const reconciledCompleted = reconcileSessionCompletedSets(
+    subgroup,
+    snapshot.completedSetsByExerciseId,
+  );
+  const reconciledMaxLoads = reconcileSessionMaxLoads(subgroup, snapshot.maxLoadsByExerciseId);
+  const reconciledVtc = Object.values(reconciledMaxLoads).reduce((sum, value) => sum + value, 0);
+  const hasStaleSession =
+    Object.keys(reconciledCompleted).length !==
+      Object.keys(snapshot.completedSetsByExerciseId).length ||
+    Object.keys(reconciledMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length;
+
+  return {
+    baseVtcTotal: reconciledVtc,
+    completedSetsByExerciseId: reconciledCompleted,
+    lastSavedWeight: snapshot.lastSavedWeight,
+    maxLoadsByExerciseId: reconciledMaxLoads,
+    shouldPersistStale: hasStaleSession,
+  };
+}
+
 export function DashboardTreinoWorkspace({
   subgroup,
   profile,
@@ -58,19 +93,26 @@ export function DashboardTreinoWorkspace({
     () => ({ userId: authUserId, subgroupId: subgroup.id }),
     [authUserId, subgroup.id],
   );
+  const sessionHydrationKey = `${sessionScope.userId}:${sessionScope.subgroupId}`;
+  const sessionHydration = useMemo(
+    () => resolveTreinoSessionHydration(sessionScope, subgroup),
+    [sessionScope, subgroup],
+  );
 
   const [activeExerciseId, setActiveExerciseId] = useState(() =>
     resolveDefaultActiveExerciseId(subgroup),
   );
   const [superacaoExerciseId, setSuperacaoExerciseId] = useState<number | null>(null);
-  const [baseVtcTotal, setBaseVtcTotal] = useState(0);
-  const [completedSetsByExerciseId, setCompletedSetsByExerciseId] = useState<Record<number, number>>(
-    {},
+  const [baseVtcTotal, setBaseVtcTotal] = useState(sessionHydration.baseVtcTotal);
+  const [completedSetsByExerciseId, setCompletedSetsByExerciseId] = useState<
+    Record<number, number>
+  >(sessionHydration.completedSetsByExerciseId);
+  const maxLoadsRef = useRef<Record<number, number>>(sessionHydration.maxLoadsByExerciseId);
+  const completedSetsRef = useRef<Record<number, number>>(
+    sessionHydration.completedSetsByExerciseId,
   );
-  const maxLoadsRef = useRef<Record<number, number>>({});
-  const completedSetsRef = useRef<Record<number, number>>({});
-  const lastSavedWeightRef = useRef(0);
-  const sessionHydratedRef = useRef(false);
+  const lastSavedWeightRef = useRef(sessionHydration.lastSavedWeight);
+  const sessionHydratedRef = useRef(true);
   const flameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const muralTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,47 +135,32 @@ export function DashboardTreinoWorkspace({
   );
 
   useEffect(() => {
-    sessionHydratedRef.current = false;
+    queueMicrotask(() => {
+      maxLoadsRef.current = sessionHydration.maxLoadsByExerciseId;
+      completedSetsRef.current = sessionHydration.completedSetsByExerciseId;
+      lastSavedWeightRef.current = sessionHydration.lastSavedWeight;
+      setBaseVtcTotal(sessionHydration.baseVtcTotal);
+      setCompletedSetsByExerciseId(sessionHydration.completedSetsByExerciseId);
+      setActiveExerciseId(resolveDefaultActiveExerciseId(subgroup));
+      sessionHydratedRef.current = true;
+      onAltarMetricsChange(sessionHydration.baseVtcTotal, sessionHydration.lastSavedWeight);
 
-    const snapshot = readAltarVtcSession(sessionScope);
-    if (snapshot) {
-      const reconciledCompleted = reconcileSessionCompletedSets(
-        subgroup,
-        snapshot.completedSetsByExerciseId,
-      );
-      const reconciledMaxLoads = reconcileSessionMaxLoads(subgroup, snapshot.maxLoadsByExerciseId);
-      const reconciledVtc = Object.values(reconciledMaxLoads).reduce((sum, value) => sum + value, 0);
-      const hasStaleSession =
-        Object.keys(reconciledCompleted).length !==
-          Object.keys(snapshot.completedSetsByExerciseId).length ||
-        Object.keys(reconciledMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length;
-
-      maxLoadsRef.current = reconciledMaxLoads;
-      completedSetsRef.current = reconciledCompleted;
-      lastSavedWeightRef.current = snapshot.lastSavedWeight;
-      setBaseVtcTotal(reconciledVtc);
-      setCompletedSetsByExerciseId(reconciledCompleted);
-      onAltarMetricsChange(reconciledVtc, snapshot.lastSavedWeight);
-
-      if (hasStaleSession) {
+      if (sessionHydration.shouldPersistStale) {
         writeAltarVtcSession(sessionScope, {
-          baseVtcTotal: reconciledVtc,
-          lastSavedWeight: snapshot.lastSavedWeight,
-          maxLoadsByExerciseId: reconciledMaxLoads,
-          completedSetsByExerciseId: reconciledCompleted,
+          baseVtcTotal: sessionHydration.baseVtcTotal,
+          lastSavedWeight: sessionHydration.lastSavedWeight,
+          maxLoadsByExerciseId: sessionHydration.maxLoadsByExerciseId,
+          completedSetsByExerciseId: sessionHydration.completedSetsByExerciseId,
         });
       }
-    } else {
-      maxLoadsRef.current = {};
-      completedSetsRef.current = {};
-      lastSavedWeightRef.current = 0;
-      setBaseVtcTotal(0);
-      setCompletedSetsByExerciseId({});
-      onAltarMetricsChange(0, 0);
-    }
-
-    sessionHydratedRef.current = true;
-  }, [sessionScope, subgroup, onAltarMetricsChange]);
+    });
+  }, [
+    sessionHydrationKey,
+    sessionHydration,
+    sessionScope,
+    subgroup,
+    onAltarMetricsChange,
+  ]);
 
   useEffect(() => {
     return () => {

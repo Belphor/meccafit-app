@@ -399,10 +399,23 @@ export type Database = {
           registrado_em: string;
         }[];
       };
+      argos_consume_invite_for_user: {
+        Args: {
+          p_token: string;
+          p_user_id: string;
+        };
+        Returns: boolean;
+      };
       fetch_dashboard_bundle: {
         Args: {
           p_musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
           p_mural_limit?: number;
+        };
+        Returns: Json;
+      };
+      argos_advance_phase_if_eligible: {
+        Args: {
+          p_user_id: string;
         };
         Returns: Json;
       };

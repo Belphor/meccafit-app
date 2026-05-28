@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
@@ -180,9 +181,12 @@ export function EvolucaoSelfiePanel() {
       </div>
 
       {captureUrl ? (
-        <img
+        <Image
           src={captureUrl}
           alt="Selfie FENYXIA capturada"
+          width={640}
+          height={480}
+          unoptimized
           className="mt-4 max-h-52 w-full rounded-xl border border-orange-500/15 object-contain sm:max-h-40"
         />
       ) : null}

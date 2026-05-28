@@ -124,6 +124,8 @@ function PhoenixInput({
 
   const [weight, setWeight] = useState(() => (initialWeight > 0 ? String(initialWeight) : ""));
 
+  const weightSeedKey = `${exercicioId ?? ""}:${initialWeight}`;
+
   const [isSaving, setIsSaving] = useState(false);
   const savingRef = useRef(false);
 
@@ -167,15 +169,25 @@ function PhoenixInput({
 
   useEffect(() => {
 
-    if (initialWeight > 0) {
+    queueMicrotask(() => {
 
-      setWeight(String(initialWeight));
+      if (initialWeight > 0) {
 
-      sessionTopWeightRef.current = initialWeight;
+        setWeight(String(initialWeight));
 
-    }
+        sessionTopWeightRef.current = initialWeight;
 
-  }, [initialWeight, exercicioId]);
+      } else {
+
+        sessionTopWeightRef.current = 0;
+
+        setWeight("");
+
+      }
+
+    });
+
+  }, [weightSeedKey, initialWeight]);
 
 
 

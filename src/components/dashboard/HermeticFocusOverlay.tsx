@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { CardioIgnitionBar } from "@/components/dashboard/CardioIgnitionBar";
 import type { CardioThermalBand } from "@/lib/cardio-voo-cinzas";
@@ -108,6 +108,18 @@ function useHermeticBodyLock(active: boolean) {
   }, [active]);
 }
 
+function subscribeNoop() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
 export function HermeticFocusOverlay({
   percent,
   band,
@@ -119,13 +131,9 @@ export function HermeticFocusOverlay({
   primaryActionLabel,
   showPrimaryAction,
 }: HermeticFocusOverlayProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
   useHermeticBodyLock(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

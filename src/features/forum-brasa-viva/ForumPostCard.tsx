@@ -68,8 +68,7 @@ export const ForumPostCard = memo(function ForumPostCard({ topic }: ForumPostCar
         <p className="mt-3">
           <span className={DASHBOARD_META_CHIP}>
             {topic.weightKg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kg ·{" "}
-            {topic.series} séries · VTC{" "}
-            {topic.weightKg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
+            {topic.series} séries · ascensão validada
           </span>
         </p>
       ) : null}

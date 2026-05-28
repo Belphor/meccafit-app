@@ -205,6 +205,8 @@ Otimização autônoma · limpeza perpétua de dados · repositórios privados �
 | **THOTH** | Documentação · DNA · schema |
 | **ATENA** | Orquestração Cursor · síntese entre diretores |
 
+**Composição fixa:** o CEA tem **8 directores** — sem cargos paralelos (telemetria → HERMES; QA/hidratação → HERMES/ATENA; privacidade → ARGOS/THOTH).
+
 Liderança estratégica **concebe com precisão**. Execução **entrega engenharia de elite**.
 
 ### Inegociáveis

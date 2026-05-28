@@ -13,13 +13,15 @@ import { DashboardTreinoWorkspace } from "@/components/dashboard/DashboardTreino
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
-import { AnimaFenixEngine } from "@/components/dashboard/AnimaFenixEngine";
+import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
 import {
   fetchCommunityMuralPosts,
+  invalidateDashboardCaches,
   loadDashboardTrainingBundle,
   refreshSubgroupHistorico,
 } from "@/lib/dashboard-data";
+import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { parseThermalGravityState } from "@/lib/thermal-gravity";
 import {
   BIOLOGICAL_BALANCE_MIN_AGE,
@@ -38,7 +40,6 @@ import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
-import { mapMuralPostsToForumTopics } from "@/lib/forum-brasa-viva-data";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
 
@@ -90,15 +91,32 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
   const [muralPosts, setMuralPosts] = useState<MuralPost[]>([]);
   const [videoModal, setVideoModal] = useState<VideoModalState>(CLOSED_VIDEO);
   const [reloadToken, setReloadToken] = useState(0);
-  const [cardioAltarPercent, setCardioAltarPercent] = useState(0);
+  const [cardioAltarPercent, setCardioAltarPercent] = useState(() =>
+    readAltarDailyCardioPercent(userId),
+  );
   const [liveSessionVtcKg, setLiveSessionVtcKg] = useState(0);
   const subgroupRef = useRef(subgroup);
-  subgroupRef.current = subgroup;
+  const loadKey = `${subgroupParam ?? ""}:${reloadToken}`;
+  const [trackedLoadKey, setTrackedLoadKey] = useState(loadKey);
+  const [trackedUserId, setTrackedUserId] = useState(userId);
+
+  if (trackedLoadKey !== loadKey) {
+    setTrackedLoadKey(loadKey);
+    setDataReady(false);
+    setLoadError(null);
+  }
+
+  if (trackedUserId !== userId) {
+    setTrackedUserId(userId);
+    setCardioAltarPercent(readAltarDailyCardioPercent(userId));
+  }
+
+  useEffect(() => {
+    subgroupRef.current = subgroup;
+  }, [subgroup]);
 
   useEffect(() => {
     let isMounted = true;
-    setDataReady(false);
-    setLoadError(null);
 
     async function loadDashboardData() {
       const bundle = await loadDashboardTrainingBundle(subgroupParam);
@@ -125,7 +143,7 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
     return () => {
       isMounted = false;
     };
-  }, [subgroupParam, reloadToken]);
+  }, [loadKey, subgroupParam]);
 
   const handleSignOut = useCallback(async () => {
     clearThermicSessionCache();
@@ -136,10 +154,6 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
   const handleRetryLoad = useCallback(() => {
     setReloadToken((token) => token + 1);
   }, []);
-
-  useEffect(() => {
-    setCardioAltarPercent(readAltarDailyCardioPercent(userId));
-  }, [userId]);
 
   useEffect(() => {
     const onStorageVtcUpdate = (event: Event) => {
@@ -171,17 +185,19 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
 
   const handleTrainingPersisted = useCallback(
     async (_exerciseId: number, detail?: { vtcGenerated: number }) => {
-      if (detail?.vtcGenerated && detail.vtcGenerated > 0) {
+      const liveIncrement = detail?.vtcGenerated ?? 0;
+      if (liveIncrement > 0) {
         setLiveSessionVtcKg((current) =>
-          Math.round((current + detail.vtcGenerated) * 100) / 100,
+          Math.round((current + liveIncrement) * 100) / 100,
         );
       }
 
-      const [subgroupResult, muralResult, bundleResult] = await Promise.all([
-        refreshSubgroupHistorico(subgroupRef.current),
-        fetchCommunityMuralPosts(),
-        loadDashboardTrainingBundle(subgroupParam),
-      ]);
+      const musculo = subgroupIdToMusculo(subgroupRef.current.id);
+      await invalidateDashboardCaches(userId, musculo);
+
+      const subgroupResult = await refreshSubgroupHistorico(subgroupRef.current);
+      const muralResult = await fetchCommunityMuralPosts();
+      const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
 
       if (subgroupResult.data) {
         setSubgroup(subgroupResult.data);
@@ -195,11 +211,13 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
         setProfileRow(bundleResult.data.profileRow);
         const thermal = parseThermalGravityState(bundleResult.data.profileRow.thermal_gravity);
         if (thermal) {
-          setLiveSessionVtcKg(thermal.session_vtc_today);
+          setLiveSessionVtcKg((current) =>
+            Math.max(current, thermal.session_vtc_today),
+          );
         }
       }
     },
-    [subgroupParam],
+    [subgroupParam, userId],
   );
 
   const refreshCommunityMural = useCallback(async () => {
@@ -222,16 +240,15 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
     [subgroup.exercises],
   );
 
-  const publishMuralAscensao = useCallback(
-    (_exerciseName: string, _payload: { weight: number; series: number; vtc: number }) => {
-      if (profile?.role === "forjador_soberano") {
-        return;
-      }
-      void refreshCommunityMural();
-      setActiveTab("forum");
-    },
-    [profile?.role, refreshCommunityMural],
-  );
+  const publishMuralAscensao = useCallback<
+    (exerciseName: string, payload: { weight: number; series: number; vtc: number }) => void
+  >(() => {
+    if (profile?.role === "forjador_soberano") {
+      return;
+    }
+    void refreshCommunityMural();
+    setActiveTab("forum");
+  }, [profile?.role, refreshCommunityMural]);
 
   const closeVideoModal = useCallback(() => setVideoModal(CLOSED_VIDEO), []);
 
@@ -258,8 +275,8 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
   }
 
   return (
-    <AnimaFenixEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
-      {() => (
+    <PhoenixPhaseEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
+      {(phase) => (
     <main className={DASHBOARD_SHELL}>
       <div
         className="pointer-events-none absolute inset-0"
@@ -328,12 +345,7 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
 
             {activeTab === "forum" ? (
               <div className={DASHBOARD_TAB_CONTENT}>
-                <ForumBrasaVivaPanel
-                  userId={userId}
-                  profileRow={profileRow}
-                  liveSessionVtcKg={liveSessionVtcKg}
-                  initialTopics={mapMuralPostsToForumTopics(muralPosts)}
-                />
+                <ForumBrasaVivaPanel userId={userId} phase={phase} />
               </div>
             ) : null}
           </div>
@@ -350,6 +362,6 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
       />
     </main>
       )}
-    </AnimaFenixEngine>
+    </PhoenixPhaseEngine>
   );
 }

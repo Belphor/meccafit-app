@@ -60,4 +60,9 @@ if (!urlHit || !keyHit) {
   process.exit(1);
 }
 
+if (map.get("INVITE_DEV_BYPASS")?.trim() === "true") {
+  console.error("\nvalidate-env-local: INVITE_DEV_BYPASS=true não é permitido (use npm run dev local).");
+  process.exit(1);
+}
+
 console.log(`\nvalidate-env-local: OK (${map.size} chaves, URL via ${urlHit.key}, chave via ${keyHit.key})`);

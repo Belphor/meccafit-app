@@ -73,7 +73,7 @@ async function fetchBundleViaParallel(
   userId: string,
   musculo: Enums<"subgrupo_muscular">,
 ) {
-  const [profileRes, historicoRes, muralRes] = await Promise.all([
+  const [profileRes, historicoRes, muralRes, phaseRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -90,6 +90,7 @@ async function fetchBundleViaParallel(
       .eq("musculo", musculo)
       .order("registrado_em", { ascending: false }),
     supabase.rpc("argos_fetch_mural_comunidade", { p_limit: MURAL_COMMUNITY_DEFAULT_LIMIT }),
+    supabase.rpc("argos_advance_phase_if_eligible", { p_user_id: userId }),
   ]);
 
   if (profileRes.error || !profileRes.data) {
@@ -99,10 +100,19 @@ async function fetchBundleViaParallel(
     return { ok: false as const, error: historicoRes.error ?? muralRes.error };
   }
 
+  const phasePayload = phaseRes.data as
+    | { phase_tier?: number; phase_one_progress?: unknown }
+    | null;
+  const profileRow: DashboardProfileRow = {
+    ...(profileRes.data as DashboardProfileRow),
+    phase_tier: phasePayload?.phase_tier ?? profileRes.data.phase_tier ?? 1,
+    phase_progress: phasePayload?.phase_one_progress ?? null,
+  };
+
   return {
     ok: true as const,
-    profile: mapProfileRowToClientProfile(profileRes.data as DashboardProfileRow),
-    profileRow: profileRes.data as DashboardProfileRow,
+    profile: mapProfileRowToClientProfile(profileRow),
+    profileRow,
     historico: historicoRes.data ?? [],
     muralPosts: mapCommunityMuralRowsToPosts((muralRes.data ?? []) as CommunityMuralRow[]),
   };

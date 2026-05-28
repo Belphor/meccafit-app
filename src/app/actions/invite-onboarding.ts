@@ -1,23 +1,13 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
 import { isDevInviteToken } from "@/lib/invite-config.server";
 import { PORTAL_COPY } from "@/lib/portal-copy";
+import { createServiceRoleClient } from "@/lib/supabase-admin.server";
 
 export type InviteValidation = {
   valid: boolean;
   message?: string;
 };
-
-function createInviteAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !serviceKey) return null;
-
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 export async function validateInviteToken(token: string): Promise<InviteValidation> {
   const normalized = token.trim();
@@ -29,7 +19,7 @@ export async function validateInviteToken(token: string): Promise<InviteValidati
     return { valid: true };
   }
 
-  const admin = createInviteAdminClient();
+  const admin = createServiceRoleClient();
   if (!admin) {
     return { valid: false, message: PORTAL_COPY.onboardingInviteUnavailable };
   }

@@ -1,6 +1,6 @@
 import { PORTAL_COPY } from "@/lib/portal-copy";
 
-export const ONBOARDING_PASSWORD_MIN = 6;
+export const ONBOARDING_PASSWORD_MIN = 8;
 
 export type PrimeiroAcessoInput = {
   email: string;
@@ -41,6 +41,10 @@ export function validatePrimeiroAcesso(input: PrimeiroAcessoInput): PrimeiroAces
 
   if (password.length < ONBOARDING_PASSWORD_MIN) {
     return { ok: false, message: PORTAL_COPY.onboardingPasswordMin };
+  }
+
+  if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+    return { ok: false, message: "Use senha com letras e números (mínimo 8 caracteres)." };
   }
 
   if (!fullName) {

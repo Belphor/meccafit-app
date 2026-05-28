@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * Motor visual de fases Fênix (Thermal Gravity + transmutação).
+ * NÃO é a Anima FENYXIA (concierge IA) — essa será implementada no fim do projeto.
+ */
+
 import {
   memo,
   useCallback,
@@ -35,14 +40,14 @@ import {
   type ThermalGravityState,
 } from "@/lib/thermal-gravity";
 
-export type AnimaFenixEngineProps = {
+export type PhoenixPhaseEngineProps = {
   userId: string;
   profileRow: Record<string, unknown> | null | undefined;
   liveSessionVtcKg?: number;
-  children: (ctx: AnimaFenixRuntimeContext) => ReactNode;
+  children: (ctx: PhoenixPhaseRuntimeContext) => ReactNode;
 };
 
-export type AnimaFenixRuntimeContext = {
+export type PhoenixPhaseRuntimeContext = {
   phaseTier: PhaseTier;
   phaseLabel: string;
   phaseOneProgress: PhaseOneProgress | null;
@@ -52,6 +57,11 @@ export type AnimaFenixRuntimeContext = {
   activePhaseLayout: PhaseLayoutCode | null;
   isThermallyDegraded: boolean;
   isThermalRestorationActive: boolean;
+  /** Fórum / UI degradada — inactivo térmico sem restauração na sessão. */
+  isForumInactive: boolean;
+  vtc30d: number;
+  sessionVtcToday: number;
+  isHydrated: boolean;
 };
 
 function readAcknowledgedTier(userId: string): PhaseTier | null {
@@ -84,12 +94,13 @@ function extractPhasePayload(profileRow: Record<string, unknown> | null | undefi
   return { phase_tier: phaseTier, phase_setup_at, phase_progress, custom_preferences };
 }
 
-export const AnimaFenixEngine = memo(function AnimaFenixEngine({
+export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
   userId,
   profileRow,
   liveSessionVtcKg = 0,
   children,
-}: AnimaFenixEngineProps) {
+}: PhoenixPhaseEngineProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
   const payload = useMemo(() => extractPhasePayload(profileRow), [profileRow]);
   const cssVars = useMemo(
     () => cosmeticPreferencesToCssVars(payload.custom_preferences),
@@ -101,9 +112,11 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
   const transmutationEvaluatedRef = useRef<number | null>(null);
   const restorationActiveRef = useRef(false);
 
-  const hasPhaseSignal =
-    profileRow != null &&
-    (profileRow.phase_tier !== undefined || profileRow.custom_preferences !== undefined);
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const hasPhaseSignal = profileRow != null;
 
   const serverThermal = useMemo(
     () => parseThermalGravityState(profileRow?.thermal_gravity),
@@ -111,18 +124,18 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
   );
 
   const thermalGravity = useMemo<ThermalGravityState | null>(() => {
-    if (!hasPhaseSignal) return null;
+    if (!hasPhaseSignal || !serverThermal) return null;
 
     const session_vtc_today = Math.max(
-      serverThermal?.session_vtc_today ?? 0,
+      serverThermal.session_vtc_today,
       Math.max(0, liveSessionVtcKg),
     );
 
     return evaluateThermalGravity(payload.phase_tier, {
-      vtc_30d: serverThermal?.vtc_30d ?? 0,
+      vtc_30d: serverThermal.vtc_30d,
       session_vtc_today,
     });
-  }, [hasPhaseSignal, liveSessionVtcKg, payload.phase_tier, serverThermal?.vtc_30d, serverThermal?.session_vtc_today]);
+  }, [hasPhaseSignal, liveSessionVtcKg, payload.phase_tier, serverThermal]);
 
   const phaseOneComplete = useMemo(() => {
     const progress = payload.phase_progress;
@@ -133,8 +146,9 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
   const isThermallyDegraded = thermalGravity?.is_degraded === true;
   const isThermalRestorationActive = thermalGravity?.restoration_active === true;
   const activePhaseLayout = thermalGravity?.active_phase_layout ?? null;
+  const isForumInactive = isThermallyDegraded && !isThermalRestorationActive;
 
-  const runtimeContext = useMemo<AnimaFenixRuntimeContext>(
+  const runtimeContext = useMemo<PhoenixPhaseRuntimeContext>(
     () => ({
       phaseTier: payload.phase_tier,
       phaseLabel: PHASE_TIER_LABELS[payload.phase_tier],
@@ -145,11 +159,18 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
       activePhaseLayout,
       isThermallyDegraded,
       isThermalRestorationActive,
+      isForumInactive,
+      vtc30d: thermalGravity?.vtc_30d ?? 0,
+      sessionVtcToday: thermalGravity?.session_vtc_today ?? Math.max(0, liveSessionVtcKg),
+      isHydrated,
     }),
     [
       activePhaseLayout,
+      isForumInactive,
+      isHydrated,
       isThermalRestorationActive,
       isThermallyDegraded,
+      liveSessionVtcKg,
       payload,
       phaseOneComplete,
       thermalGravity,
@@ -197,7 +218,7 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
   }, []);
 
   const shellStyle = useMemo(() => cssVars as CSSProperties, [cssVars]);
-  const layoutBlocked = isThermallyDegraded && !isThermalRestorationActive;
+  const layoutBlocked = isForumInactive;
 
   return (
     <div
@@ -275,3 +296,7 @@ export const AnimaFenixEngine = memo(function AnimaFenixEngine({
     </div>
   );
 });
+
+/** @deprecated Use PhoenixPhaseEngine — nome antigo confundia com Anima FENYXIA (IA). */
+export const AnimaFenixEngine = PhoenixPhaseEngine;
+export type AnimaFenixRuntimeContext = PhoenixPhaseRuntimeContext;

@@ -173,5 +173,60 @@ await check("peso invalido (99999) rejeitado na RPC", async () => {
   return Boolean(error);
 });
 
+await check("RPC argos_fetch_forum_brasa_viva responde para cliente", async () => {
+  const { data, error } = await cliente.client.rpc("argos_fetch_forum_brasa_viva", {
+    p_limit: 5,
+  });
+  return !error && Array.isArray(data);
+});
+
+await check("RPC argos_advance_phase_if_eligible responde para cliente", async () => {
+  const { data, error } = await cliente.client.rpc("argos_advance_phase_if_eligible", {
+    p_user_id: cliente.userId,
+  });
+  if (error || !data || typeof data !== "object") return false;
+  return typeof data.phase_tier === "number";
+});
+
+let forjador = null;
+try {
+  forjador = await signIn("forjador@meccafit.com", "senha123");
+} catch {
+  console.warn("forjador@ ausente — rode: node scripts/seed-test-users.mjs");
+}
+
+if (forjador) {
+  await check("forjador excluido da gamificacao (advance RPC)", async () => {
+    const { data, error } = await forjador.client.rpc("argos_advance_phase_if_eligible", {
+      p_user_id: forjador.userId,
+    });
+    if (error || !data || typeof data !== "object") return false;
+    return data.gamification_excluded === true && data.advanced === false;
+  });
+
+  await check("forjador bloqueado ao editar phase_tier", async () => {
+    const { error } = await forjador.client
+      .from("profiles")
+      .update({ phase_tier: 5 })
+      .eq("id", forjador.userId);
+    return Boolean(error);
+  });
+}
+
+await check("cliente nao pode consumir invite via RPC service-only", async () => {
+  const { error } = await cliente.client.rpc("argos_consume_invite_for_user", {
+    p_token: "probe-token",
+    p_user_id: cliente.userId,
+  });
+  return Boolean(error);
+});
+
+await check("cliente nao pode validar invite via RPC service-only", async () => {
+  const { error } = await cliente.client.rpc("argos_validate_invite_token", {
+    p_token: "probe-token",
+  });
+  return Boolean(error);
+});
+
 console.log(`\nARGOS SQL Verify: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 2 : 0);
