@@ -18,6 +18,7 @@ const MIGRATIONS = [
   "20260529100000_dual_track_training_architecture.sql",
   "20260530008000_final_consolidated_muscle_architecture.sql",
   "20260530100000_evolucao_aba3_sistema_geral_patch.sql",
+  "20260530110000_fix_workout_resolve_after_iris_drop.sql",
 ];
 
 function loadEnv() {

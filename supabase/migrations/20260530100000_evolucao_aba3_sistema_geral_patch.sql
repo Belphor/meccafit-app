@@ -26,6 +26,20 @@ DROP FUNCTION IF EXISTS public.muscle_normalize_subgrupo(text);
 DROP FUNCTION IF EXISTS public.evolucao_membros_prescritos_ativos(uuid);
 DROP FUNCTION IF EXISTS public.evolucao_cliente_tem_personal(uuid);
 
+CREATE OR REPLACE FUNCTION public.workout_resolve_split_via(p_musculo public.subgrupo_muscular)
+RETURNS public.workout_split_via
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE
+    WHEN p_musculo = 'pernas'::public.subgrupo_muscular THEN 'via_b'::public.workout_split_via
+    ELSE 'via_a'::public.workout_split_via
+  END;
+$$;
+
+COMMENT ON FUNCTION public.workout_resolve_split_via(public.subgrupo_muscular) IS
+  'Via A = Membro Superior · Via B = Pernas — sem dependência de catálogo IRIS.';
+
 -- ---------------------------------------------------------------------------
 -- 1. Enum · 4 membros soberanos
 -- ---------------------------------------------------------------------------

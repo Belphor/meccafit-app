@@ -20,6 +20,17 @@ DROP FUNCTION IF EXISTS public.muscle_fetch_architecture_catalog();
 DROP FUNCTION IF EXISTS public.muscle_resolve_ui_route(text);
 DROP FUNCTION IF EXISTS public.muscle_normalize_subgrupo(text);
 
+CREATE OR REPLACE FUNCTION public.workout_resolve_split_via(p_musculo public.subgrupo_muscular)
+RETURNS public.workout_split_via
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE
+    WHEN p_musculo = 'pernas'::public.subgrupo_muscular THEN 'via_b'::public.workout_split_via
+    ELSE 'via_a'::public.workout_split_via
+  END;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- 1. Enum soberano — 4 Grandes Membros Principais
 -- ---------------------------------------------------------------------------
