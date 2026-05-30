@@ -19,6 +19,9 @@ const MIGRATIONS = [
   "20260530008000_final_consolidated_muscle_architecture.sql",
   "20260530100000_evolucao_aba3_sistema_geral_patch.sql",
   "20260530110000_fix_workout_resolve_after_iris_drop.sql",
+  "20260530120000_restore_estase_gatilho_muscular.sql",
+  "20260530121000_fix_obter_calor_ambiguous.sql",
+  "20260530122000_fix_obter_calor_volatile.sql",
 ];
 
 function loadEnv() {

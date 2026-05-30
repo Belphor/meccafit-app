@@ -464,7 +464,7 @@ RETURNS TABLE (
   is_frozen boolean
 )
 LANGUAGE plpgsql
-STABLE
+VOLATILE
 SECURITY DEFINER
 SET search_path = public
 AS $$
