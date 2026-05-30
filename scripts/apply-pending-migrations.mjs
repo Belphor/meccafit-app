@@ -17,6 +17,7 @@ const MIGRATIONS = [
   "20260529000000_split_workout_architecture.sql",
   "20260529100000_dual_track_training_architecture.sql",
   "20260530008000_final_consolidated_muscle_architecture.sql",
+  "20260530100000_evolucao_aba3_sistema_geral_patch.sql",
 ];
 
 function loadEnv() {

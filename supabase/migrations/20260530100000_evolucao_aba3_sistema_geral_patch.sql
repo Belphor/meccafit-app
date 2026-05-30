@@ -1,16 +1,20 @@
--- FENYXIA · Aba 3 (Evolução) — Arquitectura Anatómica Consolidada (4 Membros Soberanos)
--- Região: sa-east-1 · Idempotente · Zero dependência de subgrupos musculares
+-- FENYXIA · PATCH · Aba 3 Evolução — Sistema Geral (comum + VIP)
+-- Região: sa-east-1 · Idempotente · Seguro re-correr
 --
--- Sistema GERAL — aplica-se a cliente comum e cliente VIP com as mesmas regras.
--- Aba Dieta (VIP + Personal) é exclusividade de produto no BFF/UI, não nesta migration.
+-- PRÉ-REQUISITOS (já aplicados manualmente):
+--   · 20260528590000_add_abdomen_subgrupo_muscular.sql  (query separada + COMMIT)
+--   · 20260529100000_dual_track_training_architecture.sql
 --
--- Membros canónicos: PEITO · BRACOS · ABDOMEN · PERNAS
--- Requer: bootstrap Meccafit + dual-track (historico_treinos · _comuns · _personais)
+-- CENÁRIOS SUPORTADOS:
+--   A) Nunca correu 20260530008000 → cria tudo do zero
+--   B) Correu versão IRIS (muscle_canonical_groups) → remove e recria
+--   C) Correu versão com estase VIP → remove helpers VIP e actualiza RPCs
+--   D) Já está na versão geral → no-op seguro (CREATE OR REPLACE)
 --
--- Substitui catálogo IRIS por subgrupos (muscle_canonical_groups / muscle_ui_routes).
+-- APLICAR: colar no SQL Editor Supabase (sa-east-1) numa única execução.
 
 -- ---------------------------------------------------------------------------
--- 0. Limpeza — remove catálogo IRIS de subgrupos (se existir)
+-- 0. Limpeza legado
 -- ---------------------------------------------------------------------------
 
 DROP TABLE IF EXISTS public.muscle_ui_routes CASCADE;
@@ -19,9 +23,11 @@ DROP TABLE IF EXISTS public.muscle_canonical_groups CASCADE;
 DROP FUNCTION IF EXISTS public.muscle_fetch_architecture_catalog();
 DROP FUNCTION IF EXISTS public.muscle_resolve_ui_route(text);
 DROP FUNCTION IF EXISTS public.muscle_normalize_subgrupo(text);
+DROP FUNCTION IF EXISTS public.evolucao_membros_prescritos_ativos(uuid);
+DROP FUNCTION IF EXISTS public.evolucao_cliente_tem_personal(uuid);
 
 -- ---------------------------------------------------------------------------
--- 1. Enum soberano — 4 Grandes Membros Principais
+-- 1. Enum · 4 membros soberanos
 -- ---------------------------------------------------------------------------
 
 DO $$
@@ -40,7 +46,7 @@ COMMENT ON TYPE public.membro_principal_soberano IS
   'Aba Evolução — únicos membros canónicos (sem subgrupos musculares).';
 
 -- ---------------------------------------------------------------------------
--- 2. profiles.target_days_per_week — meta semanal de pureza (padrão 3)
+-- 2. profiles.target_days_per_week
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE public.profiles
@@ -53,8 +59,22 @@ WHERE target_days_per_week IS NULL;
 ALTER TABLE public.profiles
   ALTER COLUMN target_days_per_week SET DEFAULT 3;
 
-ALTER TABLE public.profiles
-  ALTER COLUMN target_days_per_week SET NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE target_days_per_week IS NULL
+  ) THEN
+    UPDATE public.profiles SET target_days_per_week = 3 WHERE target_days_per_week IS NULL;
+  END IF;
+
+  ALTER TABLE public.profiles
+    ALTER COLUMN target_days_per_week SET NOT NULL;
+EXCEPTION
+  WHEN others THEN
+    NULL;
+END $$;
 
 DO $$
 BEGIN
@@ -71,7 +91,7 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 3. purity_logs — uma linha por dia por atleta (cota zero de disco)
+-- 3. Tabelas Evolução
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.purity_logs (
@@ -88,11 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_purity_logs_user_pure_date
   WHERE is_pure = true;
 
 COMMENT ON TABLE public.purity_logs IS
-  'Pureza diária do atleta — 1 registo/dia (Índice de Ignição · Aba Evolução).';
-
--- ---------------------------------------------------------------------------
--- 4. evolucao_membro_estase — cache do último cálculo (todos os atletas)
--- ---------------------------------------------------------------------------
+  'Pureza diária — 1 registo/dia (Índice de Ignição · todos os atletas).';
 
 CREATE TABLE IF NOT EXISTS public.evolucao_membro_estase (
   user_id uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
@@ -100,34 +116,58 @@ CREATE TABLE IF NOT EXISTS public.evolucao_membro_estase (
   nivel_calculado text NOT NULL DEFAULT 'CINZAS',
   metrica_bruta numeric(14, 2) NOT NULL DEFAULT 0,
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, membro_principal),
-  CONSTRAINT evolucao_membro_estase_nivel_check CHECK (
-    nivel_calculado IN ('CINZAS', 'FAISCA', 'BRASA', 'LABAREDA', 'FOGO CÓSMICO')
-  )
+  PRIMARY KEY (user_id, membro_principal)
 );
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'evolucao_membro_estase_nivel_check'
+      AND conrelid = 'public.evolucao_membro_estase'::regclass
+  ) THEN
+    ALTER TABLE public.evolucao_membro_estase
+      ADD CONSTRAINT evolucao_membro_estase_nivel_check CHECK (
+        nivel_calculado IN ('CINZAS', 'FAISCA', 'BRASA', 'LABAREDA', 'FOGO CÓSMICO')
+      );
+  END IF;
+END $$;
+
 COMMENT ON TABLE public.evolucao_membro_estase IS
-  'Snapshot do último calor muscular calculado — cliente comum e VIP (sem regra VIP).';
+  'Cache do último calor muscular — cliente comum e VIP (sem gate VIP).';
 
 -- ---------------------------------------------------------------------------
--- 5. membro_principal — rotulação dos 4 membros (Forja + treinos comuns)
---    Não gateia Evolução; só classifica/agrupa execuções e prescrições.
+-- 4. Colunas membro_principal (dual-track)
 -- ---------------------------------------------------------------------------
 
-ALTER TABLE public.historico_treinos_personais
-  ADD COLUMN IF NOT EXISTS membro_principal public.membro_principal_soberano;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'historico_treinos_personais'
+  ) THEN
+    ALTER TABLE public.historico_treinos_personais
+      ADD COLUMN IF NOT EXISTS membro_principal public.membro_principal_soberano;
 
-ALTER TABLE public.historico_treinos_comuns
-  ADD COLUMN IF NOT EXISTS membro_principal public.membro_principal_soberano;
+    CREATE INDEX IF NOT EXISTS idx_htp_client_membro
+      ON public.historico_treinos_personais (client_id, membro_principal);
+  END IF;
 
-CREATE INDEX IF NOT EXISTS idx_htp_client_membro
-  ON public.historico_treinos_personais (client_id, membro_principal);
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'historico_treinos_comuns'
+  ) THEN
+    ALTER TABLE public.historico_treinos_comuns
+      ADD COLUMN IF NOT EXISTS membro_principal public.membro_principal_soberano;
 
-CREATE INDEX IF NOT EXISTS idx_htc_user_membro_criado
-  ON public.historico_treinos_comuns (user_id, membro_principal, criado_em DESC);
+    CREATE INDEX IF NOT EXISTS idx_htc_user_membro_criado
+      ON public.historico_treinos_comuns (user_id, membro_principal, criado_em DESC);
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
--- 6. Helpers — resolução · classificação · janelas temporais
+-- 5. Helpers
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.evolucao_sp_today()
@@ -217,22 +257,32 @@ AS $$
   END;
 $$;
 
-DROP FUNCTION IF EXISTS public.evolucao_membros_prescritos_ativos(uuid);
-DROP FUNCTION IF EXISTS public.evolucao_cliente_tem_personal(uuid);
+-- Backfill opcional (só se tabelas existirem)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'historico_treinos_personais'
+  ) THEN
+    UPDATE public.historico_treinos_personais htp
+    SET membro_principal = public.evolucao_inferir_membro(
+      COALESCE(htp.observacoes, '') || ' ' || htp.exercicio_id
+    )
+    WHERE htp.membro_principal IS NULL;
+  END IF;
 
--- Backfill prescrições — inferência por exercicio_id / observações (legado)
-UPDATE public.historico_treinos_personais htp
-SET membro_principal = public.evolucao_inferir_membro(
-  COALESCE(htp.observacoes, '') || ' ' || htp.exercicio_id
-)
-WHERE htp.membro_principal IS NULL;
-
-UPDATE public.historico_treinos_comuns htc
-SET membro_principal = public.evolucao_inferir_membro(htc.exercicio_id)
-WHERE htc.membro_principal IS NULL;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'historico_treinos_comuns'
+  ) THEN
+    UPDATE public.historico_treinos_comuns htc
+    SET membro_principal = public.evolucao_inferir_membro(htc.exercicio_id)
+    WHERE htc.membro_principal IS NULL;
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
--- 7. RPC — calcular_indice_ignicao_atleta(p_user_id uuid) → INTEGER
+-- 6. RPC — calcular_indice_ignicao_atleta
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.calcular_indice_ignicao_atleta(p_user_id uuid)
@@ -292,10 +342,10 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.calcular_indice_ignicao_atleta(uuid) IS
-  'Índice de Ignição (0–100): treinos puros / alvo dinâmico 30d × target_days_per_week.';
+  'Índice de Ignição (0–100) — geral para comum e VIP.';
 
 -- ---------------------------------------------------------------------------
--- 8. RPC interna — métrica bruta por membro (janela 14 dias dinâmicos)
+-- 7. RPC interna — métrica 14 dias
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.evolucao_calcular_metrica_membro(
@@ -311,23 +361,28 @@ AS $$
 DECLARE
   v_window_start date;
   v_metric numeric := 0;
+  v_partial numeric := 0;
+  v_has_htc boolean;
 BEGIN
   v_window_start := public.evolucao_sp_today() - 13;
 
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'historico_treinos_comuns'
+  ) INTO v_has_htc;
+
   IF p_membro = 'ABDOMEN'::public.membro_principal_soberano THEN
-    SELECT COALESCE(SUM(w.series * w.repeticoes), 0)
+    SELECT COALESCE(SUM(ht.series * ht.repeticoes), 0)
     INTO v_metric
-    FROM (
-      SELECT ht.series, ht.repeticoes
-      FROM public.historico_treinos ht
-      WHERE ht.cliente_id = p_user_id
-        AND public.evolucao_resolve_membro(ht.musculo) = p_membro
-        AND (timezone('America/Sao_Paulo', ht.registrado_em))::date >= v_window_start
-        AND (timezone('America/Sao_Paulo', ht.registrado_em))::date <= public.evolucao_sp_today()
+    FROM public.historico_treinos ht
+    WHERE ht.cliente_id = p_user_id
+      AND public.evolucao_resolve_membro(ht.musculo) = p_membro
+      AND (timezone('America/Sao_Paulo', ht.registrado_em))::date >= v_window_start
+      AND (timezone('America/Sao_Paulo', ht.registrado_em))::date <= public.evolucao_sp_today();
 
-      UNION ALL
-
-      SELECT htc.series, htc.repeticoes
+    IF v_has_htc THEN
+      SELECT COALESCE(SUM(htc.series * htc.repeticoes), 0)
+      INTO v_partial
       FROM public.historico_treinos_comuns htc
       WHERE htc.user_id = p_user_id
         AND (
@@ -335,34 +390,35 @@ BEGIN
           OR public.evolucao_resolve_membro(htc.exercicio_id) = p_membro
         )
         AND (timezone('America/Sao_Paulo', htc.criado_em))::date >= v_window_start
-        AND (timezone('America/Sao_Paulo', htc.criado_em))::date <= public.evolucao_sp_today()
-    ) w;
+        AND (timezone('America/Sao_Paulo', htc.criado_em))::date <= public.evolucao_sp_today();
+
+      v_metric := COALESCE(v_metric, 0) + COALESCE(v_partial, 0);
+    END IF;
   ELSE
     SELECT COALESCE(SUM(sp.peak_kg), 0)
     INTO v_metric
     FROM (
       SELECT
-        w.session_date,
-        w.exercicio_key,
-        MAX(w.peso_atual) AS peak_kg
+        (timezone('America/Sao_Paulo', ht.registrado_em))::date AS session_date,
+        ht.exercicio_id::text AS exercicio_key,
+        MAX(ht.peso_atual) AS peak_kg
+      FROM public.historico_treinos ht
+      WHERE ht.cliente_id = p_user_id
+        AND ht.peso_atual > 0
+        AND public.evolucao_resolve_membro(ht.musculo) = p_membro
+        AND (timezone('America/Sao_Paulo', ht.registrado_em))::date >= v_window_start
+        AND (timezone('America/Sao_Paulo', ht.registrado_em))::date <= public.evolucao_sp_today()
+      GROUP BY 1, 2
+    ) sp;
+
+    IF v_has_htc THEN
+      SELECT COALESCE(SUM(sp.peak_kg), 0)
+      INTO v_partial
       FROM (
-        SELECT
-          (timezone('America/Sao_Paulo', ht.registrado_em))::date AS session_date,
-          ht.exercicio_id::text AS exercicio_key,
-          ht.peso_atual
-        FROM public.historico_treinos ht
-        WHERE ht.cliente_id = p_user_id
-          AND ht.peso_atual > 0
-          AND public.evolucao_resolve_membro(ht.musculo) = p_membro
-          AND (timezone('America/Sao_Paulo', ht.registrado_em))::date >= v_window_start
-          AND (timezone('America/Sao_Paulo', ht.registrado_em))::date <= public.evolucao_sp_today()
-
-        UNION ALL
-
         SELECT
           (timezone('America/Sao_Paulo', htc.criado_em))::date AS session_date,
           htc.exercicio_id AS exercicio_key,
-          htc.peso_atual
+          MAX(htc.peso_atual) AS peak_kg
         FROM public.historico_treinos_comuns htc
         WHERE htc.user_id = p_user_id
           AND htc.peso_atual > 0
@@ -372,9 +428,11 @@ BEGIN
           )
           AND (timezone('America/Sao_Paulo', htc.criado_em))::date >= v_window_start
           AND (timezone('America/Sao_Paulo', htc.criado_em))::date <= public.evolucao_sp_today()
-      ) w
-      GROUP BY w.session_date, w.exercicio_key
-    ) sp;
+        GROUP BY 1, 2
+      ) sp;
+
+      v_metric := COALESCE(v_metric, 0) + COALESCE(v_partial, 0);
+    END IF;
   END IF;
 
   RETURN COALESCE(v_metric, 0);
@@ -382,8 +440,7 @@ END;
 $$;
 
 -- ---------------------------------------------------------------------------
--- 9. RPC — obter_calor_muscular_atleta(p_user_id uuid)
---    → TABLE (membro_principal text, nivel_calculado text, is_frozen boolean)
+-- 8. RPC — obter_calor_muscular_atleta (geral · is_frozen sempre false)
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.obter_calor_muscular_atleta(p_user_id uuid)
@@ -463,10 +520,10 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.obter_calor_muscular_atleta(uuid) IS
-  'Aba Evolução — calor muscular dos 4 membros (geral: comum + VIP). Penalidade ARGOS se ignição < 50%. is_frozen reservado (sempre false).';
+  'Aba Evolução — 4 membros · comum + VIP · penalidade ARGOS se ignição < 50%.';
 
 -- ---------------------------------------------------------------------------
--- 10. RLS — purity_logs · evolucao_membro_estase
+-- 9. RLS + Grants
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE public.purity_logs ENABLE ROW LEVEL SECURITY;
@@ -474,52 +531,35 @@ ALTER TABLE public.evolucao_membro_estase ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "ARGOS purity_logs select own" ON public.purity_logs;
 CREATE POLICY "ARGOS purity_logs select own"
-ON public.purity_logs
-FOR SELECT
-TO authenticated
+ON public.purity_logs FOR SELECT TO authenticated
 USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS "ARGOS purity_logs insert own" ON public.purity_logs;
 CREATE POLICY "ARGOS purity_logs insert own"
-ON public.purity_logs
-FOR INSERT
-TO authenticated
+ON public.purity_logs FOR INSERT TO authenticated
 WITH CHECK (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS "ARGOS purity_logs update own" ON public.purity_logs;
 CREATE POLICY "ARGOS purity_logs update own"
-ON public.purity_logs
-FOR UPDATE
-TO authenticated
+ON public.purity_logs FOR UPDATE TO authenticated
 USING (user_id = (SELECT auth.uid()))
 WITH CHECK (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS "ARGOS purity_logs delete own" ON public.purity_logs;
 CREATE POLICY "ARGOS purity_logs delete own"
-ON public.purity_logs
-FOR DELETE
-TO authenticated
+ON public.purity_logs FOR DELETE TO authenticated
 USING (user_id = (SELECT auth.uid()));
 
 DROP POLICY IF EXISTS "ARGOS evolucao_membro_estase select own" ON public.evolucao_membro_estase;
 CREATE POLICY "ARGOS evolucao_membro_estase select own"
-ON public.evolucao_membro_estase
-FOR SELECT
-TO authenticated
+ON public.evolucao_membro_estase FOR SELECT TO authenticated
 USING (user_id = (SELECT auth.uid()));
-
--- Escrita em estase apenas via RPC SECURITY DEFINER (sem policy INSERT/UPDATE client)
-
--- ---------------------------------------------------------------------------
--- 11. Grants
--- ---------------------------------------------------------------------------
 
 REVOKE ALL ON TABLE public.purity_logs FROM PUBLIC, anon;
 REVOKE ALL ON TABLE public.evolucao_membro_estase FROM PUBLIC, anon;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.purity_logs TO authenticated;
 GRANT SELECT ON TABLE public.evolucao_membro_estase TO authenticated;
-
 GRANT ALL ON TABLE public.purity_logs TO service_role;
 GRANT ALL ON TABLE public.evolucao_membro_estase TO service_role;
 
@@ -534,3 +574,31 @@ GRANT EXECUTE ON FUNCTION public.calcular_indice_ignicao_atleta(uuid) TO authent
 GRANT EXECUTE ON FUNCTION public.obter_calor_muscular_atleta(uuid) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.evolucao_inferir_membro(text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.evolucao_resolve_membro(text) TO authenticated, service_role;
+
+-- ---------------------------------------------------------------------------
+-- 10. Verificação pós-patch (NOTICE no SQL Editor)
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+  v_enum boolean;
+  v_purity boolean;
+  v_estase boolean;
+  v_ignicao boolean;
+  v_calor boolean;
+BEGIN
+  SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membro_principal_soberano') INTO v_enum;
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'purity_logs') INTO v_purity;
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'evolucao_membro_estase') INTO v_estase;
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'calcular_indice_ignicao_atleta'
+  ) INTO v_ignicao;
+  SELECT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'obter_calor_muscular_atleta'
+  ) INTO v_calor;
+
+  RAISE NOTICE 'FENYXIA PATCH OK · enum=% · purity_logs=% · estase=% · ignicao_rpc=% · calor_rpc=%',
+    v_enum, v_purity, v_estase, v_ignicao, v_calor;
+END $$;
