@@ -16,7 +16,7 @@ export type BodyRegionSubtitle = "Membro Superior" | "Membro Inferior" | "Core";
 const BODY_REGION_BY_SUBGROUP_ID: Record<string, BodyRegionSubtitle> = {
   "peitoral-superior": "Membro Superior",
   "membro-inferior": "Membro Inferior",
-  core: "Core",
+  core: "Membro Superior",
 };
 
 export function resolveBodyRegionSubtitle(
@@ -33,8 +33,8 @@ export function resolveBodyRegionSubtitle(
   if (normalized.includes("inferior") || normalized.includes("perna")) {
     return "Membro Inferior";
   }
-  if (normalized.includes("core")) {
-    return "Core";
+  if (normalized.includes("core") || normalized.includes("abdome") || normalized.includes("abdômen")) {
+    return "Membro Superior";
   }
 
   return "Membro Superior";
@@ -169,9 +169,9 @@ export const subgroupsCatalog: MuscleSubgroup[] = [
     id: "core",
     slug: "core",
     numericRouteId: 3,
-    name: "Core",
-    monumentalTitle: "Core",
-    bodyRegionSubtitle: "Core",
+    name: "Abdômen",
+    monumentalTitle: "Abdômen",
+    bodyRegionSubtitle: "Membro Superior",
     exercises: [],
   },
 ];

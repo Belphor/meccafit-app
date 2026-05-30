@@ -23,6 +23,13 @@ import type {
   MuscleSubgroup,
 } from "@/lib/mock-data";
 import type { Database, Enums } from "@/types/database.types";
+import {
+  DEFAULT_TRAINING_TRACK,
+  parseHasPersonalBondFromBundle,
+  parseTrainingTrackFromBundle,
+  type TrainingTrackState,
+} from "@/lib/training-track";
+import { fetchTrainingTrackForUser } from "@/lib/training-track.server";
 
 export type DashboardProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
@@ -371,6 +378,8 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
     muralPosts: MuralPost[];
     musculo: Enums<"subgrupo_muscular">;
     historico: HistoricoTreinoRow[];
+    trainingTrack: TrainingTrackState;
+    hasPersonalBond: boolean;
   }>
 > {
   const query = subgroupParam ? `?subgrupo=${encodeURIComponent(subgroupParam)}` : "";
@@ -407,13 +416,23 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
     muralPosts: MuralPost[];
     musculo: Enums<"subgrupo_muscular">;
     historico?: HistoricoTreinoRow[];
+    trainingTrack?: TrainingTrackState;
+    hasPersonalBond?: boolean;
   };
+
+  const trainingTrack = parseTrainingTrackFromBundle(payload.trainingTrack);
+  const hasPersonalBond = parseHasPersonalBondFromBundle(
+    payload.hasPersonalBond,
+    trainingTrack,
+  );
 
   return {
     data: {
       ...payload,
       profileRow: payload.profileRow ?? null,
       historico: payload.historico ?? [],
+      trainingTrack,
+      hasPersonalBond,
     },
     error: null,
   };
@@ -427,6 +446,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
     muralPosts: MuralPost[];
     musculo: Enums<"subgrupo_muscular">;
     historico: HistoricoTreinoRow[];
+    trainingTrack: TrainingTrackState;
+    hasPersonalBond: boolean;
   }>
 > {
   const session = await getActiveSupabaseSession();
@@ -442,6 +463,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
 
   const baseSubgroup = resolveSubgroupFromParam(subgroupParam);
   const musculo = subgroupIdToMusculo(baseSubgroup.id);
+  const trainingTrack = await fetchTrainingTrackForUser(supabase, session.user.id);
+  const hasPersonalBond = Boolean(trainingTrack.bond);
 
   const rpcResult = await withSupabaseRlsGuard(async () => {
     const { data, error } = await supabase.rpc("fetch_dashboard_bundle", {
@@ -478,6 +501,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
           muralPosts: mapCommunityMuralRowsToPosts(bundle.mural ?? []),
           musculo,
           historico,
+          trainingTrack,
+          hasPersonalBond,
         },
         error: null,
       };
@@ -526,6 +551,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       muralPosts: muralResult.data ?? [],
       musculo,
       historico,
+      trainingTrack,
+      hasPersonalBond,
     },
     error: null,
   };
@@ -537,6 +564,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
     profileRow: Record<string, unknown> | null;
     subgroup: MuscleSubgroup;
     muralPosts: MuralPost[];
+    trainingTrack: TrainingTrackState;
+    hasPersonalBond: boolean;
   }>
 > {
   const session = await getActiveSupabaseSession();
@@ -560,6 +589,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
         profileRow: cached.profileRow ?? null,
         subgroup: applyHistoricoToSubgroup(baseSubgroup, cached.historico),
         muralPosts: cached.muralPosts,
+        trainingTrack: cached.trainingTrack ?? DEFAULT_TRAINING_TRACK,
+        hasPersonalBond: cached.hasPersonalBond ?? Boolean(cached.trainingTrack?.bond),
       },
       error: null,
     };
@@ -581,6 +612,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
     historico: resolved.data.historico,
     muralPosts: resolved.data.muralPosts,
     musculo: resolved.data.musculo,
+    trainingTrack: resolved.data.trainingTrack,
+    hasPersonalBond: resolved.data.hasPersonalBond,
     fetchedAt: Date.now(),
   });
 
@@ -590,6 +623,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
       profileRow: resolved.data.profileRow,
       subgroup: resolved.data.subgroup,
       muralPosts: resolved.data.muralPosts,
+      trainingTrack: resolved.data.trainingTrack,
+      hasPersonalBond: resolved.data.hasPersonalBond,
     },
     error: null,
   };

@@ -86,7 +86,7 @@ export function ForumBrasaVivaView({ userId, phase }: ForumBrasaVivaViewProps) {
           Fórum Brasa-Viva
         </h2>
         <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
-          Tópicos de ascensão da linhagem. Cada card reflete a fase do autor — Cinza, Faísca,
+          Tópicos de ascensão da linhagem. Cada card reflete a fase do autor — Cinza, Brasa,
           Labareda ou Magma. Forjadores soberanos observam, mas não competem neste fórum.
         </p>
 

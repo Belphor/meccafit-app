@@ -1,6 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { memo } from "react";
+import {
+  FORUM_PHASE_BLUR_DATA_URL,
+  FORUM_PHASE_BADGE_SIZE_PX,
+  resolveForumPhaseAssetPath,
+  toForumThermalPhase,
+} from "@/features/forum-brasa-viva/forum-phase-assets";
 import { FORUM_PHASE_CARD_STYLES } from "@/features/forum-brasa-viva/forum-phase-styles";
 import type { ForumBrasaVivaTopic } from "@/features/forum-brasa-viva/types";
 import {
@@ -25,7 +32,10 @@ function formatPostedAt(iso: string): string {
 }
 
 export const ForumPostCard = memo(function ForumPostCard({ topic }: ForumPostCardProps) {
-  const phaseStyle = FORUM_PHASE_CARD_STYLES[topic.authorCardPhase];
+  const phase = topic.authorCardPhase;
+  const phaseStyle = FORUM_PHASE_CARD_STYLES[phase];
+  const phaseAssetPath = resolveForumPhaseAssetPath(phase);
+  const thermalPhase = toForumThermalPhase(phase);
 
   return (
     <article
@@ -35,23 +45,37 @@ export const ForumPostCard = memo(function ForumPostCard({ topic }: ForumPostCar
         phaseStyle.gradientClass,
         phaseStyle.glowClass,
       ].join(" ")}
-      data-author-phase={topic.authorCardPhase}
+      data-author-phase={phase}
+      data-author-thermal-phase={thermalPhase}
       data-author-tier={topic.authorPhaseTier}
     >
       <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <span
-            className={[
-              "inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em]",
-              phaseStyle.chipClass,
-            ].join(" ")}
-          >
-            Fase {phaseStyle.label}
-          </span>
-          <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-amber-200/85">
-            {topic.authorName}
-            {topic.authorLineage ? ` · ${topic.authorLineage}` : ""}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <Image
+            src={phaseAssetPath}
+            alt={`Badge fase térmica ${phaseStyle.label}`}
+            width={FORUM_PHASE_BADGE_SIZE_PX}
+            height={FORUM_PHASE_BADGE_SIZE_PX}
+            sizes={`${FORUM_PHASE_BADGE_SIZE_PX}px`}
+            placeholder="blur"
+            blurDataURL={FORUM_PHASE_BLUR_DATA_URL[phase]}
+            className="size-12 shrink-0 object-contain"
+            priority={false}
+          />
+          <div className="min-w-0">
+            <span
+              className={[
+                "inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em]",
+                phaseStyle.chipClass,
+              ].join(" ")}
+            >
+              Fase {phaseStyle.label}
+            </span>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-amber-200/85">
+              {topic.authorName}
+              {topic.authorLineage ? ` · ${topic.authorLineage}` : ""}
+            </p>
+          </div>
         </div>
         <time
           className="text-[10px] uppercase tracking-[0.14em] text-neutral-500"

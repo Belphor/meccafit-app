@@ -1,7 +1,10 @@
 import type { PhaseTier } from "@/lib/dashboard-config";
 
-/** Fases visuais IRIS dos cards do fórum (4 níveis de fogo). */
-export type ForumCardPhase = "cinza" | "faisca" | "labareda" | "magma";
+/** Fases térmicas IRIS — nomenclatura oficial (assets em /public/assets/forum/). */
+export type ForumThermalPhase = "CINZA" | "BRASA" | "LABAREDA" | "MAGMA";
+
+/** Slug da fase (nome do ficheiro PNG, minúsculas). */
+export type ForumCardPhase = Lowercase<ForumThermalPhase>;
 
 export type ForumBrasaVivaTopic = {
   id: string;

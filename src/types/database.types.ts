@@ -188,6 +188,87 @@ export type Database = {
           },
         ];
       };
+      forger_client_bonds: {
+        Row: {
+          id: string;
+          forger_id: string;
+          client_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          forger_id: string;
+          client_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          forger_id?: string;
+          client_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      mecca_global_metrics: {
+        Row: {
+          id: string;
+          total_weight_lifted: number;
+          active_streaks_count: number;
+          furnace_temperature: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          total_weight_lifted?: number;
+          active_streaks_count?: number;
+          furnace_temperature?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          total_weight_lifted?: number;
+          active_streaks_count?: number;
+          furnace_temperature?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      historico_treinos_personais: {
+        Row: {
+          id: string;
+          client_id: string;
+          forger_id: string;
+          exercicio_id: string;
+          peso_prescrito: number;
+          repeticoes_alvo: number;
+          series_alvo: number;
+          observacoes: string | null;
+          criado_em: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          forger_id: string;
+          exercicio_id: string;
+          peso_prescrito: number;
+          repeticoes_alvo: number;
+          series_alvo: number;
+          observacoes?: string | null;
+          criado_em?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          forger_id?: string;
+          exercicio_id?: string;
+          peso_prescrito?: number;
+          repeticoes_alvo?: number;
+          series_alvo?: number;
+          observacoes?: string | null;
+          criado_em?: string;
+        };
+        Relationships: [];
+      };
       historico_treinos: {
         Row: {
           id: number;
@@ -447,7 +528,7 @@ export type Database = {
     Enums: {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
       estagio_forca: "cinzas" | "faisca" | "brasa" | "labareda" | "fogo_cosmico_sagrado";
-      subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "pernas";
+      subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "abdomen" | "pernas";
     };
     CompositeTypes: Record<string, never>;
   };

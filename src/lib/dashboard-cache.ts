@@ -1,6 +1,8 @@
 import type { Enums } from "@/types/database.types";
 import type { HistoricoTreinoRow } from "@/lib/dashboard-data";
 import type { ClientProfile, MuralPost } from "@/lib/mock-data";
+import type { TrainingTrackState } from "@/lib/training-track";
+import { DEFAULT_TRAINING_TRACK } from "@/lib/training-track";
 
 export const DASHBOARD_CACHE_TTL_MS = 45_000;
 export const DASHBOARD_CACHE_PREFIX = "meccafit:dashboard:bundle:";
@@ -11,6 +13,8 @@ export type DashboardBundleCachePayload = {
   historico: HistoricoTreinoRow[];
   muralPosts: MuralPost[];
   musculo: Enums<"subgrupo_muscular">;
+  trainingTrack: TrainingTrackState;
+  hasPersonalBond: boolean;
   fetchedAt: number;
 };
 
@@ -34,6 +38,12 @@ function readSessionStorage(key: string): DashboardBundleCachePayload | null {
 
     const parsed = JSON.parse(raw) as DashboardBundleCachePayload;
     if (!parsed?.fetchedAt || !parsed.profile) return null;
+    if (!parsed.trainingTrack) {
+      parsed.trainingTrack = DEFAULT_TRAINING_TRACK;
+    }
+    if (typeof parsed.hasPersonalBond !== "boolean") {
+      parsed.hasPersonalBond = Boolean(parsed.trainingTrack.bond);
+    }
     if (Date.now() - parsed.fetchedAt > DASHBOARD_CACHE_TTL_MS) {
       window.sessionStorage.removeItem(key);
       return null;

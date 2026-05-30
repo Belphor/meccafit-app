@@ -15,6 +15,7 @@ import {
 } from "@/app/actions/forge-ignition";
 import { requestForjadorCadastroOtp } from "@/app/actions/forge-registration";
 import { PortalEmberCurtain } from "@/components/portal/PortalEmberCurtain";
+import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
 import { PrimeiroAcessoFenyxiaPanel } from "@/components/portal/PrimeiroAcessoFenyxiaPanel";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { SacredPhoenixLogo, type PhoenixTone } from "@/components/SacredPhoenixLogo";
@@ -36,7 +37,7 @@ import {
   PORTAL_SHELL,
   type PortalTone,
 } from "@/lib/portal-theme";
-import { resolveClienteDashboardRoute } from "@/lib/internal-routes";
+import { resolveClienteDashboardRoute, resolvePostLoginRoute } from "@/lib/internal-routes";
 import { supabase } from "@/lib/supabase";
 
 type PortalMode = "login_cliente" | "primeiro_acesso" | "ignicao_forja" | "cadastro_forja";
@@ -45,6 +46,11 @@ type PortalStatus = "idle" | "loading" | "success" | "error";
 type PortalFeedback = {
   status: PortalStatus;
   message: string;
+};
+
+type PortalToastState = {
+  message: string;
+  variant: PortalToastVariant;
 };
 
 const EMPTY_ONBOARDING: PrimeiroAcessoInput = {
@@ -85,6 +91,22 @@ export default function PortalDeBrasaPage() {
     status: "idle",
     message: inviteToken ? PORTAL_COPY.onboardingSubtitle : PORTAL_COPY.loginIdle,
   });
+  const [toast, setToast] = useState<PortalToastState | null>(null);
+
+  const dismissToast = useCallback(() => {
+    setToast(null);
+  }, []);
+
+  const showPortalToast = useCallback((message: string, variant: PortalToastVariant = "error") => {
+    setToast({ message, variant });
+  }, []);
+
+  const resetLoginFeedback = useCallback(() => {
+    setFeedback({
+      status: "idle",
+      message: PORTAL_COPY.loginIdle,
+    });
+  }, []);
 
   const isLoginMode = mode === "login_cliente";
   const isPrimeiroAcessoMode = mode === "primeiro_acesso";
@@ -223,16 +245,19 @@ export default function PortalDeBrasaPage() {
     const normalizedPassword = password.trim();
 
     if (!normalizedEmail) {
-      setFeedback({ status: "error", message: "Informe o e-mail de acesso." });
+      resetLoginFeedback();
+      showPortalToast("Informe o e-mail de acesso.");
       return;
     }
 
     if (!normalizedPassword) {
-      setFeedback({ status: "error", message: PORTAL_COPY.loginPasswordHint });
+      resetLoginFeedback();
+      showPortalToast(PORTAL_COPY.loginPasswordHint);
       return;
     }
 
     setFeedback({ status: "loading", message: PORTAL_COPY.loginOpening });
+    setToast(null);
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -241,12 +266,14 @@ export default function PortalDeBrasaPage() {
       });
 
       if (error) {
-        setFeedback({ status: "error", message: mapAuthError(error) });
+        resetLoginFeedback();
+        showPortalToast(mapAuthError(error));
         return;
       }
 
       if (!data.user) {
-        setFeedback({ status: "error", message: PORTAL_COPY.loginSessionError });
+        resetLoginFeedback();
+        showPortalToast(PORTAL_COPY.loginSessionError);
         return;
       }
 
@@ -254,15 +281,32 @@ export default function PortalDeBrasaPage() {
 
       if (!profile) {
         await supabase.auth.signOut();
-        setFeedback({ status: "error", message: PORTAL_COPY.loginProfileMissing });
+        resetLoginFeedback();
+        showPortalToast(PORTAL_COPY.loginProfileMissing);
+        return;
+      }
+
+      const destination = resolvePostLoginRoute(profile.role);
+
+      if (!destination) {
+        await supabase.auth.signOut();
+        resetLoginFeedback();
+        showPortalToast(PORTAL_COPY.loginRoleUnauthorized);
         return;
       }
 
       setFeedback({ status: "loading", message: PORTAL_COPY.loginConfirmed });
       router.refresh();
-      router.replace(dashboardRoute);
+
+      if (profile.role === "forjador_soberano") {
+        router.push(destination);
+        return;
+      }
+
+      router.replace(destination);
     } catch {
-      setFeedback({ status: "error", message: PORTAL_COPY.loginDbError });
+      resetLoginFeedback();
+      showPortalToast(PORTAL_COPY.loginDbError);
     }
   }
 
@@ -319,6 +363,12 @@ export default function PortalDeBrasaPage() {
 
   return (
     <main className={PORTAL_SHELL}>
+      <PortalToast
+        message={toast?.message ?? ""}
+        variant={toast?.variant ?? "error"}
+        visible={Boolean(toast)}
+        onDismiss={dismissToast}
+      />
       <div className="pointer-events-none absolute inset-0 bg-black" aria-hidden="true" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(245,158,11,0.06),rgba(0,0,0,0.82)_45%,#000_82%)]" />
       <div

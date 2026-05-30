@@ -7,7 +7,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subgrupo?: string }>;
+  searchParams: Promise<{ subgrupo?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -21,7 +21,11 @@ export default async function DashboardPage({
 
   return (
     <Suspense fallback={<DashboardLoading />}>
-      <DashboardClient userId={user.id} subgroupParam={params.subgrupo ?? null} />
+      <DashboardClient
+        userId={user.id}
+        subgroupParam={params.subgrupo ?? null}
+        tabParam={params.tab ?? null}
+      />
     </Suspense>
   );
 }

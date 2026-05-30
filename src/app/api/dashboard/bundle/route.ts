@@ -17,6 +17,8 @@ import {
 } from "@/lib/thermal-gravity-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Enums } from "@/types/database.types";
+import type { TrainingTrackState } from "@/lib/training-track";
+import { fetchTrainingTrackForUser } from "@/lib/training-track.server";
 
 const SERVER_CACHE_TTL_MS = 45_000;
 
@@ -27,8 +29,19 @@ type BundleCacheEntry = {
 
 const serverCache = new Map<string, BundleCacheEntry>();
 
-function cacheKey(userId: string, musculo: Enums<"subgrupo_muscular">): string {
-  return `${userId}:${musculo}`;
+function cacheKey(
+  userId: string,
+  musculo: Enums<"subgrupo_muscular">,
+  track: TrainingTrackState["track"],
+): string {
+  return `${userId}:${musculo}:${track}`;
+}
+
+async function fetchTrainingTrack(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<TrainingTrackState> {
+  return fetchTrainingTrackForUser(supabase, userId);
 }
 
 function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
@@ -131,7 +144,9 @@ export async function GET(request: Request) {
   }
 
   const { client: supabase, userId } = auth;
-  const key = cacheKey(userId, musculo);
+  const trainingTrack = await fetchTrainingTrack(supabase, userId);
+  const hasPersonalBond = Boolean(trainingTrack.bond);
+  const key = cacheKey(userId, musculo, trainingTrack.track);
   const cached = serverCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json(cached.body, {
@@ -169,6 +184,8 @@ export async function GET(request: Request) {
     muralPosts: bundleResult.muralPosts,
     historico: bundleResult.historico,
     musculo,
+    trainingTrack,
+    hasPersonalBond,
     fetchedAt: Date.now(),
   };
 
@@ -203,7 +220,8 @@ export async function POST(request: Request) {
 
   const prefix = `${userId}:`;
   if (musculo) {
-    serverCache.delete(cacheKey(userId, musculo));
+    serverCache.delete(cacheKey(userId, musculo, "common"));
+    serverCache.delete(cacheKey(userId, musculo, "personal"));
   } else {
     for (const key of serverCache.keys()) {
       if (key.startsWith(prefix)) serverCache.delete(key);

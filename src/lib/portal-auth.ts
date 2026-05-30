@@ -1,16 +1,46 @@
 import type { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
+export type PortalProfileRole =
+  | "forjador"
+  | "forjador_linhagem"
+  | "forjador_soberano"
+  | "cliente";
+
 export type PortalProfile = {
   full_name: string | null;
-  role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
+  role: PortalProfileRole;
   nome_linhagem: string | null;
   status_altar: string | null;
 };
 
+const INVALID_CREDENTIAL_CODES = new Set([
+  "invalid_credentials",
+  "invalid_grant",
+  "user_not_found",
+]);
+
 export function mapAuthError(error: AuthError): string {
-  const message = error.message.trim();
-  return message.length > 0 ? message : "Não foi possível autenticar agora.";
+  const code = (error.code ?? "").trim().toLowerCase();
+  const message = error.message.trim().toLowerCase();
+
+  if (
+    INVALID_CREDENTIAL_CODES.has(code) ||
+    message.includes("invalid login credentials") ||
+    message.includes("invalid email or password")
+  ) {
+    return "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.";
+  }
+
+  if (code === "email_not_confirmed") {
+    return "Confirme seu e-mail antes de acessar o altar.";
+  }
+
+  if (error.message.trim().length > 0) {
+    return error.message.trim();
+  }
+
+  return "Não foi possível autenticar agora. Tente novamente.";
 }
 
 export async function fetchAuthenticatedProfile(userId: string): Promise<PortalProfile | null> {

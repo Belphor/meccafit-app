@@ -8,13 +8,20 @@ import { SacredPhoenixSigil } from "@/components/dashboard/DashboardBrandAssets"
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { DashboardBrandHeader } from "@/components/dashboard/DashboardBrandHeader";
 import { DashboardSignOutButton } from "@/components/dashboard/DashboardSignOutButton";
-import { DashboardTabNav, type DashboardTabId } from "@/components/dashboard/DashboardTabNav";
+import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
 import { DashboardTreinoWorkspace } from "@/components/dashboard/DashboardTreinoWorkspace";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
+import {
+  buildDashboardHref,
+  DEFAULT_DASHBOARD_TAB,
+  isDietaTabAllowed,
+  resolveDashboardTabFromParam,
+  type DashboardTabId,
+} from "@/lib/dashboard-tabs";
 import {
   fetchCommunityMuralPosts,
   invalidateDashboardCaches,
@@ -42,6 +49,12 @@ import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
+import {
+  DEFAULT_TRAINING_TRACK,
+  applyPersonalPrescriptionsToSubgroup,
+  resolvePrescriptionsForSubgroup,
+  type TrainingTrackState,
+} from "@/lib/training-track";
 
 const EvolucaoSelfiePanel = dynamic(
   () =>
@@ -59,6 +72,22 @@ const ForumBrasaVivaPanel = dynamic(
   { loading: () => <DashboardLoading message="Abrindo Fórum Brasa-Viva..." /> },
 );
 
+const PersonalTreinoWorkspace = dynamic(
+  () =>
+    import("@/components/dashboard/PersonalTreinoWorkspace").then((module) => ({
+      default: module.PersonalTreinoWorkspace,
+    })),
+  { loading: () => <DashboardLoading message="Abrindo via Personal..." /> },
+);
+
+const DietaPanel = dynamic(
+  () =>
+    import("@/components/dashboard/DietaPanel").then((module) => ({
+      default: module.DietaPanel,
+    })),
+  { loading: () => <DashboardLoading message="Abrindo dieta..." /> },
+);
+
 type VideoModalState = {
   isOpen: boolean;
   exerciseName: string;
@@ -70,9 +99,10 @@ const CLOSED_VIDEO: VideoModalState = { isOpen: false, exerciseName: "", videoUr
 type DashboardClientProps = {
   userId: string;
   subgroupParam: string | null;
+  tabParam: string | null;
 };
 
-export function DashboardClient({ userId, subgroupParam }: DashboardClientProps) {
+export function DashboardClient({ userId, subgroupParam, tabParam }: DashboardClientProps) {
   const router = useRouter();
   const catalogSubgroup = useMemo(
     () => resolveSubgroupFromParam(subgroupParam),
@@ -95,6 +125,8 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
     readAltarDailyCardioPercent(userId),
   );
   const [liveSessionVtcKg, setLiveSessionVtcKg] = useState(0);
+  const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
+  const [hasPersonalBond, setHasPersonalBond] = useState(false);
   const subgroupRef = useRef(subgroup);
   const loadKey = `${subgroupParam ?? ""}:${reloadToken}`;
   const [trackedLoadKey, setTrackedLoadKey] = useState(loadKey);
@@ -132,6 +164,10 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
       setProfileRow(bundle.data.profileRow);
       setSubgroup(bundle.data.subgroup);
       setMuralPosts(bundle.data.muralPosts);
+      setTrainingTrack(bundle.data.trainingTrack);
+      setHasPersonalBond(bundle.data.hasPersonalBond);
+      const resolvedTab = resolveDashboardTabFromParam(tabParam, bundle.data.hasPersonalBond);
+      setActiveTab(resolvedTab);
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
         setLiveSessionVtcKg(thermal.session_vtc_today);
@@ -143,7 +179,49 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
     return () => {
       isMounted = false;
     };
-  }, [loadKey, subgroupParam]);
+  }, [loadKey, subgroupParam, tabParam]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    if (tabParam === "dieta" && !hasPersonalBond) {
+      setActiveTab(DEFAULT_DASHBOARD_TAB);
+      router.replace(
+        buildDashboardHref({
+          subgrupo: subgroupParam,
+          tab: DEFAULT_DASHBOARD_TAB,
+        }),
+      );
+      return;
+    }
+
+    const resolvedTab = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
+    setActiveTab((current) => (current === resolvedTab ? current : resolvedTab));
+  }, [dataReady, hasPersonalBond, router, subgroupParam, tabParam]);
+
+  const handleTabChange = useCallback(
+    (tab: DashboardTabId) => {
+      if (!isDietaTabAllowed(hasPersonalBond, tab)) {
+        setActiveTab(DEFAULT_DASHBOARD_TAB);
+        router.replace(
+          buildDashboardHref({
+            subgrupo: subgroupParam,
+            tab: DEFAULT_DASHBOARD_TAB,
+          }),
+        );
+        return;
+      }
+
+      setActiveTab(tab);
+      router.replace(
+        buildDashboardHref({
+          subgrupo: subgroupParam,
+          tab,
+        }),
+      );
+    },
+    [hasPersonalBond, router, subgroupParam],
+  );
 
   const handleSignOut = useCallback(async () => {
     clearThermicSessionCache();
@@ -216,6 +294,11 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
           );
         }
       }
+
+      if (bundleResult.data) {
+        setTrainingTrack(bundleResult.data.trainingTrack);
+        setHasPersonalBond(bundleResult.data.hasPersonalBond);
+      }
     },
     [subgroupParam, userId],
   );
@@ -248,9 +331,43 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
     }
     void refreshCommunityMural();
     setActiveTab("forum");
-  }, [profile?.role, refreshCommunityMural]);
+    router.replace(
+      buildDashboardHref({
+        subgrupo: subgroupParam,
+        tab: "forum",
+      }),
+    );
+  }, [profile?.role, refreshCommunityMural, router, subgroupParam]);
 
   const closeVideoModal = useCallback(() => setVideoModal(CLOSED_VIDEO), []);
+
+  const treinoSubgroup = useMemo(() => {
+    if (trainingTrack.track !== "personal") {
+      return subgroup;
+    }
+    return applyPersonalPrescriptionsToSubgroup(
+      subgroup,
+      trainingTrack.personalPrescriptions,
+    );
+  }, [subgroup, trainingTrack]);
+
+  const subgroupPrescriptions = useMemo(
+    () => resolvePrescriptionsForSubgroup(subgroup, trainingTrack.personalPrescriptions),
+    [subgroup, trainingTrack.personalPrescriptions],
+  );
+
+  const treinoWorkspaceProps = {
+    subgroup: treinoSubgroup,
+    authUserId: userId,
+    isIncubating,
+    hasBiologicalBalance: (profile?.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE,
+    onAltarMetricsChange: handleAltarMetricsChange,
+    onSuperacaoFlashChange: setShowSuperacaoFlash,
+    onOpenVideo: handleWatchVideo,
+    onSuperacaoMural: publishMuralAscensao,
+    onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) =>
+      void handleTrainingPersisted(exerciseId, detail),
+  } as const;
 
   if (!dataReady) {
     return <DashboardLoading message="Sincronizando dados do altar..." />;
@@ -316,25 +433,32 @@ export function DashboardClient({ userId, subgroupParam }: DashboardClientProps)
             <DashboardTabNav
               activeTab={activeTab}
               forumCount={muralPosts.length}
-              onTabChange={setActiveTab}
+              hasPersonalBond={hasPersonalBond}
+              onTabChange={handleTabChange}
             />
 
             {activeTab === "treino" ? (
-              <DashboardTreinoWorkspace
-                key={subgroup.id}
-                subgroup={subgroup}
-                profile={profile}
-                authUserId={userId}
-                isIncubating={isIncubating}
-                hasBiologicalBalance={(profile.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE}
-                onAltarMetricsChange={handleAltarMetricsChange}
-                onSuperacaoFlashChange={setShowSuperacaoFlash}
-                onOpenVideo={handleWatchVideo}
-                onSuperacaoMural={publishMuralAscensao}
-                onTrainingPersisted={(exerciseId, detail) =>
-                  void handleTrainingPersisted(exerciseId, detail)
-                }
-              />
+              trainingTrack.track === "personal" ? (
+                <PersonalTreinoWorkspace
+                  key={`personal-${subgroup.id}`}
+                  trainingTrack={trainingTrack}
+                  subgroupPrescriptions={subgroupPrescriptions}
+                  profile={profile}
+                  {...treinoWorkspaceProps}
+                />
+              ) : (
+                <DashboardTreinoWorkspace
+                  key={`common-${subgroup.id}`}
+                  profile={profile}
+                  {...treinoWorkspaceProps}
+                />
+              )
+            ) : null}
+
+            {activeTab === "dieta" && hasPersonalBond ? (
+              <div className={DASHBOARD_TAB_CONTENT}>
+                <DietaPanel />
+              </div>
             ) : null}
 
             {activeTab === "evolucao" ? (

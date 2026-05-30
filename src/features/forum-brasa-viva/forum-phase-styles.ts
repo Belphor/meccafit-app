@@ -18,8 +18,8 @@ export const FORUM_PHASE_CARD_STYLES: Record<ForumCardPhase, ForumPhaseCardStyle
     chipClass: "border-neutral-500/25 bg-neutral-900/70 text-neutral-400",
     glowClass: "shadow-[0_0_24px_rgba(115,115,115,0.08)]",
   },
-  faisca: {
-    label: "Faísca",
+  brasa: {
+    label: "Brasa",
     borderClass: "border-amber-500/30",
     gradientClass:
       "bg-gradient-to-br from-amber-950/50 via-neutral-950/90 to-black",
@@ -45,12 +45,12 @@ export const FORUM_PHASE_CARD_STYLES: Record<ForumCardPhase, ForumPhaseCardStyle
   },
 };
 
-/** IRIS — mapeia tier ARGOS (1–5) para 4 skins de card. Brasa (3) usa Faísca intensa. */
+/** IRIS — mapeia tier ARGOS (1–5) para 4 skins térmicas: CINZA · BRASA · LABAREDA · MAGMA. */
 export function resolveForumCardPhase(tier: number): ForumCardPhase {
   const normalized = Math.min(5, Math.max(1, Math.floor(tier))) as PhaseTier;
   if (normalized >= 5) return "magma";
   if (normalized >= 4) return "labareda";
-  if (normalized >= 2) return "faisca";
+  if (normalized >= 2) return "brasa";
   return "cinza";
 }
 

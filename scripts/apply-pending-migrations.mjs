@@ -1,5 +1,5 @@
 /**
- * Aplica migrations pendentes (Fórum Brasa-Viva + Security Hardening).
+ * Aplica migrations pendentes (Mecca + Fórum + Security Hardening).
  * Requer SUPABASE_DB_URL em .env.local (Connection string Session pooler).
  *
  * Uso: node scripts/apply-pending-migrations.mjs
@@ -11,6 +11,12 @@ import { createClient } from "@supabase/supabase-js";
 const MIGRATIONS = [
   "20260525100000_argos_forum_brasa_viva.sql",
   "20260525110000_argos_security_hardening.sql",
+  "20260527240000_create_mecca_global_metrics.sql",
+  "20260527241000_integrate_mecca_contribution_registrar.sql",
+  "20260528590000_add_abdomen_subgrupo_muscular.sql",
+  "20260529000000_split_workout_architecture.sql",
+  "20260529100000_dual_track_training_architecture.sql",
+  "20260530008000_final_consolidated_muscle_architecture.sql",
 ];
 
 function loadEnv() {
@@ -27,9 +33,16 @@ function loadEnv() {
   return env;
 }
 
-async function verifyHardening(admin) {
+async function verifyApplied(admin) {
   const { error: forumErr } = await admin.rpc("argos_fetch_forum_brasa_viva", { p_limit: 1 });
-  if (forumErr?.code === "PGRST202") return { forum: false, phaseLock: false };
+  const forumOk = !forumErr || forumErr.code !== "PGRST202";
+
+  const { data: meccaRow, error: meccaErr } = await admin
+    .from("mecca_global_metrics")
+    .select("id, furnace_temperature")
+    .limit(1)
+    .maybeSingle();
+  const meccaOk = !meccaErr && Boolean(meccaRow?.id);
 
   const { data: soberanoRow } = await admin
     .from("profiles")
@@ -47,7 +60,7 @@ async function verifyHardening(admin) {
     phaseLock = Boolean(phaseErr);
   }
 
-  return { forum: !forumErr, phaseLock };
+  return { forumOk, meccaOk, phaseLock };
 }
 
 const env = loadEnv();
@@ -65,13 +78,10 @@ const admin =
     : null;
 
 if (admin) {
-  const status = await verifyHardening(admin);
-  if (status.forum && status.phaseLock) {
-    console.log("Migrations já aplicadas (forum RPC + bloqueio phase_tier).");
+  const status = await verifyApplied(admin);
+  if (status.forumOk && status.meccaOk && status.phaseLock) {
+    console.log("Migrations já aplicadas (forum + mecca global + phase lock).");
     process.exit(0);
-  }
-  if (status.forum && !status.phaseLock) {
-    console.log("Forum OK — falta apenas security hardening (phase lock).");
   }
 }
 
@@ -106,9 +116,9 @@ try {
 
 if (admin) {
   await new Promise((r) => setTimeout(r, 2000));
-  const status = await verifyHardening(admin);
-  if (status.forum && status.phaseLock) {
-    console.log("\nVerificação OK: forum + phase lock activos.");
+  const status = await verifyApplied(admin);
+  if (status.forumOk && status.meccaOk && status.phaseLock) {
+    console.log("\nVerificação OK: forum + mecca global + phase lock activos.");
     process.exit(0);
   }
   console.warn("\nMigration executada — aguarde ~30s cache PostgREST e re-verifique.");

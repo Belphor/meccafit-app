@@ -16,6 +16,9 @@ export const PORTAL_COPY = {
   loginProfileMissing:
     "Login reconhecido, mas o perfil não foi encontrado no altar. Contate o Forjador.",
   loginConfirmed: "Acesso confirmado no altar. Entrando no dashboard...",
+  loginInvalidCredentials: "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.",
+  loginRoleUnauthorized:
+    "Este altar não reconhece o seu papel de acesso. Utilize o portal correto da sua linhagem.",
   loginDbError: "Falha ao validar o login no banco de dados. Tente novamente.",
   loginSubtitle: "Pronto para queimar os velhos hábitos?",
   onboardingTitle: "Primeiro Acesso Fenyxia",

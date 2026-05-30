@@ -2,10 +2,24 @@ import type { ClienteDashboardTab } from "@/types/portal.types";
 
 export const DEFAULT_DASHBOARD_SUBGRUPO = "peitoral-superior" as const;
 
+export const FORJA_DASHBOARD_ROUTE = "/dashboard/forja";
+
 export function resolveClienteDashboardRoute(
   subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
 ): string {
   return `/dashboard?subgrupo=${encodeURIComponent(subgrupo)}`;
+}
+
+export function resolvePostLoginRoute(role: string): string | null {
+  if (role === "forjador_soberano") {
+    return FORJA_DASHBOARD_ROUTE;
+  }
+
+  if (role === "cliente") {
+    return internalRoutes.cliente.dashboard;
+  }
+
+  return null;
 }
 
 export const internalRoutes = {
