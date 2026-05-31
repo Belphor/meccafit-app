@@ -6,7 +6,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const MIGRATION_FILE = "20260530122000_fix_obter_calor_volatile.sql";
+const MIGRATION_FILES = [
+  "20260530140000_evolucao_costas_enum.sql",
+  "20260530140001_evolucao_costas_calor_json.sql",
+];
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -67,15 +70,21 @@ const resolvedDbUrl =
     ? `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-sa-east-1.pooler.supabase.com:5432/postgres`
     : "");
 
-const sql = readFileSync(resolve(process.cwd(), "supabase/migrations", MIGRATION_FILE), "utf8");
+const sqlParts = MIGRATION_FILES.map((file) =>
+  readFileSync(resolve(process.cwd(), "supabase/migrations", file), "utf8"),
+);
 
-console.log("\n=== Apply Evolution Hotfix ===\n");
+console.log("\n=== Apply Evolution Hotfix (COSTAS) ===\n");
 
 if (resolvedDbUrl) {
-  await applyWithPg(resolvedDbUrl, sql);
+  for (const sql of sqlParts) {
+    await applyWithPg(resolvedDbUrl, sql);
+  }
   console.log("Hotfix aplicado via Postgres.");
 } else if (accessToken && projectRef) {
-  await applyWithManagementApi(projectRef, accessToken, sql);
+  for (const sql of sqlParts) {
+    await applyWithManagementApi(projectRef, accessToken, sql);
+  }
   console.log("Hotfix aplicado via Management API.");
 } else {
   console.error("Credencial DDL ausente (SUPABASE_DB_PASSWORD, SUPABASE_DB_URL ou SUPABASE_ACCESS_TOKEN).");
@@ -85,14 +94,41 @@ if (resolvedDbUrl) {
 const admin = createClient(baseUrl, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-const { data, error } = await admin.rpc("obter_calor_muscular_atleta", {
-  p_user_id: "00000000-0000-4000-8000-000000000001",
-});
 
-if (error?.message?.includes("ambiguous")) {
-  console.error("Verificação falhou — ambiguous persiste:", error.message);
-  process.exit(1);
+async function verifyRpcJson() {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const { data, error } = await admin.rpc("obter_calor_muscular_atleta", {
+      target_atleta_id: "00000000-0000-4000-8000-000000000001",
+    });
+
+    if (error?.message?.includes("ambiguous")) {
+      console.error("Verificação falhou — ambiguous persiste:", error.message);
+      process.exit(1);
+    }
+
+    const jsonOk =
+      data &&
+      typeof data === "object" &&
+      !Array.isArray(data) &&
+      "ombros" in data &&
+      "costas" in data &&
+      "indice_ignicao" in data;
+
+    if (jsonOk) {
+      console.log("Verificação RPC OK (JSON 6 grupos incl. ombros + costas).");
+      process.exit(0);
+    }
+
+    if (attempt < 4) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    } else {
+      console.error(
+        "Verificação falhou — RPC não retorna JSON COSTAS:",
+        error?.message ?? JSON.stringify(data),
+      );
+      process.exit(1);
+    }
+  }
 }
 
-console.log("Verificação RPC OK (sem ambiguous).");
-process.exit(0);
+await verifyRpcJson();

@@ -35,7 +35,14 @@ function applyCinemaFrame(context: CanvasRenderingContext2D, width: number, heig
   context.fillText("FENYXIA", width / 2, height - 28);
 }
 
-export function EvolucaoSelfiePanel() {
+export function EvolucaoSelfiePanel({
+  onCapture,
+  onClose,
+}: {
+  /** Quando definido, entrega o data URL capturado em vez de só preview local */
+  onCapture?: (dataUrl: string) => void;
+  onClose?: () => void;
+} = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
@@ -93,8 +100,10 @@ export function EvolucaoSelfiePanel() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
     applyCinemaFrame(context, canvas.width, canvas.height);
 
-    setCaptureUrl(canvas.toDataURL("image/png"));
-  }, []);
+    const dataUrl = canvas.toDataURL("image/png");
+    setCaptureUrl(dataUrl);
+    onCapture?.(dataUrl);
+  }, [onCapture]);
 
   const downloadSelfie = useCallback(() => {
     if (!captureUrl) return;
@@ -113,12 +122,26 @@ export function EvolucaoSelfiePanel() {
     >
       <DashboardPanelHeader chip="Aba 3 · Evolução" meta="Selfie" />
 
-      <h2 id="evolucao-tab-title" className={`${DASHBOARD_SECTION_TITLE} mt-4`}>
-        Selfie FENYXIA
-      </h2>
-      <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-        Vinheta cinema · Solar Gold
-      </p>
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-3 border-b border-orange-500/10 pb-4">
+        <div>
+          <h2 id="evolucao-tab-title" className={DASHBOARD_SECTION_TITLE}>
+            Selfie FENYXIA
+          </h2>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
+            Vinheta cinema · Solar Gold
+          </p>
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${DASHBOARD_ACTION_BUTTON} shrink-0 px-4 py-2`}
+            aria-label="Fechar selfie FENYXIA"
+          >
+            Fechar
+          </button>
+        ) : null}
+      </div>
 
       <div
         className={`relative mt-6 aspect-[4/5] max-h-[min(58vh,480px)] w-full overflow-hidden sm:max-h-[min(72vh,520px)] ${DASHBOARD_INNER_FRAME} p-0`}

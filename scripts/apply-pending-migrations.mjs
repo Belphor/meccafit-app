@@ -1,28 +1,16 @@
 /**
- * Aplica migrations pendentes (Mecca + Fórum + Security Hardening).
- * Requer SUPABASE_DB_URL em .env.local (Connection string Session pooler).
+ * Aplica migrations pendentes com verificação ARGOS remota.
+ * Requer SUPABASE_DB_URL para apply SQL · probes usam service role.
  *
  * Uso: node scripts/apply-pending-migrations.mjs
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
-
-const MIGRATIONS = [
-  "20260525100000_argos_forum_brasa_viva.sql",
-  "20260525110000_argos_security_hardening.sql",
-  "20260527240000_create_mecca_global_metrics.sql",
-  "20260527241000_integrate_mecca_contribution_registrar.sql",
-  "20260528590000_add_abdomen_subgrupo_muscular.sql",
-  "20260529000000_split_workout_architecture.sql",
-  "20260529100000_dual_track_training_architecture.sql",
-  "20260530008000_final_consolidated_muscle_architecture.sql",
-  "20260530100000_evolucao_aba3_sistema_geral_patch.sql",
-  "20260530110000_fix_workout_resolve_after_iris_drop.sql",
-  "20260530120000_restore_estase_gatilho_muscular.sql",
-  "20260530121000_fix_obter_calor_ambiguous.sql",
-  "20260530122000_fix_obter_calor_volatile.sql",
-];
+import {
+  ALL_MIGRATION_FILES,
+  runMigrationProbes,
+} from "./argos/verify-migrations.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -38,34 +26,12 @@ function loadEnv() {
   return env;
 }
 
-async function verifyApplied(admin) {
-  const { error: forumErr } = await admin.rpc("argos_fetch_forum_brasa_viva", { p_limit: 1 });
-  const forumOk = !forumErr || forumErr.code !== "PGRST202";
-
-  const { data: meccaRow, error: meccaErr } = await admin
-    .from("mecca_global_metrics")
-    .select("id, furnace_temperature")
-    .limit(1)
-    .maybeSingle();
-  const meccaOk = !meccaErr && Boolean(meccaRow?.id);
-
-  const { data: soberanoRow } = await admin
-    .from("profiles")
-    .select("id, phase_tier")
-    .eq("role", "forjador_soberano")
-    .limit(1)
-    .maybeSingle();
-
-  let phaseLock = false;
-  if (soberanoRow?.id) {
-    const { error: phaseErr } = await admin
-      .from("profiles")
-      .update({ phase_tier: Math.min(5, (soberanoRow.phase_tier ?? 1) + 1) })
-      .eq("id", soberanoRow.id);
-    phaseLock = Boolean(phaseErr);
+function printProbeReport(result) {
+  console.log("\n=== ARGOS · probes remotas ===\n");
+  for (const probe of result.probes) {
+    console.log(`${probe.ok ? "[PASS]" : "[FAIL]"} ${probe.id} — ${probe.detail}`);
   }
-
-  return { forumOk, meccaOk, phaseLock };
+  console.log("");
 }
 
 const env = loadEnv();
@@ -75,26 +41,37 @@ const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 console.log("\n=== ARGOS · apply pending migrations ===\n");
 
-const admin =
-  baseUrl && serviceKey
-    ? createClient(baseUrl, serviceKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-    : null;
-
-if (admin) {
-  const status = await verifyApplied(admin);
-  if (status.forumOk && status.meccaOk && status.phaseLock) {
-    console.log("Migrations já aplicadas (forum + mecca global + phase lock).");
-    process.exit(0);
-  }
+if (!baseUrl || !serviceKey) {
+  console.error("NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.");
+  process.exit(1);
 }
 
+const admin = createClient(baseUrl, serviceKey, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+let probeResult = await runMigrationProbes(admin, { probeOmbrosIsolation: true });
+printProbeReport(probeResult);
+
+if (probeResult.allOk) {
+  console.log("Remote OK · nenhuma migration pendente detectada.");
+  if (!dbUrl) {
+    console.log("SUPABASE_DB_URL ausente — apply SQL local ignorado (remoto já conforme).");
+  }
+  process.exit(0);
+}
+
+const filesToApply =
+  probeResult.filesToApply.length > 0 ? probeResult.filesToApply : ALL_MIGRATION_FILES;
+
+console.log(`${probeResult.failed.length} probe(s) falharam.`);
+console.log(`Aplicar ${filesToApply.length} arquivo(s) SQL.\n`);
+
 if (!dbUrl) {
-  console.error("SUPABASE_DB_URL ausente em .env.local.");
+  console.error("SUPABASE_DB_URL ausente em .env.local — não é possível aplicar SQL.");
   console.error("Supabase Dashboard → Project Settings → Database → Connection string (Session).");
-  console.error("\nOu aplique manualmente no SQL Editor, por ordem:");
-  for (const file of MIGRATIONS) {
+  console.error("\nAplique manualmente no SQL Editor, por ordem:");
+  for (const file of filesToApply) {
     console.error(`  supabase/migrations/${file}`);
   }
   process.exit(1);
@@ -105,12 +82,12 @@ const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorize
 
 try {
   await client.connect();
-  for (const file of MIGRATIONS) {
+  for (const file of filesToApply) {
     const path = resolve(process.cwd(), "supabase/migrations", file);
     const sql = readFileSync(path, "utf8");
     console.log(`Aplicando ${file}...`);
     await client.query(sql);
-    console.log(`  OK`);
+    console.log("  OK");
   }
 } catch (error) {
   console.error("Falha:", error.message ?? error);
@@ -119,15 +96,17 @@ try {
   await client.end();
 }
 
-if (admin) {
-  await new Promise((r) => setTimeout(r, 2000));
-  const status = await verifyApplied(admin);
-  if (status.forumOk && status.meccaOk && status.phaseLock) {
-    console.log("\nVerificação OK: forum + mecca global + phase lock activos.");
-    process.exit(0);
-  }
-  console.warn("\nMigration executada — aguarde ~30s cache PostgREST e re-verifique.");
+console.log("\nRe-verificando probes remotas (aguarde cache PostgREST)...");
+await new Promise((r) => setTimeout(r, 2500));
+
+probeResult = await runMigrationProbes(admin, { probeOmbrosIsolation: true });
+printProbeReport(probeResult);
+
+if (probeResult.allOk) {
+  console.log("Migrations aplicadas e verificadas via ARGOS.");
+  process.exit(0);
 }
 
-console.log("\nMigrations aplicadas via SUPABASE_DB_URL.");
-process.exit(0);
+console.warn("Migrations executadas, mas probes ainda falham — aguarde ~30s e rode:");
+console.warn("  node scripts/argos/verify-migrations.mjs");
+process.exit(2);

@@ -524,6 +524,18 @@ export type Database = {
         };
         Returns: boolean;
       };
+      obter_calor_muscular_atleta: {
+        Args: {
+          target_atleta_id: string;
+        };
+        Returns: Json;
+      };
+      calcular_indice_ignicao_atleta: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";

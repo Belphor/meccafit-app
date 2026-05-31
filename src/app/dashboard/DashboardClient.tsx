@@ -49,6 +49,7 @@ import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
+import type { MuscleCalorRow } from "@/components/evolution/human-body-constants";
 import {
   DEFAULT_TRAINING_TRACK,
   applyPersonalPrescriptionsToSubgroup,
@@ -56,10 +57,10 @@ import {
   type TrainingTrackState,
 } from "@/lib/training-track";
 
-const EvolucaoSelfiePanel = dynamic(
+const EvolutionAbaPanel = dynamic(
   () =>
-    import("@/components/dashboard/EvolucaoSelfiePanel").then((module) => ({
-      default: module.EvolucaoSelfiePanel,
+    import("@/components/evolution/evolution-aba-view").then((module) => ({
+      default: module.EvolutionAbaView,
     })),
   { loading: () => <DashboardLoading message="Abrindo evolução..." /> },
 );
@@ -100,9 +101,17 @@ type DashboardClientProps = {
   userId: string;
   subgroupParam: string | null;
   tabParam: string | null;
+  initialEvolutionCalor?: MuscleCalorRow[];
+  initialEvolutionIgnicao?: number;
 };
 
-export function DashboardClient({ userId, subgroupParam, tabParam }: DashboardClientProps) {
+export function DashboardClient({
+  userId,
+  subgroupParam,
+  tabParam,
+  initialEvolutionCalor,
+  initialEvolutionIgnicao,
+}: DashboardClientProps) {
   const router = useRouter();
   const catalogSubgroup = useMemo(
     () => resolveSubgroupFromParam(subgroupParam),
@@ -463,7 +472,13 @@ export function DashboardClient({ userId, subgroupParam, tabParam }: DashboardCl
 
             {activeTab === "evolucao" ? (
               <div className={DASHBOARD_TAB_CONTENT}>
-                <EvolucaoSelfiePanel />
+                <EvolutionAbaPanel
+                  userId={userId}
+                  initialCalorRows={initialEvolutionCalor}
+                  initialIgnicao={initialEvolutionIgnicao}
+                  profileName={profile?.name}
+                  variant="dashboard"
+                />
               </div>
             ) : null}
 

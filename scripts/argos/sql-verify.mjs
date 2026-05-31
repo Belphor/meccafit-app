@@ -228,5 +228,17 @@ await check("cliente nao pode validar invite via RPC service-only", async () => 
   return Boolean(error);
 });
 
+await check("RPC obter_calor_muscular_atleta retorna 6 grupos incl. ombros", async () => {
+  const { data, error } = await cliente.client.rpc("obter_calor_muscular_atleta", {
+    target_atleta_id: cliente.userId,
+  });
+  if (error) return false;
+  const keys = ["peito", "ombros", "bracos", "costas", "abdomen", "pernas"];
+  return (
+    keys.every((k) => data?.[k] && typeof data[k].is_frozen === "boolean") &&
+    typeof data.indice_ignicao === "number"
+  );
+});
+
 console.log(`\nARGOS SQL Verify: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 2 : 0);

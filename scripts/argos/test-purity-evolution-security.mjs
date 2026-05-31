@@ -4,7 +4,7 @@
  * 4 cenários adversariais / conformidade:
  *   1. Ataque anónimo (sem token de sessão)
  *   2. Isolamento de dados biológicos (cross-user RPC)
- *   3. Formato consolidado — 4 Membros Soberanos (zero subgrupos)
+ *   3. Formato consolidado — 6 grupos JSON (peito · ombros · bracos · costas · abdomen · pernas)
  *   4. Gatilho de estase muscular (is_frozen × historico_treinos_personais)
  *
  * Actores: cliente@meccafit.com · atleta2@meccafit.com · master@meccafit.com
@@ -19,16 +19,16 @@ import { createClient } from "@supabase/supabase-js";
 
 const SEED_PASSWORD = "senha123";
 
-const SOVEREIGN_MEMBERS = ["PEITO", "BRACOS", "ABDOMEN", "PERNAS"];
+const SOVEREIGN_JSON_KEYS = ["peito", "ombros", "bracos", "costas", "abdomen", "pernas"];
+const SOVEREIGN_MEMBERS = ["PEITO", "OMBROS", "BRACOS", "COSTAS", "ABDOMEN", "PERNAS"];
 const LEGACY_SUBGROUP_MARKERS = [
-  "costas",
-  "ombros",
   "peitoral",
   "subgrupo",
   "via_a",
   "via_b",
   "membro superior",
   "membro inferior",
+  "membro_principal",
 ];
 
 function loadEnv() {
@@ -79,35 +79,45 @@ function isRlsBlocked(error) {
   );
 }
 
-function assertSovereignPayload(rows) {
-  if (!Array.isArray(rows) || rows.length !== 4) {
-    return { ok: false, detail: `esperado 4 linhas, recebido ${rows?.length ?? 0}` };
+function assertCalorJsonPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { ok: false, detail: "esperado objeto JSON, recebido array ou null" };
   }
 
-  const membros = rows.map((r) => String(r.membro_principal ?? "").trim().toUpperCase());
-  const sorted = [...membros].sort();
-  const expected = [...SOVEREIGN_MEMBERS].sort();
+  const keys = Object.keys(payload).filter((k) => k !== "indice_ignicao");
+  const sorted = [...keys].sort();
+  const expected = [...SOVEREIGN_JSON_KEYS].sort();
 
-  if (!sorted.every((m, i) => m === expected[i])) {
-    return { ok: false, detail: `membros=${membros.join(",")}` };
+  if (!sorted.every((k, i) => k === expected[i])) {
+    return { ok: false, detail: `chaves=${keys.join(",")}` };
   }
 
-  const membrosSerialized = membros.join(" ").toLowerCase();
-  const legacyHit = LEGACY_SUBGROUP_MARKERS.find((marker) => membrosSerialized.includes(marker));
-  if (legacyHit) {
-    return { ok: false, detail: `subgrupo legado em membro_principal: ${legacyHit}` };
+  if (typeof payload.indice_ignicao !== "number" || !Number.isFinite(payload.indice_ignicao)) {
+    return { ok: false, detail: "indice_ignicao inválido" };
   }
 
-  for (const row of rows) {
-    if (typeof row.is_frozen !== "boolean") {
-      return { ok: false, detail: `is_frozen não-booleano em ${row.membro_principal}` };
+  for (const key of SOVEREIGN_JSON_KEYS) {
+    const group = payload[key];
+    if (!group || typeof group !== "object") {
+      return { ok: false, detail: `${key} ausente` };
     }
-    if (!row.nivel_calculado || typeof row.nivel_calculado !== "string") {
-      return { ok: false, detail: `nivel_calculado inválido em ${row.membro_principal}` };
+    if (typeof group.is_frozen !== "boolean") {
+      return { ok: false, detail: `is_frozen não-booleano em ${key}` };
+    }
+    if (!group.nivel_calculado || typeof group.nivel_calculado !== "string") {
+      return { ok: false, detail: `nivel_calculado inválido em ${key}` };
     }
   }
 
-  return { ok: true, detail: membros.join(" · ") };
+  return { ok: true, detail: SOVEREIGN_JSON_KEYS.join(" · ") };
+}
+
+function frozenByJsonKey(payload) {
+  const out = {};
+  for (const key of SOVEREIGN_JSON_KEYS) {
+    out[key.toUpperCase()] = payload?.[key]?.is_frozen;
+  }
+  return out;
 }
 
 const env = loadEnv();
@@ -213,9 +223,11 @@ const anon = createAnonRestClient();
 const dummyUuid = "00000000-0000-4000-8000-000000000001";
 
 await record(1, "RPC obter_calor_muscular_atleta bloqueada", async () => {
-  const { data, error } = await anon.rpc("obter_calor_muscular_atleta", { p_user_id: dummyUuid });
+  const { data, error } = await anon.rpc("obter_calor_muscular_atleta", {
+    target_atleta_id: dummyUuid,
+  });
   return {
-    ok: isAuthOrPermissionBlocked(error) && (data === null || (Array.isArray(data) && data.length === 0)),
+    ok: isAuthOrPermissionBlocked(error) && (data === null || data === undefined),
     detail: error?.message ?? `payload=${JSON.stringify(data)}`,
   };
 });
@@ -256,14 +268,16 @@ try {
   process.exit(1);
 }
 
-await record(2, "cliente@ chama obter_calor com UUID de atleta2@ — bloqueado ou vazio", async () => {
+await record(2, "cliente@ chama obter_calor com UUID de atleta2@ — bloqueado (42501)", async () => {
   const { data, error } = await cliente.client.rpc("obter_calor_muscular_atleta", {
-    p_user_id: vitima.userId,
+    target_atleta_id: vitima.userId,
   });
-  const empty = data === null || (Array.isArray(data) && data.length === 0);
+  const denied =
+    isAuthOrPermissionBlocked(error) &&
+    String(error?.message ?? "").includes("Acesso Negado");
   return {
-    ok: isAuthOrPermissionBlocked(error) || empty,
-    detail: error?.message ?? `linhas=${Array.isArray(data) ? data.length : "null"}`,
+    ok: denied && (data === null || data === undefined),
+    detail: error?.message ?? `payload=${JSON.stringify(data)}`,
   };
 });
 
@@ -282,26 +296,24 @@ await record(2, "cliente@ chama calcular_indice com UUID de atleta2@ — bloquea
 // CENÁRIO 3 · Formato consolidado dos 4 Membros Soberanos
 // ---------------------------------------------------------------------------
 
-console.log("\n--- Cenário 3 · 4 Membros Soberanos ---\n");
+console.log("\n--- Cenário 3 · 6 grupos JSON ---\n");
 
-await record(3, "payload legítimo — exatamente PEITO BRACOS ABDOMEN PERNAS", async () => {
+await record(3, "payload legítimo — peito ombros bracos costas abdomen pernas", async () => {
   const { data, error } = await cliente.client.rpc("obter_calor_muscular_atleta", {
-    p_user_id: cliente.userId,
+    target_atleta_id: cliente.userId,
   });
   if (error) return { ok: false, detail: error.message };
-  const check = assertSovereignPayload(data);
+  const check = assertCalorJsonPayload(data);
   return check;
 });
 
-await record(3, "zero menção a subgrupos legados em membro_principal", async () => {
+await record(3, "zero menção a subgrupos legados no payload", async () => {
   const { data, error } = await vitima.client.rpc("obter_calor_muscular_atleta", {
-    p_user_id: vitima.userId,
+    target_atleta_id: vitima.userId,
   });
   if (error) return { ok: false, detail: error.message };
-  const membros = (Array.isArray(data) ? data : [])
-    .map((r) => String(r.membro_principal ?? "").toLowerCase())
-    .join(" ");
-  const hit = LEGACY_SUBGROUP_MARKERS.find((m) => membros.includes(m));
+  const serialized = JSON.stringify(data ?? {}).toLowerCase();
+  const hit = LEGACY_SUBGROUP_MARKERS.find((m) => serialized.includes(m));
   return { ok: !hit, detail: hit ? `legado=${hit}` : "limpo" };
 });
 
@@ -374,21 +386,18 @@ await record(4, "setup: ficha personal PEITO+PERNAS para cliente VIP", async () 
 
 await record(4, "is_frozen booleano — prescritos false · ausentes true", async () => {
   const { data, error } = await cliente.client.rpc("obter_calor_muscular_atleta", {
-    p_user_id: cliente.userId,
+    target_atleta_id: cliente.userId,
   });
   if (error) return { ok: false, detail: error.message };
 
-  const byMember = Object.fromEntries(
-    (Array.isArray(data) ? data : []).map((r) => [
-      String(r.membro_principal).toUpperCase(),
-      r.is_frozen,
-    ]),
-  );
+  const byMember = frozenByJsonKey(data);
 
   const expected = {
     PEITO: false,
     PERNAS: false,
+    OMBROS: true,
     BRACOS: true,
+    COSTAS: true,
     ABDOMEN: true,
   };
 
@@ -400,7 +409,7 @@ await record(4, "is_frozen booleano — prescritos false · ausentes true", asyn
     detail:
       mismatches.length > 0
         ? ` divergência: ${mismatches.map((m) => `${m}=${byMember[m]}`).join(", ")}`
-        : "PEITO/PERNAS=active · BRACOS/ABDOMEN=frozen",
+        : "PEITO/PERNAS=active · OMBROS/BRACOS/COSTAS/ABDOMEN=frozen",
   };
 });
 
@@ -422,13 +431,15 @@ await record(4, "cliente comum sem ficha personal — is_frozen false em todos",
   }
 
   const { data, error } = await vitima.client.rpc("obter_calor_muscular_atleta", {
-    p_user_id: vitima.userId,
+    target_atleta_id: vitima.userId,
   });
   if (error) return { ok: false, detail: error.message };
 
-  const rows = Array.isArray(data) ? data : [];
-  const allFalse = rows.length === 4 && rows.every((r) => r.is_frozen === false);
-  return { ok: allFalse, detail: `frozen=${rows.filter((r) => r.is_frozen).length}` };
+  const check = assertCalorJsonPayload(data);
+  if (!check.ok) return check;
+
+  const allFalse = SOVEREIGN_JSON_KEYS.every((k) => data[k]?.is_frozen === false);
+  return { ok: allFalse, detail: `frozen=${SOVEREIGN_JSON_KEYS.filter((k) => data[k]?.is_frozen).length}` };
 });
 
 // ---------------------------------------------------------------------------
