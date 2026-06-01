@@ -1,0 +1,202 @@
+{
+  "version": 2,
+  "cardio": {
+    "productionGoalMs": 1800000,
+    "testGoalMs": 120000,
+    "testCheckInWindowMs": 60000
+  },
+  "subgroups": [
+    {
+      "id": "peitoral-superior",
+      "slug": "peitoral-superior",
+      "numericRouteId": 1,
+      "name": "Peitoral Superior",
+      "monumentalTitle": "Peito",
+      "bodyRegionSubtitle": "Membro Superior",
+      "musculo": "peito",
+      "exercises": [
+        {
+          "id": 1,
+          "name": "Supino Reto Halteres",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 10,
+          "seedMetric": 30,
+          "video_url": "https://www.youtube.com/embed/rT7DgCr-3pg"
+        },
+        {
+          "id": 2,
+          "name": "Crucifixo Inclinado",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 12,
+          "seedMetric": 22,
+          "video_url": "https://www.youtube.com/embed/8iPEnov-lmU"
+        },
+        {
+          "id": 3,
+          "name": "Crossover Polia Alta",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 15,
+          "seedMetric": 25,
+          "video_url": "https://www.youtube.com/embed/Iwe6AmxVf7o"
+        }
+      ]
+    },
+    {
+      "id": "ombros-deltoides",
+      "slug": "ombros-deltoides",
+      "numericRouteId": 2,
+      "name": "Deltoides",
+      "monumentalTitle": "Ombros",
+      "bodyRegionSubtitle": "Membro Superior",
+      "musculo": "ombros",
+      "exercises": [
+        {
+          "id": 4,
+          "name": "Desenvolvimento Arnold",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 10,
+          "seedMetric": 18,
+          "video_url": "https://www.youtube.com/embed/6Z15_WdXmVw"
+        },
+        {
+          "id": 5,
+          "name": "Elevação Lateral Halteres",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 12,
+          "seedMetric": 10,
+          "video_url": "https://www.youtube.com/embed/3VcKaXpzqRo"
+        }
+      ]
+    },
+    {
+      "id": "bracos-biceps-triceps",
+      "slug": "bracos-biceps-triceps",
+      "numericRouteId": 3,
+      "name": "Bíceps e Tríceps",
+      "monumentalTitle": "Braços",
+      "bodyRegionSubtitle": "Membro Superior",
+      "musculo": "bracos",
+      "exercises": [
+        {
+          "id": 6,
+          "name": "Rosca Direta Barra W",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 10,
+          "seedMetric": 20,
+          "video_url": "https://www.youtube.com/embed/ykJmrZ5v0Oo"
+        },
+        {
+          "id": 7,
+          "name": "Tríceps Testa Halteres",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 12,
+          "seedMetric": 14,
+          "video_url": "https://www.youtube.com/embed/_gsao8VAMbc"
+        }
+      ]
+    },
+    {
+      "id": "costas-dorsal",
+      "slug": "costas-dorsal",
+      "numericRouteId": 4,
+      "name": "Dorsal e Trapézio",
+      "monumentalTitle": "Costas",
+      "bodyRegionSubtitle": "Membro Superior",
+      "musculo": "costas",
+      "exercises": [
+        {
+          "id": 8,
+          "name": "Puxada Frontal Polia",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 10,
+          "seedMetric": 45,
+          "video_url": "https://www.youtube.com/embed/CAwf7n6Luuc"
+        },
+        {
+          "id": 9,
+          "name": "Remada Curvada Halteres",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 12,
+          "seedMetric": 28,
+          "video_url": "https://www.youtube.com/embed/pYcpY20QaE8"
+        }
+      ]
+    },
+    {
+      "id": "core",
+      "slug": "core",
+      "numericRouteId": 5,
+      "name": "Abdômen",
+      "monumentalTitle": "Abdômen",
+      "bodyRegionSubtitle": "Core",
+      "musculo": "abdomen",
+      "exercises": [
+        {
+          "id": 10,
+          "name": "Abdominal Crunch Banco",
+          "metricKind": "rep_max",
+          "targetSets": 4,
+          "targetReps": 15,
+          "seedMetric": 20,
+          "video_url": "https://www.youtube.com/embed/Xyd_fa5zoEU"
+        },
+        {
+          "id": 11,
+          "name": "Prancha Isométrica",
+          "metricKind": "duration_sec",
+          "targetSets": 3,
+          "targetDurationSec": 60,
+          "seedMetric": 45,
+          "video_url": "https://www.youtube.com/embed/ASdvN_XEl_c"
+        }
+      ]
+    },
+    {
+      "id": "membro-inferior",
+      "slug": "membro-inferior",
+      "numericRouteId": 6,
+      "name": "Pernas",
+      "monumentalTitle": "Pernas",
+      "bodyRegionSubtitle": "Membro Inferior",
+      "musculo": "pernas",
+      "exercises": [
+        {
+          "id": 12,
+          "name": "Agachamento Livre",
+          "metricKind": "load_kg",
+          "targetSets": 4,
+          "targetReps": 10,
+          "seedMetric": 60,
+          "video_url": "https://www.youtube.com/embed/ultWZbUMPL8"
+        },
+        {
+          "id": 13,
+          "name": "Leg Press 45°",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 12,
+          "seedMetric": 120,
+          "video_url": "https://www.youtube.com/embed/IZxyjW7MPJQ"
+        },
+        {
+          "id": 14,
+          "name": "Stiff Halteres",
+          "metricKind": "load_kg",
+          "targetSets": 3,
+          "targetReps": 10,
+          "seedMetric": 24,
+          "video_url": "https://www.youtube.com/embed/1uDiW5-xz4E"
+        }
+      ]
+    }
+  ]
+}

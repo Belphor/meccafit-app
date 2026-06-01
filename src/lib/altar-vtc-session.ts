@@ -1,4 +1,5 @@
 import { ALTAR_VTC_SESSION_TARGET_KG } from "@/lib/mock-data";
+import { resolveTreinoDayKey } from "@/lib/treino-day-key";
 
 const STORAGE_PREFIX = "meccafit:altar-vtc";
 const SNAPSHOT_VERSION = 1 as const;
@@ -19,7 +20,8 @@ export type AltarVtcSessionSnapshot = {
 };
 
 function buildStorageKey(scope: AltarVtcSessionScope): string {
-  return `${STORAGE_PREFIX}:${scope.userId}:${scope.subgroupId}`;
+  const day = resolveTreinoDayKey();
+  return `${STORAGE_PREFIX}:${scope.userId}:${scope.subgroupId}:${day}`;
 }
 
 function sanitizeMaxLoads(

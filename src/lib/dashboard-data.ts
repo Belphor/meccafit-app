@@ -147,13 +147,13 @@ export function applyHistoricoToSubgroup(
 
     const persistedWeight = normalizeWeight(historico.peso ?? historico.peso_atual);
     const historicalPrWeight = persistedWeight;
-    const isExerciseComplete = persistedWeight > 0;
 
     return {
       ...exercise,
       ...(persistedWeight > 0 ? { currentWeight: persistedWeight } : null),
       historicalPrWeight: historicalPrWeight > 0 ? historicalPrWeight : exercise.historicalPrWeight,
-      completedSets: isExerciseComplete ? exercise.targetSets : exercise.completedSets,
+      // Conclusão do dia vem da sessão local (como cardio) — histórico só guarda PR/registro.
+      completedSets: 0,
     };
   });
 
@@ -183,7 +183,7 @@ export function mergeSessionCompletedSets(
   };
 }
 
-/** Descarta localStorage obsoleto (ex.: pós-reset) quando o servidor não confirma conclusão. */
+/** Mantém apenas conclusões válidas do dia corrente (sessão localStorage). */
 export function reconcileSessionCompletedSets(
   subgroup: MuscleSubgroup,
   completedSetsByExerciseId: Record<number, number>,
@@ -194,17 +194,7 @@ export function reconcileSessionCompletedSets(
     const sessionCompleted = Math.trunc(completedSetsByExerciseId[exercise.id] ?? 0);
     if (sessionCompleted <= 0) continue;
 
-    const serverComplete = exercise.completedSets >= exercise.targetSets;
-    const sessionClaimsComplete = sessionCompleted >= exercise.targetSets;
-
-    if (sessionClaimsComplete && !serverComplete) {
-      continue;
-    }
-
-    next[exercise.id] = Math.min(
-      exercise.targetSets,
-      Math.max(exercise.completedSets, sessionCompleted),
-    );
+    next[exercise.id] = Math.min(exercise.targetSets, sessionCompleted);
   }
 
   return next;
@@ -212,6 +202,7 @@ export function reconcileSessionCompletedSets(
 
 export function reconcileSessionMaxLoads(
   subgroup: MuscleSubgroup,
+  completedSetsByExerciseId: Record<number, number>,
   maxLoadsByExerciseId: Record<number, number>,
 ): Record<number, number> {
   const next: Record<number, number> = {};
@@ -219,7 +210,9 @@ export function reconcileSessionMaxLoads(
   for (const exercise of subgroup.exercises) {
     const load = maxLoadsByExerciseId[exercise.id];
     if (typeof load !== "number" || !Number.isFinite(load) || load <= 0) continue;
-    if (exercise.completedSets < exercise.targetSets) continue;
+
+    const sessionCompleted = Math.trunc(completedSetsByExerciseId[exercise.id] ?? 0);
+    if (sessionCompleted < exercise.targetSets) continue;
 
     next[exercise.id] = load;
   }

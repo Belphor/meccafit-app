@@ -1,4 +1,4 @@
-import { monumentalSubgroupMock, subgroupsCatalog, type MuscleSubgroup } from "@/lib/mock-data";
+import { subgroupsCatalog, monumentalSubgroupMock, type MuscleSubgroup } from "@/lib/exercise-catalog";
 import { sanitizeNumericRouteParam, sanitizeTextFilterParam } from "@/lib/filter-sanitize";
 
 export function resolveSubgroupFromParam(param: string | null | undefined): MuscleSubgroup {

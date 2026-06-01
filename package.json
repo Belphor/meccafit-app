@@ -30,8 +30,12 @@
     "db:apply:latency": "node scripts/apply-latency-migration.mjs",
     "db:apply:thermal": "node scripts/apply-thermal-gravity-migration.mjs",
     "db:apply:pending": "node scripts/apply-pending-migrations.mjs",
+    "db:apply:abdomen-thermal": "node scripts/apply-abdomen-thermal.mjs",
     "reset:test-training": "node scripts/reset-test-training.mjs",
+    "reset:first-run": "node scripts/reset-test-training.mjs --first-run",
     "seed:test-users": "node scripts/seed-test-users.mjs",
+    "seed:test-training": "node scripts/seed-test-training.mjs",
+    "test:reset-and-seed": "node scripts/reset-test-training.mjs --catalog-only && node scripts/seed-test-training.mjs",
     "argos:load:5k": "node scripts/argos/load-test.mjs --vus 5000 --duration 30 --ramp 10"
   },
   "dependencies": {

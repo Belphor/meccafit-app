@@ -15,7 +15,7 @@ export function MonumentalSubgroupTitle({ subgroup }: MonumentalSubgroupTitlePro
       </p>
       <h2
         id="subgrupo-monumental-title"
-        className={`${PLASMA_TITLE} mt-3 text-4xl leading-[0.95] tracking-[0.08em] sm:text-5xl sm:tracking-[0.1em] lg:text-7xl`}
+        className={`${PLASMA_TITLE} mt-3 overflow-visible py-1 text-4xl leading-[1.15] tracking-[0.08em] sm:text-5xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-7xl lg:leading-[1.1]`}
       >
         {subgroup.monumentalTitle}
       </h2>

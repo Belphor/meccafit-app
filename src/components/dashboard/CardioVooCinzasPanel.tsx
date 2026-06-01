@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioIgnitionBar } from "@/components/dashboard/CardioIgnitionBar";
 import { HermeticFocusOverlay } from "@/components/dashboard/HermeticFocusOverlay";
+import { resolveCardioGoalMs } from "@/lib/cardio-config";
 import {
-  CARDIO_DEFAULT_GOAL_MS,
   computeCardioPercent,
   formatCardioDuration,
   resolveThermalBand,
@@ -42,7 +42,7 @@ function resolveCardioPanelFrame(status: CardioSessionStatus) {
 
 export function CardioVooCinzasPanel({
   userId,
-  goalMs = CARDIO_DEFAULT_GOAL_MS,
+  goalMs = resolveCardioGoalMs(),
 }: CardioVooCinzasPanelProps) {
   const { session, handleStart, handleThermalCheckIn, handleReactivate } = useCardioVooCinzas({
     userId,

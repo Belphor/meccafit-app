@@ -67,6 +67,10 @@ export const MIGRATION_PATCHES = [
     ],
   },
   {
+    id: "abdomen_thermal",
+    files: ["20260530160000_evolucao_abdomen_thermal_metrics.sql"],
+  },
+  {
     id: "ombros_grupo_isolado",
     files: [
       "20260530150000_evolucao_ombros_enum.sql",
@@ -197,6 +201,16 @@ export async function runMigrationProbes(admin, options = {}) {
     });
   }
 
+  if (probeUserId) {
+    probes.push(await probeAbdomenThermal(admin, probeUserId));
+  } else {
+    probes.push({
+      id: "abdomen_thermal",
+      ok: false,
+      detail: "sem perfil para probe abdômen",
+    });
+  }
+
   const failed = probes.filter((p) => !p.ok);
   const filesToApply = [
     ...new Set(
@@ -213,6 +227,64 @@ export async function runMigrationProbes(admin, options = {}) {
     allOk: failed.length === 0,
     filesToApply,
     probeUserId,
+  };
+}
+
+async function probeAbdomenThermal(admin, userId) {
+  const probeIds = [88010, 88011];
+
+  await admin.from("historico_treinos").delete().eq("cliente_id", userId).in("exercicio_id", probeIds);
+
+  await admin.from("evolucao_membro_estase").delete().eq("user_id", userId);
+
+  const rows = [
+    {
+      cliente_id: userId,
+      exercicio_id: 88010,
+      exercicio_nome: "ARGOS probe crunch",
+      musculo: "abdomen",
+      peso_atual: 20,
+      repeticoes: 1,
+      series: 4,
+      status: "CONCLUÍDO",
+    },
+    {
+      cliente_id: userId,
+      exercicio_id: 88011,
+      exercicio_nome: "ARGOS probe prancha",
+      musculo: "abdomen",
+      peso_atual: 60,
+      repeticoes: 1,
+      series: 3,
+      status: "CONCLUÍDO",
+    },
+  ];
+
+  const { error: insertErr } = await admin.from("historico_treinos").insert(rows);
+  if (insertErr) {
+    return { id: "abdomen_thermal", ok: false, detail: insertErr.message };
+  }
+
+  const { data, error } = await admin.rpc("obter_calor_muscular_atleta", {
+    target_atleta_id: userId,
+  });
+
+  await admin.from("historico_treinos").delete().eq("cliente_id", userId).in("exercicio_id", probeIds);
+
+  if (error) {
+    return { id: "abdomen_thermal", ok: false, detail: error.message };
+  }
+
+  const abdomenMetric = Number(data?.abdomen?.metrica_bruta ?? 0);
+  // TLU: crunch 20 + prancha 60s/4 = 15 → 35 (pico/dia/exercício · rep=1)
+  const ok = abdomenMetric >= 34 && abdomenMetric <= 36;
+
+  return {
+    id: "abdomen_thermal",
+    ok,
+    detail: ok
+      ? `abdomen TLU=${abdomenMetric} (esperado ~35)`
+      : `abdomen metrica_bruta=${abdomenMetric} (esperado ~35 — migration pendente?)`,
   };
 }
 

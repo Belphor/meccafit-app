@@ -10,6 +10,8 @@ import {
   reconcileSessionMaxLoads,
 } from "@/lib/dashboard-data";
 import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
+import { resolveCatalogMetricKind } from "@/lib/exercise-catalog";
+import { resolveAltarContribution } from "@/lib/training-metric";
 import {
   BIOLOGICAL_BALANCE_MULTIPLIER,
   DASHBOARD_TAB_CONTENT,
@@ -24,10 +26,13 @@ export type SuperacaoPayload = {
   vtc: number;
 };
 
+import type { DashboardTabId } from "@/lib/dashboard-tabs";
+
 export type DashboardTreinoWorkspaceProps = {
   subgroup: MuscleSubgroup;
   profile: ClientProfile;
   authUserId: string;
+  tabParam?: DashboardTabId | null;
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   onAltarMetricsChange: (baseVtcTotal: number, lastSavedWeight: number) => void;
@@ -61,7 +66,11 @@ function resolveTreinoSessionHydration(
     subgroup,
     snapshot.completedSetsByExerciseId,
   );
-  const reconciledMaxLoads = reconcileSessionMaxLoads(subgroup, snapshot.maxLoadsByExerciseId);
+  const reconciledMaxLoads = reconcileSessionMaxLoads(
+    subgroup,
+    reconciledCompleted,
+    snapshot.maxLoadsByExerciseId,
+  );
   const reconciledVtc = Object.values(reconciledMaxLoads).reduce((sum, value) => sum + value, 0);
   const hasStaleSession =
     Object.keys(reconciledCompleted).length !==
@@ -81,6 +90,7 @@ export function DashboardTreinoWorkspace({
   subgroup,
   profile,
   authUserId,
+  tabParam,
   isIncubating,
   hasBiologicalBalance,
   onAltarMetricsChange,
@@ -192,7 +202,9 @@ export function DashboardTreinoWorkspace({
 
   const handleExerciseMaxLoad = useCallback(
     (exerciseId: number, maxLoadKg: number) => {
-      maxLoadsRef.current[exerciseId] = maxLoadKg;
+      const metricKind = resolveCatalogMetricKind(exerciseId);
+      const contribution = resolveAltarContribution(metricKind, maxLoadKg);
+      maxLoadsRef.current[exerciseId] = contribution;
       const total = Object.values(maxLoadsRef.current).reduce((sum, value) => sum + value, 0);
       setBaseVtcTotal(total);
       onAltarMetricsChange(total, lastSavedWeightRef.current);
@@ -272,6 +284,7 @@ export function DashboardTreinoWorkspace({
           <TreinoTab
             profile={profile}
             subgroup={mergedSubgroup}
+            tabParam={tabParam}
             activeExerciseId={activeExerciseId}
             superacaoExerciseId={superacaoExerciseId}
             isIncubating={isIncubating}

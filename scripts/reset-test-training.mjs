@@ -4,66 +4,50 @@
  *
  * Uso:
  *   node scripts/reset-test-training.mjs
- *   node scripts/reset-test-training.mjs --peito-only   (só exercícios peito 1–3)
+ *   node scripts/reset-test-training.mjs --catalog-only   (só exercícios do catálogo ARGOS)
+ *   node scripts/reset-test-training.mjs --first-run      (estado inicial · sem seed)
  */
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { loadEnvLocal, requireEnv } from "./lib/env.mjs";
+import { findCatalogExercise, listCatalogExerciseIds, matchesCatalogExercise } from "./lib/exercise-catalog.mjs";
 
-const PEITO_EXERCISE_IDS = [1, 2, 3];
-const PEITO_EXERCISE_NAMES = [
-  "Supino Reto Halteres",
-  "Crucifixo Inclinado",
-  "Crossover Polia Alta",
-];
+function formatHistoricoMetric(row) {
+  const catalogEntry = findCatalogExercise(Number(row.exercicio_id));
+  const value = row.peso_atual;
+  if (catalogEntry?.metricKind === "duration_sec") {
+    const minutes = Math.floor(value / 60);
+    const seconds = value % 60;
+    if (minutes <= 0) return `${seconds} s`;
+    if (seconds <= 0) return `${minutes} min`;
+    return `${minutes} min ${seconds} s`;
+  }
+  if (catalogEntry?.metricKind === "rep_max" || row.musculo === "abdomen") {
+    return `${value} rep`;
+  }
+  return `${value} kg`;
+}
 
 const FORJADOR_ROLES = new Set(["forjador", "forjador_linhagem", "forjador_soberano"]);
-const peitoOnly = process.argv.includes("--peito-only");
+const firstRun = process.argv.includes("--first-run");
+const catalogOnly = process.argv.includes("--catalog-only") || firstRun;
 
-function loadEnv() {
-  const envPath = resolve(process.cwd(), ".env.local");
-  const raw = readFileSync(envPath, "utf8");
-  const env = {};
-  for (const line of raw.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    env[trimmed.slice(0, idx)] = trimmed.slice(idx + 1);
-  }
-  return env;
-}
+const env = loadEnvLocal();
+requireEnv(env, ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
 
-function matchesPeitoCatalog(row) {
-  const id = Number(row.exercicio_id);
-  const name = String(row.exercicio_nome ?? "").trim();
-  const musculo = String(row.musculo ?? "").trim().toLowerCase();
-
-  if (PEITO_EXERCISE_IDS.includes(id)) return true;
-  if (musculo === "peito" && PEITO_EXERCISE_NAMES.some((label) => name.includes(label.split(" ")[0]))) {
-    return true;
-  }
-  return PEITO_EXERCISE_NAMES.some((label) => name === label);
-}
+const url = env.NEXT_PUBLIC_SUPABASE_URL.trim();
+const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY.trim();
 
 function resolveActorLabel(role) {
   if (FORJADOR_ROLES.has(role)) return "forjador";
   return "cliente";
 }
 
-const env = loadEnv();
-const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-if (!url || !serviceKey) {
-  console.error("reset-test-training: NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY obrigatórios.");
-  process.exit(1);
-}
-
 async function main() {
   const client = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const catalogIds = new Set(listCatalogExerciseIds());
 
   const { data: profiles, error: profilesError } = await client
     .from("profiles")
@@ -86,8 +70,8 @@ async function main() {
     process.exit(1);
   }
 
-  const targetHistorico = peitoOnly
-    ? (allHistorico ?? []).filter(matchesPeitoCatalog)
+  const targetHistorico = catalogOnly
+    ? (allHistorico ?? []).filter(matchesCatalogExercise)
     : (allHistorico ?? []);
 
   const historicoIds = targetHistorico.map((row) => row.id);
@@ -104,8 +88,70 @@ async function main() {
     }
   }
 
+  const affectedUserIds = [
+    ...new Set(
+      targetHistorico.map((row) => row.cliente_id).filter((id) => typeof id === "string" && id.length > 0),
+    ),
+  ];
+
+  let estaseResetCount = 0;
+  {
+    const { data: estaseRows, error: estaseReadError } = await client
+      .from("evolucao_membro_estase")
+      .select("user_id, membro_principal");
+
+    if (estaseReadError) {
+      console.error("reset-test-training: leitura evolucao_membro_estase falhou —", estaseReadError.message);
+      process.exit(1);
+    }
+
+    estaseResetCount = estaseRows?.length ?? 0;
+
+    if (estaseResetCount > 0 && (catalogOnly || affectedUserIds.length > 0)) {
+      const { error: estaseDeleteError } = catalogOnly
+        ? await client
+            .from("evolucao_membro_estase")
+            .delete()
+            .neq("user_id", "00000000-0000-0000-0000-000000000000")
+        : await client.from("evolucao_membro_estase").delete().in("user_id", affectedUserIds);
+
+      if (estaseDeleteError) {
+        console.error("reset-test-training: reset estase falhou —", estaseDeleteError.message);
+        process.exit(1);
+      }
+    }
+  }
+
+  let balancoResetCount = 0;
+  {
+    const { data: balancoRows, error: balancoReadError } = await client
+      .from("balanco_termico_diario")
+      .select("user_id, data_treino");
+
+    if (balancoReadError) {
+      console.error("reset-test-training: leitura balanco_termico falhou —", balancoReadError.message);
+      process.exit(1);
+    }
+
+    balancoResetCount = balancoRows?.length ?? 0;
+
+    if (balancoResetCount > 0 && (catalogOnly || affectedUserIds.length > 0)) {
+      const { error: balancoDeleteError } = catalogOnly
+        ? await client
+            .from("balanco_termico_diario")
+            .delete()
+            .neq("user_id", "00000000-0000-0000-0000-000000000000")
+        : await client.from("balanco_termico_diario").delete().in("user_id", affectedUserIds);
+
+      if (balancoDeleteError) {
+        console.error("reset-test-training: reset balanco falhou —", balancoDeleteError.message);
+        process.exit(1);
+      }
+    }
+  }
+
   let matrizResetCount = 0;
-  if (!peitoOnly) {
+  {
     const { data: matrizRows, error: matrizReadError } = await client
       .from("matriz_forca")
       .select("id, cliente_id, musculo, vtc_atual");
@@ -140,13 +186,18 @@ async function main() {
     process.exit(1);
   }
 
-  if (targetHistorico.length === 0 && matrizResetCount === 0) {
-    console.log("reset-test-training: OK — banco já limpo (0 historico, 0 matriz).");
+  if (targetHistorico.length === 0 && matrizResetCount === 0 && estaseResetCount === 0 && balancoResetCount === 0) {
+    console.log("reset-test-training: OK — banco já limpo.");
   } else {
     console.log("reset-test-training: OK");
   }
-  console.log(`  escopo: ${peitoOnly ? "peito (exercícios 1–3)" : "TODOS — clientes e forjadores"}`);
+
+  console.log(
+    `  escopo: ${firstRun ? "primeira abertura (catálogo · sem histórico)" : catalogOnly ? `catálogo (${catalogIds.size} exercícios)` : "TODOS — clientes e forjadores"}`,
+  );
   console.log(`  historico removido: ${targetHistorico.length}`);
+  console.log(`  evolucao_membro_estase removida: ${estaseResetCount}`);
+  console.log(`  balanco_termico_diario removido: ${balancoResetCount}`);
   console.log(`  matriz_forca zerada: ${matrizResetCount}`);
 
   const byActor = { cliente: [], forjador: [], desconhecido: [] };
@@ -166,7 +217,7 @@ async function main() {
       const name = profile?.full_name?.trim() || profile?.nome_linhagem?.trim() || row.cliente_id;
       const role = profile?.role ?? "—";
       console.log(
-        `    · ${name} [${role}] — #${row.exercicio_id} ${row.exercicio_nome} — ${row.peso_atual} kg · ${row.status ?? "—"}`,
+        `    · ${name} [${role}] — #${row.exercicio_id} ${row.exercicio_nome} — ${formatHistoricoMetric(row)} · ${row.status ?? "—"}`,
       );
     }
   }
@@ -181,7 +232,15 @@ async function main() {
   }
 
   console.log("");
-  console.log("No browser: logout/login ou Ctrl+F5 para limpar localStorage meccafit:*");
+  if (firstRun) {
+    console.log("Estado inicial pronto — nenhum treino registrado.");
+    console.log("No browser (F12 → Console), cole:");
+    console.log("  Object.keys(localStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>localStorage.removeItem(k));");
+    console.log("Depois: Ctrl+F5 · /dashboard · /evolucao");
+  } else {
+    console.log("Próximo passo: npm run seed:test-training");
+    console.log("No browser: logout/login ou Ctrl+F5 para limpar localStorage meccafit:*");
+  }
 }
 
 main().catch((error) => {

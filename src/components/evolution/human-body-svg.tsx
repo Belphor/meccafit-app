@@ -269,39 +269,39 @@ function renderThermalEmbers(
   const anchors: Record<HudBodyFacing, EmberAnchorMap> = {
     front: {
       ombros: [
-        [158, 108],
-        [242, 108],
+        [142, 142],
+        [258, 142],
       ],
       peito: [
-        [172, 152],
-        [228, 152],
+        [174, 168],
+        [226, 168],
       ],
       bracos: [
-        [120, 268],
-        [280, 268],
+        [116, 280],
+        [284, 280],
       ],
-      abdomen: [[200, 218]],
+      abdomen: [[200, 234]],
       pernas: [
-        [178, 380],
-        [222, 380],
+        [174, 396],
+        [226, 396],
       ],
     },
     back: {
       ombros: [
-        [156, 98],
-        [244, 98],
+        [126, 142],
+        [274, 142],
       ],
       costas: [
-        [164, 156],
-        [236, 156],
+        [174, 168],
+        [226, 168],
       ],
       bracos: [
-        [108, 258],
-        [292, 258],
+        [108, 278],
+        [292, 278],
       ],
       pernas: [
-        [176, 378],
-        [224, 378],
+        [174, 396],
+        [226, 396],
       ],
     },
   };
@@ -373,12 +373,12 @@ function HudPanel({
     });
   };
 
-  const gridY = [80, 160, 240, 320, 400, 480, 560];
+  const gridY = [104, 184, 264, 344, 424, 504, 576];
   const gridX = [80, 160, 240, 320];
 
   return (
     <div
-      className={`evolution-hud-panel relative flex h-full min-h-[420px] flex-col items-center rounded-xl bg-black/65 p-3 shadow-[inset_0_0_48px_rgba(0,0,0,0.5)] ${
+      className={`evolution-hud-panel relative flex h-full min-h-[460px] flex-1 flex-col items-center justify-center rounded-xl bg-black/65 p-3 shadow-[inset_0_0_48px_rgba(0,0,0,0.5)] ${
         flashActive ? "evolution-hud-panel--flash" : ""
       }`}
     >
@@ -387,7 +387,7 @@ function HudPanel({
         <div className="evolution-hud-purity-vignette" aria-hidden />
       ) : null}
 
-      <div className="mb-3 flex w-full max-w-[300px] items-center justify-between gap-2 px-1">
+      <div className="mb-3 flex w-full max-w-[320px] items-center justify-between gap-2 px-1">
         <p className="font-mono text-[10px] font-bold uppercase tracking-[0.28em] text-cyan-400/85">
           {title}
         </p>
@@ -401,7 +401,7 @@ function HudPanel({
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={`Mapa térmico ${facing === "front" ? "frontal" : "dorsal"}`}
-        className="aspect-[400/600] h-auto w-full max-w-[300px]"
+        className="aspect-[400/600] h-auto w-full max-w-[320px] flex-1"
       >
         <HudSvgDefs prefix={defsPrefix} performanceMode={performanceMode} />
 
@@ -410,15 +410,15 @@ function HudPanel({
             <line key={`h-${y}`} x1={32} y1={y} x2={368} y2={y} />
           ))}
           {gridX.map((x) => (
-            <line key={`v-${x}`} x1={x} y1={24} x2={x} y2={576} />
+            <line key={`v-${x}`} x1={x} y1={48} x2={x} y2={584} />
           ))}
         </g>
 
         <rect
-          x={40}
-          y={36}
-          width={320}
-          height={528}
+          x={48}
+          y={48}
+          width={304}
+          height={536}
           fill={`url(#${defsPrefix}-hud-ambient)`}
           rx={16}
         />
@@ -549,7 +549,7 @@ function HudPanel({
         />
 
         <path
-          d="M44 44 L44 68 M44 44 L68 44 M356 44 L356 68 M356 44 L332 44 M44 556 L44 532 M44 556 L68 556 M356 556 L356 532 M356 556 L332 556"
+          d="M52 52 L52 76 M52 52 L76 52 M348 52 L348 76 M348 52 L324 52 M52 576 L52 552 M52 576 L76 576 M348 576 L348 552 M348 576 L324 576"
           stroke="rgba(6,182,212,0.52)"
           strokeWidth={1.25}
           fill="none"
@@ -557,8 +557,8 @@ function HudPanel({
         />
 
         <text
-          x={52}
-          y={58}
+          x={60}
+          y={68}
           fill="rgba(6,182,212,0.55)"
           fontSize={8}
           fontFamily="ui-monospace, monospace"
@@ -567,8 +567,8 @@ function HudPanel({
           FENYXIA
         </text>
         <text
-          x={348}
-          y={58}
+          x={340}
+          y={68}
           fill="rgba(6,182,212,0.55)"
           fontSize={8}
           fontFamily="ui-monospace, monospace"
@@ -635,7 +635,7 @@ export function HumanBodySvg({
   }, []);
 
   return (
-    <div className={`relative grid grid-cols-1 items-start gap-4 sm:grid-cols-2 sm:gap-3 ${className}`}>
+    <div className={`relative grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 sm:gap-3 ${className}`}>
       <HudPanel
         facing="front"
         title="Visão Frontal"

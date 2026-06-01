@@ -368,6 +368,7 @@ export function DashboardClient({
   const treinoWorkspaceProps = {
     subgroup: treinoSubgroup,
     authUserId: userId,
+    tabParam: activeTab,
     isIncubating,
     hasBiologicalBalance: (profile?.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE,
     onAltarMetricsChange: handleAltarMetricsChange,

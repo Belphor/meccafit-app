@@ -10,7 +10,7 @@ import { ExerciseForjadoBadge } from "@/components/dashboard/ExerciseForjadoBadg
 import { CameraGlyph } from "@/components/dashboard/DashboardBrandAssets";
 import type { Enums } from "@/types/database.types";
 import type { Exercise } from "@/lib/mock-data";
-import { formatExerciseReferenceWeight } from "@/lib/mock-data";
+import { formatExerciseReferenceMetric, formatDuration, formatSessionMetricLabel } from "@/lib/training-metric";
 import {
   BIOLOGICAL_BALANCE_MULTIPLIER,
   BRASAO_LIGHT_CAPSULE,
@@ -61,14 +61,6 @@ export type MonumentalExerciseCardProps = {
   onPersistSuccess?: (exerciseId: number, detail: { vtcGenerated: number }) => void;
 };
 
-function formatVolume(value: number) {
-  return value.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-}
-
-function stopCardActivation(event: MouseEvent) {
-  event.stopPropagation();
-}
-
 export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   exercise,
   isActive,
@@ -87,7 +79,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   const [baseVtc, setBaseVtc] = useState(0);
   const finalVtc = hasBiologicalBalance ? baseVtc * BIOLOGICAL_BALANCE_MULTIPLIER : baseVtc;
   const isSeriesComplete = exercise.completedSets >= exercise.targetSets;
-  const historicalPrLabel = formatExerciseReferenceWeight(exercise);
+  const historicalPrLabel = formatExerciseReferenceMetric(exercise, exercise.metricKind);
 
   const handleVolumeCommitted = useCallback(
     (volume: number) => {
@@ -107,6 +99,20 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   const handleCardActivate = useCallback(() => {
     onActivate(exercise.id);
   }, [exercise.id, onActivate]);
+
+  const handleCardClick = useCallback(
+    (event: MouseEvent<HTMLElement>) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      if (target.closest("[data-exercise-interactive='true']")) {
+        return;
+      }
+
+      handleCardActivate();
+    },
+    [handleCardActivate],
+  );
 
   const handleCardKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
@@ -177,7 +183,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
       tabIndex={0}
       aria-label={`Exercício ${exercise.name}${isSeriesComplete ? ", concluído" : isActive ? ", selecionado" : ""}`}
       aria-current={isActive ? "true" : undefined}
-      onClick={handleCardActivate}
+      onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       className={`${EXERCISE_CARD_SELECTABLE} p-4 sm:p-6 ${cardSurface} ${cardFrameClass}`}
       variant={showBrasaoBorder ? "brasao" : "selectable-idle"}
@@ -214,6 +220,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
             aria-disabled={!videoInteractive}
             disabled={!videoInteractive}
             onClick={handleWatchVideo}
+            data-exercise-interactive="true"
             className={`${videoButtonClass} relative z-[2] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-55`}
           >
             <CameraGlyph className="text-amber-300" />
@@ -228,15 +235,20 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
         ) : (
           <div className="relative min-w-0">
             <div
-              className="pointer-events-none flex min-w-0 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex min-w-0 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               aria-label="Métricas do exercício"
             >
               <span className={capsuleClass}>Séries {exercise.targetSets}</span>
               <span className={`${capsuleClass} ${showBrasaoBorder ? "text-amber-100" : ""}`}>
-                VTC {formatVolume(finalVtc)}
+                {formatSessionMetricLabel(exercise.metricKind, finalVtc)}
               </span>
+              {exercise.metricKind === "duration_sec" && exercise.targetDurationSec ? (
+                <span className={capsuleClass}>Meta {formatDuration(exercise.targetDurationSec)}</span>
+              ) : exercise.metricKind === "rep_max" && exercise.targetReps > 0 ? (
+                <span className={capsuleClass}>Meta {exercise.targetReps} rep</span>
+              ) : null}
             </div>
-            <p className={`${EXERCISE_RECORD_META} pointer-events-none`}>
+            <p className={EXERCISE_RECORD_META}>
               <span className={EXERCISE_RECORD_TERM}>Recorde histórico</span>
               {" · "}
               {historicalPrLabel}
@@ -249,11 +261,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
         )}
       </div>
 
-      <div
-        className="relative z-[2] mt-5 flex w-full justify-center"
-        onClick={stopCardActivation}
-        role="presentation"
-      >
+      <div className="relative z-[2] mt-5 flex w-full justify-center">
         <PhoenixInput
           userId={userId}
           isExerciseActive={isActive && !isSeriesComplete}
@@ -265,10 +273,15 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
           trainingGoalText={
             isSeriesComplete
               ? PHOENIX_INPUT_GOAL_COMPLETE
-              : `Registrar carga máxima · ${exercise.targetSets} séries`
+              : exercise.metricKind === "duration_sec"
+                ? `Registrar tempo máximo · ${exercise.targetSets} séries`
+                : exercise.metricKind === "rep_max"
+                  ? `Registrar repetição máxima · ${exercise.targetSets} séries`
+                  : `Registrar carga máxima · ${exercise.targetSets} séries`
           }
           prescribedSeries={exercise.targetSets}
           musculo={musculo}
+          metricKind={exercise.metricKind}
           onWeightSaved={handleWeightSaved}
           onVolumeCommitted={handleVolumeCommitted}
           onSuperacao={(payload) => onSuperacao(exercise.id, payload)}

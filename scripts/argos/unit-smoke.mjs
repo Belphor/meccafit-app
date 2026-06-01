@@ -2,6 +2,10 @@
  * ARGOS — smoke tests de funções puras (sem rede, lógica espelhada do app)
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { resolveTreinoPersistPayload } from "../lib/training-metric.mjs";
+
 let passed = 0;
 let failed = 0;
 
@@ -13,6 +17,61 @@ function assert(name, condition) {
     console.log(`[FAIL] ${name}`);
     failed += 1;
   }
+}
+
+function loadExerciseCatalog() {
+  const raw = readFileSync(resolve(process.cwd(), "src/data/test-exercise-catalog.json"), "utf8");
+  return JSON.parse(raw);
+}
+
+function subgroupIdToMusculo(subgroupId) {
+  const normalized = subgroupId.trim().toLowerCase();
+  if (normalized.includes("peitoral") || normalized.includes("peito")) return "peito";
+  if (normalized.includes("inferior") || normalized.includes("perna")) return "pernas";
+  if (normalized === "core" || normalized.includes("abdome") || normalized.includes("abdômen")) {
+    return "abdomen";
+  }
+  if (normalized.includes("costa")) return "costas";
+  if (normalized.includes("ombro")) return "ombros";
+  if (normalized.includes("braco") || normalized.includes("braço")) return "bracos";
+  return "peito";
+}
+
+function resolveTreinoDayKey(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(now);
+}
+
+function applyHistoricoCompletionMirror(exercise, historicoWeight) {
+  return {
+    currentWeight: historicoWeight,
+    historicalPrWeight: historicoWeight,
+    completedSets: 0,
+  };
+}
+
+function resolveCardioGoalMs(catalog, testMode) {
+  if (testMode) return catalog.cardio.testGoalMs;
+  return catalog.cardio.productionGoalMs;
+}
+
+function resolveTreinoPersistPayloadMirror(musculo, metricValue, prescribedSeries, metricKind, exercicioId) {
+  return resolveTreinoPersistPayload({
+    musculo,
+    metricValue,
+    prescribedSeries,
+    metricKind,
+    exercicioId,
+  });
+}
+
+function reconcileSessionCompletedSetsMirror(exercises, completedMap) {
+  const next = {};
+  for (const exercise of exercises) {
+    const sessionCompleted = Math.trunc(completedMap[exercise.id] ?? 0);
+    if (sessionCompleted <= 0) continue;
+    next[exercise.id] = Math.min(exercise.targetSets, sessionCompleted);
+  }
+  return next;
 }
 
 function sanitizeTextFilterParam(param) {
@@ -64,6 +123,57 @@ assert(
 assert("resolveHistoricoClienteId rejeita undefined string", resolveHistoricoClienteId("undefined") === null);
 assert("resolveHistoricoExercicioId numérico", resolveHistoricoExercicioId("7") === 7);
 assert("resolveHistoricoExercicioId geral vira 0", resolveHistoricoExercicioId("geral") === 0);
+
+const catalog = loadExerciseCatalog();
+assert("catálogo possui 6 subgrupos", catalog.subgroups.length === 6);
+assert(
+  "catálogo cobre 6 músculos soberanos",
+  new Set(catalog.subgroups.map((s) => s.musculo)).size === 6,
+);
+assert("catálogo possui 14 exercícios", catalog.subgroups.flatMap((s) => s.exercises).length === 14);
+assert(
+  "subgroup ombros mapeia musculo ombros",
+  subgroupIdToMusculo("ombros-deltoides") === "ombros",
+);
+assert(
+  "cardio test mode usa meta curta",
+  resolveCardioGoalMs(catalog, true) === catalog.cardio.testGoalMs,
+);
+assert(
+  "cardio produção usa meta longa",
+  resolveCardioGoalMs(catalog, false) === catalog.cardio.productionGoalMs,
+);
+assert("treino day key formato ISO", /^\d{4}-\d{2}-\d{2}$/.test(resolveTreinoDayKey()));
+assert(
+  "histórico não marca completedSets (sessão diária)",
+  applyHistoricoCompletionMirror({ targetSets: 4 }, 30).completedSets === 0,
+);
+assert(
+  "sessão diária reconcilia conclusão",
+  reconcileSessionCompletedSetsMirror([{ id: 1, targetSets: 4 }], { 1: 4 })[1] === 4,
+);
+assert("catálogo versão 2 com metricKind", catalog.version === 2);
+assert(
+  "prancha usa duration_sec",
+  catalog.subgroups
+    .flatMap((s) => s.exercises)
+    .find((e) => e.id === 11)?.metricKind === "duration_sec",
+);
+assert(
+  "abdomen persiste rep=1 (sem VTC inflado)",
+  resolveTreinoPersistPayloadMirror("abdomen", 25, 4, "rep_max", 10).repeticoes === 1 &&
+    resolveTreinoPersistPayloadMirror("abdomen", 25, 4, "rep_max", 10).pesoAtual === 25,
+);
+assert(
+  "prancha persiste segundos com rep=1",
+  resolveTreinoPersistPayloadMirror("abdomen", 45, 3, "duration_sec", 11).repeticoes === 1 &&
+    resolveTreinoPersistPayloadMirror("abdomen", 45, 3, "duration_sec", 11).pesoAtual === 45,
+);
+assert(
+  "peito persiste carga com rep=1",
+  resolveTreinoPersistPayloadMirror("peito", 30, 4, "load_kg", 1).pesoAtual === 30 &&
+    resolveTreinoPersistPayloadMirror("peito", 30, 4, "load_kg", 1).repeticoes === 1,
+);
 
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

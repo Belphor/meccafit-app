@@ -193,12 +193,11 @@ export const MONUMENTAL_BODY_REGION_SUBTITLE =
 /** Botão de ação primário */
 export const DASHBOARD_ACTION_BUTTON = `${EXERCISE_VIDEO_BUTTON} w-full sm:w-auto`;
 
-/** Botão mobile 「Registrar carga」 — inativo sem brasão */
-export const PHOENIX_REGISTER_CARGA_IDLE =
-  `${EXERCISE_VIDEO_BUTTON_IDLE} w-full sm:hidden`;
+/** Botão touch 「Registrar carga」 — visibilidade controlada no PhoenixInput */
+export const PHOENIX_REGISTER_CARGA_IDLE = `${EXERCISE_VIDEO_BUTTON_IDLE} w-full`;
 
-/** Botão mobile 「Registrar carga」 — ativo com brasão */
-export const PHOENIX_REGISTER_CARGA_ACTIVE = `${EXERCISE_VIDEO_BUTTON} w-full sm:hidden`;
+/** Botão touch 「Registrar carga」 — card selecionado */
+export const PHOENIX_REGISTER_CARGA_ACTIVE = `${EXERCISE_VIDEO_BUTTON} w-full`;
 
 /** Meta do PhoenixInput — exercício concluído na sessão */
 export const PHOENIX_INPUT_META_COMPLETE =

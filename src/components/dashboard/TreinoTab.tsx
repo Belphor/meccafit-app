@@ -6,12 +6,15 @@ import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPane
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import { MonumentalExerciseCard } from "@/components/dashboard/MonumentalExerciseCard";
 import { MonumentalSubgroupTitle } from "@/components/dashboard/MonumentalSubgroupTitle";
+import { TreinoSubgroupNav } from "@/components/dashboard/TreinoSubgroupNav";
 import { DASHBOARD_PANEL_FRAME, DASHBOARD_SCROLL_LIST } from "@/lib/dashboard-config";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
+import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
 type TreinoTabProps = {
   profile: ClientProfile;
   subgroup: MuscleSubgroup;
+  tabParam?: DashboardTabId | null;
   activeExerciseId: number;
   superacaoExerciseId: number | null;
   isIncubating: boolean;
@@ -31,6 +34,7 @@ type TreinoTabProps = {
 export function TreinoTab({
   profile,
   subgroup,
+  tabParam,
   activeExerciseId,
   superacaoExerciseId,
   isIncubating,
@@ -55,6 +59,8 @@ export function TreinoTab({
       <DashboardPanelHeader chip="Aba 1 · Treino" meta={profile.birth} metaVariant="chip" />
 
       <CardioVooCinzasPanel userId={userId} />
+
+      <TreinoSubgroupNav activeSubgroupId={subgroup.id} tabParam={tabParam} />
 
       <MonumentalSubgroupTitle subgroup={subgroup} />
 

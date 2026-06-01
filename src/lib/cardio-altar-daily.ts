@@ -1,5 +1,7 @@
 /** Altar diário privado — contribuição de cardio (sem mural comunitário). */
 
+import { resolveAppDayKey } from "@/lib/treino-day-key";
+
 export const STORAGE_VTC_UPDATE_EVENT = "storage_vtc_update";
 export const ALTAR_DAILY_CARDIO_PREFIX = "meccafit:altar-daily-cardio";
 
@@ -11,7 +13,7 @@ export type StorageVtcUpdateDetail = {
 };
 
 function dailyKey(userId: string): string {
-  const day = new Date().toISOString().slice(0, 10);
+  const day = resolveAppDayKey();
   return `${ALTAR_DAILY_CARDIO_PREFIX}:${userId}:${day}`;
 }
 
