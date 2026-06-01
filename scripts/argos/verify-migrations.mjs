@@ -276,15 +276,28 @@ async function probeAbdomenThermal(admin, userId) {
   }
 
   const abdomenMetric = Number(data?.abdomen?.metrica_bruta ?? 0);
-  // TLU: crunch 20 + prancha 60s/4 = 15 → 35 (pico/dia/exercício · rep=1)
-  const ok = abdomenMetric >= 34 && abdomenMetric <= 36;
+  const ignicao = Number(data?.indice_ignicao ?? 0);
+  // TLU bruto: crunch 20 + prancha 60s/4 = 15 → 35 (pico/dia/exercício · rep=1)
+  const rawTlu = 35;
+  const purityFactor = ignicao >= 50 ? 1 : 0.6;
+  const expected = rawTlu * purityFactor;
+  const ok = Math.abs(abdomenMetric - expected) <= 0.5;
+
+  // Pré-migration: SUM(series × repeticoes) com rep=1 → 7
+  if (abdomenMetric > 0 && abdomenMetric <= 10) {
+    return {
+      id: "abdomen_thermal",
+      ok: false,
+      detail: `abdomen metrica_bruta=${abdomenMetric} (legado SUM(series×reps) — migration pendente)`,
+    };
+  }
 
   return {
     id: "abdomen_thermal",
     ok,
     detail: ok
-      ? `abdomen TLU=${abdomenMetric} (esperado ~35)`
-      : `abdomen metrica_bruta=${abdomenMetric} (esperado ~35 — migration pendente?)`,
+      ? `abdomen TLU=${abdomenMetric} (bruto=${rawTlu} · ignição=${ignicao}%)`
+      : `abdomen metrica_bruta=${abdomenMetric} (esperado ~${expected} · bruto=${rawTlu} · ignição=${ignicao}%)`,
   };
 }
 
