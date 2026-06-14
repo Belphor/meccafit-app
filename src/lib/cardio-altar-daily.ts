@@ -1,5 +1,6 @@
 /** Altar diário privado — contribuição de cardio (sem mural comunitário). */
 
+import { markDailyPurityLog } from "@/lib/purity-log";
 import { resolveAppDayKey } from "@/lib/treino-day-key";
 
 export const STORAGE_VTC_UPDATE_EVENT = "storage_vtc_update";
@@ -56,4 +57,5 @@ export function commitCardioAltarCompletion(userId: string): void {
     source: "cardio_voo_cinzas",
     updatedAt: new Date().toISOString(),
   });
+  void markDailyPurityLog(userId, { source: "cardio_voo_cinzas" });
 }

@@ -23,6 +23,7 @@ export type Database = {
           phase_tier: number;
           phase_setup_at: string;
           custom_preferences: Json;
+          target_days_per_week: number;
         };
         Insert: {
           id: string;
@@ -37,6 +38,7 @@ export type Database = {
           phase_tier?: number;
           phase_setup_at?: string;
           custom_preferences?: Json;
+          target_days_per_week?: number;
         };
         Update: {
           id?: string;
@@ -51,6 +53,7 @@ export type Database = {
           phase_tier?: number;
           phase_setup_at?: string;
           custom_preferences?: Json;
+          target_days_per_week?: number;
         };
         Relationships: [
           {
@@ -181,6 +184,108 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "balanco_termico_diario_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      purity_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          log_date: string;
+          is_pure: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          log_date?: string;
+          is_pure?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          log_date?: string;
+          is_pure?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "purity_logs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      evolucao_membro_estase: {
+        Row: {
+          user_id: string;
+          membro_principal: Database["public"]["Enums"]["membro_principal_soberano"];
+          nivel_calculado: string;
+          metrica_bruta: number;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          membro_principal: Database["public"]["Enums"]["membro_principal_soberano"];
+          nivel_calculado?: string;
+          metrica_bruta?: number;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          membro_principal?: Database["public"]["Enums"]["membro_principal_soberano"];
+          nivel_calculado?: string;
+          metrica_bruta?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "evolucao_membro_estase_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      historico_treinos_comuns: {
+        Row: {
+          id: string;
+          user_id: string;
+          exercicio_id: string;
+          peso_atual: number;
+          repeticoes: number;
+          series: number;
+          criado_em: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          exercicio_id: string;
+          peso_atual: number;
+          repeticoes: number;
+          series: number;
+          criado_em?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          exercicio_id?: string;
+          peso_atual?: number;
+          repeticoes?: number;
+          series?: number;
+          criado_em?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "historico_treinos_comuns_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -541,6 +646,7 @@ export type Database = {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
       estagio_forca: "cinzas" | "faisca" | "brasa" | "labareda" | "fogo_cosmico_sagrado";
       subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "abdomen" | "pernas";
+      membro_principal_soberano: "PEITO" | "BRACOS" | "ABDOMEN" | "PERNAS";
     };
     CompositeTypes: Record<string, never>;
   };

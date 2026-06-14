@@ -6,10 +6,15 @@ import {
 import { createBrowserClient } from "@supabase/ssr";
 import { requireSupabasePublicEnv } from "@/lib/supabase-env";
 import { resolveHistoricoExercicioId } from "@/lib/exercise-rpc";
+import { markDailyPurityLog } from "@/lib/purity-log";
 import type { Database, Enums } from "@/types/database.types";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
-type ProtectedTableName = "matriz_forca" | "fenix_pureza_diaria" | "historico_treinos";
+type ProtectedTableName =
+  | "matriz_forca"
+  | "fenix_pureza_diaria"
+  | "historico_treinos"
+  | "purity_logs";
 type ProtectedInsert<TableName extends ProtectedTableName> =
   Database["public"]["Tables"][TableName]["Insert"];
 type ProtectedUpdate<TableName extends ProtectedTableName> =
@@ -244,7 +249,7 @@ export async function registrarTreinoComStatus(
   const exercicioNome = input.exercicioNome ?? "Treino geral";
   const exercicioId = resolveHistoricoExercicioId(input.exercicioId);
 
-  return withProtectedSupabaseMutation(
+  const result = await withProtectedSupabaseMutation(
     {
       cliente_id: input.clienteId,
       musculo,
@@ -267,21 +272,29 @@ export async function registrarTreinoComStatus(
 
       const row = Array.isArray(data) ? data[0] : data;
 
+      const parsed: RegistrarTreinoResult | null =
+        row && typeof row === "object"
+          ? {
+              status: row.status === "SUPERAÇÃO" ? "SUPERAÇÃO" : "CONCLUÍDO",
+              max_peso_atual: Number(row.max_peso_atual),
+              peso_atual: Number(row.peso_atual),
+              vtc_gerado: Number(row.vtc_gerado),
+              payload: row.payload,
+            }
+          : null;
+
       return {
-        data:
-          row && typeof row === "object"
-            ? {
-                status: row.status === "SUPERAÇÃO" ? "SUPERAÇÃO" : "CONCLUÍDO",
-                max_peso_atual: Number(row.max_peso_atual),
-                peso_atual: Number(row.peso_atual),
-                vtc_gerado: Number(row.vtc_gerado),
-                payload: row.payload,
-              }
-            : null,
+        data: parsed,
         error,
       };
     },
   );
+
+  if (result.data) {
+    void markDailyPurityLog(input.clienteId, { source: "treino_registrado" });
+  }
+
+  return result;
 }
 
 export type { ProtectedTableName, TypedSupabaseClient };

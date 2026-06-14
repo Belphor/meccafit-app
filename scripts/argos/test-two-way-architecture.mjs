@@ -231,6 +231,27 @@ try {
 }
 
 // =============================================================================
+// Setup · cliente@ na via comum (limpar bond residual de dual-vip / forger-lifecycle)
+// =============================================================================
+
+if (service) {
+  const { error: bondCleanupError } = await service
+    .from("forger_client_bonds")
+    .delete()
+    .eq("client_id", cliente.userId);
+
+  if (bondCleanupError) {
+    console.warn(
+      `ARGOS two-way: não foi possível limpar bond de cliente@ — ${bondCleanupError.message}`,
+    );
+  }
+} else {
+  console.warn(
+    "ARGOS two-way: SUPABASE_SERVICE_ROLE_KEY ausente — bond residual de testes VIP não será removido",
+  );
+}
+
+// =============================================================================
 // BLOCO 1 · cliente@meccafit.com — role cliente, sem vínculo Personal
 // =============================================================================
 
@@ -242,7 +263,12 @@ await record("1.0 · Pré-condição: cliente sem bond Personal", async () => {
   });
   if (error) return { ok: false, detail: error.message };
   if (hasBond === true) {
-    return { ok: false, detail: "cliente@ possui bond — seed inconsistente para via comum" };
+    return {
+      ok: false,
+      detail: service
+        ? "cliente@ ainda possui bond após cleanup — verifique RLS/service_role"
+        : "cliente@ possui bond — defina SUPABASE_SERVICE_ROLE_KEY para prep da via comum",
+    };
   }
   const { data: isCommon } = await cliente.client.rpc("argos_is_common_training_client", {
     p_user_id: cliente.userId,

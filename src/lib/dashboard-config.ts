@@ -61,8 +61,8 @@ export const PORTAL_FRAME_PANEL = `${PORTAL_FRAME_HALO} ${PORTAL_FRAME_SURFACE}`
 /** Aba Treino — mesmo halo e fundo do dashboard */
 export const TREINO_FRAME_PANEL = `${PORTAL_FRAME_HALO} ${PORTAL_FRAME_SURFACE}`;
 
-/** IRIS — fusão latente: inativo sem brasão, alinhado ao vidro fumê do portal */
-export const IRIS_IDLE_BORDER = "border-orange-500/[0.08]";
+/** IRIS — fusão latente: inativo sem borda visível (só o activo brilha) */
+export const IRIS_IDLE_BORDER = "border-transparent";
 export const IRIS_IDLE_SURFACE = "bg-neutral-950/45 backdrop-blur-sm";
 export const IRIS_IDLE_INSET =
   "shadow-[inset_0_1px_0_rgba(251,191,36,0.04)]";
@@ -73,9 +73,9 @@ export const IRIS_IDLE_HOVER =
 export const TREINO_INNER_PANEL =
   `border ${IRIS_IDLE_BORDER} bg-neutral-950/40 backdrop-blur-sm ${IRIS_IDLE_INSET}`;
 
-/** Voo de Cinzas — repouso (pré-voo), legível sem parecer desligado */
+/** Voo de Cinzas — repouso (pré-voo), sem halo brasão */
 export const CARDIO_VOO_PANEL_IDLE =
-  `border border-orange-500/18 bg-neutral-950/62 backdrop-blur-md ${IRIS_IDLE_INSET} ${BRASA_AMBIENT_GLOW}`;
+  `border ${IRIS_IDLE_BORDER} bg-neutral-950/45 backdrop-blur-sm ${IRIS_IDLE_INSET} ${IRIS_IDLE_HOVER}`;
 
 /** Voo de Cinzas — sessão ativa (running · check-in · estase) — halo + classe .cardio-voo-active no painel */
 export const CARDIO_VOO_PANEL_ACTIVE =
@@ -380,7 +380,7 @@ export const EXERCISE_CAPSULE_COMPLETE =
   "brasao-light-border exercise-series-complete shrink-0 rounded-full bg-black/45 px-2.5 py-1 text-[10px] uppercase tracking-[0.14em] text-[#FFD700]/85";
 
 export const EXERCISE_CARD_ACTIVE = "opacity-100";
-export const EXERCISE_CARD_IDLE = "opacity-[0.88] saturate-[0.9]";
+export const EXERCISE_CARD_IDLE = "opacity-[0.82] saturate-[0.85]";
 export const EXERCISE_CARD_COMPLETE = "opacity-100 saturate-[1.02]";
 export const EXERCISE_CARD_COMPLETE_FRAME =
   "exercise-card-complete shadow-[0_0_36px_rgba(255,215,0,0.12)] bg-neutral-950/65";

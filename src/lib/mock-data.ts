@@ -8,12 +8,7 @@ export type {
 } from "@/lib/mock-data-types";
 
 import type { BodyRegionSubtitle, Exercise, ExercisePersonalRecord, MuscleSubgroup } from "@/lib/mock-data-types";
-import {
-  exercisePersonalRecordsMock,
-  exercisesMock,
-  monumentalSubgroupMock,
-  subgroupsCatalog,
-} from "@/lib/exercise-catalog";
+import { exercisePersonalRecordsMock } from "@/lib/exercise-catalog";
 
 export {
   exercisePersonalRecordsMock,

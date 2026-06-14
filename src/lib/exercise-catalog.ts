@@ -1,6 +1,6 @@
 import catalogJson from "@/data/test-exercise-catalog.json";
 import type { Enums } from "@/types/database.types";
-import type { BodyRegionSubtitle, Exercise, ExerciseMetricKind, ExercisePersonalRecord, MuscleSubgroup } from "@/lib/mock-data-types";
+import type { BodyRegionSubtitle, Exercise, ExerciseMetricKind, MuscleSubgroup } from "@/lib/mock-data-types";
 
 export type { MuscleSubgroup, ExerciseMetricKind } from "@/lib/mock-data-types";
 
