@@ -22,7 +22,7 @@ export function PersonalTreinoWorkspace({
     <div className="space-y-0">
       <TrainingTrackBanner trainingTrack={trainingTrack} />
       <PersonalPrescriptionsPanel prescriptions={subgroupPrescriptions} />
-      <DashboardTreinoWorkspace {...workspaceProps} />
+      <DashboardTreinoWorkspace {...workspaceProps} trainingTrack={trainingTrack} />
     </div>
   );
 }

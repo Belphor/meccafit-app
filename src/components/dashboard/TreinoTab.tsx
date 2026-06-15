@@ -1,6 +1,6 @@
 "use client";
 
-import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
+import type { MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
@@ -19,10 +19,11 @@ import {
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
+import { resolveActiveTreinoSubgroup } from "@/lib/treino-subgroup";
+import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-track";
 import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 
 type TreinoTabProps = {
-  profile: ClientProfile;
   subgroup: MuscleSubgroup;
   activeExerciseId: number;
   superacaoExerciseId: number | null;
@@ -31,8 +32,10 @@ type TreinoTabProps = {
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
   activeTreinoMuscle: ClientTrainingMuscleGroup;
+  isTreinoSwitching: boolean;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
+  trainingTrack?: TrainingTrackState;
   indicatedDay: WeekdayIndex;
   onIndicatedDayChange: (day: WeekdayIndex) => void;
   onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
@@ -44,11 +47,10 @@ type TreinoTabProps = {
     exerciseId: number,
     payload: { weight: number; series: number; vtc: number },
   ) => void;
-  onPersistSuccess?: (exerciseId: number, detail: { vtcGenerated: number }) => void;
+  onPersistSuccess?: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
 };
 
 export function TreinoTab({
-  profile,
   subgroup,
   activeExerciseId,
   superacaoExerciseId,
@@ -57,8 +59,10 @@ export function TreinoTab({
   userId,
   initialWeekSchedule,
   activeTreinoMuscle,
+  isTreinoSwitching,
   forjadorConfig,
   forjadorPrescriptions,
+  trainingTrack = DEFAULT_TRAINING_TRACK,
   indicatedDay,
   onIndicatedDayChange,
   onTrainingMusclePick,
@@ -69,7 +73,13 @@ export function TreinoTab({
   onSuperacao,
   onPersistSuccess,
 }: TreinoTabProps) {
-  const musculo = subgroupIdToMusculo(subgroup.id);
+  const displaySubgroup = resolveActiveTreinoSubgroup(
+    activeTreinoMuscle,
+    subgroup,
+    trainingTrack,
+    forjadorPrescriptions,
+  );
+  const musculo = subgroupIdToMusculo(displaySubgroup.id);
   const hasForjadorPlan = hasForjadorPrescriptionForMuscle(
     forjadorPrescriptions,
     activeTreinoMuscle,
@@ -93,27 +103,26 @@ export function TreinoTab({
             userId={userId}
             initialSchedule={initialWeekSchedule}
             activeTreinoMuscle={activeTreinoMuscle}
+            isTreinoSwitching={isTreinoSwitching}
             hasForjadorPlan={hasForjadorPlan}
+            forjadorConfig={forjadorConfig}
             indicatedDay={indicatedDay}
             onIndicatedDayChange={onIndicatedDayChange}
             onTrainingMusclePick={onTrainingMusclePick}
           />
         ) : null}
-        <MonumentalSubgroupTitle subgroup={subgroup} />
-        {!hasForjadorPlan ? (
-          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/75">
-            Treino exemplo · forjador monta planilha, descanso e cardio
-          </p>
-        ) : (
-          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-emerald-300/80">
-            Planilha do forjador · descanso {forjadorConfig.descansoPadraoSeg}s · cardio{" "}
-            {forjadorConfig.cardioMetaMinutos} min
-          </p>
-        )}
+
+        <MonumentalSubgroupTitle subgroup={displaySubgroup} />
       </div>
 
-      <ul className={`mt-4 ${DASHBOARD_SCROLL_LIST}`} aria-label="Lista de exercícios do dia">
-        {subgroup.exercises.map((exercise) => (
+      <ul
+        className={`mt-4 ${DASHBOARD_SCROLL_LIST} transition-opacity duration-150 ${
+          isTreinoSwitching ? "opacity-70" : "opacity-100"
+        }`}
+        aria-label="Lista de exercícios do dia"
+        aria-busy={isTreinoSwitching}
+      >
+        {displaySubgroup.exercises.map((exercise) => (
           <li key={exercise.id} className="min-w-0">
             <MonumentalExerciseCard
               exercise={exercise}

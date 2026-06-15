@@ -21,6 +21,7 @@ import {
 } from "@/lib/dashboard-config";
 import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import { resolveCalendarWeekdayIndex } from "@/lib/training-week";
+import type { TrainingTrackState } from "@/lib/training-track";
 import type { ForjadorPrescriptionRow, ForjadorTreinoConfig } from "@/lib/forjador-prescriptions";
 
 export type SuperacaoPayload = {
@@ -37,6 +38,8 @@ export type DashboardTreinoWorkspaceProps = {
   activeTreinoMuscle: ClientTrainingMuscleGroup;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
+  isTreinoSwitching: boolean;
+  trainingTrack: TrainingTrackState;
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   onAltarMetricsChange: (baseVtcTotal: number, lastSavedWeight: number) => void;
@@ -99,6 +102,8 @@ export function DashboardTreinoWorkspace({
   activeTreinoMuscle,
   forjadorConfig,
   forjadorPrescriptions,
+  isTreinoSwitching,
+  trainingTrack,
   isIncubating,
   hasBiologicalBalance,
   onAltarMetricsChange,
@@ -135,6 +140,7 @@ export function DashboardTreinoWorkspace({
   );
   const lastSavedWeightRef = useRef(sessionHydration.lastSavedWeight);
   const sessionHydratedRef = useRef(true);
+  const prevSubgroupIdRef = useRef(subgroup.id);
   const flameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const muralTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,7 +169,12 @@ export function DashboardTreinoWorkspace({
       lastSavedWeightRef.current = sessionHydration.lastSavedWeight;
       setBaseVtcTotal(sessionHydration.baseVtcTotal);
       setCompletedSetsByExerciseId(sessionHydration.completedSetsByExerciseId);
-      setActiveExerciseId(resolveDefaultActiveExerciseId(subgroup));
+
+      if (prevSubgroupIdRef.current !== subgroup.id) {
+        setActiveExerciseId(resolveDefaultActiveExerciseId(subgroup));
+        prevSubgroupIdRef.current = subgroup.id;
+      }
+
       sessionHydratedRef.current = true;
       onAltarMetricsChange(sessionHydration.baseVtcTotal, sessionHydration.lastSavedWeight);
 
@@ -180,6 +191,7 @@ export function DashboardTreinoWorkspace({
     sessionHydrationKey,
     sessionHydration,
     sessionScope,
+    subgroup.id,
     subgroup,
     onAltarMetricsChange,
   ]);
@@ -301,12 +313,13 @@ export function DashboardTreinoWorkspace({
       <div className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
         <div className="order-1 min-w-0 lg:order-1">
           <TreinoTab
-            profile={profile}
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
             activeTreinoMuscle={activeTreinoMuscle}
+            isTreinoSwitching={isTreinoSwitching}
             forjadorConfig={forjadorConfig}
             forjadorPrescriptions={forjadorPrescriptions}
+            trainingTrack={trainingTrack}
             indicatedDay={indicatedDay}
             onIndicatedDayChange={setIndicatedDay}
             onTrainingMusclePick={handleTrainingMusclePick}

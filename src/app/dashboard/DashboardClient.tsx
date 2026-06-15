@@ -19,11 +19,14 @@ import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import {
-  applyForjadorPrescriptionsToSubgroup,
   DEFAULT_FORJADOR_TREINO_CONFIG,
   type ForjadorPrescriptionRow,
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
+import {
+  composeTreinoSubgroup,
+  resolveSubgroupByCatalogId,
+} from "@/lib/treino-subgroup";
 import {
   buildDashboardHref,
   DEFAULT_DASHBOARD_TAB,
@@ -61,7 +64,6 @@ import { supabase } from "@/lib/supabase";
 import type { MuscleCalorRow } from "@/components/evolution/human-body-constants";
 import {
   DEFAULT_TRAINING_TRACK,
-  applyPersonalPrescriptionsToSubgroup,
   resolvePrescriptionsForSubgroup,
   type TrainingTrackState,
 } from "@/lib/training-track";
@@ -70,7 +72,6 @@ import {
   MUSCLE_TO_SUBGROUP_ID,
   subgroupIdToClientTrainingMuscle,
 } from "@/lib/training-week";
-import { resolveSubgroupByCatalogId } from "@/lib/treino-subgroup";
 
 const EvolutionAbaPanel = dynamic(
   () =>
@@ -124,19 +125,6 @@ type DashboardClientProps = {
   initialForjadorPrescriptions?: ForjadorPrescriptionRow[];
 };
 
-function composeTreinoSubgroup(
-  base: MuscleSubgroup,
-  muscle: ClientTrainingMuscleGroup,
-  track: TrainingTrackState,
-  forjadorPrescriptions: ForjadorPrescriptionRow[],
-): MuscleSubgroup {
-  let next = applyForjadorPrescriptionsToSubgroup(base, muscle, forjadorPrescriptions);
-  if (track.track === "personal") {
-    next = applyPersonalPrescriptionsToSubgroup(next, track.personalPrescriptions);
-  }
-  return next;
-}
-
 export function DashboardClient({
   userId,
   subgroupParam,
@@ -162,8 +150,11 @@ export function DashboardClient({
   const [activeTreinoMuscle, setActiveTreinoMuscle] = useState<ClientTrainingMuscleGroup>(
     () => subgroupIdToClientTrainingMuscle(catalogSubgroup.id) ?? "PEITO",
   );
+  const [isTreinoSwitching, setIsTreinoSwitching] = useState(false);
   const [forjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
   const [forjadorPrescriptions] = useState<ForjadorPrescriptionRow[]>(initialForjadorPrescriptions);
+  const treinoSwitchTokenRef = useRef(0);
+  const activeTreinoMuscleRef = useRef(activeTreinoMuscle);
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
@@ -196,6 +187,10 @@ export function DashboardClient({
   useEffect(() => {
     subgroupRef.current = subgroup;
   }, [subgroup]);
+
+  useEffect(() => {
+    activeTreinoMuscleRef.current = activeTreinoMuscle;
+  }, [activeTreinoMuscle]);
 
   useEffect(() => {
     let isMounted = true;
@@ -237,7 +232,7 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [activeTreinoMuscle, forjadorPrescriptions, loadKey, subgroupParam, tabParam]);
+  }, [forjadorPrescriptions, loadKey, subgroupParam, tabParam]);
 
   useEffect(() => {
     if (!dataReady) return;
@@ -293,13 +288,15 @@ export function DashboardClient({
 
   const handleTrainingMusclePick = useCallback(
     (muscle: ClientTrainingMuscleGroup) => {
-      if (muscle === activeTreinoMuscle) return;
+      if (muscle === activeTreinoMuscleRef.current) return;
 
+      const switchToken = ++treinoSwitchTokenRef.current;
       setActiveTreinoMuscle(muscle);
+      setIsTreinoSwitching(true);
+
       const subgroupId = MUSCLE_TO_SUBGROUP_ID[muscle];
-      const base = resolveSubgroupByCatalogId(subgroupId);
       const instant = composeTreinoSubgroup(
-        base,
+        resolveSubgroupByCatalogId(subgroupId),
         muscle,
         trainingTrack,
         forjadorPrescriptions,
@@ -307,13 +304,18 @@ export function DashboardClient({
       setSubgroup(instant);
 
       void refreshSubgroupHistorico(instant).then((result) => {
-        if (!result.data) return;
-        setSubgroup(
-          composeTreinoSubgroup(result.data, muscle, trainingTrack, forjadorPrescriptions),
-        );
+        if (switchToken !== treinoSwitchTokenRef.current) return;
+
+        if (result.data) {
+          setSubgroup(
+            composeTreinoSubgroup(result.data, muscle, trainingTrack, forjadorPrescriptions),
+          );
+        }
+
+        setIsTreinoSwitching(false);
       });
     },
-    [activeTreinoMuscle, forjadorPrescriptions, trainingTrack],
+    [forjadorPrescriptions, trainingTrack],
   );
 
   useEffect(() => {
@@ -361,7 +363,14 @@ export function DashboardClient({
       const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
 
       if (subgroupResult.data) {
-        setSubgroup(subgroupResult.data);
+        setSubgroup(
+          composeTreinoSubgroup(
+            subgroupResult.data,
+            activeTreinoMuscleRef.current,
+            trainingTrack,
+            forjadorPrescriptions,
+          ),
+        );
       }
 
       if (muralResult.data) {
@@ -383,7 +392,7 @@ export function DashboardClient({
         setHasPersonalBond(bundleResult.data.hasPersonalBond);
       }
     },
-    [subgroupParam, userId],
+    [forjadorPrescriptions, subgroupParam, trainingTrack, userId],
   );
 
   const handleWatchVideo = useCallback(
@@ -427,6 +436,7 @@ export function DashboardClient({
     activeTreinoMuscle,
     forjadorConfig,
     forjadorPrescriptions,
+    isTreinoSwitching,
     isIncubating,
     hasBiologicalBalance: (profile?.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE,
     onAltarMetricsChange: handleAltarMetricsChange,
@@ -520,6 +530,7 @@ export function DashboardClient({
                       <DashboardTreinoWorkspace
                         key="common-treino"
                         profile={profile}
+                        trainingTrack={trainingTrack}
                         {...treinoWorkspaceProps}
                       />
                     )
