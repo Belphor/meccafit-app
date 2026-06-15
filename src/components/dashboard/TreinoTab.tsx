@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import { MonumentalExerciseCard } from "@/components/dashboard/MonumentalExerciseCard";
 import { MonumentalSubgroupTitle } from "@/components/dashboard/MonumentalSubgroupTitle";
-import { TreinoSubgroupNav } from "@/components/dashboard/TreinoSubgroupNav";
 import { TreinoWeekControls } from "@/components/training/treino-week-controls";
 import {
   DASHBOARD_INNER_FRAME,
@@ -56,7 +55,15 @@ export function TreinoTab({
   onPersistSuccess,
 }: TreinoTabProps) {
   const musculo = subgroupIdToMusculo(subgroup.id);
-  const [focusOverride, setFocusOverride] = useState(false);
+
+  const handleDayTrainingChange = useCallback(
+    ({ subgroupId }: { subgroupId: string }) => {
+      if (subgroupId !== subgroup.id) {
+        onSubgroupNavigate(subgroupId);
+      }
+    },
+    [onSubgroupNavigate, subgroup.id],
+  );
 
   const weekControls = useMemo(() => {
     if (!userId) return null;
@@ -64,17 +71,11 @@ export function TreinoTab({
     return (
       <TreinoWeekControls
         userId={userId}
-        activeSubgroupId={subgroup.id}
         initialSchedule={initialWeekSchedule}
-        onMuscleFocusChange={({ subgroupId, isOverride }) => {
-          setFocusOverride(isOverride);
-          if (subgroupId !== subgroup.id) {
-            onSubgroupNavigate(subgroupId);
-          }
-        }}
+        onDayTrainingChange={handleDayTrainingChange}
       />
     );
-  }, [initialWeekSchedule, onSubgroupNavigate, subgroup.id, userId]);
+  }, [handleDayTrainingChange, initialWeekSchedule, userId]);
 
   return (
     <BrasaVivaCard
@@ -89,16 +90,7 @@ export function TreinoTab({
 
       <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
         {weekControls}
-
-        <TreinoSubgroupNav activeSubgroupId={subgroup.id} />
-
         <MonumentalSubgroupTitle subgroup={subgroup} />
-
-        {focusOverride ? (
-          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/80">
-            Foco vital alternado · planilha do forjador intacta
-          </p>
-        ) : null}
       </div>
 
       <ul className={`mt-4 ${DASHBOARD_SCROLL_LIST}`} aria-label="Lista de exercícios do dia">

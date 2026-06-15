@@ -10,6 +10,7 @@ import {
   resolveCalendarWeekdayIndex,
   TRAINING_MUSCLE_GROUPS,
   WEEKDAY_LABELS,
+  WEEKDAY_SHORT_LABELS,
   type PlanilhaDayRow,
   type TrainingMuscleGroup,
   type WeekdayIndex,
@@ -19,21 +20,12 @@ import { supabase } from "@/lib/supabase";
 
 const WEEKDAY_INDICES: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
 
-const SUBGROUP_TO_MUSCLE = Object.fromEntries(
-  Object.entries(MUSCLE_TO_SUBGROUP_ID).map(([muscle, subgroupId]) => [
-    subgroupId,
-    muscle as TrainingMuscleGroup,
-  ]),
-) as Record<string, TrainingMuscleGroup>;
-
 export type TreinoWeekControlsProps = {
   userId: string;
-  activeSubgroupId?: string;
   initialSchedule?: PlanilhaDayRow[];
-  onMuscleFocusChange: (payload: {
+  onDayTrainingChange: (payload: {
     muscle: TrainingMuscleGroup;
     subgroupId: string;
-    isOverride: boolean;
     activeDay: WeekdayIndex;
   }) => void;
 };
@@ -46,33 +38,67 @@ function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
 
 export function TreinoWeekControls({
   userId,
-  activeSubgroupId,
   initialSchedule,
-  onMuscleFocusChange,
+  onDayTrainingChange,
 }: TreinoWeekControlsProps) {
   const boot = useMemo(() => resolveInitialSchedule(initialSchedule), [initialSchedule]);
+  const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
 
   const [schedule, setSchedule] = useState(boot.schedule);
   const [activeDay, setActiveDay] = useState<WeekdayIndex>(boot.activeDay);
-  const [selectedMuscle, setSelectedMuscle] = useState<TrainingMuscleGroup>(boot.muscle);
-  const [isOverride, setIsOverride] = useState(false);
-  const [focusMenuOpen, setFocusMenuOpen] = useState(false);
   const [loading, setLoading] = useState(!initialSchedule?.length);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const didInitialSyncRef = useRef(false);
+  const didInitialNavigateRef = useRef(false);
 
-  const scheduledForActiveDay = schedule[activeDay];
+  const activeMuscle = schedule[activeDay];
 
-  const emitFocus = useCallback(
-    (muscle: TrainingMuscleGroup, day: WeekdayIndex, override: boolean) => {
-      onMuscleFocusChange({
+  const emitTraining = useCallback(
+    (muscle: TrainingMuscleGroup, day: WeekdayIndex) => {
+      onDayTrainingChange({
         muscle,
         subgroupId: MUSCLE_TO_SUBGROUP_ID[muscle],
-        isOverride: override,
         activeDay: day,
       });
     },
-    [onMuscleFocusChange],
+    [onDayTrainingChange],
+  );
+
+  const persistDayMuscle = useCallback(
+    async (day: WeekdayIndex, muscle: TrainingMuscleGroup) => {
+      setSaving(true);
+      setError(null);
+
+      const { error: upsertError } = await supabase.from("planilhas_forjador").upsert(
+        {
+          atleta_id: userId,
+          dia_semana: day,
+          grupo_muscular: muscle,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "atleta_id,dia_semana" },
+      );
+
+      setSaving(false);
+
+      if (upsertError) {
+        setError(upsertError.message);
+        return false;
+      }
+
+      return true;
+    },
+    [userId],
+  );
+
+  const applyDayMuscle = useCallback(
+    async (day: WeekdayIndex, muscle: TrainingMuscleGroup) => {
+      setSchedule((current) => ({ ...current, [day]: muscle }));
+      setActiveDay(day);
+      emitTraining(muscle, day);
+      await persistDayMuscle(day, muscle);
+    },
+    [emitTraining, persistDayMuscle],
   );
 
   const loadSchedule = useCallback(async () => {
@@ -100,21 +126,14 @@ export function TreinoWeekControls({
         })
         .filter((row): row is PlanilhaDayRow => row !== null);
 
-      const nextSchedule = buildScheduleMap(rows);
-      setSchedule(nextSchedule);
-
-      if (!isOverride) {
-        const muscle = nextSchedule[activeDay];
-        setSelectedMuscle(muscle);
-        emitFocus(muscle, activeDay, false);
-      }
+      setSchedule(buildScheduleMap(rows));
     } catch {
-      setError("Falha ao carregar planilha do forjador.");
+      setError("Falha ao carregar grade semanal.");
       setSchedule(DEFAULT_WEEKLY_SCHEDULE);
     } finally {
       setLoading(false);
     }
-  }, [activeDay, emitFocus, isOverride, userId]);
+  }, [userId]);
 
   useEffect(() => {
     if (!initialSchedule?.length) {
@@ -123,82 +142,42 @@ export function TreinoWeekControls({
   }, [initialSchedule?.length, loadSchedule]);
 
   useEffect(() => {
-    if (!activeSubgroupId) return;
-
-    const muscle = SUBGROUP_TO_MUSCLE[activeSubgroupId];
-    if (!muscle) return;
-
-    setSelectedMuscle(muscle);
-    setIsOverride(muscle !== schedule[activeDay]);
-  }, [activeDay, activeSubgroupId, schedule]);
-
-  useEffect(() => {
-    if (didInitialSyncRef.current) return;
-    didInitialSyncRef.current = true;
-    emitFocus(selectedMuscle, activeDay, isOverride);
-  }, [activeDay, emitFocus, isOverride, selectedMuscle]);
+    if (didInitialNavigateRef.current) return;
+    didInitialNavigateRef.current = true;
+    emitTraining(boot.muscle, boot.activeDay);
+  }, [boot.activeDay, boot.muscle, emitTraining]);
 
   const selectDay = useCallback(
     (day: WeekdayIndex) => {
+      const muscle = schedule[day];
       setActiveDay(day);
-      setFocusMenuOpen(false);
-      if (!isOverride) {
-        const muscle = schedule[day];
-        setSelectedMuscle(muscle);
-        emitFocus(muscle, day, false);
-      }
+      emitTraining(muscle, day);
     },
-    [emitFocus, isOverride, schedule],
+    [emitTraining, schedule],
   );
-
-  const applyMuscleOverride = useCallback(
-    (muscle: TrainingMuscleGroup) => {
-      const override = muscle !== schedule[activeDay];
-      setSelectedMuscle(muscle);
-      setIsOverride(override);
-      setFocusMenuOpen(false);
-      emitFocus(muscle, activeDay, override);
-    },
-    [activeDay, emitFocus, schedule],
-  );
-
-  const resetToScheduled = useCallback(() => {
-    const muscle = schedule[activeDay];
-    setSelectedMuscle(muscle);
-    setIsOverride(false);
-    setFocusMenuOpen(false);
-    emitFocus(muscle, activeDay, false);
-  }, [activeDay, emitFocus, schedule]);
 
   return (
-    <div className="space-y-4 border-b border-orange-500/10 pb-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
-            Grade · Segunda a Sábado
-          </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-            {loading ? "Sincronizando…" : `${WEEKDAY_LABELS[activeDay]} · ${MUSCLE_GROUP_LABELS[selectedMuscle]}`}
-            {isOverride ? " · foco alternado" : ""}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setFocusMenuOpen((open) => !open)}
-          className={`${DASHBOARD_TAP_TARGET} rounded-full border border-cyan-500/20 bg-neutral-950/60 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-100/85 backdrop-blur-md`}
-        >
-          Alternar Foco Vital
-        </button>
+    <div className="space-y-4 border-b border-orange-500/10 pb-5">
+      <div>
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
+          Semana · Segunda a Sábado
+        </p>
+        <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
+          {loading
+            ? "Sincronizando grade…"
+            : `Dia ativo · ${WEEKDAY_LABELS[activeDay]} · ${MUSCLE_GROUP_LABELS[activeMuscle]}`}
+          {saving ? " · salvando…" : ""}
+        </p>
       </div>
 
       <div
-        className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+        className="grid grid-cols-3 gap-2 sm:grid-cols-6"
         role="tablist"
         aria-label="Dias da semana"
       >
         {WEEKDAY_INDICES.map((day) => {
           const isActive = day === activeDay;
+          const isToday = day === calendarToday;
           const muscle = schedule[day];
 
           return (
@@ -208,22 +187,25 @@ export function TreinoWeekControls({
               role="tab"
               aria-selected={isActive}
               onClick={() => selectDay(day)}
-              className={`rounded-xl border px-3 py-3 text-left transition-[border-color,box-shadow,background-color] duration-200 ${
+              className={`relative rounded-xl border px-2 py-3 text-center transition-[border-color,box-shadow,background-color,transform] duration-200 active:scale-[0.98] ${
                 isActive
-                  ? "border-emerald-500 bg-emerald-950/20 shadow-[0_0_12px_rgba(16,185,129,0.28)]"
-                  : `${IRIS_IDLE_BORDER} ${IRIS_IDLE_SURFACE} opacity-80`
+                  ? "border-emerald-500/70 bg-emerald-950/30 shadow-[0_0_14px_rgba(16,185,129,0.22)]"
+                  : `${IRIS_IDLE_BORDER} ${IRIS_IDLE_SURFACE} hover:border-orange-500/20`
               }`}
             >
+              {isToday ? (
+                <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)]" />
+              ) : null}
               <p
-                className={`font-mono text-[9px] uppercase tracking-[0.16em] ${
+                className={`font-mono text-[9px] uppercase tracking-[0.14em] ${
                   isActive ? "text-emerald-200" : "text-neutral-500"
                 }`}
               >
-                {WEEKDAY_LABELS[day]}
+                {WEEKDAY_SHORT_LABELS[day]}
               </p>
               <p
-                className={`mt-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
-                  isActive ? "text-amber-50" : "text-neutral-600"
+                className={`mt-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.1em] ${
+                  isActive ? "text-amber-50" : "text-neutral-500"
                 }`}
               >
                 {MUSCLE_GROUP_LABELS[muscle]}
@@ -233,45 +215,35 @@ export function TreinoWeekControls({
         })}
       </div>
 
-      {focusMenuOpen ? (
-        <div className="rounded-xl border border-cyan-500/20 bg-black/55 p-3 backdrop-blur-md">
-          <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.18em] text-cyan-400/70">
-            Selecione o grupo muscular
-          </p>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {TRAINING_MUSCLE_GROUPS.map((muscle) => {
-              const selected = muscle === selectedMuscle;
-              return (
-                <button
-                  key={muscle}
-                  type="button"
-                  onClick={() => applyMuscleOverride(muscle)}
-                  className={`${DASHBOARD_TAP_TARGET} rounded-lg border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] ${
-                    selected
-                      ? "border-emerald-500 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                      : "border-orange-500/10 text-neutral-500 opacity-70"
-                  }`}
-                >
-                  {MUSCLE_GROUP_LABELS[muscle]}
-                </button>
-              );
-            })}
-          </div>
-          {isOverride ? (
-            <button
-              type="button"
-              onClick={resetToScheduled}
-              className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/80 hover:underline"
-            >
-              Restaurar prescrição · {MUSCLE_GROUP_LABELS[scheduledForActiveDay]}
-            </button>
-          ) : null}
+      <div className="rounded-xl border border-cyan-500/12 bg-black/40 p-3 backdrop-blur-sm">
+        <p className="mb-2.5 font-mono text-[9px] uppercase tracking-[0.18em] text-cyan-400/70">
+          Treino de {WEEKDAY_LABELS[activeDay]}
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {TRAINING_MUSCLE_GROUPS.map((muscle) => {
+            const selected = muscle === activeMuscle;
+            return (
+              <button
+                key={muscle}
+                type="button"
+                disabled={saving}
+                onClick={() => void applyDayMuscle(activeDay, muscle)}
+                className={`${DASHBOARD_TAP_TARGET} rounded-lg border px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-[border-color,background-color] duration-200 disabled:opacity-50 ${
+                  selected
+                    ? "border-emerald-500/60 bg-emerald-950/35 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
+                    : "border-orange-500/10 bg-neutral-950/40 text-neutral-400 hover:border-cyan-500/20 hover:text-neutral-200"
+                }`}
+              >
+                {MUSCLE_GROUP_LABELS[muscle]}
+              </button>
+            );
+          })}
         </div>
-      ) : null}
+      </div>
 
       {error ? (
         <p className="text-[10px] text-amber-400/85" role="alert">
-          {error} · grade padrão local.
+          {error}
         </p>
       ) : null}
     </div>

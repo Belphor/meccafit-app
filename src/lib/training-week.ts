@@ -23,6 +23,15 @@ export const WEEKDAY_LABELS: Record<WeekdayIndex, string> = {
   6: "Sábado",
 };
 
+export const WEEKDAY_SHORT_LABELS: Record<WeekdayIndex, string> = {
+  1: "Seg",
+  2: "Ter",
+  3: "Qua",
+  4: "Qui",
+  5: "Sex",
+  6: "Sáb",
+};
+
 export const MUSCLE_GROUP_LABELS: Record<TrainingMuscleGroup, string> = {
   PEITO: "Peito",
   COSTAS: "Costas",

@@ -91,6 +91,10 @@ export const MIGRATION_PATCHES = [
     id: "planilhas_forjador",
     files: ["20260618120000_planilhas_forjador_weekly.sql"],
   },
+  {
+    id: "planilhas_atleta_free",
+    files: ["20260619100000_planilhas_atleta_weekly_free.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
