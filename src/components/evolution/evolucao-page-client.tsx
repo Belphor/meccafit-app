@@ -11,8 +11,6 @@ import {
   calorRowsToCongelamento,
   calorRowsToNiveisTermicos,
   formatCalorMembroMetric,
-  hasAnyFrozenMember,
-  parseEvolutionCalorJson,
   resolveNivelTermicoGlobal,
   SOVEREIGN_MUSCLES,
   type EvolutionCalorPayload,
@@ -30,7 +28,9 @@ import {
   DASHBOARD_SECTION_TITLE,
   MAGMA_SPECTRUM,
 } from "@/lib/dashboard-config";
+import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import { supabase } from "@/lib/supabase";
+import { SelfieComparison } from "@/components/evolution/selfie-comparison";
 
 const EvolucaoSelfiePanel = dynamic(
   () =>
@@ -60,16 +60,12 @@ async function assertAuthenticatedScope(expectedUserId: string): Promise<boolean
   return session.user.id === expectedUserId;
 }
 
-async function fetchCalorPayload(userId: string): Promise<EvolutionCalorPayload> {
-  const calorRes = await supabase.rpc("obter_calor_muscular_atleta", {
-    target_atleta_id: userId,
-  });
-
-  if (calorRes.error) {
-    throw new Error(calorRes.error.message);
+async function fetchCalorPayload(expectedUserId: string): Promise<EvolutionCalorPayload> {
+  const scoped = await assertAuthenticatedScope(expectedUserId);
+  if (!scoped) {
+    throw new Error("Sessão inválida. Faça login novamente.");
   }
-
-  return parseEvolutionCalorJson(calorRes.data);
+  return fetchMuscularEvolutionPayload();
 }
 
 export function EvolucaoPageClient({
@@ -206,7 +202,7 @@ export function EvolucaoPageClient({
         className={DASHBOARD_PANEL_FRAME}
         aria-labelledby="evolucao-aba-title"
       >
-        <DashboardPanelHeader chip="Aba 3 · Evolução" meta="Calor Muscular" />
+        <DashboardPanelHeader chip="Evolução" meta="Calor muscular" />
 
         <div className="mt-4 flex flex-col gap-4 border-b border-orange-500/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 text-center sm:text-left">
@@ -214,7 +210,7 @@ export function EvolucaoPageClient({
               Mapa Térmico
             </h2>
             <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-              6 grupos musculares · pureza dinâmica
+              6 grupos · pureza dinâmica · ignição mensal
             </p>
           </div>
 
@@ -279,11 +275,6 @@ export function EvolucaoPageClient({
                   <p className="mt-0.5 font-mono text-[10px] text-neutral-600">
                     {activeCalorMetric.hint}
                   </p>
-                  {activeRow.is_frozen ? (
-                    <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-cyan-300/90">
-                      Membro congelado · estase VIP
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
             </>
@@ -308,7 +299,6 @@ export function EvolucaoPageClient({
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
                   Nível global · {CALOR_LEVEL_LABELS[nivelTermicoGlobal ?? computedNivelGlobal]}
-                  {hasAnyFrozenMember(calorRows) ? " · congelamento parcial" : ""}
                 </p>
                 {indiceIgnicao < PURITY_PENALTY_THRESHOLD ? (
                   <p className="text-[9px] uppercase tracking-[0.14em] text-amber-500/70">
@@ -350,8 +340,7 @@ export function EvolucaoPageClient({
                         : "border-orange-500/10 bg-black/30 text-neutral-500"
                     }`}
                   >
-                    {id}
-                    {row?.is_frozen ? " · ∅" : ""}
+                    {MUSCLE_LABELS[id]}
                   </button>
                 );
               })}
@@ -367,6 +356,10 @@ export function EvolucaoPageClient({
             />
           </div>
         ) : null}
+
+        <div className="mt-8 border-t border-orange-500/10 pt-6">
+          <SelfieComparison />
+        </div>
       </BrasaVivaCard>
     </Wrapper>
   );

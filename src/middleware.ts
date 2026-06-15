@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createMiddlewareClient } from "@/lib/supabase-middleware";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/evolucao"] as const;
+const PROTECTED_PREFIXES = ["/dashboard", "/evolucao", "/treino", "/comunidade", "/perfil"] as const;
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
@@ -32,5 +32,16 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/evolucao"],
+  matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
+    "/evolucao",
+    "/evolucao/:path*",
+    "/treino",
+    "/treino/:path*",
+    "/comunidade",
+    "/comunidade/:path*",
+    "/perfil",
+    "/perfil/:path*",
+  ],
 };

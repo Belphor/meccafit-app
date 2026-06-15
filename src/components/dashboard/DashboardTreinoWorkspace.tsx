@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BraseiroPanel } from "@/components/dashboard/BraseiroPanel";
 import { TreinoTab } from "@/components/dashboard/TreinoTab";
 import { readAltarVtcSession, writeAltarVtcSession } from "@/lib/altar-vtc-session";
@@ -19,6 +20,8 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
+import { buildDashboardHref, type DashboardTabId } from "@/lib/dashboard-tabs";
+import type { PlanilhaDayRow } from "@/lib/training-week";
 
 export type SuperacaoPayload = {
   weight: number;
@@ -26,13 +29,12 @@ export type SuperacaoPayload = {
   vtc: number;
 };
 
-import type { DashboardTabId } from "@/lib/dashboard-tabs";
-
 export type DashboardTreinoWorkspaceProps = {
   subgroup: MuscleSubgroup;
   profile: ClientProfile;
   authUserId: string;
   tabParam?: DashboardTabId | null;
+  initialWeekSchedule?: PlanilhaDayRow[];
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   onAltarMetricsChange: (baseVtcTotal: number, lastSavedWeight: number) => void;
@@ -91,6 +93,7 @@ export function DashboardTreinoWorkspace({
   profile,
   authUserId,
   tabParam,
+  initialWeekSchedule,
   isIncubating,
   hasBiologicalBalance,
   onAltarMetricsChange,
@@ -99,6 +102,7 @@ export function DashboardTreinoWorkspace({
   onSuperacaoMural,
   onTrainingPersisted,
 }: DashboardTreinoWorkspaceProps) {
+  const router = useRouter();
   const sessionScope = useMemo(
     () => ({ userId: authUserId, subgroupId: subgroup.id }),
     [authUserId, subgroup.id],
@@ -277,6 +281,18 @@ export function DashboardTreinoWorkspace({
     [baseVtcTotal, mergedSubgroup.exercises, onTrainingPersisted, persistAltarSession],
   );
 
+  const handleSubgroupNavigate = useCallback(
+    (subgroupSlug: string) => {
+      router.replace(
+        buildDashboardHref({
+          subgrupo: subgroupSlug,
+          tab: tabParam ?? "treino",
+        }),
+      );
+    },
+    [router, tabParam],
+  );
+
   return (
     <div className={DASHBOARD_TAB_CONTENT}>
       <div className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
@@ -285,6 +301,8 @@ export function DashboardTreinoWorkspace({
             profile={profile}
             subgroup={mergedSubgroup}
             tabParam={tabParam}
+            initialWeekSchedule={initialWeekSchedule}
+            onSubgroupNavigate={handleSubgroupNavigate}
             activeExerciseId={activeExerciseId}
             superacaoExerciseId={superacaoExerciseId}
             isIncubating={isIncubating}

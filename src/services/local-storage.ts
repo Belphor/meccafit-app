@@ -19,6 +19,15 @@ const STORE_SELFIES = "selfies_ciclo";
 const AVATAR_KEY = "current";
 const MAX_CYCLE_SELFIES = 3;
 
+/** Slots fixos do ciclo mensal · apenas native_path no IndexedDB */
+export const CYCLE_SELFIE_DAY_IDS = {
+  1: "cycle-selfie-day-1",
+  15: "cycle-selfie-day-15",
+  30: "cycle-selfie-day-30",
+} as const;
+
+export type CycleSelfieDay = keyof typeof CYCLE_SELFIE_DAY_IDS;
+
 export const EVOLUTION_AVATAR_UPDATED_EVENT = "meccafit:evolution-avatar-updated";
 
 type AvatarPathRecord = {
@@ -257,6 +266,20 @@ export async function saveCycleSelfie(id: string, file: File): Promise<void> {
     await trimCycleSelfiesToLimit();
   } catch {
     /* fallback silencioso */
+  }
+}
+
+/** Resolve URL local de uma selfie de ciclo pelo id (ex.: cycle-selfie-day-1). */
+export async function getCycleSelfiePathById(id: string): Promise<string | null> {
+  if (!isBrowser() || !id.trim()) return null;
+
+  try {
+    const rows = await readSelfieRecords();
+    const target = rows.find((row) => row.id === id.trim());
+    if (!target) return null;
+    return await resolveAppFileSrc(target.native_path);
+  } catch {
+    return null;
   }
 }
 

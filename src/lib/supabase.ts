@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { requireSupabasePublicEnv } from "@/lib/supabase-env";
 import { resolveHistoricoExercicioId } from "@/lib/exercise-rpc";
 import { markDailyPurityLog } from "@/lib/purity-log";
+import { recordHistoricoCarga } from "@/lib/historico-cargas";
 import type { Database, Enums } from "@/types/database.types";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
@@ -292,6 +293,15 @@ export async function registrarTreinoComStatus(
 
   if (result.data) {
     void markDailyPurityLog(input.clienteId, { source: "treino_registrado" });
+    void recordHistoricoCarga({
+      atletaId: input.clienteId,
+      musculo,
+      exercicioId,
+      exercicioNome,
+      peso: input.pesoAtual,
+      repeticoes,
+      series,
+    });
   }
 
   return result;

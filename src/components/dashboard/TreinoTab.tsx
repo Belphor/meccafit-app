@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo, useState } from "react";
 import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
@@ -7,8 +8,15 @@ import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeade
 import { MonumentalExerciseCard } from "@/components/dashboard/MonumentalExerciseCard";
 import { MonumentalSubgroupTitle } from "@/components/dashboard/MonumentalSubgroupTitle";
 import { TreinoSubgroupNav } from "@/components/dashboard/TreinoSubgroupNav";
-import { DASHBOARD_PANEL_FRAME, DASHBOARD_SCROLL_LIST } from "@/lib/dashboard-config";
+import { TreinoWeekControls } from "@/components/training/treino-week-controls";
+import { WorkoutTimer } from "@/components/training/workout-timer";
+import {
+  DASHBOARD_INNER_FRAME,
+  DASHBOARD_PANEL_FRAME,
+  DASHBOARD_SCROLL_LIST,
+} from "@/lib/dashboard-config";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
+import type { PlanilhaDayRow } from "@/lib/training-week";
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
 type TreinoTabProps = {
@@ -20,6 +28,8 @@ type TreinoTabProps = {
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   userId: string | null;
+  initialWeekSchedule?: PlanilhaDayRow[];
+  onSubgroupNavigate: (subgroupSlug: string) => void;
   onActivate: (exerciseId: number) => void;
   onVolumeCommitted: (exerciseId: number, baseVolume: number) => void;
   onWeightSaved: (exerciseId: number, weight: number) => void;
@@ -40,6 +50,8 @@ export function TreinoTab({
   isIncubating,
   hasBiologicalBalance,
   userId,
+  initialWeekSchedule,
+  onSubgroupNavigate,
   onActivate,
   onVolumeCommitted,
   onWeightSaved,
@@ -48,6 +60,34 @@ export function TreinoTab({
   onPersistSuccess,
 }: TreinoTabProps) {
   const musculo = subgroupIdToMusculo(subgroup.id);
+  const [timerToken, setTimerToken] = useState(0);
+  const [focusOverride, setFocusOverride] = useState(false);
+
+  const handlePersistSuccess = useCallback(
+    (exerciseId: number, detail: { vtcGenerated: number }) => {
+      setTimerToken((token) => token + 1);
+      onPersistSuccess?.(exerciseId, detail);
+    },
+    [onPersistSuccess],
+  );
+
+  const weekControls = useMemo(() => {
+    if (!userId) return null;
+
+    return (
+      <TreinoWeekControls
+        userId={userId}
+        activeSubgroupId={subgroup.id}
+        initialSchedule={initialWeekSchedule}
+        onMuscleFocusChange={({ subgroupId, isOverride }) => {
+          setFocusOverride(isOverride);
+          if (subgroupId !== subgroup.id) {
+            onSubgroupNavigate(subgroupId);
+          }
+        }}
+      />
+    );
+  }, [initialWeekSchedule, onSubgroupNavigate, subgroup.id, userId]);
 
   return (
     <BrasaVivaCard
@@ -56,15 +96,27 @@ export function TreinoTab({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="subgrupo-monumental-title"
     >
-      <DashboardPanelHeader chip="Aba 1 · Treino" meta={profile.birth} metaVariant="chip" />
+      <DashboardPanelHeader chip="Treino" meta="Execução diária" metaVariant="chip" />
 
       <CardioVooCinzasPanel userId={userId} />
 
-      <TreinoSubgroupNav activeSubgroupId={subgroup.id} tabParam={tabParam} />
+      <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
+        {weekControls}
 
-      <MonumentalSubgroupTitle subgroup={subgroup} />
+        <WorkoutTimer restartToken={timerToken} defaultSeconds={90} />
 
-      <ul className={`mt-2 ${DASHBOARD_SCROLL_LIST}`} aria-label="Lista de exercícios do dia">
+        <TreinoSubgroupNav activeSubgroupId={subgroup.id} tabParam={tabParam} />
+
+        <MonumentalSubgroupTitle subgroup={subgroup} />
+
+        {focusOverride ? (
+          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/80">
+            Foco vital alternado · planilha do forjador intacta
+          </p>
+        ) : null}
+      </div>
+
+      <ul className={`mt-4 ${DASHBOARD_SCROLL_LIST}`} aria-label="Lista de exercícios do dia">
         {subgroup.exercises.map((exercise) => (
           <li key={exercise.id} className="min-w-0">
             <MonumentalExerciseCard
@@ -80,7 +132,7 @@ export function TreinoTab({
               onWeightSaved={onWeightSaved}
               onWatchVideo={onWatchVideo}
               onSuperacao={onSuperacao}
-              onPersistSuccess={onPersistSuccess}
+              onPersistSuccess={handlePersistSuccess}
             />
           </li>
         ))}

@@ -16,6 +16,8 @@ export const SOVEREIGN_JSON_KEYS = [
   "pernas",
 ];
 
+export const MIDAS_MUSCLE_KEYS = SOVEREIGN_JSON_KEYS;
+
 /** Patches incrementais · ordem de aplicação */
 export const MIGRATION_PATCHES = [
   {
@@ -77,6 +79,18 @@ export const MIGRATION_PATCHES = [
       "20260530150001_evolucao_ombros_calor_json.sql",
     ],
   },
+  {
+    id: "midas_growth",
+    files: [
+      "20260615100000_evolucao_midas_growth_layer.sql",
+      "20260615110000_evolucao_midas_remove_share_text.sql",
+      "20260618100000_evolucao_monthly_flex_remove_frozen.sql",
+    ],
+  },
+  {
+    id: "planilhas_forjador",
+    files: ["20260618120000_planilhas_forjador_weekly.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -97,6 +111,35 @@ function loadEnv() {
     env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
   }
   return env;
+}
+
+function assertMidasEvolutionJson(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { ok: false, detail: "payload inválido" };
+  }
+  if (payload.error === "unauthorized") {
+    return { ok: false, detail: "auth.uid ausente (esperado com service_role)" };
+  }
+  if (typeof payload.ignition_index !== "number") {
+    return { ok: false, detail: "ignition_index ausente" };
+  }
+  const muscles = payload.muscles;
+  if (!muscles || typeof muscles !== "object" || Array.isArray(muscles)) {
+    return { ok: false, detail: "muscles ausente" };
+  }
+  for (const key of MIDAS_MUSCLE_KEYS) {
+    const group = muscles[key];
+    if (!group || typeof group !== "object") {
+      return { ok: false, detail: `${key} ausente` };
+    }
+    if (typeof group.thermal_level !== "string") {
+      return { ok: false, detail: `thermal_level inválido em ${key}` };
+    }
+    if ("is_frozen" in group) {
+      return { ok: false, detail: `is_frozen banido — ainda presente em ${key}` };
+    }
+  }
+  return { ok: true, detail: MIDAS_MUSCLE_KEYS.join(" · ") };
 }
 
 function assertCalorJsonSixGroups(payload) {
@@ -203,11 +246,23 @@ export async function runMigrationProbes(admin, options = {}) {
 
   if (probeUserId) {
     probes.push(await probeAbdomenThermal(admin, probeUserId));
+    probes.push(await probeMidasGrowth(admin, probeUserId));
+    probes.push(await probePlanilhasForjador(admin, probeUserId));
   } else {
     probes.push({
       id: "abdomen_thermal",
       ok: false,
       detail: "sem perfil para probe abdômen",
+    });
+    probes.push({
+      id: "midas_growth",
+      ok: false,
+      detail: "sem perfil para probe MIDAS",
+    });
+    probes.push({
+      id: "planilhas_forjador",
+      ok: false,
+      detail: "sem perfil para probe planilhas",
     });
   }
 
@@ -354,6 +409,85 @@ async function probeOmbrosIsolation(admin, userId) {
     id: "ombros_grupo_isolado",
     ok,
     detail: ok ? `ombros calor=${ombrosMetric}` : "ombros metrica_bruta=0 após treino probe",
+  };
+}
+
+async function probeMidasGrowth(admin, userId) {
+  const tableChecks = await Promise.all([
+    admin.from("planos_atletas").select("atleta_id").eq("atleta_id", userId).maybeSingle(),
+    admin.from("calendario_ignicao").select("id").eq("atleta_id", userId).limit(1).maybeSingle(),
+    admin.from("historico_cargas").select("id").eq("atleta_id", userId).limit(1).maybeSingle(),
+  ]);
+
+  const tableErr = tableChecks.find((result) => result.error)?.error;
+  if (tableErr) {
+    return {
+      id: "midas_growth",
+      ok: false,
+      detail: tableErr.message,
+    };
+  }
+
+  const { data: rpcData, error: rpcErr } = await admin.rpc("get_muscular_evolution");
+  if (rpcErr?.code === "PGRST202") {
+    return {
+      id: "midas_growth",
+      ok: false,
+      detail: "RPC get_muscular_evolution ausente",
+    };
+  }
+
+  const shape = assertMidasEvolutionJson(rpcData);
+  if (!shape.ok && rpcData?.code === 401) {
+    return {
+      id: "midas_growth",
+      ok: true,
+      detail: "tabelas OK · RPC bloqueia service_role (auth.uid)",
+    };
+  }
+
+  return {
+    id: "midas_growth",
+    ok: shape.ok,
+    detail: shape.ok ? shape.detail : shape.detail,
+  };
+}
+
+async function probePlanilhasForjador(admin, userId) {
+  const { data, error } = await admin
+    .from("planilhas_forjador")
+    .select("dia_semana, grupo_muscular")
+    .eq("atleta_id", userId);
+
+  if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: "tabela planilhas_forjador ausente",
+    };
+  }
+
+  if (error) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: error.message,
+    };
+  }
+
+  const rows = data ?? [];
+  const hasSixDays = [1, 2, 3, 4, 5, 6].every((day) =>
+    rows.some((row) => Number(row.dia_semana) === day),
+  );
+
+  return {
+    id: "planilhas_forjador",
+    ok: rows.length > 0,
+    detail: rows.length
+      ? hasSixDays
+        ? "grade Seg–Sáb ok"
+        : `${rows.length} dia(s) · seed parcial`
+      : "sem linhas para atleta probe",
   };
 }
 

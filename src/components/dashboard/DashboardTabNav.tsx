@@ -41,10 +41,7 @@ export function DashboardTabNav({
             className={`min-h-11 shrink-0 ${isActive ? DASHBOARD_TAB_BUTTON_ACTIVE : DASHBOARD_TAB_BUTTON_IDLE}`}
           >
             <span className={`relative z-[1] ${isActive ? PLASMA_TITLE : ""}`}>
-              <span className="sm:hidden">{tab.label}</span>
-              <span className="hidden sm:inline">
-                {tab.aba} · {tab.label}
-              </span>
+              {tab.label}
             </span>
             {tab.id === "forum" && forumCount > 0 ? (
               <span className="relative z-[1] ml-1.5 text-amber-300 sm:ml-2">({forumCount})</span>

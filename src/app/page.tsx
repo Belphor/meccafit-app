@@ -372,9 +372,8 @@ export default function PortalDeBrasaPage() {
       <div className="pointer-events-none absolute inset-0 bg-black" aria-hidden="true" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(245,158,11,0.06),rgba(0,0,0,0.82)_45%,#000_82%)]" />
       <div
-        className={`pointer-events-none absolute inset-x-[-20%] bottom-[-28%] h-[52vh] bg-gradient-to-t ${atmosphere.aura} blur-3xl transition duration-700 ${
-          focused ? "scale-105 opacity-70" : "scale-95 opacity-40"
-        }`}
+        className={`pointer-events-none absolute inset-x-[-20%] bottom-[-28%] h-[52vh] bg-gradient-to-t ${atmosphere.aura} blur-3xl transition duration-700 ${focused ? "scale-105 opacity-70" : "scale-95 opacity-40"
+          }`}
       />
       <PortalEmberCurtain tone={tone} />
 
@@ -444,7 +443,7 @@ export default function PortalDeBrasaPage() {
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     disabled={isLoading}
-                    placeholder="seu@email.com"
+                    placeholder="Digite seu email"
                     className={PORTAL_INPUT}
                     autoComplete="email"
                   />
@@ -462,7 +461,7 @@ export default function PortalDeBrasaPage() {
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     disabled={isLoading}
-                    placeholder="Sua senha"
+                    placeholder="Digite sua senha"
                     className={PORTAL_INPUT}
                     autoComplete="current-password"
                   />
@@ -551,26 +550,24 @@ export default function PortalDeBrasaPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`mt-4 w-full rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 ${
-                isLoginMode || isPrimeiroAcessoMode
+              className={`mt-4 w-full rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-black transition-all duration-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 ${isLoginMode || isPrimeiroAcessoMode
                   ? "bg-gradient-to-r from-orange-600 to-amber-500 hover:shadow-[inset_0_0_34px_rgba(255,255,255,0.42),0_0_52px_rgba(249,115,22,0.42)]"
                   : "bg-gradient-to-r from-white via-blue-100 to-slate-300 hover:shadow-[inset_0_0_34px_rgba(255,255,255,0.38),0_0_52px_rgba(147,197,253,0.28)]"
-              }`}
+                }`}
             >
               {submitLabel}
             </button>
 
             <p
               role="status"
-              className={`mt-5 min-h-10 text-center text-xs leading-5 transition-colors ${
-                feedback.status === "error"
+              className={`mt-5 min-h-10 text-center text-xs leading-5 transition-colors ${feedback.status === "error"
                   ? "text-red-300"
                   : feedback.status === "success"
                     ? "text-emerald-300"
                     : feedback.status === "loading"
                       ? atmosphere.accent
                       : "text-neutral-600"
-              }`}
+                }`}
             >
               {feedback.message}
             </p>

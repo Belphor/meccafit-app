@@ -443,6 +443,52 @@ await record(4, "cliente comum sem ficha personal — is_frozen false em todos",
 });
 
 // ---------------------------------------------------------------------------
+// BLOCO 5 · MIDAS get_muscular_evolution (auth.uid only)
+// ---------------------------------------------------------------------------
+
+function assertMidasPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { ok: false, detail: "payload inválido" };
+  }
+  if (payload.error === "unauthorized") {
+    return { ok: true, detail: "401 esperado sem sessão" };
+  }
+  if (typeof payload.ignition_index !== "number") {
+    return { ok: false, detail: "ignition_index ausente" };
+  }
+  const muscles = payload.muscles;
+  if (!muscles || typeof muscles !== "object") {
+    return { ok: false, detail: "muscles ausente" };
+  }
+  for (const key of SOVEREIGN_JSON_KEYS) {
+    const group = muscles[key];
+    if (!group || typeof group !== "object") {
+      return { ok: false, detail: `${key} ausente` };
+    }
+    if (typeof group.thermal_level !== "string") {
+      return { ok: false, detail: `thermal_level inválido em ${key}` };
+    }
+    if ("is_frozen" in group) {
+      return { ok: false, detail: `is_frozen banido em ${key}` };
+    }
+  }
+  return { ok: true, detail: "6 grupos MIDAS" };
+}
+
+await record(5, "RPC get_muscular_evolution bloqueada para anon", async () => {
+  const { data, error } = await anon.rpc("get_muscular_evolution");
+  const blocked = isAuthOrPermissionBlocked(error) || data?.code === 401;
+  return { ok: blocked, detail: error?.message ?? String(data?.code ?? "ok") };
+});
+
+await record(6, "cliente autenticado — get_muscular_evolution retorna 6 músculos", async () => {
+  const { data, error } = await cliente.client.rpc("get_muscular_evolution");
+  if (error) return { ok: false, detail: error.message };
+  const check = assertMidasPayload(data);
+  return check;
+});
+
+// ---------------------------------------------------------------------------
 // Cleanup probes
 // ---------------------------------------------------------------------------
 

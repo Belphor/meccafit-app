@@ -3,15 +3,14 @@ export type DashboardTabId = "treino" | "dieta" | "evolucao" | "forum";
 export type DashboardTabDefinition = {
   id: DashboardTabId;
   label: string;
-  aba: string;
   requiresPersonalBond?: boolean;
 };
 
 export const DASHBOARD_TAB_DEFINITIONS: readonly DashboardTabDefinition[] = [
-  { id: "treino", label: "Treino", aba: "Aba 1" },
-  { id: "dieta", label: "Dieta", aba: "Aba 2", requiresPersonalBond: true },
-  { id: "evolucao", label: "Evolução", aba: "Aba 3" },
-  { id: "forum", label: "Fórum Brasa-Viva", aba: "Aba 6" },
+  { id: "treino", label: "Treino" },
+  { id: "dieta", label: "Dieta", requiresPersonalBond: true },
+  { id: "evolucao", label: "Evolução" },
+  { id: "forum", label: "Fórum Brasa-Viva" },
 ] as const;
 
 export const DEFAULT_DASHBOARD_TAB: DashboardTabId = "treino";

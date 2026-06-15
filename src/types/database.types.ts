@@ -223,6 +223,108 @@ export type Database = {
           },
         ];
       };
+      planos_atletas: {
+        Row: {
+          atleta_id: string;
+          total_treinos_mensais_planejados: number;
+          grupos_obrigatorios: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          atleta_id: string;
+          total_treinos_mensais_planejados?: number;
+          grupos_obrigatorios?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          atleta_id?: string;
+          total_treinos_mensais_planejados?: number;
+          grupos_obrigatorios?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      calendario_ignicao: {
+        Row: {
+          id: string;
+          atleta_id: string;
+          data_registro: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          atleta_id: string;
+          data_registro: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          atleta_id?: string;
+          data_registro?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      historico_cargas: {
+        Row: {
+          id: string;
+          atleta_id: string;
+          grupo_muscular: Database["public"]["Enums"]["grupo_muscular_evolucao"];
+          exercicio_id: string;
+          carga_maxima: number;
+          repeticoes_acumuladas: number;
+          data_registro: string;
+        };
+        Insert: {
+          id?: string;
+          atleta_id: string;
+          grupo_muscular: Database["public"]["Enums"]["grupo_muscular_evolucao"];
+          exercicio_id: string;
+          carga_maxima?: number;
+          repeticoes_acumuladas?: number;
+          data_registro?: string;
+        };
+        Update: {
+          id?: string;
+          atleta_id?: string;
+          grupo_muscular?: Database["public"]["Enums"]["grupo_muscular_evolucao"];
+          exercicio_id?: string;
+          carga_maxima?: number;
+          repeticoes_acumuladas?: number;
+          data_registro?: string;
+        };
+        Relationships: [];
+      };
+      planilhas_forjador: {
+        Row: {
+          id: string;
+          atleta_id: string;
+          dia_semana: number;
+          grupo_muscular: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          atleta_id: string;
+          dia_semana: number;
+          grupo_muscular: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          atleta_id?: string;
+          dia_semana?: number;
+          grupo_muscular?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       evolucao_membro_estase: {
         Row: {
           user_id: string;
@@ -635,6 +737,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      get_muscular_evolution: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       calcular_indice_ignicao_atleta: {
         Args: {
           p_user_id: string;
@@ -646,7 +752,8 @@ export type Database = {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
       estagio_forca: "cinzas" | "faisca" | "brasa" | "labareda" | "fogo_cosmico_sagrado";
       subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "abdomen" | "pernas";
-      membro_principal_soberano: "PEITO" | "BRACOS" | "ABDOMEN" | "PERNAS";
+      grupo_muscular_evolucao: "PEITO" | "COSTAS" | "PERNAS" | "OMBROS" | "BRACOS" | "ABDOMEN";
+      membro_principal_soberano: "PEITO" | "BRACOS" | "ABDOMEN" | "PERNAS" | "COSTAS" | "OMBROS";
     };
     CompositeTypes: Record<string, never>;
   };

@@ -5,9 +5,9 @@ export const DEFAULT_DASHBOARD_SUBGRUPO = "peitoral-superior" as const;
 export const FORJA_DASHBOARD_ROUTE = "/dashboard/forja";
 
 export function resolveClienteDashboardRoute(
-  subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
+  _subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
 ): string {
-  return `/dashboard?subgrupo=${encodeURIComponent(subgrupo)}`;
+  return "/dashboard";
 }
 
 export function resolvePostLoginRoute(role: string): string | null {
@@ -16,7 +16,7 @@ export function resolvePostLoginRoute(role: string): string | null {
   }
 
   if (role === "cliente") {
-    return internalRoutes.cliente.dashboard;
+    return "/dashboard";
   }
 
   return null;

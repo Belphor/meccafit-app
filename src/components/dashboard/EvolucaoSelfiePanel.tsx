@@ -120,7 +120,7 @@ export function EvolucaoSelfiePanel({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="evolucao-tab-title"
     >
-      <DashboardPanelHeader chip="Aba 3 · Evolução" meta="Selfie" />
+      <DashboardPanelHeader chip="Selfie de ciclo" meta="Registro visual" />
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-3 border-b border-orange-500/10 pb-4">
         <div>

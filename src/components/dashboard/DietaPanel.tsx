@@ -11,7 +11,7 @@ import {
 export function DietaPanel() {
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
-      <DashboardPanelHeader chip="Aba 2 · Dieta" meta="Consultoria Personal" />
+      <DashboardPanelHeader chip="Dieta" meta="Consultoria personal" />
       <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-5 text-center`}>
         <h2 className={DASHBOARD_SECTION_TITLE}>Plano nutricional VIP</h2>
         <p className="mt-3 text-sm leading-relaxed text-amber-100/85">

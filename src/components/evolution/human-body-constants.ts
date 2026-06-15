@@ -107,12 +107,12 @@ export const MUSCLE_THERMAL_CEILINGS: Record<
   SovereignMuscleId,
   { faisca: number; brasa: number; labareda: number }
 > = {
-  PEITO: { faisca: 100, brasa: 240, labareda: 480 },
-  OMBROS: { faisca: 50, brasa: 140, labareda: 280 },
-  BRACOS: { faisca: 60, brasa: 160, labareda: 320 },
+  PEITO: { faisca: 160, brasa: 500, labareda: 1000 },
   COSTAS: { faisca: 160, brasa: 500, labareda: 1000 },
-  ABDOMEN: { faisca: 50, brasa: 150, labareda: 300 },
   PERNAS: { faisca: 160, brasa: 500, labareda: 1000 },
+  OMBROS: { faisca: 100, brasa: 240, labareda: 480 },
+  BRACOS: { faisca: 60, brasa: 160, labareda: 320 },
+  ABDOMEN: { faisca: 50, brasa: 150, labareda: 300 },
 };
 
 export type ThermalCeilingProgress = {
@@ -223,11 +223,63 @@ export function formatCalorForjaMetric(row: MuscleCalorRow): { label: string; va
 
 export function normalizeMuscleCalorLevel(value: string | null | undefined): MuscleCalorLevel {
   const upper = String(value ?? "CINZAS").trim().toUpperCase();
+  if (upper === "CONGELADO") return "CINZAS";
   if (upper === "FOGO COSMICO" || upper === "FOGO_COSMICO") return "FOGO CÓSMICO";
   if (MUSCLE_CALOR_LEVELS.includes(upper as MuscleCalorLevel)) {
     return upper as MuscleCalorLevel;
   }
   return "CINZAS";
+}
+
+type MidasMuscleRecord = {
+  grupo?: string;
+  vtc?: number;
+  vra?: number;
+  metric_raw?: number;
+  metric_final?: number;
+  thermal_level?: string;
+};
+
+export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
+  const source = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+  if (source.error === "unauthorized" || source.code === 401) {
+    throw new Error(
+      typeof source.message === "string" ? source.message : "Sessão inválida — faça login novamente.",
+    );
+  }
+
+  const indiceRaw = source.ignition_index;
+  const indice_ignicao =
+    typeof indiceRaw === "number" && Number.isFinite(indiceRaw)
+      ? Math.max(0, Math.min(100, Math.round(indiceRaw)))
+      : 0;
+
+  const musclesRaw = source.muscles;
+  const muscles =
+    musclesRaw && typeof musclesRaw === "object" && !Array.isArray(musclesRaw)
+      ? (musclesRaw as Record<string, MidasMuscleRecord>)
+      : {};
+
+  const calorRows: MuscleCalorRow[] = CALOR_JSON_KEYS.map((key) => {
+    const record = muscles[key] ?? {};
+    const sovereign = JSON_KEY_TO_SOVEREIGN[key];
+    const metrica_bruta =
+      typeof record.metric_raw === "number" && Number.isFinite(record.metric_raw)
+        ? record.metric_raw
+        : sovereign === "ABDOMEN"
+          ? Number(record.vra ?? 0)
+          : Number(record.vtc ?? 0);
+
+    return {
+      membro_principal: sovereign,
+      nivel_calculado: normalizeMuscleCalorLevel(record.thermal_level),
+      is_frozen: false,
+      metrica_bruta,
+    };
+  });
+
+  return { calorRows, indice_ignicao };
 }
 
 function parseGroupRecord(raw: unknown): MuscleCalorGroupRecord {

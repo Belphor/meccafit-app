@@ -1,21 +1,14 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { EvolucaoPageClient } from "@/components/evolution/evolucao-page-client";
-import {
-  parseEvolutionCalorJson,
-  type EvolutionCalorPayload,
-} from "@/components/evolution/human-body-constants";
+import type { EvolutionCalorPayload } from "@/components/evolution/human-body-constants";
+import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-/** Aba 3 · Controlador server — consome RPC obter_calor_muscular_atleta */
-async function fetchEvolutionCalorPayload(userId: string): Promise<EvolutionCalorPayload> {
+/** Controlador server — consome RPC get_muscular_evolution */
+async function fetchEvolutionCalorPayload(): Promise<EvolutionCalorPayload> {
   const supabase = await createSupabaseServerClient();
-
-  const calorRes = await supabase.rpc("obter_calor_muscular_atleta", {
-    target_atleta_id: userId,
-  });
-
-  return parseEvolutionCalorJson(calorRes.data);
+  return fetchMuscularEvolutionPayload(supabase);
 }
 
 async function fetchProfileName(userId: string): Promise<string | null> {
@@ -47,7 +40,7 @@ function EvolucaoHudShell({ children }: { children: React.ReactNode }) {
 
 async function EvolucaoPageContent({ userId }: { userId: string }) {
   const [initialPayload, profileName] = await Promise.all([
-    fetchEvolutionCalorPayload(userId),
+    fetchEvolutionCalorPayload(),
     fetchProfileName(userId),
   ]);
 
@@ -77,7 +70,7 @@ export default async function EvolucaoPage() {
         fallback={
           <div className="rounded-2xl border border-cyan-500/10 bg-black/50 p-6 backdrop-blur-sm">
             <p className="text-center font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-500/60">
-              Sincronizando Aba Evolução…
+              Sincronizando evolução…
             </p>
           </div>
         }

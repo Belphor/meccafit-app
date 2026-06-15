@@ -10,6 +10,7 @@ import { DashboardBrandHeader } from "@/components/dashboard/DashboardBrandHeade
 import { DashboardSignOutButton } from "@/components/dashboard/DashboardSignOutButton";
 import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
 import { DashboardTreinoWorkspace } from "@/components/dashboard/DashboardTreinoWorkspace";
+import { AppShell } from "@/components/navigation/app-shell";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
@@ -56,6 +57,7 @@ import {
   resolvePrescriptionsForSubgroup,
   type TrainingTrackState,
 } from "@/lib/training-track";
+import type { PlanilhaDayRow } from "@/lib/training-week";
 
 const EvolutionAbaPanel = dynamic(
   () =>
@@ -103,6 +105,7 @@ type DashboardClientProps = {
   tabParam: string | null;
   initialEvolutionCalor?: MuscleCalorRow[];
   initialEvolutionIgnicao?: number;
+  initialWeekSchedule?: PlanilhaDayRow[];
 };
 
 export function DashboardClient({
@@ -111,6 +114,7 @@ export function DashboardClient({
   tabParam,
   initialEvolutionCalor,
   initialEvolutionIgnicao,
+  initialWeekSchedule,
 }: DashboardClientProps) {
   const router = useRouter();
   const catalogSubgroup = useMemo(
@@ -369,6 +373,7 @@ export function DashboardClient({
     subgroup: treinoSubgroup,
     authUserId: userId,
     tabParam: activeTab,
+    initialWeekSchedule,
     isIncubating,
     hasBiologicalBalance: (profile?.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE,
     onAltarMetricsChange: handleAltarMetricsChange,
@@ -402,6 +407,7 @@ export function DashboardClient({
   }
 
   return (
+    <AppShell>
     <PhoenixPhaseEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
       {(phase) => (
     <main className={DASHBOARD_SHELL}>
@@ -503,5 +509,6 @@ export function DashboardClient({
     </main>
       )}
     </PhoenixPhaseEngine>
+    </AppShell>
   );
 }
