@@ -13,7 +13,41 @@ import {
   type PlanilhaDayRow,
   type WeekdayIndex,
 } from "@/lib/training-week";
+import {
+  DEFAULT_FORJADOR_TREINO_CONFIG,
+  parseForjadorPrescriptionRows,
+  parseForjadorTreinoConfig,
+  type ForjadorPrescriptionRow,
+  type ForjadorTreinoConfig,
+} from "@/lib/forjador-prescriptions";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+async function fetchForjadorTreinoConfig(userId: string): Promise<ForjadorTreinoConfig> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("config_treino_atleta")
+    .select("forjador_id, descanso_padrao_seg, cardio_meta_minutos")
+    .eq("atleta_id", userId)
+    .maybeSingle();
+
+  if (error || !data) return DEFAULT_FORJADOR_TREINO_CONFIG;
+  return parseForjadorTreinoConfig(data as Record<string, unknown>);
+}
+
+async function fetchForjadorPrescriptions(userId: string): Promise<ForjadorPrescriptionRow[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("prescricoes_treino_forjador")
+    .select(
+      "id, atleta_id, forjador_id, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, observacoes",
+    )
+    .eq("atleta_id", userId)
+    .order("grupo_muscular")
+    .order("ordem");
+
+  if (error || !data) return [];
+  return parseForjadorPrescriptionRows(data);
+}
 
 async function fetchWeeklySchedule(userId: string): Promise<PlanilhaDayRow[]> {
   const supabase = await createSupabaseServerClient();
@@ -79,11 +113,14 @@ export default async function DashboardPage({
     redirect("/");
   }
 
-  const [evolutionPayload, initialWeekSchedule, initialAthletePlan] = await Promise.all([
-    fetchMuscularEvolutionPayload(supabase),
-    fetchWeeklySchedule(user.id),
-    fetchAthletePlan(user.id),
-  ]);
+  const [evolutionPayload, initialWeekSchedule, initialAthletePlan, initialForjadorConfig, initialForjadorPrescriptions] =
+    await Promise.all([
+      fetchMuscularEvolutionPayload(supabase),
+      fetchWeeklySchedule(user.id),
+      fetchAthletePlan(user.id),
+      fetchForjadorTreinoConfig(user.id),
+      fetchForjadorPrescriptions(user.id),
+    ]);
 
   return (
     <Suspense fallback={<DashboardLoading />}>
@@ -95,6 +132,8 @@ export default async function DashboardPage({
         initialEvolutionIgnicao={evolutionPayload.indice_ignicao}
         initialWeekSchedule={initialWeekSchedule}
         initialAthletePlan={initialAthletePlan}
+        initialForjadorConfig={initialForjadorConfig}
+        initialForjadorPrescriptions={initialForjadorPrescriptions}
       />
     </Suspense>
   );

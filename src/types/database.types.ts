@@ -325,6 +325,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      config_treino_atleta: {
+        Row: {
+          atleta_id: string;
+          forjador_id: string;
+          descanso_padrao_seg: number;
+          cardio_meta_minutos: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          atleta_id: string;
+          forjador_id: string;
+          descanso_padrao_seg?: number;
+          cardio_meta_minutos?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          atleta_id?: string;
+          forjador_id?: string;
+          descanso_padrao_seg?: number;
+          cardio_meta_minutos?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      prescricoes_treino_forjador: {
+        Row: {
+          id: string;
+          atleta_id: string;
+          forjador_id: string;
+          grupo_muscular: string;
+          exercicio_id: string;
+          ordem: number;
+          series_alvo: number;
+          repeticoes_alvo: number;
+          peso_prescrito: number | null;
+          descanso_segundos: number | null;
+          observacoes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          atleta_id: string;
+          forjador_id: string;
+          grupo_muscular: string;
+          exercicio_id: string;
+          ordem?: number;
+          series_alvo: number;
+          repeticoes_alvo: number;
+          peso_prescrito?: number | null;
+          descanso_segundos?: number | null;
+          observacoes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          atleta_id?: string;
+          forjador_id?: string;
+          grupo_muscular?: string;
+          exercicio_id?: string;
+          ordem?: number;
+          series_alvo?: number;
+          repeticoes_alvo?: number;
+          peso_prescrito?: number | null;
+          descanso_segundos?: number | null;
+          observacoes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       evolucao_membro_estase: {
         Row: {
           user_id: string;

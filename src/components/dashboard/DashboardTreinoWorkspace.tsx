@@ -20,7 +20,8 @@ import {
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
 import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
-import { MUSCLE_TO_SUBGROUP_ID, resolveCalendarWeekdayIndex } from "@/lib/training-week";
+import { resolveCalendarWeekdayIndex } from "@/lib/training-week";
+import type { ForjadorPrescriptionRow, ForjadorTreinoConfig } from "@/lib/forjador-prescriptions";
 
 export type SuperacaoPayload = {
   weight: number;
@@ -33,6 +34,9 @@ export type DashboardTreinoWorkspaceProps = {
   profile: ClientProfile;
   authUserId: string;
   initialWeekSchedule?: PlanilhaDayRow[];
+  activeTreinoMuscle: ClientTrainingMuscleGroup;
+  forjadorConfig: ForjadorTreinoConfig;
+  forjadorPrescriptions: ForjadorPrescriptionRow[];
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   onAltarMetricsChange: (baseVtcTotal: number, lastSavedWeight: number) => void;
@@ -40,7 +44,7 @@ export type DashboardTreinoWorkspaceProps = {
   onOpenVideo: (exerciseId: number) => void;
   onSuperacaoMural: (exerciseName: string, payload: SuperacaoPayload) => void;
   onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
-  onSubgroupNavigate: (subgroupSlug: string) => void;
+  onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
 };
 
 function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
@@ -92,6 +96,9 @@ export function DashboardTreinoWorkspace({
   profile,
   authUserId,
   initialWeekSchedule,
+  activeTreinoMuscle,
+  forjadorConfig,
+  forjadorPrescriptions,
   isIncubating,
   hasBiologicalBalance,
   onAltarMetricsChange,
@@ -99,7 +106,7 @@ export function DashboardTreinoWorkspace({
   onOpenVideo,
   onSuperacaoMural,
   onTrainingPersisted,
-  onSubgroupNavigate,
+  onTrainingMusclePick,
 }: DashboardTreinoWorkspaceProps) {
   const [indicatedDay, setIndicatedDay] = useState<WeekdayIndex>(() =>
     resolveCalendarWeekdayIndex(),
@@ -284,12 +291,9 @@ export function DashboardTreinoWorkspace({
 
   const handleTrainingMusclePick = useCallback(
     (muscle: ClientTrainingMuscleGroup) => {
-      const subgroupId = MUSCLE_TO_SUBGROUP_ID[muscle];
-      if (subgroupId !== subgroup.id) {
-        onSubgroupNavigate(subgroupId);
-      }
+      onTrainingMusclePick(muscle);
     },
-    [onSubgroupNavigate, subgroup.id],
+    [onTrainingMusclePick],
   );
 
   return (
@@ -300,6 +304,9 @@ export function DashboardTreinoWorkspace({
             profile={profile}
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
+            activeTreinoMuscle={activeTreinoMuscle}
+            forjadorConfig={forjadorConfig}
+            forjadorPrescriptions={forjadorPrescriptions}
             indicatedDay={indicatedDay}
             onIndicatedDayChange={setIndicatedDay}
             onTrainingMusclePick={handleTrainingMusclePick}

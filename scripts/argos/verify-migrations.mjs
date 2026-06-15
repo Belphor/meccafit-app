@@ -99,6 +99,10 @@ export const MIGRATION_PATCHES = [
     id: "planilhas_indication_no_abdomen",
     files: ["20260620100000_planilhas_indication_no_abdomen.sql"],
   },
+  {
+    id: "prescricoes_forjador_treino",
+    files: ["20260621100000_prescricoes_forjador_treino.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [

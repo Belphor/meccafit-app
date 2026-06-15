@@ -51,6 +51,7 @@ export type MonumentalExerciseCardProps = {
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
   userId: string | null | undefined;
+  restSeconds?: number;
   onActivate: (exerciseId: number) => void;
   onVolumeCommitted: (exerciseId: number, baseVolume: number) => void;
   onWeightSaved: (exerciseId: number, weight: number) => void;
@@ -70,6 +71,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   isIncubating,
   hasBiologicalBalance,
   userId,
+  restSeconds = 90,
   onActivate,
   onVolumeCommitted,
   onWeightSaved,
@@ -301,7 +303,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
           <WorkoutTimer
             variant="exercise"
             restartToken={restTimerToken}
-            defaultSeconds={90}
+            defaultSeconds={restSeconds}
           />
         </div>
       ) : null}

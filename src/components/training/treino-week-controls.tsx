@@ -8,7 +8,6 @@ import {
   MUSCLE_GROUP_LABELS,
   normalizeWeeklyScheduleMuscle,
   resolveCalendarWeekdayIndex,
-  subgroupIdToClientTrainingMuscle,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT_LABELS,
   type ClientTrainingMuscleGroup,
@@ -23,7 +22,8 @@ const WEEKDAY_INDICES: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
 export type TreinoWeekControlsProps = {
   userId: string;
   initialSchedule?: PlanilhaDayRow[];
-  activeSubgroupId: string;
+  activeTreinoMuscle: ClientTrainingMuscleGroup;
+  hasForjadorPlan: boolean;
   indicatedDay: WeekdayIndex;
   onIndicatedDayChange: (day: WeekdayIndex) => void;
   onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
@@ -36,7 +36,8 @@ function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
 export function TreinoWeekControls({
   userId,
   initialSchedule,
-  activeSubgroupId,
+  activeTreinoMuscle,
+  hasForjadorPlan,
   indicatedDay,
   onIndicatedDayChange,
   onTrainingMusclePick,
@@ -49,8 +50,6 @@ export function TreinoWeekControls({
   const [error, setError] = useState<string | null>(null);
 
   const indicatedMuscle = schedule[indicatedDay];
-  const activeTrainingMuscle =
-    subgroupIdToClientTrainingMuscle(activeSubgroupId) ?? indicatedMuscle;
 
   const loadSchedule = useCallback(async () => {
     setLoading(true);
@@ -113,7 +112,9 @@ export function TreinoWeekControls({
             : `${WEEKDAY_LABELS[indicatedDay]} · indica ${MUSCLE_GROUP_LABELS[indicatedMuscle]}`}
         </p>
         <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-neutral-700">
-          Referência da planilha · sua escolha de treino é livre abaixo
+          {hasForjadorPlan
+            ? "Planilha do forjador · escolha livre o treino de hoje"
+            : "Indicação de exemplo · escolha livre o treino de hoje"}
         </p>
       </div>
 
@@ -170,12 +171,15 @@ export function TreinoWeekControls({
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {CLIENT_TRAINING_MUSCLE_GROUPS.map((muscle) => {
-            const selected = muscle === activeTrainingMuscle;
+            const selected = muscle === activeTreinoMuscle;
             return (
               <button
                 key={muscle}
                 type="button"
-                onClick={() => onTrainingMusclePick(muscle)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onTrainingMusclePick(muscle);
+                }}
                 className={`${DASHBOARD_TAP_TARGET} rounded-lg border px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-[border-color,background-color] duration-200 ${
                   selected
                     ? "border-emerald-500/60 bg-emerald-950/35 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.25)]"

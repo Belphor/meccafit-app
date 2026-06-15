@@ -12,6 +12,12 @@ import {
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SCROLL_LIST,
 } from "@/lib/dashboard-config";
+import {
+  hasForjadorPrescriptionForMuscle,
+  resolveExerciseRestSeconds,
+  type ForjadorPrescriptionRow,
+  type ForjadorTreinoConfig,
+} from "@/lib/forjador-prescriptions";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 
@@ -24,6 +30,9 @@ type TreinoTabProps = {
   hasBiologicalBalance: boolean;
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
+  activeTreinoMuscle: ClientTrainingMuscleGroup;
+  forjadorConfig: ForjadorTreinoConfig;
+  forjadorPrescriptions: ForjadorPrescriptionRow[];
   indicatedDay: WeekdayIndex;
   onIndicatedDayChange: (day: WeekdayIndex) => void;
   onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
@@ -47,6 +56,9 @@ export function TreinoTab({
   hasBiologicalBalance,
   userId,
   initialWeekSchedule,
+  activeTreinoMuscle,
+  forjadorConfig,
+  forjadorPrescriptions,
   indicatedDay,
   onIndicatedDayChange,
   onTrainingMusclePick,
@@ -58,6 +70,11 @@ export function TreinoTab({
   onPersistSuccess,
 }: TreinoTabProps) {
   const musculo = subgroupIdToMusculo(subgroup.id);
+  const hasForjadorPlan = hasForjadorPrescriptionForMuscle(
+    forjadorPrescriptions,
+    activeTreinoMuscle,
+  );
+  const cardioGoalMs = forjadorConfig.cardioMetaMinutos * 60 * 1000;
 
   return (
     <BrasaVivaCard
@@ -68,20 +85,31 @@ export function TreinoTab({
     >
       <DashboardPanelHeader chip="Treino" meta="Execução diária" metaVariant="chip" />
 
-      <CardioVooCinzasPanel userId={userId} />
+      <CardioVooCinzasPanel userId={userId} goalMs={cardioGoalMs} />
 
       <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
         {userId ? (
           <TreinoWeekControls
             userId={userId}
             initialSchedule={initialWeekSchedule}
-            activeSubgroupId={subgroup.id}
+            activeTreinoMuscle={activeTreinoMuscle}
+            hasForjadorPlan={hasForjadorPlan}
             indicatedDay={indicatedDay}
             onIndicatedDayChange={onIndicatedDayChange}
             onTrainingMusclePick={onTrainingMusclePick}
           />
         ) : null}
         <MonumentalSubgroupTitle subgroup={subgroup} />
+        {!hasForjadorPlan ? (
+          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/75">
+            Treino exemplo · forjador monta planilha, descanso e cardio
+          </p>
+        ) : (
+          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-emerald-300/80">
+            Planilha do forjador · descanso {forjadorConfig.descansoPadraoSeg}s · cardio{" "}
+            {forjadorConfig.cardioMetaMinutos} min
+          </p>
+        )}
       </div>
 
       <ul className={`mt-4 ${DASHBOARD_SCROLL_LIST}`} aria-label="Lista de exercícios do dia">
@@ -95,6 +123,12 @@ export function TreinoTab({
               isIncubating={isIncubating}
               hasBiologicalBalance={hasBiologicalBalance}
               userId={userId}
+              restSeconds={resolveExerciseRestSeconds(
+                exercise.id,
+                forjadorPrescriptions,
+                activeTreinoMuscle,
+                forjadorConfig,
+              )}
               onActivate={onActivate}
               onVolumeCommitted={onVolumeCommitted}
               onWeightSaved={onWeightSaved}
