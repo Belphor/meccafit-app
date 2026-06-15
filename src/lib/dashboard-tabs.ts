@@ -1,4 +1,4 @@
-export type DashboardTabId = "treino" | "dieta" | "evolucao" | "forum";
+export type DashboardTabId = "treino" | "dieta" | "evolucao" | "comunidade" | "perfil";
 
 export type DashboardTabDefinition = {
   id: DashboardTabId;
@@ -8,12 +8,25 @@ export type DashboardTabDefinition = {
 
 export const DASHBOARD_TAB_DEFINITIONS: readonly DashboardTabDefinition[] = [
   { id: "treino", label: "Treino" },
-  { id: "dieta", label: "Dieta", requiresPersonalBond: true },
   { id: "evolucao", label: "Evolução" },
-  { id: "forum", label: "Fórum Brasa-Viva" },
+  { id: "comunidade", label: "Comunidade" },
+  { id: "perfil", label: "Perfil" },
+  { id: "dieta", label: "Dieta", requiresPersonalBond: true },
 ] as const;
 
 export const DEFAULT_DASHBOARD_TAB: DashboardTabId = "treino";
+
+const LEGACY_TAB_ALIASES: Record<string, DashboardTabId> = {
+  forum: "comunidade",
+};
+
+export function normalizeDashboardTabParam(
+  tabParam: string | null | undefined,
+): DashboardTabId | null {
+  if (!tabParam) return null;
+  const normalized = LEGACY_TAB_ALIASES[tabParam] ?? tabParam;
+  return isDashboardTabId(normalized) ? normalized : null;
+}
 
 export function filterDashboardTabs(hasPersonalBond: boolean): DashboardTabDefinition[] {
   return DASHBOARD_TAB_DEFINITIONS.filter(
@@ -26,7 +39,8 @@ export function isDashboardTabId(value: string | null | undefined): value is Das
     value === "treino" ||
     value === "dieta" ||
     value === "evolucao" ||
-    value === "forum"
+    value === "comunidade" ||
+    value === "perfil"
   );
 }
 
@@ -34,15 +48,16 @@ export function resolveDashboardTabFromParam(
   tabParam: string | null | undefined,
   hasPersonalBond: boolean,
 ): DashboardTabId {
-  if (!isDashboardTabId(tabParam)) {
+  const normalized = normalizeDashboardTabParam(tabParam);
+  if (!normalized) {
     return DEFAULT_DASHBOARD_TAB;
   }
 
-  if (tabParam === "dieta" && !hasPersonalBond) {
+  if (normalized === "dieta" && !hasPersonalBond) {
     return DEFAULT_DASHBOARD_TAB;
   }
 
-  return tabParam;
+  return normalized;
 }
 
 export function isDietaTabAllowed(hasPersonalBond: boolean, tab: DashboardTabId): boolean {

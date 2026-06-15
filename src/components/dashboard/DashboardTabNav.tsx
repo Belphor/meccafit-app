@@ -12,14 +12,14 @@ export type { DashboardTabId };
 
 type DashboardTabNavProps = {
   activeTab: DashboardTabId;
-  forumCount: number;
+  muralCount: number;
   hasPersonalBond: boolean;
   onTabChange: (tab: DashboardTabId) => void;
 };
 
 export function DashboardTabNav({
   activeTab,
-  forumCount,
+  muralCount,
   hasPersonalBond,
   onTabChange,
 }: DashboardTabNavProps) {
@@ -43,8 +43,8 @@ export function DashboardTabNav({
             <span className={`relative z-[1] ${isActive ? PLASMA_TITLE : ""}`}>
               {tab.label}
             </span>
-            {tab.id === "forum" && forumCount > 0 ? (
-              <span className="relative z-[1] ml-1.5 text-amber-300 sm:ml-2">({forumCount})</span>
+            {tab.id === "comunidade" && muralCount > 0 ? (
+              <span className="relative z-[1] ml-1.5 text-amber-300 sm:ml-2">({muralCount})</span>
             ) : null}
           </button>
         );

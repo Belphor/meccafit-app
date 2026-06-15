@@ -67,7 +67,7 @@ async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subgrupo?: string }>;
+  searchParams: Promise<{ subgrupo?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -90,6 +90,7 @@ export default async function DashboardPage({
       <DashboardClient
         userId={user.id}
         subgroupParam={params.subgrupo ?? null}
+        tabParam={params.tab ?? null}
         initialEvolutionCalor={evolutionPayload.calorRows}
         initialEvolutionIgnicao={evolutionPayload.indice_ignicao}
         initialWeekSchedule={initialWeekSchedule}

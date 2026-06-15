@@ -8,6 +8,7 @@ import { SacredPhoenixSigil } from "@/components/dashboard/DashboardBrandAssets"
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { DashboardBrandHeader } from "@/components/dashboard/DashboardBrandHeader";
 import { DashboardSignOutButton } from "@/components/dashboard/DashboardSignOutButton";
+import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
 import { DashboardTreinoWorkspace } from "@/components/dashboard/DashboardTreinoWorkspace";
 import { ComunidadePageClient } from "@/components/comunidade/comunidade-page-client";
 import { AppShell } from "@/components/navigation/app-shell";
@@ -17,6 +18,13 @@ import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
+import {
+  buildDashboardHref,
+  DEFAULT_DASHBOARD_TAB,
+  isDietaTabAllowed,
+  resolveDashboardTabFromParam,
+  type DashboardTabId,
+} from "@/lib/dashboard-tabs";
 import {
   fetchCommunityMuralPosts,
   invalidateDashboardCaches,
@@ -39,7 +47,7 @@ import {
   type StorageVtcUpdateDetail,
 } from "@/lib/cardio-altar-daily";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
-import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
+import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
@@ -93,16 +101,10 @@ type VideoModalState = {
 
 const CLOSED_VIDEO: VideoModalState = { isOpen: false, exerciseName: "", videoUrl: "" };
 
-function scrollToDashboardSection(sectionId: string) {
-  if (typeof window === "undefined") return;
-  window.requestAnimationFrame(() => {
-    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-}
-
 type DashboardClientProps = {
   userId: string;
   subgroupParam: string | null;
+  tabParam: string | null;
   initialEvolutionCalor?: MuscleCalorRow[];
   initialEvolutionIgnicao?: number;
   initialWeekSchedule?: PlanilhaDayRow[];
@@ -112,6 +114,7 @@ type DashboardClientProps = {
 export function DashboardClient({
   userId,
   subgroupParam,
+  tabParam,
   initialEvolutionCalor,
   initialEvolutionIgnicao,
   initialWeekSchedule,
@@ -131,6 +134,8 @@ export function DashboardClient({
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
+  const [activeTab, setActiveTab] = useState<DashboardTabId>(DEFAULT_DASHBOARD_TAB);
+  const [muralPosts, setMuralPosts] = useState<MuralPost[]>([]);
   const [videoModal, setVideoModal] = useState<VideoModalState>(CLOSED_VIDEO);
   const [reloadToken, setReloadToken] = useState(0);
   const [cardioAltarPercent, setCardioAltarPercent] = useState(() =>
@@ -175,8 +180,10 @@ export function DashboardClient({
       setProfile(bundle.data.profile);
       setProfileRow(bundle.data.profileRow);
       setSubgroup(bundle.data.subgroup);
+      setMuralPosts(bundle.data.muralPosts);
       setTrainingTrack(bundle.data.trainingTrack);
       setHasPersonalBond(bundle.data.hasPersonalBond);
+      setActiveTab(resolveDashboardTabFromParam(tabParam, bundle.data.hasPersonalBond));
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
         setLiveSessionVtcKg(thermal.session_vtc_today);
@@ -188,16 +195,49 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [loadKey, subgroupParam]);
+  }, [loadKey, subgroupParam, tabParam]);
 
   useEffect(() => {
     if (!dataReady) return;
 
-    const hash = window.location.hash.replace(/^#/, "");
-    if (!hash) return;
+    if (tabParam === "dieta" && !hasPersonalBond) {
+      setActiveTab(DEFAULT_DASHBOARD_TAB);
+      router.replace(
+        buildDashboardHref({
+          subgrupo: subgroupParam,
+          tab: DEFAULT_DASHBOARD_TAB,
+        }),
+      );
+      return;
+    }
 
-    scrollToDashboardSection(hash);
-  }, [dataReady]);
+    const resolvedTab = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
+    setActiveTab((current) => (current === resolvedTab ? current : resolvedTab));
+  }, [dataReady, hasPersonalBond, router, subgroupParam, tabParam]);
+
+  const handleTabChange = useCallback(
+    (tab: DashboardTabId) => {
+      if (!isDietaTabAllowed(hasPersonalBond, tab)) {
+        setActiveTab(DEFAULT_DASHBOARD_TAB);
+        router.replace(
+          buildDashboardHref({
+            subgrupo: subgroupParam,
+            tab: DEFAULT_DASHBOARD_TAB,
+          }),
+        );
+        return;
+      }
+
+      setActiveTab(tab);
+      router.replace(
+        buildDashboardHref({
+          subgrupo: subgroupParam,
+          tab,
+        }),
+      );
+    },
+    [hasPersonalBond, router, subgroupParam],
+  );
 
   const handleSignOut = useCallback(async () => {
     clearThermicSessionCache();
@@ -250,10 +290,15 @@ export function DashboardClient({
       await invalidateDashboardCaches(userId, musculo);
 
       const subgroupResult = await refreshSubgroupHistorico(subgroupRef.current);
+      const muralResult = await fetchCommunityMuralPosts();
       const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
 
       if (subgroupResult.data) {
         setSubgroup(subgroupResult.data);
+      }
+
+      if (muralResult.data) {
+        setMuralPosts(muralResult.data);
       }
 
       if (bundleResult.data?.profileRow) {
@@ -293,9 +338,11 @@ export function DashboardClient({
     if (profile?.role === "forjador_soberano") {
       return;
     }
-    void fetchCommunityMuralPosts();
-    scrollToDashboardSection("comunidade");
-  }, [profile?.role]);
+    void fetchCommunityMuralPosts().then((result) => {
+      if (result.data) setMuralPosts(result.data);
+    });
+    handleTabChange("comunidade");
+  }, [handleTabChange, profile?.role]);
 
   const closeVideoModal = useCallback(() => setVideoModal(CLOSED_VIDEO), []);
 
@@ -354,96 +401,109 @@ export function DashboardClient({
     <PhoenixPhaseEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
       {(phase) => (
         <AppShell>
-        <main className={DASHBOARD_SHELL}>
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "var(--meccafit-ambient-gradient)" }}
-            aria-hidden="true"
-          />
-          <SuperacaoOverlay visible={showSuperacaoFlash} />
-
-          <section className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
-            <DashboardBrandHeader
-              altarEnergyPercent={altarEnergyPercent}
-              signOutButton={
-                <DashboardSignOutButton
-                  onClick={() => void handleSignOut()}
-                  className="relative z-10 shrink-0"
-                />
-              }
+          <main className={DASHBOARD_SHELL}>
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: "var(--meccafit-ambient-gradient)" }}
+              aria-hidden="true"
             />
+            <SuperacaoOverlay visible={showSuperacaoFlash} />
 
-            <BrasaVivaCard
-              as="article"
-              variant="portal"
-              className={DASHBOARD_PORTAL_PADDING}
-              aria-label={PORTAL_COPY.portalBrasaAria}
-            >
-              <div className="flex flex-col items-center overflow-visible text-center">
-                <SacredPhoenixSigil altarEnergy={altarEnergy} />
-                <PhoenixDisplayTitle className={DASHBOARD_HERO_TITLE}>
-                  {PORTAL_COPY.leaveYesterday}
-                </PhoenixDisplayTitle>
-                <p className={`${PLASMA_HERO_TITLE} mt-3`} aria-label={PORTAL_COPY.rebirthTodayAria}>
-                  {PORTAL_COPY.rebirthToday}
-                </p>
-              </div>
-
-              <div className={`z-[1] ${DASHBOARD_TAB_CONTENT} space-y-8`}>
-                <section id="treino" className="scroll-mt-6">
-                  {trainingTrack.track === "personal" ? (
-                    <PersonalTreinoWorkspace
-                      key={`personal-${subgroup.id}`}
-                      trainingTrack={trainingTrack}
-                      subgroupPrescriptions={subgroupPrescriptions}
-                      profile={profile}
-                      {...treinoWorkspaceProps}
-                    />
-                  ) : (
-                    <DashboardTreinoWorkspace
-                      key={`common-${subgroup.id}`}
-                      profile={profile}
-                      {...treinoWorkspaceProps}
-                    />
-                  )}
-                </section>
-
-                {hasPersonalBond ? (
-                  <section id="dieta" className="scroll-mt-6">
-                    <DietaPanel />
-                  </section>
-                ) : null}
-
-                <section id="evolucao" className="scroll-mt-6">
-                  <EvolutionAbaPanel
-                    userId={userId}
-                    initialCalorRows={initialEvolutionCalor}
-                    initialIgnicao={initialEvolutionIgnicao}
-                    profileName={profile.name}
-                    variant="dashboard"
+            <section className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
+              <DashboardBrandHeader
+                altarEnergyPercent={altarEnergyPercent}
+                signOutButton={
+                  <DashboardSignOutButton
+                    onClick={() => void handleSignOut()}
+                    className="relative z-10 shrink-0"
                   />
-                </section>
+                }
+              />
 
-                <section id="comunidade" className="scroll-mt-6">
-                  <ComunidadePageClient userId={userId} phase={phase} />
-                </section>
+              <BrasaVivaCard
+                as="article"
+                variant="portal"
+                className={DASHBOARD_PORTAL_PADDING}
+                aria-label={PORTAL_COPY.portalBrasaAria}
+              >
+                <div className="flex flex-col items-center overflow-visible text-center">
+                  <SacredPhoenixSigil altarEnergy={altarEnergy} />
+                  <PhoenixDisplayTitle className={DASHBOARD_HERO_TITLE}>
+                    {PORTAL_COPY.leaveYesterday}
+                  </PhoenixDisplayTitle>
+                  <p className={`${PLASMA_HERO_TITLE} mt-3`} aria-label={PORTAL_COPY.rebirthTodayAria}>
+                    {PORTAL_COPY.rebirthToday}
+                  </p>
+                </div>
 
-                <section id="perfil" className="scroll-mt-6">
-                  <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} />
-                </section>
-              </div>
-            </BrasaVivaCard>
+                <div className="z-[1]">
+                  <DashboardTabNav
+                    activeTab={activeTab}
+                    muralCount={muralPosts.length}
+                    hasPersonalBond={hasPersonalBond}
+                    onTabChange={handleTabChange}
+                  />
 
-            <FenyxiaBrandFooter className="mt-8" />
-          </section>
+                  {activeTab === "treino" ? (
+                    trainingTrack.track === "personal" ? (
+                      <PersonalTreinoWorkspace
+                        key={`personal-${subgroup.id}`}
+                        trainingTrack={trainingTrack}
+                        subgroupPrescriptions={subgroupPrescriptions}
+                        profile={profile}
+                        {...treinoWorkspaceProps}
+                      />
+                    ) : (
+                      <DashboardTreinoWorkspace
+                        key={`common-${subgroup.id}`}
+                        profile={profile}
+                        {...treinoWorkspaceProps}
+                      />
+                    )
+                  ) : null}
 
-          <VideoModal
-            isOpen={videoModal.isOpen}
-            exerciseName={videoModal.exerciseName}
-            videoUrl={videoModal.videoUrl}
-            onClose={closeVideoModal}
-          />
-        </main>
+                  {activeTab === "dieta" && hasPersonalBond ? (
+                    <div className={DASHBOARD_TAB_CONTENT}>
+                      <DietaPanel />
+                    </div>
+                  ) : null}
+
+                  {activeTab === "evolucao" ? (
+                    <div className={DASHBOARD_TAB_CONTENT}>
+                      <EvolutionAbaPanel
+                        userId={userId}
+                        initialCalorRows={initialEvolutionCalor}
+                        initialIgnicao={initialEvolutionIgnicao}
+                        profileName={profile.name}
+                        variant="dashboard"
+                      />
+                    </div>
+                  ) : null}
+
+                  {activeTab === "comunidade" ? (
+                    <div className={DASHBOARD_TAB_CONTENT}>
+                      <ComunidadePageClient userId={userId} phase={phase} />
+                    </div>
+                  ) : null}
+
+                  {activeTab === "perfil" ? (
+                    <div className={DASHBOARD_TAB_CONTENT}>
+                      <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} />
+                    </div>
+                  ) : null}
+                </div>
+              </BrasaVivaCard>
+
+              <FenyxiaBrandFooter className="mt-8" />
+            </section>
+
+            <VideoModal
+              isOpen={videoModal.isOpen}
+              exerciseName={videoModal.exerciseName}
+              videoUrl={videoModal.videoUrl}
+              onClose={closeVideoModal}
+            />
+          </main>
         </AppShell>
       )}
     </PhoenixPhaseEngine>

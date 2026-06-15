@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function EvolucaoRedirectPage() {
-  redirect("/dashboard#evolucao");
+  redirect("/dashboard?tab=evolucao");
 }

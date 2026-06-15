@@ -176,6 +176,42 @@ async function main() {
     }
   }
 
+  const midasTables = [
+    { table: "historico_cargas", column: "atleta_id" },
+    { table: "calendario_ignicao", column: "atleta_id" },
+    { table: "purity_logs", column: "user_id" },
+  ];
+
+  const midasResetCounts = {};
+  for (const { table, column } of midasTables) {
+    const { count, error: countError } = await client
+      .from(table)
+      .select("*", { count: "exact", head: true });
+
+    if (countError) {
+      if (countError.code === "42P01" || (countError.message ?? "").includes("does not exist")) {
+        midasResetCounts[table] = 0;
+        continue;
+      }
+      console.error(`reset-test-training: leitura ${table} falhou —`, countError.message);
+      process.exit(1);
+    }
+
+    if ((count ?? 0) > 0) {
+      const { error: deleteError } = await client
+        .from(table)
+        .delete()
+        .neq(column, "00000000-0000-0000-0000-000000000000");
+
+      if (deleteError) {
+        console.error(`reset-test-training: reset ${table} falhou —`, deleteError.message);
+        process.exit(1);
+      }
+    }
+
+    midasResetCounts[table] = count ?? 0;
+  }
+
   const { data: remainingHistorico, error: verifyError } = await client
     .from("historico_treinos")
     .select("id, cliente_id, exercicio_id, exercicio_nome")
@@ -199,6 +235,9 @@ async function main() {
   console.log(`  evolucao_membro_estase removida: ${estaseResetCount}`);
   console.log(`  balanco_termico_diario removido: ${balancoResetCount}`);
   console.log(`  matriz_forca zerada: ${matrizResetCount}`);
+  console.log(`  historico_cargas removido: ${midasResetCounts.historico_cargas ?? 0}`);
+  console.log(`  calendario_ignicao removido: ${midasResetCounts.calendario_ignicao ?? 0}`);
+  console.log(`  purity_logs removido: ${midasResetCounts.purity_logs ?? 0}`);
 
   const byActor = { cliente: [], forjador: [], desconhecido: [] };
 
@@ -236,7 +275,7 @@ async function main() {
     console.log("Estado inicial pronto — nenhum treino registrado.");
     console.log("No browser (F12 → Console), cole:");
     console.log("  Object.keys(localStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>localStorage.removeItem(k));");
-    console.log("Depois: Ctrl+F5 · /dashboard · /evolucao");
+    console.log("Depois: Ctrl+F5 · /dashboard");
   } else {
     console.log("Próximo passo: npm run seed:test-training");
     console.log("No browser: logout/login ou Ctrl+F5 para limpar localStorage meccafit:*");
