@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { DashboardClient } from "@/app/dashboard/DashboardClient";
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
-import type { EvolutionCalorPayload } from "@/components/evolution/human-body-constants";
+import {
+  PLAN_SESSIONS_DEFAULT,
+  type AthletePlanConfig,
+} from "@/components/evolution/plan-config-form";
+import type { SovereignMuscleId } from "@/components/evolution/human-body-constants";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import {
   normalizeTrainingMuscleGroup,
@@ -29,10 +33,41 @@ async function fetchWeeklySchedule(userId: string): Promise<PlanilhaDayRow[]> {
     .filter((row): row is PlanilhaDayRow => row !== null);
 }
 
+async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data } = await supabase
+    .from("planos_atletas")
+    .select("total_treinos_mensais_planejados, grupos_obrigatorios")
+    .eq("atleta_id", userId)
+    .maybeSingle();
+
+  if (!data) {
+    return {
+      totalTreinosMensaisPlanejados: PLAN_SESSIONS_DEFAULT,
+      gruposObrigatorios: [],
+    };
+  }
+
+  const grupos = Array.isArray(data.grupos_obrigatorios)
+    ? (data.grupos_obrigatorios
+        .map((item) => String(item).trim().toUpperCase())
+        .filter(Boolean) as SovereignMuscleId[])
+    : [];
+
+  return {
+    totalTreinosMensaisPlanejados:
+      typeof data.total_treinos_mensais_planejados === "number"
+        ? data.total_treinos_mensais_planejados
+        : PLAN_SESSIONS_DEFAULT,
+    gruposObrigatorios: grupos,
+  };
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subgrupo?: string; tab?: string }>;
+  searchParams: Promise<{ subgrupo?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createSupabaseServerClient();
@@ -44,26 +79,21 @@ export default async function DashboardPage({
     redirect("/");
   }
 
-  let initialEvolutionCalor = undefined as EvolutionCalorPayload["calorRows"] | undefined;
-  let initialEvolutionIgnicao = undefined as number | undefined;
-
-  if (params.tab === "evolucao") {
-    const payload = await fetchMuscularEvolutionPayload(supabase);
-    initialEvolutionCalor = payload.calorRows;
-    initialEvolutionIgnicao = payload.indice_ignicao;
-  }
-
-  const initialWeekSchedule = await fetchWeeklySchedule(user.id);
+  const [evolutionPayload, initialWeekSchedule, initialAthletePlan] = await Promise.all([
+    fetchMuscularEvolutionPayload(supabase),
+    fetchWeeklySchedule(user.id),
+    fetchAthletePlan(user.id),
+  ]);
 
   return (
     <Suspense fallback={<DashboardLoading />}>
       <DashboardClient
         userId={user.id}
         subgroupParam={params.subgrupo ?? null}
-        tabParam={params.tab ?? null}
-        initialEvolutionCalor={initialEvolutionCalor}
-        initialEvolutionIgnicao={initialEvolutionIgnicao}
+        initialEvolutionCalor={evolutionPayload.calorRows}
+        initialEvolutionIgnicao={evolutionPayload.indice_ignicao}
         initialWeekSchedule={initialWeekSchedule}
+        initialAthletePlan={initialAthletePlan}
       />
     </Suspense>
   );

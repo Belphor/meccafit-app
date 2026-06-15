@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function TreinoPage() {
+export default function TreinoRedirectPage() {
   redirect("/dashboard");
 }

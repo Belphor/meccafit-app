@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { subgroupsCatalog } from "@/lib/exercise-catalog";
-import { buildDashboardHref, type DashboardTabId } from "@/lib/dashboard-tabs";
+import { buildDashboardHref } from "@/lib/dashboard-tabs";
 
 type TreinoSubgroupNavProps = {
   activeSubgroupId: string;
-  tabParam?: DashboardTabId | null;
 };
 
-export function TreinoSubgroupNav({ activeSubgroupId, tabParam }: TreinoSubgroupNavProps) {
+export function TreinoSubgroupNav({ activeSubgroupId }: TreinoSubgroupNavProps) {
   return (
     <nav
       className="mb-4 flex flex-wrap justify-center gap-2"
@@ -17,10 +16,7 @@ export function TreinoSubgroupNav({ activeSubgroupId, tabParam }: TreinoSubgroup
     >
       {subgroupsCatalog.map((subgroup) => {
         const isActive = subgroup.id === activeSubgroupId;
-        const href = buildDashboardHref({
-          tab: tabParam && tabParam !== "treino" ? tabParam : null,
-          subgrupo: subgroup.slug,
-        });
+        const href = buildDashboardHref({ subgrupo: subgroup.slug });
 
         return (
           <Link

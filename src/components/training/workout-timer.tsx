@@ -10,6 +10,8 @@ export type WorkoutTimerProps = {
   onRestComplete?: () => void;
   /** Incrementa para reiniciar o descanso (ex.: após gravar série) */
   restartToken?: number;
+  /** Compacto: embutido no card do exercício */
+  variant?: "panel" | "exercise";
 };
 
 export function WorkoutTimer({
@@ -17,6 +19,7 @@ export function WorkoutTimer({
   className = "",
   onRestComplete,
   restartToken = 0,
+  variant = "panel",
 }: WorkoutTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
@@ -73,6 +76,48 @@ export function WorkoutTimer({
   const minutes = Math.floor(secondsLeft / 60);
   const seconds = secondsLeft % 60;
   const display = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  if (variant === "exercise") {
+    return (
+      <div
+        className={`rounded-lg border border-cyan-500/12 bg-black/40 px-3 py-2 ${className}`}
+        aria-live="polite"
+        data-exercise-interactive="true"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-cyan-400/75">
+              Descanso
+            </p>
+            <p
+              className={`font-mono text-xl font-bold tabular-nums tracking-wider ${
+                isRunning ? "text-emerald-200" : "text-neutral-500"
+              }`}
+            >
+              {display}
+            </p>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => startRest()}
+              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-emerald-500/20 bg-emerald-950/25 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-emerald-100`}
+            >
+              {defaultSeconds}s
+            </button>
+            <button
+              type="button"
+              onClick={stopRest}
+              disabled={!isRunning && secondsLeft === 0}
+              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-orange-500/12 bg-neutral-950/50 px-3 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-400 disabled:opacity-40`}
+            >
+              Parar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

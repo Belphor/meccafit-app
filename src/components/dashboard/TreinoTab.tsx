@@ -9,7 +9,6 @@ import { MonumentalExerciseCard } from "@/components/dashboard/MonumentalExercis
 import { MonumentalSubgroupTitle } from "@/components/dashboard/MonumentalSubgroupTitle";
 import { TreinoSubgroupNav } from "@/components/dashboard/TreinoSubgroupNav";
 import { TreinoWeekControls } from "@/components/training/treino-week-controls";
-import { WorkoutTimer } from "@/components/training/workout-timer";
 import {
   DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
@@ -17,12 +16,10 @@ import {
 } from "@/lib/dashboard-config";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import type { PlanilhaDayRow } from "@/lib/training-week";
-import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
 type TreinoTabProps = {
   profile: ClientProfile;
   subgroup: MuscleSubgroup;
-  tabParam?: DashboardTabId | null;
   activeExerciseId: number;
   superacaoExerciseId: number | null;
   isIncubating: boolean;
@@ -44,7 +41,6 @@ type TreinoTabProps = {
 export function TreinoTab({
   profile,
   subgroup,
-  tabParam,
   activeExerciseId,
   superacaoExerciseId,
   isIncubating,
@@ -60,16 +56,7 @@ export function TreinoTab({
   onPersistSuccess,
 }: TreinoTabProps) {
   const musculo = subgroupIdToMusculo(subgroup.id);
-  const [timerToken, setTimerToken] = useState(0);
   const [focusOverride, setFocusOverride] = useState(false);
-
-  const handlePersistSuccess = useCallback(
-    (exerciseId: number, detail: { vtcGenerated: number }) => {
-      setTimerToken((token) => token + 1);
-      onPersistSuccess?.(exerciseId, detail);
-    },
-    [onPersistSuccess],
-  );
 
   const weekControls = useMemo(() => {
     if (!userId) return null;
@@ -103,9 +90,7 @@ export function TreinoTab({
       <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
         {weekControls}
 
-        <WorkoutTimer restartToken={timerToken} defaultSeconds={90} />
-
-        <TreinoSubgroupNav activeSubgroupId={subgroup.id} tabParam={tabParam} />
+        <TreinoSubgroupNav activeSubgroupId={subgroup.id} />
 
         <MonumentalSubgroupTitle subgroup={subgroup} />
 
@@ -132,7 +117,7 @@ export function TreinoTab({
               onWeightSaved={onWeightSaved}
               onWatchVideo={onWatchVideo}
               onSuperacao={onSuperacao}
-              onPersistSuccess={handlePersistSuccess}
+              onPersistSuccess={onPersistSuccess}
             />
           </li>
         ))}

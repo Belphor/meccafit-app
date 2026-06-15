@@ -8,21 +8,15 @@ import { SacredPhoenixSigil } from "@/components/dashboard/DashboardBrandAssets"
 import { DashboardLoading } from "@/components/dashboard/DashboardLoading";
 import { DashboardBrandHeader } from "@/components/dashboard/DashboardBrandHeader";
 import { DashboardSignOutButton } from "@/components/dashboard/DashboardSignOutButton";
-import { DashboardTabNav } from "@/components/dashboard/DashboardTabNav";
 import { DashboardTreinoWorkspace } from "@/components/dashboard/DashboardTreinoWorkspace";
+import { ComunidadePageClient } from "@/components/comunidade/comunidade-page-client";
 import { AppShell } from "@/components/navigation/app-shell";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
-import {
-  buildDashboardHref,
-  DEFAULT_DASHBOARD_TAB,
-  isDietaTabAllowed,
-  resolveDashboardTabFromParam,
-  type DashboardTabId,
-} from "@/lib/dashboard-tabs";
+import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import {
   fetchCommunityMuralPosts,
   invalidateDashboardCaches,
@@ -45,7 +39,7 @@ import {
   type StorageVtcUpdateDetail,
 } from "@/lib/cardio-altar-daily";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
-import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
+import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
@@ -64,15 +58,15 @@ const EvolutionAbaPanel = dynamic(
     import("@/components/evolution/evolution-aba-view").then((module) => ({
       default: module.EvolutionAbaView,
     })),
-  { loading: () => <DashboardLoading message="Abrindo evolução..." /> },
+  { loading: () => <DashboardLoading message="Carregando evolução..." /> },
 );
 
-const ForumBrasaVivaPanel = dynamic(
+const PlanConfigForm = dynamic(
   () =>
-    import("@/features/forum-brasa-viva/ForumBrasaVivaView").then((module) => ({
-      default: module.ForumBrasaVivaView,
+    import("@/components/evolution/plan-config-form").then((module) => ({
+      default: module.PlanConfigForm,
     })),
-  { loading: () => <DashboardLoading message="Abrindo Fórum Brasa-Viva..." /> },
+  { loading: () => <DashboardLoading message="Carregando perfil..." /> },
 );
 
 const PersonalTreinoWorkspace = dynamic(
@@ -88,7 +82,7 @@ const DietaPanel = dynamic(
     import("@/components/dashboard/DietaPanel").then((module) => ({
       default: module.DietaPanel,
     })),
-  { loading: () => <DashboardLoading message="Abrindo dieta..." /> },
+  { loading: () => <DashboardLoading message="Carregando dieta..." /> },
 );
 
 type VideoModalState = {
@@ -99,22 +93,29 @@ type VideoModalState = {
 
 const CLOSED_VIDEO: VideoModalState = { isOpen: false, exerciseName: "", videoUrl: "" };
 
+function scrollToDashboardSection(sectionId: string) {
+  if (typeof window === "undefined") return;
+  window.requestAnimationFrame(() => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
 type DashboardClientProps = {
   userId: string;
   subgroupParam: string | null;
-  tabParam: string | null;
   initialEvolutionCalor?: MuscleCalorRow[];
   initialEvolutionIgnicao?: number;
   initialWeekSchedule?: PlanilhaDayRow[];
+  initialAthletePlan?: AthletePlanConfig;
 };
 
 export function DashboardClient({
   userId,
   subgroupParam,
-  tabParam,
   initialEvolutionCalor,
   initialEvolutionIgnicao,
   initialWeekSchedule,
+  initialAthletePlan,
 }: DashboardClientProps) {
   const router = useRouter();
   const catalogSubgroup = useMemo(
@@ -130,8 +131,6 @@ export function DashboardClient({
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
-  const [activeTab, setActiveTab] = useState<DashboardTabId>("treino");
-  const [muralPosts, setMuralPosts] = useState<MuralPost[]>([]);
   const [videoModal, setVideoModal] = useState<VideoModalState>(CLOSED_VIDEO);
   const [reloadToken, setReloadToken] = useState(0);
   const [cardioAltarPercent, setCardioAltarPercent] = useState(() =>
@@ -176,11 +175,8 @@ export function DashboardClient({
       setProfile(bundle.data.profile);
       setProfileRow(bundle.data.profileRow);
       setSubgroup(bundle.data.subgroup);
-      setMuralPosts(bundle.data.muralPosts);
       setTrainingTrack(bundle.data.trainingTrack);
       setHasPersonalBond(bundle.data.hasPersonalBond);
-      const resolvedTab = resolveDashboardTabFromParam(tabParam, bundle.data.hasPersonalBond);
-      setActiveTab(resolvedTab);
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
         setLiveSessionVtcKg(thermal.session_vtc_today);
@@ -192,49 +188,16 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [loadKey, subgroupParam, tabParam]);
+  }, [loadKey, subgroupParam]);
 
   useEffect(() => {
     if (!dataReady) return;
 
-    if (tabParam === "dieta" && !hasPersonalBond) {
-      setActiveTab(DEFAULT_DASHBOARD_TAB);
-      router.replace(
-        buildDashboardHref({
-          subgrupo: subgroupParam,
-          tab: DEFAULT_DASHBOARD_TAB,
-        }),
-      );
-      return;
-    }
+    const hash = window.location.hash.replace(/^#/, "");
+    if (!hash) return;
 
-    const resolvedTab = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
-    setActiveTab((current) => (current === resolvedTab ? current : resolvedTab));
-  }, [dataReady, hasPersonalBond, router, subgroupParam, tabParam]);
-
-  const handleTabChange = useCallback(
-    (tab: DashboardTabId) => {
-      if (!isDietaTabAllowed(hasPersonalBond, tab)) {
-        setActiveTab(DEFAULT_DASHBOARD_TAB);
-        router.replace(
-          buildDashboardHref({
-            subgrupo: subgroupParam,
-            tab: DEFAULT_DASHBOARD_TAB,
-          }),
-        );
-        return;
-      }
-
-      setActiveTab(tab);
-      router.replace(
-        buildDashboardHref({
-          subgrupo: subgroupParam,
-          tab,
-        }),
-      );
-    },
-    [hasPersonalBond, router, subgroupParam],
-  );
+    scrollToDashboardSection(hash);
+  }, [dataReady]);
 
   const handleSignOut = useCallback(async () => {
     clearThermicSessionCache();
@@ -287,15 +250,10 @@ export function DashboardClient({
       await invalidateDashboardCaches(userId, musculo);
 
       const subgroupResult = await refreshSubgroupHistorico(subgroupRef.current);
-      const muralResult = await fetchCommunityMuralPosts();
       const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
 
       if (subgroupResult.data) {
         setSubgroup(subgroupResult.data);
-      }
-
-      if (muralResult.data) {
-        setMuralPosts(muralResult.data);
       }
 
       if (bundleResult.data?.profileRow) {
@@ -316,13 +274,6 @@ export function DashboardClient({
     [subgroupParam, userId],
   );
 
-  const refreshCommunityMural = useCallback(async () => {
-    const muralResult = await fetchCommunityMuralPosts();
-    if (muralResult.data) {
-      setMuralPosts(muralResult.data);
-    }
-  }, []);
-
   const handleWatchVideo = useCallback(
     (exerciseId: number) => {
       const exercise = subgroup.exercises.find((item) => item.id === exerciseId);
@@ -342,15 +293,9 @@ export function DashboardClient({
     if (profile?.role === "forjador_soberano") {
       return;
     }
-    void refreshCommunityMural();
-    setActiveTab("forum");
-    router.replace(
-      buildDashboardHref({
-        subgrupo: subgroupParam,
-        tab: "forum",
-      }),
-    );
-  }, [profile?.role, refreshCommunityMural, router, subgroupParam]);
+    void fetchCommunityMuralPosts();
+    scrollToDashboardSection("comunidade");
+  }, [profile?.role]);
 
   const closeVideoModal = useCallback(() => setVideoModal(CLOSED_VIDEO), []);
 
@@ -372,7 +317,6 @@ export function DashboardClient({
   const treinoWorkspaceProps = {
     subgroup: treinoSubgroup,
     authUserId: userId,
-    tabParam: activeTab,
     initialWeekSchedule,
     isIncubating,
     hasBiologicalBalance: (profile?.age ?? 0) >= BIOLOGICAL_BALANCE_MIN_AGE,
@@ -407,108 +351,101 @@ export function DashboardClient({
   }
 
   return (
-    <AppShell>
     <PhoenixPhaseEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
       {(phase) => (
-    <main className={DASHBOARD_SHELL}>
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: "var(--meccafit-ambient-gradient)" }}
-        aria-hidden="true"
-      />
-      <SuperacaoOverlay visible={showSuperacaoFlash} />
+        <AppShell>
+        <main className={DASHBOARD_SHELL}>
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: "var(--meccafit-ambient-gradient)" }}
+            aria-hidden="true"
+          />
+          <SuperacaoOverlay visible={showSuperacaoFlash} />
 
-      <section className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
-        <DashboardBrandHeader
-          altarEnergyPercent={altarEnergyPercent}
-          signOutButton={
-            <DashboardSignOutButton
-              onClick={() => void handleSignOut()}
-              className="relative z-10 shrink-0"
-            />
-          }
-        />
-
-        <BrasaVivaCard
-          as="article"
-          variant="portal"
-          className={DASHBOARD_PORTAL_PADDING}
-          aria-label={PORTAL_COPY.portalBrasaAria}
-        >
-          <div className="flex flex-col items-center overflow-visible text-center">
-            <SacredPhoenixSigil altarEnergy={altarEnergy} />
-            <PhoenixDisplayTitle className={DASHBOARD_HERO_TITLE}>
-              {PORTAL_COPY.leaveYesterday}
-            </PhoenixDisplayTitle>
-            <p className={`${PLASMA_HERO_TITLE} mt-3`} aria-label={PORTAL_COPY.rebirthTodayAria}>
-              {PORTAL_COPY.rebirthToday}
-            </p>
-          </div>
-
-          <div className="z-[1]">
-            <DashboardTabNav
-              activeTab={activeTab}
-              forumCount={muralPosts.length}
-              hasPersonalBond={hasPersonalBond}
-              onTabChange={handleTabChange}
+          <section className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
+            <DashboardBrandHeader
+              altarEnergyPercent={altarEnergyPercent}
+              signOutButton={
+                <DashboardSignOutButton
+                  onClick={() => void handleSignOut()}
+                  className="relative z-10 shrink-0"
+                />
+              }
             />
 
-            {activeTab === "treino" ? (
-              trainingTrack.track === "personal" ? (
-                <PersonalTreinoWorkspace
-                  key={`personal-${subgroup.id}`}
-                  trainingTrack={trainingTrack}
-                  subgroupPrescriptions={subgroupPrescriptions}
-                  profile={profile}
-                  {...treinoWorkspaceProps}
-                />
-              ) : (
-                <DashboardTreinoWorkspace
-                  key={`common-${subgroup.id}`}
-                  profile={profile}
-                  {...treinoWorkspaceProps}
-                />
-              )
-            ) : null}
-
-            {activeTab === "dieta" && hasPersonalBond ? (
-              <div className={DASHBOARD_TAB_CONTENT}>
-                <DietaPanel />
+            <BrasaVivaCard
+              as="article"
+              variant="portal"
+              className={DASHBOARD_PORTAL_PADDING}
+              aria-label={PORTAL_COPY.portalBrasaAria}
+            >
+              <div className="flex flex-col items-center overflow-visible text-center">
+                <SacredPhoenixSigil altarEnergy={altarEnergy} />
+                <PhoenixDisplayTitle className={DASHBOARD_HERO_TITLE}>
+                  {PORTAL_COPY.leaveYesterday}
+                </PhoenixDisplayTitle>
+                <p className={`${PLASMA_HERO_TITLE} mt-3`} aria-label={PORTAL_COPY.rebirthTodayAria}>
+                  {PORTAL_COPY.rebirthToday}
+                </p>
               </div>
-            ) : null}
 
-            {activeTab === "evolucao" ? (
-              <div className={DASHBOARD_TAB_CONTENT}>
-                <EvolutionAbaPanel
-                  userId={userId}
-                  initialCalorRows={initialEvolutionCalor}
-                  initialIgnicao={initialEvolutionIgnicao}
-                  profileName={profile?.name}
-                  variant="dashboard"
-                />
+              <div className={`z-[1] ${DASHBOARD_TAB_CONTENT} space-y-8`}>
+                <section id="treino" className="scroll-mt-6">
+                  {trainingTrack.track === "personal" ? (
+                    <PersonalTreinoWorkspace
+                      key={`personal-${subgroup.id}`}
+                      trainingTrack={trainingTrack}
+                      subgroupPrescriptions={subgroupPrescriptions}
+                      profile={profile}
+                      {...treinoWorkspaceProps}
+                    />
+                  ) : (
+                    <DashboardTreinoWorkspace
+                      key={`common-${subgroup.id}`}
+                      profile={profile}
+                      {...treinoWorkspaceProps}
+                    />
+                  )}
+                </section>
+
+                {hasPersonalBond ? (
+                  <section id="dieta" className="scroll-mt-6">
+                    <DietaPanel />
+                  </section>
+                ) : null}
+
+                <section id="evolucao" className="scroll-mt-6">
+                  <EvolutionAbaPanel
+                    userId={userId}
+                    initialCalorRows={initialEvolutionCalor}
+                    initialIgnicao={initialEvolutionIgnicao}
+                    profileName={profile.name}
+                    variant="dashboard"
+                  />
+                </section>
+
+                <section id="comunidade" className="scroll-mt-6">
+                  <ComunidadePageClient userId={userId} phase={phase} />
+                </section>
+
+                <section id="perfil" className="scroll-mt-6">
+                  <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} />
+                </section>
               </div>
-            ) : null}
+            </BrasaVivaCard>
 
-            {activeTab === "forum" ? (
-              <div className={DASHBOARD_TAB_CONTENT}>
-                <ForumBrasaVivaPanel userId={userId} phase={phase} />
-              </div>
-            ) : null}
-          </div>
-        </BrasaVivaCard>
+            <FenyxiaBrandFooter className="mt-8" />
+          </section>
 
-        <FenyxiaBrandFooter className="mt-8" />
-      </section>
-
-      <VideoModal
-        isOpen={videoModal.isOpen}
-        exerciseName={videoModal.exerciseName}
-        videoUrl={videoModal.videoUrl}
-        onClose={closeVideoModal}
-      />
-    </main>
+          <VideoModal
+            isOpen={videoModal.isOpen}
+            exerciseName={videoModal.exerciseName}
+            videoUrl={videoModal.videoUrl}
+            onClose={closeVideoModal}
+          />
+        </main>
+        </AppShell>
       )}
     </PhoenixPhaseEngine>
-    </AppShell>
   );
 }

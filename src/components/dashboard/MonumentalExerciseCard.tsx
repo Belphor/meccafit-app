@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { WorkoutTimer } from "@/components/training/workout-timer";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import PhoenixInput from "@/components/PhoenixInput";
 import { EmChamasBadge } from "@/components/dashboard/EmChamasBadge";
@@ -77,6 +78,8 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   onPersistSuccess,
 }: MonumentalExerciseCardProps) {
   const [baseVtc, setBaseVtc] = useState(0);
+  const [restTimerToken, setRestTimerToken] = useState(0);
+  const [showRestTimer, setShowRestTimer] = useState(false);
   const finalVtc = hasBiologicalBalance ? baseVtc * BIOLOGICAL_BALANCE_MULTIPLIER : baseVtc;
   const isSeriesComplete = exercise.completedSets >= exercise.targetSets;
   const historicalPrLabel = formatExerciseReferenceMetric(exercise, exercise.metricKind);
@@ -285,9 +288,23 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
           onWeightSaved={handleWeightSaved}
           onVolumeCommitted={handleVolumeCommitted}
           onSuperacao={(payload) => onSuperacao(exercise.id, payload)}
-          onPersistSuccess={(detail) => onPersistSuccess?.(exercise.id, detail)}
+          onPersistSuccess={(detail) => {
+            setRestTimerToken((token) => token + 1);
+            setShowRestTimer(true);
+            onPersistSuccess?.(exercise.id, detail);
+          }}
         />
       </div>
+
+      {!isIncubating && !isSeriesComplete && (showRestTimer || isActive) ? (
+        <div className="relative z-[2] mt-3 w-full" data-exercise-interactive="true">
+          <WorkoutTimer
+            variant="exercise"
+            restartToken={restTimerToken}
+            defaultSeconds={90}
+          />
+        </div>
+      ) : null}
     </BrasaVivaCard>
   );
 });

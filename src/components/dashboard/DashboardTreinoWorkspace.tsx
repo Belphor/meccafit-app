@@ -20,7 +20,7 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
-import { buildDashboardHref, type DashboardTabId } from "@/lib/dashboard-tabs";
+import { buildDashboardHref } from "@/lib/dashboard-tabs";
 import type { PlanilhaDayRow } from "@/lib/training-week";
 
 export type SuperacaoPayload = {
@@ -33,7 +33,6 @@ export type DashboardTreinoWorkspaceProps = {
   subgroup: MuscleSubgroup;
   profile: ClientProfile;
   authUserId: string;
-  tabParam?: DashboardTabId | null;
   initialWeekSchedule?: PlanilhaDayRow[];
   isIncubating: boolean;
   hasBiologicalBalance: boolean;
@@ -92,7 +91,6 @@ export function DashboardTreinoWorkspace({
   subgroup,
   profile,
   authUserId,
-  tabParam,
   initialWeekSchedule,
   isIncubating,
   hasBiologicalBalance,
@@ -283,14 +281,9 @@ export function DashboardTreinoWorkspace({
 
   const handleSubgroupNavigate = useCallback(
     (subgroupSlug: string) => {
-      router.replace(
-        buildDashboardHref({
-          subgrupo: subgroupSlug,
-          tab: tabParam ?? "treino",
-        }),
-      );
+      router.replace(buildDashboardHref({ subgrupo: subgroupSlug }));
     },
-    [router, tabParam],
+    [router],
   );
 
   return (
@@ -300,7 +293,6 @@ export function DashboardTreinoWorkspace({
           <TreinoTab
             profile={profile}
             subgroup={mergedSubgroup}
-            tabParam={tabParam}
             initialWeekSchedule={initialWeekSchedule}
             onSubgroupNavigate={handleSubgroupNavigate}
             activeExerciseId={activeExerciseId}
