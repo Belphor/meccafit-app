@@ -228,6 +228,8 @@ export type Database = {
           atleta_id: string;
           total_treinos_mensais_planejados: number;
           grupos_obrigatorios: string[];
+          detem_cinturao_duelo: boolean;
+          is_pilar_fogo_cosmico: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -235,6 +237,8 @@ export type Database = {
           atleta_id: string;
           total_treinos_mensais_planejados?: number;
           grupos_obrigatorios?: string[];
+          detem_cinturao_duelo?: boolean;
+          is_pilar_fogo_cosmico?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -242,6 +246,83 @@ export type Database = {
           atleta_id?: string;
           total_treinos_mensais_planejados?: number;
           grupos_obrigatorios?: string[];
+          detem_cinturao_duelo?: boolean;
+          is_pilar_fogo_cosmico?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      duelos_supergrupos: {
+        Row: {
+          id: string;
+          atleta_desafiante_id: string;
+          atleta_desafiado_id: string;
+          tipo_confronto: Database["public"]["Enums"]["tipo_confronto_duelo"];
+          vtc_desafiante: number;
+          vtc_desafiado: number;
+          status: Database["public"]["Enums"]["status_duelo_supergrupo"];
+          inicio_em: string;
+          fim_em: string;
+          vencedor_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          atleta_desafiante_id: string;
+          atleta_desafiado_id: string;
+          tipo_confronto: Database["public"]["Enums"]["tipo_confronto_duelo"];
+          vtc_desafiante?: number;
+          vtc_desafiado?: number;
+          status?: Database["public"]["Enums"]["status_duelo_supergrupo"];
+          inicio_em?: string;
+          fim_em?: string;
+          vencedor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          atleta_desafiante_id?: string;
+          atleta_desafiado_id?: string;
+          tipo_confronto?: Database["public"]["Enums"]["tipo_confronto_duelo"];
+          vtc_desafiante?: number;
+          vtc_desafiado?: number;
+          status?: Database["public"]["Enums"]["status_duelo_supergrupo"];
+          inicio_em?: string;
+          fim_em?: string;
+          vencedor_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      metas_coletivas_academia: {
+        Row: {
+          id: string;
+          mes_referencia: string;
+          tonelagem_alvo_kg: number;
+          tonelagem_atual_acumulada: number;
+          fechado_em: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          mes_referencia: string;
+          tonelagem_alvo_kg?: number;
+          tonelagem_atual_acumulada?: number;
+          fechado_em?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          mes_referencia?: string;
+          tonelagem_alvo_kg?: number;
+          tonelagem_atual_acumulada?: number;
+          fechado_em?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -822,6 +903,16 @@ export type Database = {
         };
         Returns: number;
       };
+      get_perfil_publico_atleta: {
+        Args: {
+          p_atleta_id: string;
+        };
+        Returns: Json;
+      };
+      get_comunidade_arena_snapshot: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
     };
     Enums: {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
@@ -829,6 +920,8 @@ export type Database = {
       subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "abdomen" | "pernas";
       grupo_muscular_evolucao: "PEITO" | "COSTAS" | "PERNAS" | "OMBROS" | "BRACOS" | "ABDOMEN";
       membro_principal_soberano: "PEITO" | "BRACOS" | "ABDOMEN" | "PERNAS" | "COSTAS" | "OMBROS";
+      tipo_confronto_duelo: "SUPERIORES" | "INFERIORES";
+      status_duelo_supergrupo: "EM_ANDAMENTO" | "FINALIZADO" | "CANCELADO";
     };
     CompositeTypes: Record<string, never>;
   };

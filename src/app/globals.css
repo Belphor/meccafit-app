@@ -186,6 +186,16 @@ body {
   }
 }
 
+@keyframes plutus-gold-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.45));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.85));
+  }
+}
+
 .brasa-viva-card,
 .pulse-brasa {
   animation: brasa-viva-pulse 4s ease-in-out infinite;

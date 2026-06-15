@@ -103,6 +103,10 @@ export const MIGRATION_PATCHES = [
     id: "prescricoes_forjador_treino",
     files: ["20260621100000_prescricoes_forjador_treino.sql"],
   },
+  {
+    id: "comunidade_arena",
+    files: ["20260620120000_comunidade_arena_cooperativa.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -260,6 +264,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeAbdomenThermal(admin, probeUserId));
     probes.push(await probeMidasGrowth(admin, probeUserId));
     probes.push(await probePlanilhasForjador(admin, probeUserId));
+    probes.push(await probeComunidadeArena(admin, probeUserId));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -275,6 +280,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "planilhas_forjador",
       ok: false,
       detail: "sem perfil para probe planilhas",
+    });
+    probes.push({
+      id: "comunidade_arena",
+      ok: false,
+      detail: "sem perfil para probe comunidade",
     });
   }
 
@@ -462,6 +472,104 @@ async function probeMidasGrowth(admin, userId) {
     id: "midas_growth",
     ok: shape.ok,
     detail: shape.ok ? shape.detail : shape.detail,
+  };
+}
+
+async function probeComunidadeArena(admin, userId) {
+  const { data: flagsRow, error: flagsErr } = await admin
+    .from("planos_atletas")
+    .select("detem_cinturao_duelo, is_pilar_fogo_cosmico")
+    .eq("atleta_id", userId)
+    .maybeSingle();
+
+  if (flagsErr?.code === "42703" || flagsErr?.message?.includes("does not exist")) {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: "colunas PLUTUS ausentes em planos_atletas",
+    };
+  }
+
+  const { error: duelosErr } = await admin.from("duelos_supergrupos").select("id").limit(1);
+  if (duelosErr?.code === "42P01" || duelosErr?.message?.includes("does not exist")) {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: "tabela duelos_supergrupos ausente",
+    };
+  }
+
+  const { error: metasErr } = await admin.from("metas_coletivas_academia").select("id").limit(1);
+  if (metasErr?.code === "42P01" || metasErr?.message?.includes("does not exist")) {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: "tabela metas_coletivas_academia ausente",
+    };
+  }
+
+  const { data: perfilRpc, error: perfilErr } = await admin.rpc("get_perfil_publico_atleta", {
+    p_atleta_id: userId,
+  });
+
+  if (perfilErr?.code === "PGRST202") {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: "RPC get_perfil_publico_atleta ausente",
+    };
+  }
+
+  if (perfilErr) {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: perfilErr.message,
+    };
+  }
+
+  const perfil = perfilRpc;
+  const shapeOk =
+    perfil &&
+    typeof perfil === "object" &&
+    !Array.isArray(perfil) &&
+    typeof perfil.indice_ignicao === "number" &&
+    typeof perfil.duelos_vencidos === "number" &&
+    typeof perfil.grupo_supremo === "string";
+
+  if (!shapeOk && perfil?.code === 401) {
+    return {
+      id: "comunidade_arena",
+      ok: true,
+      detail: "tabelas OK · RPC bloqueia service_role (auth.uid)",
+    };
+  }
+
+  const { data: snapshotRpc, error: snapshotErr } = await admin.rpc("get_comunidade_arena_snapshot");
+
+  if (snapshotErr?.code === "PGRST202") {
+    return {
+      id: "comunidade_arena",
+      ok: false,
+      detail: "RPC get_comunidade_arena_snapshot ausente",
+    };
+  }
+
+  const plutusOk =
+    flagsRow === null ||
+    (typeof flagsRow.detem_cinturao_duelo === "boolean" &&
+      typeof flagsRow.is_pilar_fogo_cosmico === "boolean");
+
+  return {
+    id: "comunidade_arena",
+    ok: shapeOk && plutusOk && !snapshotErr,
+    detail: shapeOk
+      ? plutusOk
+        ? snapshotErr
+          ? snapshotErr.message
+          : "PLUTUS · duelos · metas · RPC ok"
+        : "flags PLUTUS inválidas"
+      : "get_perfil_publico_atleta shape inválido",
   };
 }
 
