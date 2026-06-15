@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { BraseiroPanel } from "@/components/dashboard/BraseiroPanel";
 import { TreinoTab } from "@/components/dashboard/TreinoTab";
 import { readAltarVtcSession, writeAltarVtcSession } from "@/lib/altar-vtc-session";
@@ -20,8 +19,8 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
-import { buildDashboardHref } from "@/lib/dashboard-tabs";
-import type { PlanilhaDayRow } from "@/lib/training-week";
+import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
+import { resolveCalendarWeekdayIndex } from "@/lib/training-week";
 
 export type SuperacaoPayload = {
   weight: number;
@@ -41,6 +40,7 @@ export type DashboardTreinoWorkspaceProps = {
   onOpenVideo: (exerciseId: number) => void;
   onSuperacaoMural: (exerciseName: string, payload: SuperacaoPayload) => void;
   onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
+  onSubgroupNavigate: (subgroupSlug: string) => void;
 };
 
 function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
@@ -99,8 +99,11 @@ export function DashboardTreinoWorkspace({
   onOpenVideo,
   onSuperacaoMural,
   onTrainingPersisted,
+  onSubgroupNavigate,
 }: DashboardTreinoWorkspaceProps) {
-  const router = useRouter();
+  const [activeWeekDay, setActiveWeekDay] = useState<WeekdayIndex>(() =>
+    resolveCalendarWeekdayIndex(),
+  );
   const sessionScope = useMemo(
     () => ({ userId: authUserId, subgroupId: subgroup.id }),
     [authUserId, subgroup.id],
@@ -279,11 +282,14 @@ export function DashboardTreinoWorkspace({
     [baseVtcTotal, mergedSubgroup.exercises, onTrainingPersisted, persistAltarSession],
   );
 
-  const handleSubgroupNavigate = useCallback(
-    (subgroupSlug: string) => {
-      router.replace(buildDashboardHref({ subgrupo: subgroupSlug }));
+  const handleDayTrainingChange = useCallback(
+    ({ subgroupId, activeDay }: { subgroupId: string; activeDay: WeekdayIndex }) => {
+      setActiveWeekDay(activeDay);
+      if (subgroupId !== subgroup.id) {
+        onSubgroupNavigate(subgroupId);
+      }
     },
-    [router],
+    [onSubgroupNavigate, subgroup.id],
   );
 
   return (
@@ -294,7 +300,9 @@ export function DashboardTreinoWorkspace({
             profile={profile}
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
-            onSubgroupNavigate={handleSubgroupNavigate}
+            activeWeekDay={activeWeekDay}
+            onActiveWeekDayChange={setActiveWeekDay}
+            onDayTrainingChange={handleDayTrainingChange}
             activeExerciseId={activeExerciseId}
             superacaoExerciseId={superacaoExerciseId}
             isIncubating={isIncubating}

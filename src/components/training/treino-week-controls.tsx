@@ -23,6 +23,8 @@ const WEEKDAY_INDICES: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
 export type TreinoWeekControlsProps = {
   userId: string;
   initialSchedule?: PlanilhaDayRow[];
+  activeDay: WeekdayIndex;
+  onActiveDayChange: (day: WeekdayIndex) => void;
   onDayTrainingChange: (payload: {
     muscle: TrainingMuscleGroup;
     subgroupId: string;
@@ -31,21 +33,20 @@ export type TreinoWeekControlsProps = {
 };
 
 function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
-  const schedule = buildScheduleMap(initialSchedule ?? []);
-  const activeDay = resolveCalendarWeekdayIndex();
-  return { schedule, activeDay, muscle: schedule[activeDay] };
+  return buildScheduleMap(initialSchedule ?? []);
 }
 
 export function TreinoWeekControls({
   userId,
   initialSchedule,
+  activeDay,
+  onActiveDayChange,
   onDayTrainingChange,
 }: TreinoWeekControlsProps) {
-  const boot = useMemo(() => resolveInitialSchedule(initialSchedule), [initialSchedule]);
+  const bootSchedule = useMemo(() => resolveInitialSchedule(initialSchedule), [initialSchedule]);
   const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
 
-  const [schedule, setSchedule] = useState(boot.schedule);
-  const [activeDay, setActiveDay] = useState<WeekdayIndex>(boot.activeDay);
+  const [schedule, setSchedule] = useState(bootSchedule);
   const [loading, setLoading] = useState(!initialSchedule?.length);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,11 +95,11 @@ export function TreinoWeekControls({
   const applyDayMuscle = useCallback(
     async (day: WeekdayIndex, muscle: TrainingMuscleGroup) => {
       setSchedule((current) => ({ ...current, [day]: muscle }));
-      setActiveDay(day);
+      onActiveDayChange(day);
       emitTraining(muscle, day);
       await persistDayMuscle(day, muscle);
     },
-    [emitTraining, persistDayMuscle],
+    [emitTraining, onActiveDayChange, persistDayMuscle],
   );
 
   const loadSchedule = useCallback(async () => {
@@ -144,16 +145,18 @@ export function TreinoWeekControls({
   useEffect(() => {
     if (didInitialNavigateRef.current) return;
     didInitialNavigateRef.current = true;
-    emitTraining(boot.muscle, boot.activeDay);
-  }, [boot.activeDay, boot.muscle, emitTraining]);
+    const muscle = schedule[activeDay];
+    emitTraining(muscle, activeDay);
+  }, [activeDay, emitTraining, schedule]);
 
   const selectDay = useCallback(
     (day: WeekdayIndex) => {
+      if (day === activeDay) return;
       const muscle = schedule[day];
-      setActiveDay(day);
+      onActiveDayChange(day);
       emitTraining(muscle, day);
     },
-    [emitTraining, schedule],
+    [activeDay, emitTraining, onActiveDayChange, schedule],
   );
 
   return (
@@ -186,7 +189,10 @@ export function TreinoWeekControls({
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => selectDay(day)}
+              onClick={(event) => {
+                event.preventDefault();
+                selectDay(day);
+              }}
               className={`relative rounded-xl border px-2 py-3 text-center transition-[border-color,box-shadow,background-color,transform] duration-200 active:scale-[0.98] ${
                 isActive
                   ? "border-emerald-500/70 bg-emerald-950/30 shadow-[0_0_14px_rgba(16,185,129,0.22)]"

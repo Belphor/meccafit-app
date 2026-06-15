@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
 import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
@@ -14,7 +13,7 @@ import {
   DASHBOARD_SCROLL_LIST,
 } from "@/lib/dashboard-config";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
-import type { PlanilhaDayRow } from "@/lib/training-week";
+import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 
 type TreinoTabProps = {
   profile: ClientProfile;
@@ -25,7 +24,13 @@ type TreinoTabProps = {
   hasBiologicalBalance: boolean;
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
-  onSubgroupNavigate: (subgroupSlug: string) => void;
+  activeWeekDay: WeekdayIndex;
+  onActiveWeekDayChange: (day: WeekdayIndex) => void;
+  onDayTrainingChange: (payload: {
+    muscle: TrainingMuscleGroup;
+    subgroupId: string;
+    activeDay: WeekdayIndex;
+  }) => void;
   onActivate: (exerciseId: number) => void;
   onVolumeCommitted: (exerciseId: number, baseVolume: number) => void;
   onWeightSaved: (exerciseId: number, weight: number) => void;
@@ -46,7 +51,9 @@ export function TreinoTab({
   hasBiologicalBalance,
   userId,
   initialWeekSchedule,
-  onSubgroupNavigate,
+  activeWeekDay,
+  onActiveWeekDayChange,
+  onDayTrainingChange,
   onActivate,
   onVolumeCommitted,
   onWeightSaved,
@@ -55,27 +62,6 @@ export function TreinoTab({
   onPersistSuccess,
 }: TreinoTabProps) {
   const musculo = subgroupIdToMusculo(subgroup.id);
-
-  const handleDayTrainingChange = useCallback(
-    ({ subgroupId }: { subgroupId: string }) => {
-      if (subgroupId !== subgroup.id) {
-        onSubgroupNavigate(subgroupId);
-      }
-    },
-    [onSubgroupNavigate, subgroup.id],
-  );
-
-  const weekControls = useMemo(() => {
-    if (!userId) return null;
-
-    return (
-      <TreinoWeekControls
-        userId={userId}
-        initialSchedule={initialWeekSchedule}
-        onDayTrainingChange={handleDayTrainingChange}
-      />
-    );
-  }, [handleDayTrainingChange, initialWeekSchedule, userId]);
 
   return (
     <BrasaVivaCard
@@ -89,7 +75,15 @@ export function TreinoTab({
       <CardioVooCinzasPanel userId={userId} />
 
       <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
-        {weekControls}
+        {userId ? (
+          <TreinoWeekControls
+            userId={userId}
+            initialSchedule={initialWeekSchedule}
+            activeDay={activeWeekDay}
+            onActiveDayChange={onActiveWeekDayChange}
+            onDayTrainingChange={onDayTrainingChange}
+          />
+        ) : null}
         <MonumentalSubgroupTitle subgroup={subgroup} />
       </div>
 

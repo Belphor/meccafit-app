@@ -32,6 +32,7 @@ import {
   refreshSubgroupHistorico,
 } from "@/lib/dashboard-data";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
+import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { parseThermalGravityState } from "@/lib/thermal-gravity";
 import {
   BIOLOGICAL_BALANCE_MIN_AGE,
@@ -48,7 +49,6 @@ import {
 } from "@/lib/cardio-altar-daily";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
-import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
@@ -145,7 +145,7 @@ export function DashboardClient({
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
   const [hasPersonalBond, setHasPersonalBond] = useState(false);
   const subgroupRef = useRef(subgroup);
-  const loadKey = `${subgroupParam ?? ""}:${reloadToken}`;
+  const loadKey = `${reloadToken}`;
   const [trackedLoadKey, setTrackedLoadKey] = useState(loadKey);
   const [trackedUserId, setTrackedUserId] = useState(userId);
 
@@ -200,6 +200,24 @@ export function DashboardClient({
   useEffect(() => {
     if (!dataReady) return;
 
+    const nextSubgroup = resolveSubgroupFromParam(subgroupParam);
+    if (nextSubgroup.id === subgroup.id) return;
+
+    let cancelled = false;
+    void refreshSubgroupHistorico(nextSubgroup).then((result) => {
+      if (!cancelled && result.data) {
+        setSubgroup(result.data);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataReady, subgroup.id, subgroupParam]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
     if (tabParam === "dieta" && !hasPersonalBond) {
       setActiveTab(DEFAULT_DASHBOARD_TAB);
       router.replace(
@@ -248,6 +266,26 @@ export function DashboardClient({
   const handleRetryLoad = useCallback(() => {
     setReloadToken((token) => token + 1);
   }, []);
+
+  const handleTreinoSubgroupNavigate = useCallback(
+    (subgroupSlug: string) => {
+      const nextSubgroup = resolveSubgroupFromParam(subgroupSlug);
+      if (nextSubgroup.id === subgroup.id) return;
+
+      const href = buildDashboardHref({
+        subgrupo: subgroupSlug,
+        tab: activeTab === DEFAULT_DASHBOARD_TAB ? null : activeTab,
+      });
+      window.history.replaceState(window.history.state, "", href);
+
+      void refreshSubgroupHistorico(nextSubgroup).then((result) => {
+        if (result.data) {
+          setSubgroup(result.data);
+        }
+      });
+    },
+    [activeTab, subgroup.id],
+  );
 
   useEffect(() => {
     const onStorageVtcUpdate = (event: Event) => {
@@ -371,6 +409,7 @@ export function DashboardClient({
     onSuperacaoFlashChange: setShowSuperacaoFlash,
     onOpenVideo: handleWatchVideo,
     onSuperacaoMural: publishMuralAscensao,
+    onSubgroupNavigate: handleTreinoSubgroupNavigate,
     onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) =>
       void handleTrainingPersisted(exerciseId, detail),
   } as const;
@@ -447,7 +486,7 @@ export function DashboardClient({
                   {activeTab === "treino" ? (
                     trainingTrack.track === "personal" ? (
                       <PersonalTreinoWorkspace
-                        key={`personal-${subgroup.id}`}
+                        key="personal-treino"
                         trainingTrack={trainingTrack}
                         subgroupPrescriptions={subgroupPrescriptions}
                         profile={profile}
@@ -455,7 +494,7 @@ export function DashboardClient({
                       />
                     ) : (
                       <DashboardTreinoWorkspace
-                        key={`common-${subgroup.id}`}
+                        key="common-treino"
                         profile={profile}
                         {...treinoWorkspaceProps}
                       />
