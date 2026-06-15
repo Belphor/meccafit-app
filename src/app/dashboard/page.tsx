@@ -9,7 +9,7 @@ import {
 import type { SovereignMuscleId } from "@/components/evolution/human-body-constants";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import {
-  normalizeTrainingMuscleGroup,
+  normalizeWeeklyScheduleMuscle,
   type PlanilhaDayRow,
   type WeekdayIndex,
 } from "@/lib/training-week";
@@ -25,7 +25,7 @@ async function fetchWeeklySchedule(userId: string): Promise<PlanilhaDayRow[]> {
 
   return (data ?? [])
     .map((row) => {
-      const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
+      const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
       const day = Number(row.dia_semana) as WeekdayIndex;
       if (!muscle || day < 1 || day > 6) return null;
       return { dia_semana: day, grupo_muscular: muscle };

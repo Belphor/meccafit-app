@@ -19,8 +19,8 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
-import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
-import { resolveCalendarWeekdayIndex } from "@/lib/training-week";
+import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
+import { MUSCLE_TO_SUBGROUP_ID, resolveCalendarWeekdayIndex } from "@/lib/training-week";
 
 export type SuperacaoPayload = {
   weight: number;
@@ -101,7 +101,7 @@ export function DashboardTreinoWorkspace({
   onTrainingPersisted,
   onSubgroupNavigate,
 }: DashboardTreinoWorkspaceProps) {
-  const [activeWeekDay, setActiveWeekDay] = useState<WeekdayIndex>(() =>
+  const [indicatedDay, setIndicatedDay] = useState<WeekdayIndex>(() =>
     resolveCalendarWeekdayIndex(),
   );
   const sessionScope = useMemo(
@@ -282,9 +282,9 @@ export function DashboardTreinoWorkspace({
     [baseVtcTotal, mergedSubgroup.exercises, onTrainingPersisted, persistAltarSession],
   );
 
-  const handleDayTrainingChange = useCallback(
-    ({ subgroupId, activeDay }: { subgroupId: string; activeDay: WeekdayIndex }) => {
-      setActiveWeekDay(activeDay);
+  const handleTrainingMusclePick = useCallback(
+    (muscle: ClientTrainingMuscleGroup) => {
+      const subgroupId = MUSCLE_TO_SUBGROUP_ID[muscle];
       if (subgroupId !== subgroup.id) {
         onSubgroupNavigate(subgroupId);
       }
@@ -300,9 +300,9 @@ export function DashboardTreinoWorkspace({
             profile={profile}
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
-            activeWeekDay={activeWeekDay}
-            onActiveWeekDayChange={setActiveWeekDay}
-            onDayTrainingChange={handleDayTrainingChange}
+            indicatedDay={indicatedDay}
+            onIndicatedDayChange={setIndicatedDay}
+            onTrainingMusclePick={handleTrainingMusclePick}
             activeExerciseId={activeExerciseId}
             superacaoExerciseId={superacaoExerciseId}
             isIncubating={isIncubating}

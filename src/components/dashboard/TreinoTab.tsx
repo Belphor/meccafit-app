@@ -13,7 +13,7 @@ import {
   DASHBOARD_SCROLL_LIST,
 } from "@/lib/dashboard-config";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
-import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
+import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 
 type TreinoTabProps = {
   profile: ClientProfile;
@@ -24,13 +24,9 @@ type TreinoTabProps = {
   hasBiologicalBalance: boolean;
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
-  activeWeekDay: WeekdayIndex;
-  onActiveWeekDayChange: (day: WeekdayIndex) => void;
-  onDayTrainingChange: (payload: {
-    muscle: TrainingMuscleGroup;
-    subgroupId: string;
-    activeDay: WeekdayIndex;
-  }) => void;
+  indicatedDay: WeekdayIndex;
+  onIndicatedDayChange: (day: WeekdayIndex) => void;
+  onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
   onActivate: (exerciseId: number) => void;
   onVolumeCommitted: (exerciseId: number, baseVolume: number) => void;
   onWeightSaved: (exerciseId: number, weight: number) => void;
@@ -51,9 +47,9 @@ export function TreinoTab({
   hasBiologicalBalance,
   userId,
   initialWeekSchedule,
-  activeWeekDay,
-  onActiveWeekDayChange,
-  onDayTrainingChange,
+  indicatedDay,
+  onIndicatedDayChange,
+  onTrainingMusclePick,
   onActivate,
   onVolumeCommitted,
   onWeightSaved,
@@ -79,9 +75,10 @@ export function TreinoTab({
           <TreinoWeekControls
             userId={userId}
             initialSchedule={initialWeekSchedule}
-            activeDay={activeWeekDay}
-            onActiveDayChange={onActiveWeekDayChange}
-            onDayTrainingChange={onDayTrainingChange}
+            activeSubgroupId={subgroup.id}
+            indicatedDay={indicatedDay}
+            onIndicatedDayChange={onIndicatedDayChange}
+            onTrainingMusclePick={onTrainingMusclePick}
           />
         ) : null}
         <MonumentalSubgroupTitle subgroup={subgroup} />

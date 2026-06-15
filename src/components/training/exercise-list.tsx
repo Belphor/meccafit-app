@@ -7,7 +7,7 @@ import { buildSubgroupFromCatalog, TEST_EXERCISE_CATALOG } from "@/lib/exercise-
 import { DASHBOARD_INNER_FRAME, DASHBOARD_SCROLL_LIST } from "@/lib/dashboard-config";
 import {
   MUSCLE_GROUP_LABELS,
-  MUSCLE_TO_SUBGROUP_ID,
+  trainingMuscleToSubgroupId,
   trainingMuscleToSubgrupo,
   type TrainingMuscleGroup,
 } from "@/lib/training-week";
@@ -23,7 +23,7 @@ export function ExerciseList({ userId, selectedMuscleGroup, isOverride = false }
   const [timerToken, setTimerToken] = useState(0);
 
   const subgroup = useMemo(() => {
-    const subgroupId = MUSCLE_TO_SUBGROUP_ID[selectedMuscleGroup];
+    const subgroupId = trainingMuscleToSubgroupId(selectedMuscleGroup);
     const entry = TEST_EXERCISE_CATALOG.subgroups.find((item) => item.id === subgroupId);
     return entry ? buildSubgroupFromCatalog(entry) : null;
   }, [selectedMuscleGroup]);

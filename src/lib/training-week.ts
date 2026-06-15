@@ -3,16 +3,24 @@ import type { Enums } from "@/types/database.types";
 /** Segunda=1 … Sábado=6 */
 export type WeekdayIndex = 1 | 2 | 3 | 4 | 5 | 6;
 
-export const TRAINING_MUSCLE_GROUPS = [
+/** Grupos que o atleta pode escolher livremente (abdômen entra nos treinos dos membros). */
+export const CLIENT_TRAINING_MUSCLE_GROUPS = [
   "PEITO",
   "COSTAS",
   "PERNAS",
   "OMBROS",
   "BRACOS",
+] as const;
+
+export type ClientTrainingMuscleGroup = (typeof CLIENT_TRAINING_MUSCLE_GROUPS)[number];
+
+export const TRAINING_MUSCLE_GROUPS = [
+  ...CLIENT_TRAINING_MUSCLE_GROUPS,
   "ABDOMEN",
 ] as const;
 
 export type TrainingMuscleGroup = (typeof TRAINING_MUSCLE_GROUPS)[number];
+export type WeeklyScheduleMuscleGroup = ClientTrainingMuscleGroup;
 
 export const WEEKDAY_LABELS: Record<WeekdayIndex, string> = {
   1: "Segunda",
@@ -41,27 +49,33 @@ export const MUSCLE_GROUP_LABELS: Record<TrainingMuscleGroup, string> = {
   ABDOMEN: "Abdômen",
 };
 
-export const DEFAULT_WEEKLY_SCHEDULE: Record<WeekdayIndex, TrainingMuscleGroup> = {
+export const DEFAULT_WEEKLY_SCHEDULE: Record<WeekdayIndex, WeeklyScheduleMuscleGroup> = {
   1: "PEITO",
   2: "COSTAS",
   3: "PERNAS",
   4: "OMBROS",
   5: "BRACOS",
-  6: "ABDOMEN",
+  6: "BRACOS",
 };
 
-export const MUSCLE_TO_SUBGROUP_ID: Record<TrainingMuscleGroup, string> = {
+export const MUSCLE_TO_SUBGROUP_ID: Record<ClientTrainingMuscleGroup, string> = {
   PEITO: "peitoral-superior",
   COSTAS: "costas-dorsal",
   PERNAS: "membro-inferior",
   OMBROS: "ombros-deltoides",
   BRACOS: "bracos-biceps-triceps",
-  ABDOMEN: "core",
 };
+
+export const ABDOMEN_SUBGROUP_ID = "core";
+
+export function trainingMuscleToSubgroupId(muscle: TrainingMuscleGroup): string {
+  if (muscle === "ABDOMEN") return ABDOMEN_SUBGROUP_ID;
+  return MUSCLE_TO_SUBGROUP_ID[muscle];
+}
 
 export type PlanilhaDayRow = {
   dia_semana: WeekdayIndex;
-  grupo_muscular: TrainingMuscleGroup;
+  grupo_muscular: WeeklyScheduleMuscleGroup;
 };
 
 export function resolveCalendarWeekdayIndex(date = new Date()): WeekdayIndex {
@@ -84,17 +98,36 @@ export function normalizeTrainingMuscleGroup(value: string | null | undefined): 
   return null;
 }
 
-export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, TrainingMuscleGroup> {
+export function normalizeWeeklyScheduleMuscle(
+  value: string | null | undefined,
+): WeeklyScheduleMuscleGroup | null {
+  const muscle = normalizeTrainingMuscleGroup(value);
+  if (!muscle || muscle === "ABDOMEN") return null;
+  return muscle;
+}
+
+export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleMuscleGroup> {
   const map = { ...DEFAULT_WEEKLY_SCHEDULE };
 
   for (const row of rows) {
-    const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
+    const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
     if (muscle && row.dia_semana >= 1 && row.dia_semana <= 6) {
       map[row.dia_semana as WeekdayIndex] = muscle;
     }
   }
 
   return map;
+}
+
+export function subgroupIdToClientTrainingMuscle(
+  subgroupId: string,
+): ClientTrainingMuscleGroup | null {
+  for (const muscle of CLIENT_TRAINING_MUSCLE_GROUPS) {
+    if (MUSCLE_TO_SUBGROUP_ID[muscle] === subgroupId) {
+      return muscle;
+    }
+  }
+  return null;
 }
 
 export function trainingMuscleToSubgrupo(

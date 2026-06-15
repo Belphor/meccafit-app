@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildScheduleMap,
+  CLIENT_TRAINING_MUSCLE_GROUPS,
   DEFAULT_WEEKLY_SCHEDULE,
   MUSCLE_GROUP_LABELS,
-  MUSCLE_TO_SUBGROUP_ID,
-  normalizeTrainingMuscleGroup,
+  normalizeWeeklyScheduleMuscle,
   resolveCalendarWeekdayIndex,
-  TRAINING_MUSCLE_GROUPS,
+  subgroupIdToClientTrainingMuscle,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT_LABELS,
+  type ClientTrainingMuscleGroup,
   type PlanilhaDayRow,
-  type TrainingMuscleGroup,
   type WeekdayIndex,
 } from "@/lib/training-week";
 import { DASHBOARD_TAP_TARGET, IRIS_IDLE_BORDER, IRIS_IDLE_SURFACE } from "@/lib/dashboard-config";
@@ -23,13 +23,10 @@ const WEEKDAY_INDICES: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
 export type TreinoWeekControlsProps = {
   userId: string;
   initialSchedule?: PlanilhaDayRow[];
-  activeDay: WeekdayIndex;
-  onActiveDayChange: (day: WeekdayIndex) => void;
-  onDayTrainingChange: (payload: {
-    muscle: TrainingMuscleGroup;
-    subgroupId: string;
-    activeDay: WeekdayIndex;
-  }) => void;
+  activeSubgroupId: string;
+  indicatedDay: WeekdayIndex;
+  onIndicatedDayChange: (day: WeekdayIndex) => void;
+  onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
 };
 
 function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
@@ -39,68 +36,21 @@ function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
 export function TreinoWeekControls({
   userId,
   initialSchedule,
-  activeDay,
-  onActiveDayChange,
-  onDayTrainingChange,
+  activeSubgroupId,
+  indicatedDay,
+  onIndicatedDayChange,
+  onTrainingMusclePick,
 }: TreinoWeekControlsProps) {
   const bootSchedule = useMemo(() => resolveInitialSchedule(initialSchedule), [initialSchedule]);
   const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
 
   const [schedule, setSchedule] = useState(bootSchedule);
   const [loading, setLoading] = useState(!initialSchedule?.length);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const didInitialNavigateRef = useRef(false);
 
-  const activeMuscle = schedule[activeDay];
-
-  const emitTraining = useCallback(
-    (muscle: TrainingMuscleGroup, day: WeekdayIndex) => {
-      onDayTrainingChange({
-        muscle,
-        subgroupId: MUSCLE_TO_SUBGROUP_ID[muscle],
-        activeDay: day,
-      });
-    },
-    [onDayTrainingChange],
-  );
-
-  const persistDayMuscle = useCallback(
-    async (day: WeekdayIndex, muscle: TrainingMuscleGroup) => {
-      setSaving(true);
-      setError(null);
-
-      const { error: upsertError } = await supabase.from("planilhas_forjador").upsert(
-        {
-          atleta_id: userId,
-          dia_semana: day,
-          grupo_muscular: muscle,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "atleta_id,dia_semana" },
-      );
-
-      setSaving(false);
-
-      if (upsertError) {
-        setError(upsertError.message);
-        return false;
-      }
-
-      return true;
-    },
-    [userId],
-  );
-
-  const applyDayMuscle = useCallback(
-    async (day: WeekdayIndex, muscle: TrainingMuscleGroup) => {
-      setSchedule((current) => ({ ...current, [day]: muscle }));
-      onActiveDayChange(day);
-      emitTraining(muscle, day);
-      await persistDayMuscle(day, muscle);
-    },
-    [emitTraining, onActiveDayChange, persistDayMuscle],
-  );
+  const indicatedMuscle = schedule[indicatedDay];
+  const activeTrainingMuscle =
+    subgroupIdToClientTrainingMuscle(activeSubgroupId) ?? indicatedMuscle;
 
   const loadSchedule = useCallback(async () => {
     setLoading(true);
@@ -120,7 +70,7 @@ export function TreinoWeekControls({
 
       const rows: PlanilhaDayRow[] = (data ?? [])
         .map((row) => {
-          const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
+          const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
           const day = Number(row.dia_semana) as WeekdayIndex;
           if (!muscle || day < 1 || day > 6) return null;
           return { dia_semana: day, grupo_muscular: muscle };
@@ -129,7 +79,7 @@ export function TreinoWeekControls({
 
       setSchedule(buildScheduleMap(rows));
     } catch {
-      setError("Falha ao carregar grade semanal.");
+      setError("Falha ao carregar indicação semanal.");
       setSchedule(DEFAULT_WEEKLY_SCHEDULE);
     } finally {
       setLoading(false);
@@ -142,44 +92,38 @@ export function TreinoWeekControls({
     }
   }, [initialSchedule?.length, loadSchedule]);
 
-  useEffect(() => {
-    if (didInitialNavigateRef.current) return;
-    didInitialNavigateRef.current = true;
-    const muscle = schedule[activeDay];
-    emitTraining(muscle, activeDay);
-  }, [activeDay, emitTraining, schedule]);
-
-  const selectDay = useCallback(
+  const selectIndicatedDay = useCallback(
     (day: WeekdayIndex) => {
-      if (day === activeDay) return;
-      const muscle = schedule[day];
-      onActiveDayChange(day);
-      emitTraining(muscle, day);
+      if (day !== indicatedDay) {
+        onIndicatedDayChange(day);
+      }
     },
-    [activeDay, emitTraining, onActiveDayChange, schedule],
+    [indicatedDay, onIndicatedDayChange],
   );
 
   return (
     <div className="space-y-4 border-b border-orange-500/10 pb-5">
       <div>
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
-          Semana · Segunda a Sábado
+          Indicação · Segunda a Sábado
         </p>
         <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
           {loading
-            ? "Sincronizando grade…"
-            : `Dia ativo · ${WEEKDAY_LABELS[activeDay]} · ${MUSCLE_GROUP_LABELS[activeMuscle]}`}
-          {saving ? " · salvando…" : ""}
+            ? "Sincronizando indicação…"
+            : `${WEEKDAY_LABELS[indicatedDay]} · indica ${MUSCLE_GROUP_LABELS[indicatedMuscle]}`}
+        </p>
+        <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-neutral-700">
+          Referência da planilha · sua escolha de treino é livre abaixo
         </p>
       </div>
 
       <div
         className="grid grid-cols-3 gap-2 sm:grid-cols-6"
-        role="tablist"
-        aria-label="Dias da semana"
+        role="group"
+        aria-label="Indicação de treino por dia"
       >
         {WEEKDAY_INDICES.map((day) => {
-          const isActive = day === activeDay;
+          const isSelected = day === indicatedDay;
           const isToday = day === calendarToday;
           const muscle = schedule[day];
 
@@ -187,15 +131,14 @@ export function TreinoWeekControls({
             <button
               key={day}
               type="button"
-              role="tab"
-              aria-selected={isActive}
+              aria-pressed={isSelected}
               onClick={(event) => {
                 event.preventDefault();
-                selectDay(day);
+                selectIndicatedDay(day);
               }}
               className={`relative rounded-xl border px-2 py-3 text-center transition-[border-color,box-shadow,background-color,transform] duration-200 active:scale-[0.98] ${
-                isActive
-                  ? "border-emerald-500/70 bg-emerald-950/30 shadow-[0_0_14px_rgba(16,185,129,0.22)]"
+                isSelected
+                  ? "border-cyan-500/50 bg-cyan-950/20 shadow-[0_0_12px_rgba(34,211,238,0.15)]"
                   : `${IRIS_IDLE_BORDER} ${IRIS_IDLE_SURFACE} hover:border-orange-500/20`
               }`}
             >
@@ -204,14 +147,14 @@ export function TreinoWeekControls({
               ) : null}
               <p
                 className={`font-mono text-[9px] uppercase tracking-[0.14em] ${
-                  isActive ? "text-emerald-200" : "text-neutral-500"
+                  isSelected ? "text-cyan-200" : "text-neutral-500"
                 }`}
               >
                 {WEEKDAY_SHORT_LABELS[day]}
               </p>
               <p
                 className={`mt-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.1em] ${
-                  isActive ? "text-amber-50" : "text-neutral-500"
+                  isSelected ? "text-amber-50/90" : "text-neutral-500"
                 }`}
               >
                 {MUSCLE_GROUP_LABELS[muscle]}
@@ -221,20 +164,19 @@ export function TreinoWeekControls({
         })}
       </div>
 
-      <div className="rounded-xl border border-cyan-500/12 bg-black/40 p-3 backdrop-blur-sm">
-        <p className="mb-2.5 font-mono text-[9px] uppercase tracking-[0.18em] text-cyan-400/70">
-          Treino de {WEEKDAY_LABELS[activeDay]}
+      <div className="rounded-xl border border-emerald-500/15 bg-black/40 p-3 backdrop-blur-sm">
+        <p className="mb-2.5 font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-400/75">
+          Escolha o treino de hoje
         </p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {TRAINING_MUSCLE_GROUPS.map((muscle) => {
-            const selected = muscle === activeMuscle;
+          {CLIENT_TRAINING_MUSCLE_GROUPS.map((muscle) => {
+            const selected = muscle === activeTrainingMuscle;
             return (
               <button
                 key={muscle}
                 type="button"
-                disabled={saving}
-                onClick={() => void applyDayMuscle(activeDay, muscle)}
-                className={`${DASHBOARD_TAP_TARGET} rounded-lg border px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-[border-color,background-color] duration-200 disabled:opacity-50 ${
+                onClick={() => onTrainingMusclePick(muscle)}
+                className={`${DASHBOARD_TAP_TARGET} rounded-lg border px-3 py-2.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-[border-color,background-color] duration-200 ${
                   selected
                     ? "border-emerald-500/60 bg-emerald-950/35 text-emerald-100 shadow-[0_0_10px_rgba(16,185,129,0.25)]"
                     : "border-orange-500/10 bg-neutral-950/40 text-neutral-400 hover:border-cyan-500/20 hover:text-neutral-200"
@@ -245,6 +187,9 @@ export function TreinoWeekControls({
             );
           })}
         </div>
+        <p className="mt-2.5 text-[9px] uppercase tracking-[0.12em] text-neutral-600">
+          Abdômen integrado nos exercícios dos membros · sem dia exclusivo
+        </p>
       </div>
 
       {error ? (

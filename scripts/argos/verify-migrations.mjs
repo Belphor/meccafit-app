@@ -95,6 +95,10 @@ export const MIGRATION_PATCHES = [
     id: "planilhas_atleta_free",
     files: ["20260619100000_planilhas_atleta_weekly_free.sql"],
   },
+  {
+    id: "planilhas_indication_no_abdomen",
+    files: ["20260620100000_planilhas_indication_no_abdomen.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
