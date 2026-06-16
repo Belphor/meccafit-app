@@ -19,7 +19,9 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
   return {
     id: `forum-${row.id}`,
     title: row.topic_title?.trim() || "Tópico Brasa-Viva",
-    body: row.topic_body?.trim() || "",
+    body:
+      row.topic_body?.trim() ||
+      muralBodyForExercise(row.topic_title?.trim() || "treino"),
     authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
     authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
@@ -32,11 +34,16 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
   };
 }
 
+function muralBodyForExercise(exerciseName: string): string {
+  const nome = exerciseName.trim() || "treino";
+  return `Bateu o recorde pessoal no ${nome} — cada vitória aquece a chama da linhagem.`;
+}
+
 function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] {
   return mapCommunityMuralRowsToPosts(rows).map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: "Superação registrada no Fórum Brasa-Viva — volume validado por ARGOS.",
+    body: muralBodyForExercise(post.exerciseName),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
@@ -98,7 +105,7 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
   return posts.map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: "Superação registrada no Fórum Brasa-Viva — volume validado por ARGOS.",
+    body: muralBodyForExercise(post.exerciseName),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",

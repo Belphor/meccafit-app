@@ -122,13 +122,14 @@ export function ComunidadeTitulosPanel({
     >
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">
-          Títulos · PLUTUS
+          Títulos mensais
         </p>
         <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
           Conquistas do mês na academia
         </h3>
-        <p className="mt-1 text-[11px] text-neutral-500">
-          2 Reis das Chamas (Superiores + Inferiores) · 3 Pilares · cinturões de duelo em paralelo.
+        <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+          Dois Reis das Chamas por faixa, três Pilares no termómetro e cinturões de duelo em
+          paralelo.
         </p>
       </header>
 

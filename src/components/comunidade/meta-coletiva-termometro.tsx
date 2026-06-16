@@ -18,15 +18,15 @@ export function MetaColetivaTermometro({
   return (
     <section
       className="rounded-2xl border border-amber-500/15 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90 p-4 sm:p-5"
-      aria-label="Meta colectiva mensal da academia"
+      aria-label="Meta coletiva mensal da academia"
     >
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/80">
-            Termómetro Colectivo
+            Termómetro coletivo
           </p>
           <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
-            Tonelagem global do mês
+            Meta de tonelagem do mês
           </h3>
         </div>
         {mesReferencia ? (
@@ -43,7 +43,7 @@ export function MetaColetivaTermometro({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={loading ? 0 : pct}
-          aria-label="Progresso da meta colectiva"
+          aria-label="Progresso da meta coletiva"
         >
           <div
             className={`h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-300 transition-[width] duration-700 ease-out ${
@@ -62,9 +62,9 @@ export function MetaColetivaTermometro({
           </p>
         </div>
 
-        <p className="mt-2 text-[10px] leading-relaxed text-neutral-500">
-          Soma dos picos de carga de todos os treinos do mês — fórmula de força (sem repetições).
-          Pilares cooperativos saem do Top 3 no fecho mensal.
+        <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
+          Soma dos maiores pesos levantados por todos neste mês. Quanto mais a linhagem treina com
+          força, mais rápido o termómetro sobe — e os três Pilares saem do Top 3 no fecho mensal.
         </p>
       </div>
     </section>

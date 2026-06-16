@@ -67,7 +67,7 @@ function RankingRow({
           {isSelf ? "Tu" : entry.atleta_nome}
         </p>
         <p className="font-mono text-[10px] tabular-nums text-neutral-500">
-          {formatVtc(metricValue)} · {metricLabel}
+          {formatVtc(metricValue)} kg · {metricLabel}
         </p>
       </div>
     </li>
@@ -76,7 +76,7 @@ function RankingRow({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[10px] leading-relaxed text-neutral-500">
+    <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[11px] leading-relaxed text-neutral-500">
       {message}
     </p>
   );
@@ -96,26 +96,26 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
   return (
     <section
       className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-neutral-950/95 via-violet-950/10 to-neutral-950/95 p-4 sm:p-5"
-      aria-label="Rankings THOTH VTC"
+      aria-label="Rankings VTC da comunidade"
     >
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300/85">
-          Rankings · THOTH
+          Rankings
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
-          Top 10 VTC · janela de 14 dias
+          Top 10 · últimos 14 dias
         </h3>
-        {rankings ? (
-          <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-            MIDAS · mesma fórmula da aba Evolução
-          </p>
-        ) : null}
+        <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
+          <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos que
+          cada atleta levantou por exercício e por dia — nos grupos peito, ombros, costas e pernas.
+          Quanto maior o VTC, mais forte foi o desempenho recente na linhagem.
+        </p>
       </header>
 
       <div
-        className="mt-4 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="mt-4 grid grid-cols-3 gap-1.5 sm:grid-cols-5 sm:gap-2"
         role="tablist"
-        aria-label="Filtrar ranking por membro"
+        aria-label="Filtrar ranking por grupo muscular"
       >
         {TABS.map(({ key, label }) => {
           const selected = activeTab === key;
@@ -126,7 +126,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               role="tab"
               aria-selected={selected}
               onClick={() => setActiveTab(key)}
-              className={`min-h-11 shrink-0 rounded-full border px-3.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors ${
+              className={`min-h-11 rounded-full border px-2 text-[9px] font-bold uppercase tracking-[0.1em] transition-colors sm:px-3 sm:text-[10px] sm:tracking-[0.14em] ${
                 selected
                   ? "border-violet-400/40 bg-violet-950/40 text-violet-100"
                   : "border-neutral-800 bg-neutral-950/60 text-neutral-500"

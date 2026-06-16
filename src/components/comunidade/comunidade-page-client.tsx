@@ -19,7 +19,6 @@ import {
   type ComunidadeClienteEvolution,
 } from "@/lib/comunidade-evolution";
 import {
-  DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
 } from "@/lib/dashboard-config";
@@ -44,6 +43,9 @@ const SECTION_NAV = [
   { id: "comunidade-rankings", label: "Rankings" },
   { id: "comunidade-mural", label: "Mural" },
 ] as const;
+
+const SECTION_CARD =
+  "rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-950/95 via-neutral-900/15 to-neutral-950/95";
 
 export function ComunidadePageClient({
   userId,
@@ -86,6 +88,7 @@ export function ComunidadePageClient({
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];
   const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
+  const rankings = arena?.rankings_thoth ?? null;
 
   return (
     <BrasaVivaCard
@@ -94,7 +97,7 @@ export function ComunidadePageClient({
       className={`${DASHBOARD_PANEL_FRAME} overflow-x-hidden`}
       aria-labelledby="comunidade-page-title"
     >
-      <DashboardPanelHeader chip="Comunidade" meta="Arena Cooperativa" />
+      <DashboardPanelHeader chip="Comunidade" meta="Arena cooperativa" />
 
       <div className="mt-3 border-b border-orange-500/10 pb-3 sm:mt-4 sm:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -102,8 +105,8 @@ export function ComunidadePageClient({
             <h2 id="comunidade-page-title" className={DASHBOARD_SECTION_TITLE}>
               Conquistas & Ascensão
             </h2>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-neutral-600 sm:tracking-[0.2em]">
-              Evolução · meta · duelos · rankings · mural
+            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
+              Acompanha a tua evolução, a meta da academia, duelos, títulos e o mural da linhagem.
             </p>
           </div>
           <button
@@ -117,14 +120,14 @@ export function ComunidadePageClient({
         </div>
 
         <nav
-          className="mt-4 grid grid-cols-5 gap-1.5 sm:mx-auto sm:max-w-xl sm:gap-2"
+          className="mt-4 grid grid-cols-5 gap-1 sm:mx-auto sm:max-w-lg sm:gap-2"
           aria-label="Secções da comunidade"
         >
           {SECTION_NAV.map(({ id, label }) => (
             <a
               key={id}
               href={`#${id}`}
-              className="flex min-h-10 items-center justify-center rounded-full border border-neutral-800/90 bg-neutral-950/70 px-1 text-center text-[8px] font-bold uppercase leading-tight tracking-[0.08em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90 sm:min-h-11 sm:text-[9px] sm:tracking-[0.12em]"
+              className="flex min-h-10 items-center justify-center rounded-full border border-neutral-800/90 bg-neutral-950/70 px-0.5 text-center text-[9px] font-bold uppercase leading-tight tracking-[0.06em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90 min-[380px]:text-[10px] min-[380px]:tracking-[0.1em] sm:min-h-11 sm:px-2 sm:text-[11px]"
             >
               {label}
             </a>
@@ -132,8 +135,8 @@ export function ComunidadePageClient({
         </nav>
       </div>
 
-      <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-6">
-        <div id="comunidade-perfil" className="scroll-mt-24">
+      <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-7">
+        <div id="comunidade-perfil" className="scroll-mt-20 sm:scroll-mt-24">
           <ComunidadeEvolutionStatus
             evolution={evolution}
             loading={evolutionLoading}
@@ -148,8 +151,11 @@ export function ComunidadePageClient({
           </p>
         ) : null}
 
-        <div id="comunidade-arena" className="scroll-mt-24 space-y-4">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div id="comunidade-arena" className="scroll-mt-20 space-y-3 sm:scroll-mt-24 sm:space-y-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600">
+            Arena · meta e duelos
+          </p>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <MetaColetivaTermometro
               meta={meta}
               mesReferencia={arena?.mes_referencia}
@@ -161,36 +167,42 @@ export function ComunidadePageClient({
                 arena?.campeoes_cinturao ?? { SUPERIORES: null, INFERIORES: null }
               }
               campeaoCinturaoId={arena?.campeao_cinturao_id ?? null}
+              rankings={rankings}
               userId={userId}
               loading={arenaLoading}
             />
           </div>
         </div>
 
-        <div id="comunidade-titulos" className="scroll-mt-24">
+        <div id="comunidade-titulos" className="scroll-mt-20 sm:scroll-mt-24">
           <ComunidadeTitulosPanel
             reisChamas={reisChamas}
             pilares={pilares}
-            rankings={arena?.rankings_thoth ?? null}
+            rankings={rankings}
             userId={userId}
             loading={arenaLoading}
           />
         </div>
 
-        <div id="comunidade-rankings" className="scroll-mt-24">
-          <RankingsThothPanel
-            rankings={arena?.rankings_thoth ?? null}
-            userId={userId}
-            loading={arenaLoading}
-          />
+        <div id="comunidade-rankings" className="scroll-mt-20 sm:scroll-mt-24">
+          <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading} />
         </div>
 
-        <div id="comunidade-mural" className={`${DASHBOARD_INNER_FRAME} scroll-mt-24 p-3 sm:p-4`}>
-          <header className="mb-3 border-b border-orange-500/10 pb-3">
+        <section
+          id="comunidade-mural"
+          className={`${SECTION_CARD} scroll-mt-20 p-4 sm:scroll-mt-24 sm:p-5`}
+        >
+          <header className="border-b border-orange-500/10 pb-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/75">
-              Mural · Brasa-Viva
+              Mural da linhagem
             </p>
-            <h3 className="mt-1 text-sm font-semibold text-amber-50/95">Superações da linhagem</h3>
+            <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
+              Vitórias partilhadas pela comunidade
+            </h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+              Cada recorde pessoal aparece aqui para inspirar a academia — a força cresce quando a
+              linhagem vê a ascensão uns dos outros.
+            </p>
           </header>
           <ForumBrasaVivaView
             userId={userId}
@@ -198,7 +210,7 @@ export function ComunidadePageClient({
             phase={phase}
             refreshKey={refreshToken}
           />
-        </div>
+        </section>
       </div>
     </BrasaVivaCard>
   );

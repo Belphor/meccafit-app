@@ -5,7 +5,6 @@ import type { ForumBrasaVivaTopic } from "@/features/forum-brasa-viva/types";
 import {
   DASHBOARD_ITEM_NAME,
   DASHBOARD_META_CHIP,
-  EXERCISE_RECORD_TERM,
 } from "@/lib/dashboard-config";
 
 type ForumPostCardProps = {
@@ -57,14 +56,10 @@ export function ForumPostCard({ topic }: ForumPostCardProps) {
         <p className="mt-3">
           <span className={DASHBOARD_META_CHIP}>
             {topic.weightKg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kg ·{" "}
-            {topic.series} séries · ascensão validada
+            {topic.series} séries
           </span>
         </p>
       ) : null}
-
-      <p className="mt-2 text-[10px] normal-case leading-snug tracking-normal text-neutral-500">
-        <span className={EXERCISE_RECORD_TERM}>Recorde histórico</span> validado no fórum.
-      </p>
     </article>
   );
 }

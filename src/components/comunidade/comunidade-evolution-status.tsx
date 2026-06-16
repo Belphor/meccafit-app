@@ -45,7 +45,7 @@ export function ComunidadeEvolutionStatus({
       aria-label="Nível de evolução na comunidade"
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">
-        Teu nível · Evolução MIDAS
+        Teu nível na comunidade
       </p>
 
       <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
@@ -98,9 +98,9 @@ export function ComunidadeEvolutionStatus({
             </dl>
           ) : null}
 
-          <p className="mt-3 text-[10px] leading-relaxed text-neutral-500">
-            Mesmo nível da aba Evolução — VTC muscular (14d) + ignição mensal. Cinturão rosa,
-            rei violeta e pilar ouro vêm da arena cooperativa.
+          <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
+            Mesmo nível da aba Evolução. Cinturão rosa, rei violeta e pilar ouro vêm dos títulos da
+            arena cooperativa.
           </p>
         </div>
       </div>
