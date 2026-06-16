@@ -7,6 +7,8 @@ import {
   COMUNIDADE_NAV,
   COMUNIDADE_NAV_LINK,
   COMUNIDADE_SCROLL_MT,
+  COMUNIDADE_SECTION_INNER,
+  COMUNIDADE_SECTION_LABEL,
 } from "@/components/comunidade/comunidade-layout";
 import { ComunidadeMuralPanel } from "@/components/comunidade/comunidade-mural-panel";
 import { ComunidadeTitulosPanel } from "@/components/comunidade/comunidade-titulos-panel";
@@ -133,7 +135,7 @@ export function ComunidadePageClient({
         </nav>
       </div>
 
-      <div className="mt-4 space-y-4 xs:space-y-5 sm:mt-6 sm:space-y-7">
+      <div className={`${COMUNIDADE_SECTION_INNER} mt-4 space-y-4 xs:space-y-5 sm:mt-6 sm:space-y-7`}>
         <div id="comunidade-perfil" className={COMUNIDADE_SCROLL_MT}>
           <ComunidadeEvolutionStatus
             evolution={evolution}
@@ -149,11 +151,9 @@ export function ComunidadePageClient({
           </p>
         ) : null}
 
-        <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} space-y-3 sm:space-y-4`}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-600 sm:tracking-[0.2em]">
-            Arena · meta e duelos
-          </p>
-          <div className="grid grid-cols-1 gap-3 xs:gap-4 md:grid-cols-2">
+        <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}>
+          <p className={COMUNIDADE_SECTION_LABEL}>Arena · meta e duelos</p>
+          <div className="grid grid-cols-1 gap-3 xs:gap-4 lg:grid-cols-2 lg:items-start">
             <MetaColetivaTermometro
               meta={meta}
               mesReferencia={arena?.mes_referencia}

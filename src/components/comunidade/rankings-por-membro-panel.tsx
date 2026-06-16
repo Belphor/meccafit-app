@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
+  COMUNIDADE_BODY_TEXT,
   COMUNIDADE_LIST_SCROLL,
   COMUNIDADE_PANEL,
   COMUNIDADE_TAB_BUTTON,
@@ -111,7 +112,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
           Top 10 VTC · Últimos 14 dias
         </h3>
-        <p className="mt-2 text-[10px] leading-relaxed text-neutral-500 xs:text-[11px]">
+        <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
           <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos que
           cada atleta levantou por exercício e por dia — nos grupos peito, ombros, costas e pernas.
           Quanto maior o VTC, mais forte foi o desempenho recente na linhagem.

@@ -1,6 +1,6 @@
 "use client";
 
-import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import { COMUNIDADE_BODY_TEXT, COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { formatTonelagemKg, type ComunidadeMeta } from "@/lib/comunidade-data";
 
 type MetaColetivaTermometroProps = {
@@ -21,12 +21,12 @@ export function MetaColetivaTermometro({
       className={`${COMUNIDADE_PANEL} border-amber-500/15 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90`}
       aria-label="Meta coletiva mensal da academia"
     >
-      <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <header className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/80">
             Termómetro coletivo
           </p>
-          <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
+          <h3 className="mt-1 text-balance text-sm font-semibold text-amber-50/95 sm:text-base">
             Meta de tonelagem do mês
           </h3>
         </div>
@@ -47,9 +47,8 @@ export function MetaColetivaTermometro({
           aria-label="Progresso da meta coletiva"
         >
           <div
-            className={`h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-300 transition-[width] duration-700 ease-out ${
-              loading ? "w-0 animate-pulse" : ""
-            }`}
+            className={`h-full rounded-full bg-gradient-to-r from-amber-600 via-amber-400 to-yellow-300 transition-[width] duration-700 ease-out ${loading ? "w-0 animate-pulse" : ""
+              }`}
             style={loading ? undefined : { width: `${pct}%` }}
           />
         </div>
@@ -63,9 +62,9 @@ export function MetaColetivaTermometro({
           </p>
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
+        <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
           Soma dos maiores pesos levantados por todos neste mês. Quanto mais a linhagem treina com
-          força, mais rápido o termómetro sobe — e os três Pilares saem do Top 3 no fecho mensal.
+          força, mais rápido o termómetro sobe, e os Três Pilares saem no Top 3 no fecho mensal.
         </p>
       </div>
     </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { COMUNIDADE_SCROLL_MT } from "@/components/comunidade/comunidade-layout";
+import { COMUNIDADE_BODY_TEXT, COMUNIDADE_SCROLL_MT } from "@/components/comunidade/comunidade-layout";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
 import { ForumBrasaVivaView } from "@/features/forum-brasa-viva/ForumBrasaVivaView";
 
@@ -17,7 +17,7 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
       className={COMUNIDADE_SCROLL_MT}
       aria-labelledby="comunidade-mural-title"
     >
-      <div className="relative overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-950/25 via-neutral-950/95 to-orange-950/15 p-3.5 shadow-[0_0_40px_-12px_rgba(251,146,60,0.35)] xs:p-4 sm:p-5">
+      <div className="relative min-w-0 overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-950/25 via-neutral-950/95 to-orange-950/15 p-3 shadow-[0_0_40px_-12px_rgba(251,146,60,0.35)] xs:p-4 sm:p-5">
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl"
           aria-hidden
@@ -44,7 +44,7 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
               Superações
             </span>
           </div>
-          <p className="relative mt-2 max-w-prose text-[10px] leading-relaxed text-neutral-400 xs:text-[11px] sm:text-[12px]">
+          <p className={`relative mt-2 max-w-prose ${COMUNIDADE_BODY_TEXT} text-neutral-400`}>
             Quando um atleta bate o recorde pessoal no treino, a conquista aparece aqui para
             inspirar toda a academia — a força da linhagem cresce quando todos veem a ascensão uns
             dos outros.

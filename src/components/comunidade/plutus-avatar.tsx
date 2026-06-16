@@ -18,9 +18,9 @@ export type PlutusAvatarProps = {
 };
 
 const SIZE_CLASS = {
-  sm: "h-10 w-10",
-  md: "h-14 w-14",
-  lg: "h-20 w-20 sm:h-24 sm:w-24",
+  sm: "h-9 w-9 xs:h-10 xs:w-10",
+  md: "h-12 w-12 xs:h-14 xs:w-14",
+  lg: "h-[4.5rem] w-[4.5rem] xs:h-20 xs:w-20 sm:h-24 sm:w-24",
 } as const;
 
 function resolveInitials(name: string | null | undefined): string {

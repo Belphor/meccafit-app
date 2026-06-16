@@ -1,6 +1,6 @@
 "use client";
 
-import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import { COMUNIDADE_BODY_TEXT, COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import type {
   CampeoesCinturao,
@@ -106,12 +106,12 @@ export function DuelosArenaPanel({
         <h3 className="mt-1 text-sm font-semibold text-fuchsia-50/95 sm:text-base">
           Até dois campeões em paralelo
         </h3>
-        <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+        <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
           Um cinturão por faixa — superiores e inferiores não se anulam.
         </p>
       </header>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-2 xs:grid-cols-2">
         <CampeaoCinturaoCard
           tipo="SUPERIORES"
           campeaoId={superioresId}
@@ -153,11 +153,11 @@ export function DuelosArenaPanel({
                     : "border-neutral-800/80 bg-neutral-950/40"
                 }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="rounded-full border border-fuchsia-500/20 px-2 py-0.5 text-[9px] uppercase tracking-[0.16em] text-fuchsia-200/90">
+                <div className="flex flex-col gap-2 xs:flex-row xs:items-center xs:justify-between">
+                  <span className="w-fit rounded-full border border-fuchsia-500/20 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-fuchsia-200/90">
                     {labelTipo(duelo.tipo_confronto)}
                   </span>
-                  <time className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
+                  <time className="text-[9px] uppercase tracking-[0.1em] text-neutral-500">
                     Fim · {formatFim(duelo.fim_em)}
                   </time>
                 </div>

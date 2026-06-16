@@ -1,6 +1,6 @@
 "use client";
 
-import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import { COMUNIDADE_BODY_TEXT, COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
   IRIS_BORDER_CINTURAO,
@@ -56,16 +56,20 @@ function TituloCard({
   }
 
   return (
-    <li
-      className={`flex min-h-[4.5rem] items-center gap-3 rounded-xl border bg-neutral-950/50 px-3 py-3 sm:px-4 ${pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
-        }`}
+      <li
+      className={`flex min-h-[4.25rem] items-center gap-2.5 rounded-xl border bg-neutral-950/50 px-2.5 py-2.5 xs:gap-3 xs:px-3 xs:py-3 sm:min-h-[4.5rem] sm:px-4 ${
+        pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
+      }`}
     >
       <PlutusAvatar name={nome} size="md" {...flags} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: borderColor }}>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <p
+          className="truncate text-[9px] font-bold uppercase tracking-[0.14em] xs:tracking-[0.18em]"
+          style={{ color: borderColor }}
+        >
           {label}
         </p>
-        <p className="truncate text-[12px] font-medium text-neutral-200">{nome}</p>
+        <p className="truncate text-[11px] font-medium text-neutral-200 xs:text-[12px]">{nome}</p>
       </div>
     </li>
   );
@@ -124,10 +128,10 @@ export function ComunidadeTitulosPanel({
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">
           Títulos mensais
         </p>
-        <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
+        <h3 className="mt-1 text-balance text-sm font-semibold text-amber-50/95 sm:text-base">
           Conquistas do mês na academia
         </h3>
-        <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+        <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
           Dois Reis das Chamas por faixa, Três Pilares no termómetro e Cinturões de duelo em
           paralelo.
         </p>
@@ -163,7 +167,7 @@ export function ComunidadeTitulosPanel({
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFD700]/90">
               Pilares cooperativos · Top 3
             </p>
-            <ul className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-2 xs:grid-cols-2 lg:grid-cols-3">
               {pilaresSlots.map((pilar, index) =>
                 pilar ? (
                   <TituloCard

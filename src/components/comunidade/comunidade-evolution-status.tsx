@@ -8,7 +8,11 @@ import {
   type SovereignMuscleId,
 } from "@/components/evolution/human-body-constants";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
-import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import {
+  COMUNIDADE_BODY_TEXT,
+  COMUNIDADE_PANEL,
+  COMUNIDADE_SECTION_INNER,
+} from "@/components/comunidade/comunidade-layout";
 import type { ComunidadeClienteEvolution } from "@/lib/comunidade-evolution";
 import { resolveEvolutionThermalStyleByLevel } from "@/lib/evolution-thermal-styles";
 
@@ -34,6 +38,7 @@ export function ComunidadeEvolutionStatus({
   const thermalStyle = resolveEvolutionThermalStyleByLevel(nivel);
   const ringClass = GLOBAL_THERMAL_RING_CLASS[nivel];
   const perfil = evolution?.perfilPublico;
+  const displayName = profileName?.trim() || "Membro da linhagem";
 
   return (
     <section
@@ -46,26 +51,37 @@ export function ComunidadeEvolutionStatus({
       ].join(" ")}
       aria-label="Nível de evolução na comunidade"
     >
-      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">
-        Teu nível na comunidade
-      </p>
+      <header className={COMUNIDADE_SECTION_INNER}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/80 sm:tracking-[0.22em]">
+          Teu nível na comunidade
+        </p>
+        <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
+          Resumo do teu papel na linhagem — como treinas, quão consistente és e onde mais
+          evoluís. Os anéis no avatar aparecem quando conquistas títulos na arena.
+        </p>
+      </header>
 
-      <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-        <div className={`shrink-0 rounded-full p-1 ${ringClass}`}>
-          <PlutusAvatar
-            name={profileName}
-            photoUrl={profilePhotoUrl}
-            temCinturaoDuelo={perfil?.tem_cinturao_duelo}
-            isReiDasChamas={perfil?.is_rei_das_chamas}
-            isPilarCooperativo={perfil?.is_pilar_cooperativo}
-            size="lg"
-          />
+      <div className="mt-4 flex w-full min-w-0 flex-col gap-4 md:flex-row md:items-start md:gap-5">
+        <div className="flex shrink-0 flex-col items-center gap-2 md:items-start">
+          <div className={`rounded-full p-1 ${ringClass}`}>
+            <PlutusAvatar
+              name={profileName}
+              photoUrl={profilePhotoUrl}
+              temCinturaoDuelo={perfil?.tem_cinturao_duelo}
+              isReiDasChamas={perfil?.is_rei_das_chamas}
+              isPilarCooperativo={perfil?.is_pilar_cooperativo}
+              size="lg"
+            />
+          </div>
+          <p className="max-w-[8.5rem] truncate text-center text-[11px] font-medium text-amber-100/90 md:max-w-[10rem] md:text-left">
+            {displayName}
+          </p>
         </div>
 
-        <div className="min-w-0 flex-1 text-center sm:text-left">
+        <div className={`${COMUNIDADE_SECTION_INNER} flex-1 text-center md:text-left`}>
           <span
             className={[
-              "inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
+              "inline-flex max-w-full rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] sm:tracking-[0.2em]",
               thermalStyle.chipClass,
             ].join(" ")}
           >
@@ -75,22 +91,22 @@ export function ComunidadeEvolutionStatus({
           <p className="mt-3 font-mono text-xl font-bold tabular-nums text-amber-50/95 xs:text-2xl sm:text-3xl">
             {loading ? "—" : `${Math.round(evolution?.indiceIgnicao ?? 0)}%`}
           </p>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-            Índice de ignição (consistência mensal)
+          <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
+            Índice de ignição · consistência no mês
           </p>
 
           {!loading && evolution ? (
-            <dl className="mt-4 grid grid-cols-1 gap-2 text-[11px] min-[400px]:grid-cols-2">
-              <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-                <dt className="text-[9px] uppercase tracking-[0.14em] text-neutral-500">
+            <dl className="mt-4 grid w-full grid-cols-2 gap-2 text-[11px]">
+              <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 px-2.5 py-2 xs:px-3">
+                <dt className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
                   Grupo supremo
                 </dt>
-                <dd className="mt-1 font-medium text-amber-100/90">
+                <dd className="mt-1 truncate font-medium text-amber-100/90">
                   {resolveGrupoLabel(evolution.perfilPublico.grupo_supremo)}
                 </dd>
               </div>
-              <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
-                <dt className="text-[9px] uppercase tracking-[0.14em] text-neutral-500">
+              <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 px-2.5 py-2 xs:px-3">
+                <dt className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
                   Duelos vencidos
                 </dt>
                 <dd className="mt-1 font-medium text-amber-100/90">
@@ -99,11 +115,6 @@ export function ComunidadeEvolutionStatus({
               </div>
             </dl>
           ) : null}
-
-          <p className="mt-3 text-[11px] leading-relaxed text-neutral-500">
-            Mesmo nível da aba Evolução. Cinturão rosa, rei violeta e pilar ouro vêm dos títulos da
-            arena cooperativa.
-          </p>
         </div>
       </div>
     </section>
