@@ -234,6 +234,8 @@ export type CommunityMuralRow = {
   author_id?: string;
   tem_cinturao_duelo?: boolean;
   is_rei_das_chamas?: boolean;
+  is_rei_chamas_superiores?: boolean;
+  is_rei_chamas_inferiores?: boolean;
   is_pilar_cooperativo?: boolean;
   /** legado pré-THOTH */
   detem_cinturao_duelo?: boolean;
@@ -251,7 +253,9 @@ export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPo
     athleteName: row.atleta_nome?.trim() || "Membro da Linhagem",
     lineageName: row.nome_linhagem?.trim() || "Linhagem Meccafit",
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
-    isReiDasChamas: Boolean(row.is_rei_das_chamas),
+    isReiDasChamas: Boolean(
+      row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas,
+    ),
     isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
   }));
 }

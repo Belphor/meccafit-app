@@ -6,21 +6,22 @@ import {
   IRIS_BORDER_PILAR_COOP,
   IRIS_BORDER_REI_CHAMAS,
 } from "@/components/comunidade/plutus-avatar";
-import type { ComunidadeAtletaRef, RankingsThoth } from "@/lib/comunidade-data";
+import type { RankingsThoth, ReisChamas } from "@/lib/comunidade-data";
 
 type ComunidadeTitulosPanelProps = {
-  reis: ComunidadeAtletaRef[];
-  pilares: ComunidadeAtletaRef[];
+  reisChamas: ReisChamas;
+  pilares: { atleta_id: string }[];
   rankings: RankingsThoth | null;
   userId: string;
   loading?: boolean;
 };
 
 function resolveNome(
-  atletaId: string,
+  atletaId: string | null,
   userId: string,
   rankings: RankingsThoth | null,
 ): string {
+  if (!atletaId) return "—";
   if (atletaId === userId) return "Tu";
   const hit = rankings?.vtc_global.find((row) => row.atleta_id === atletaId);
   return hit?.atleta_nome ?? `${atletaId.slice(0, 8)}…`;
@@ -32,17 +33,27 @@ function TituloCard({
   borderColor,
   flags,
   pulse = false,
+  empty = false,
 }: {
   label: string;
   nome: string;
   borderColor: string;
-  flags: {
+  flags?: {
     temCinturaoDuelo?: boolean;
     isReiDasChamas?: boolean;
     isPilarCooperativo?: boolean;
   };
   pulse?: boolean;
+  empty?: boolean;
 }) {
+  if (empty) {
+    return (
+      <li className="flex min-h-[4.5rem] items-center justify-center rounded-xl border border-dashed border-violet-500/20 px-3 py-3 text-center text-[10px] text-neutral-600">
+        {label} · vago
+      </li>
+    );
+  }
+
   return (
     <li
       className={`flex min-h-[4.5rem] items-center gap-3 rounded-xl border bg-neutral-950/50 px-3 py-3 sm:px-4 ${
@@ -62,8 +73,12 @@ function TituloCard({
 
 function IrisLegend() {
   const items = [
-    { color: IRIS_BORDER_CINTURAO, label: "Cinturão duelo", detail: "até perder na faixa" },
-    { color: IRIS_BORDER_REI_CHAMAS, label: "Rei das Chamas", detail: "Top 1 pico mensal" },
+    { color: IRIS_BORDER_CINTURAO, label: "Cinturão duelo", detail: "1 por faixa · até perder" },
+    {
+      color: IRIS_BORDER_REI_CHAMAS,
+      label: "Rei das Chamas",
+      detail: "Superiores ou Inferiores · Top 1 pico mensal",
+    },
     { color: IRIS_BORDER_PILAR_COOP, label: "Pilar cooperativo", detail: "Top 3 no termómetro" },
   ];
 
@@ -92,7 +107,7 @@ function IrisLegend() {
 }
 
 export function ComunidadeTitulosPanel({
-  reis,
+  reisChamas,
   pilares,
   rankings,
   userId,
@@ -113,7 +128,7 @@ export function ComunidadeTitulosPanel({
           Conquistas do mês na academia
         </h3>
         <p className="mt-1 text-[11px] text-neutral-500">
-          1 Rei das Chamas · até 3 Pilares cooperativos · cinturões de duelo em paralelo.
+          2 Reis das Chamas (Superiores + Inferiores) · 3 Pilares · cinturões de duelo em paralelo.
         </p>
       </header>
 
@@ -123,25 +138,24 @@ export function ComunidadeTitulosPanel({
         <div className="mt-4 space-y-4">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/85">
-              Rei das Chamas
+              Reis das Chamas · 2 faixas
             </p>
-            {reis.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-violet-500/20 p-3 text-center text-[10px] text-neutral-500">
-                Ainda sem rei este mês — maior pico de força no fecho.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {reis.map((rei) => (
-                  <TituloCard
-                    key={rei.atleta_id}
-                    label="Rei das Chamas"
-                    nome={resolveNome(rei.atleta_id, userId, rankings)}
-                    borderColor={IRIS_BORDER_REI_CHAMAS}
-                    flags={{ isReiDasChamas: true }}
-                  />
-                ))}
-              </ul>
-            )}
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <TituloCard
+                label="Rei · Superiores"
+                nome={resolveNome(reisChamas.SUPERIORES, userId, rankings)}
+                borderColor={IRIS_BORDER_REI_CHAMAS}
+                flags={{ isReiDasChamas: Boolean(reisChamas.SUPERIORES) }}
+                empty={!reisChamas.SUPERIORES}
+              />
+              <TituloCard
+                label="Rei · Inferiores"
+                nome={resolveNome(reisChamas.INFERIORES, userId, rankings)}
+                borderColor={IRIS_BORDER_REI_CHAMAS}
+                flags={{ isReiDasChamas: Boolean(reisChamas.INFERIORES) }}
+                empty={!reisChamas.INFERIORES}
+              />
+            </ul>
           </div>
 
           <div>
@@ -160,12 +174,13 @@ export function ComunidadeTitulosPanel({
                     pulse
                   />
                 ) : (
-                  <li
+                  <TituloCard
                     key={`pilar-vago-${index}`}
-                    className="flex min-h-[4.5rem] items-center justify-center rounded-xl border border-dashed border-[#FFD700]/15 px-3 py-3 text-center text-[10px] text-neutral-600"
-                  >
-                    Pilar {index + 1} · vago
-                  </li>
+                    label={`Pilar ${index + 1}`}
+                    nome=""
+                    borderColor={IRIS_BORDER_PILAR_COOP}
+                    empty
+                  />
                 ),
               )}
             </ul>

@@ -180,7 +180,12 @@ try {
     const hasRankings =
       arenaSnap.rankings_thoth?.vtc_global !== undefined ||
       arenaSnap.rankings_por_membro?.vtc_global !== undefined;
-    hasMeta && hasDuels && hasRankings
+    const hasReisChamas =
+      arenaSnap.reis_chamas &&
+      typeof arenaSnap.reis_chamas === "object" &&
+      "SUPERIORES" in arenaSnap.reis_chamas &&
+      "INFERIORES" in arenaSnap.reis_chamas;
+    hasMeta && hasDuels && hasRankings && hasReisChamas
       ? pass("comunidade:arena:snapshot")
       : fail("comunidade:arena:snapshot", "shape incompleto");
   } else {

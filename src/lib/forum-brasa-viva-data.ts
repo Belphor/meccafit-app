@@ -24,7 +24,7 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
     authorName: row.author_name?.trim() || "Membro da Linhagem",
     authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
-    isReiDasChamas: Boolean(row.is_rei_das_chamas),
+    isReiDasChamas: Boolean(row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas),
     isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
     weightKg: normalizeWeight(row.peso),
     series: Math.max(1, Number(row.series) || 1),

@@ -22,6 +22,8 @@ export type ForumBrasaVivaRpcRow = {
   author_id?: string;
   tem_cinturao_duelo?: boolean;
   is_rei_das_chamas?: boolean;
+  is_rei_chamas_superiores?: boolean;
+  is_rei_chamas_inferiores?: boolean;
   is_pilar_cooperativo?: boolean;
   /** legado pré-THOTH */
   detem_cinturao_duelo?: boolean;

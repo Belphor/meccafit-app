@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 export type ComunidadeTitulos = {
   temCinturaoDuelo?: boolean;
   isReiDasChamas?: boolean;
+  isReiChamasSuperiores?: boolean;
+  isReiChamasInferiores?: boolean;
   isPilarCooperativo?: boolean;
 };
 
@@ -33,6 +35,11 @@ export type ComunidadeAtletaRef = {
 };
 
 export type CampeoesCinturao = {
+  SUPERIORES: string | null;
+  INFERIORES: string | null;
+};
+
+export type ReisChamas = {
   SUPERIORES: string | null;
   INFERIORES: string | null;
 };
@@ -65,6 +72,8 @@ export type ComunidadeArenaSnapshot = {
   meta: ComunidadeMeta;
   campeao_cinturao_id: string | null;
   campeoes_cinturao: CampeoesCinturao;
+  reis_chamas: ReisChamas;
+  /** legado · lista com faixa */
   reis_das_chamas: ComunidadeAtletaRef[];
   pilares_cooperativos: ComunidadeAtletaRef[];
   duelos_ativos: ComunidadeDueloAtivo[];
@@ -80,6 +89,8 @@ export type PerfilPublicoAtleta = ComunidadeTitulos & {
   grupo_supremo: string;
   tem_cinturao_duelo: boolean;
   is_rei_das_chamas: boolean;
+  is_rei_chamas_superiores: boolean;
+  is_rei_chamas_inferiores: boolean;
   is_pilar_cooperativo: boolean;
 };
 
@@ -94,10 +105,14 @@ function parseTitulos(row: Record<string, unknown>): ComunidadeTitulos {
     row.is_pilar_cooperativo !== undefined
       ? Boolean(row.is_pilar_cooperativo)
       : Boolean(row.is_pilar_fogo_cosmico);
+  const isReiSup = Boolean(row.is_rei_chamas_superiores);
+  const isReiInf = Boolean(row.is_rei_chamas_inferiores);
 
   return {
     temCinturaoDuelo: temCinturao,
-    isReiDasChamas: Boolean(row.is_rei_das_chamas),
+    isReiChamasSuperiores: isReiSup,
+    isReiChamasInferiores: isReiInf,
+    isReiDasChamas: isReiSup || isReiInf || Boolean(row.is_rei_das_chamas),
     isPilarCooperativo: isPilar,
   };
 }
@@ -152,6 +167,17 @@ function parseRankingsThoth(payload: unknown): RankingsThoth | null {
   };
 }
 
+function parseReisChamas(raw: unknown): ReisChamas {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { SUPERIORES: null, INFERIORES: null };
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    SUPERIORES: row.SUPERIORES ? String(row.SUPERIORES) : null,
+    INFERIORES: row.INFERIORES ? String(row.INFERIORES) : null,
+  };
+}
+
 function parseCampeoesCinturao(raw: unknown): CampeoesCinturao {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { SUPERIORES: null, INFERIORES: null };
@@ -193,6 +219,7 @@ function parseSnapshot(payload: unknown): { data: ComunidadeArenaSnapshot | null
     parseRankingsThoth(row.rankings_thoth) ?? parseRankingsThoth(row.rankings_por_membro);
 
   const campeoes = parseCampeoesCinturao(row.campeoes_cinturao);
+  const reisChamas = parseReisChamas(row.reis_chamas);
 
   return {
     data: {
@@ -204,6 +231,7 @@ function parseSnapshot(payload: unknown): { data: ComunidadeArenaSnapshot | null
       },
       campeao_cinturao_id: row.campeao_cinturao_id ? String(row.campeao_cinturao_id) : null,
       campeoes_cinturao: campeoes,
+      reis_chamas: reisChamas,
       reis_das_chamas: Array.isArray(row.reis_das_chamas)
         ? (row.reis_das_chamas as ComunidadeAtletaRef[])
         : [],
@@ -298,6 +326,8 @@ export async function fetchPerfilPublicoAtleta(
       grupo_supremo: String(row.grupo_supremo ?? "CINZAS"),
       tem_cinturao_duelo: Boolean(titulos.temCinturaoDuelo),
       is_rei_das_chamas: Boolean(titulos.isReiDasChamas),
+      is_rei_chamas_superiores: Boolean(titulos.isReiChamasSuperiores),
+      is_rei_chamas_inferiores: Boolean(titulos.isReiChamasInferiores),
       is_pilar_cooperativo: Boolean(titulos.isPilarCooperativo),
       ...titulos,
     },

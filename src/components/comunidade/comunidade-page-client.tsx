@@ -85,7 +85,7 @@ export function ComunidadePageClient({
 
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];
-  const reis = arena?.reis_das_chamas ?? [];
+  const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
 
   return (
     <BrasaVivaCard
@@ -117,14 +117,14 @@ export function ComunidadePageClient({
         </div>
 
         <nav
-          className="mt-3 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="mt-4 grid grid-cols-5 gap-1.5 sm:mx-auto sm:max-w-xl sm:gap-2"
           aria-label="Secções da comunidade"
         >
           {SECTION_NAV.map(({ id, label }) => (
             <a
               key={id}
               href={`#${id}`}
-              className="min-h-10 shrink-0 rounded-full border border-neutral-800/90 bg-neutral-950/70 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90"
+              className="flex min-h-10 items-center justify-center rounded-full border border-neutral-800/90 bg-neutral-950/70 px-1 text-center text-[8px] font-bold uppercase leading-tight tracking-[0.08em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90 sm:min-h-11 sm:text-[9px] sm:tracking-[0.12em]"
             >
               {label}
             </a>
@@ -169,7 +169,7 @@ export function ComunidadePageClient({
 
         <div id="comunidade-titulos" className="scroll-mt-24">
           <ComunidadeTitulosPanel
-            reis={reis}
+            reisChamas={reisChamas}
             pilares={pilares}
             rankings={arena?.rankings_thoth ?? null}
             userId={userId}

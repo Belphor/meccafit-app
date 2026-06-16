@@ -236,18 +236,20 @@ try {
   const { error: titulosErr } = await admin.rpc("comunidade_apply_demo_titulos", {
     p_cinturao_superiores_id: u2,
     p_cinturao_inferiores_id: u4,
+    p_rei_superiores_id: u2,
+    p_rei_inferiores_id: u4,
     p_pilar_id: u3,
-    p_rei_id: u4,
     p_todos_id: u1,
   });
   if (titulosErr) {
     if (titulosErr.code === "PGRST202") {
-      console.log("  SKIP · aplique migrations 20260623100000 e 20260623120000 no Supabase");
+      console.log("  SKIP · aplique migrations comunidade no Supabase");
     } else {
       throw titulosErr;
     }
   } else {
-    console.log("  OK · atleta2 cinturão superiores · atleta4 cinturão inferiores + rei");
+    console.log("  OK · atleta2 cinturão + rei superiores");
+    console.log("  OK · atleta4 cinturão + rei inferiores");
     console.log("  OK · atleta3 pilar · cliente todos os títulos");
   }
 

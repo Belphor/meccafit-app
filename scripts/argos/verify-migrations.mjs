@@ -127,6 +127,10 @@ export const MIGRATION_PATCHES = [
     id: "comunidade_safe_update",
     files: ["20260623130000_fix_comunidade_safe_update_where.sql"],
   },
+  {
+    id: "comunidade_rei_chamas_faixa",
+    files: ["20260623140000_comunidade_rei_chamas_por_faixa.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -504,7 +508,7 @@ async function probeMidasGrowth(admin, userId) {
 async function probeComunidadeArena(admin, userId) {
   const { data: flagsRow, error: flagsErr } = await admin
     .from("planos_atletas")
-    .select("tem_cinturao_duelo, tem_cinturao_superiores, tem_cinturao_inferiores, is_rei_das_chamas, is_pilar_cooperativo")
+    .select("tem_cinturao_duelo, tem_cinturao_superiores, tem_cinturao_inferiores, is_rei_das_chamas, is_rei_chamas_superiores, is_rei_chamas_inferiores, is_pilar_cooperativo")
     .eq("atleta_id", userId)
     .maybeSingle();
 
@@ -617,12 +621,23 @@ async function probeComunidadeArena(admin, userId) {
     (typeof flagsRow.tem_cinturao_superiores === "boolean" &&
       typeof flagsRow.tem_cinturao_inferiores === "boolean");
 
+  const reiChamasTipoOk =
+    flagsRow === null ||
+    (typeof flagsRow.is_rei_chamas_superiores === "boolean" &&
+      typeof flagsRow.is_rei_chamas_inferiores === "boolean");
+
   const rankingsShape =
     snapshotRpc &&
     typeof snapshotRpc === "object" &&
     (snapshotRpc.rankings_thoth?.vtc_global !== undefined ||
       snapshotRpc.rankings_por_membro?.vtc_global !== undefined ||
       snapshotRpc.rankings_por_membro?.rankings !== undefined);
+
+  const reisChamasShape =
+    snapshotRpc &&
+    typeof snapshotRpc === "object" &&
+    snapshotRpc.reis_chamas &&
+    typeof snapshotRpc.reis_chamas === "object";
 
   return {
     id: "comunidade_arena",
@@ -633,9 +648,13 @@ async function probeComunidadeArena(admin, userId) {
           ? snapshotErr
             ? snapshotErr.message
             : cinturaoTipoOk
-              ? rankingsShape
-                ? "PLUTUS · duelos · VTC THOTH · RPC ok"
-                : "snapshot sem rankings THOTH — aplicar 20260623120000"
+              ? reiChamasTipoOk
+                ? rankingsShape
+                  ? reisChamasShape
+                    ? "PLUTUS · duelos · VTC THOTH · reis por faixa · RPC ok"
+                    : "snapshot sem reis_chamas — aplicar 20260623140000"
+                  : "snapshot sem rankings THOTH — aplicar 20260623120000"
+                : "rei chamas por faixa ausente — aplicar 20260623140000"
               : "cinturão por tipo ausente — aplicar 20260623120000"
           : "RPC perfil sem flags THOTH — aplicar 20260623100000"
         : "flags PLUTUS inválidas"

@@ -232,6 +232,8 @@ export type Database = {
           tem_cinturao_superiores: boolean;
           tem_cinturao_inferiores: boolean;
           is_rei_das_chamas: boolean;
+          is_rei_chamas_superiores: boolean;
+          is_rei_chamas_inferiores: boolean;
           is_pilar_cooperativo: boolean;
           created_at: string;
           updated_at: string;
@@ -244,6 +246,8 @@ export type Database = {
           tem_cinturao_superiores?: boolean;
           tem_cinturao_inferiores?: boolean;
           is_rei_das_chamas?: boolean;
+          is_rei_chamas_superiores?: boolean;
+          is_rei_chamas_inferiores?: boolean;
           is_pilar_cooperativo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -256,6 +260,8 @@ export type Database = {
           tem_cinturao_superiores?: boolean;
           tem_cinturao_inferiores?: boolean;
           is_rei_das_chamas?: boolean;
+          is_rei_chamas_superiores?: boolean;
+          is_rei_chamas_inferiores?: boolean;
           is_pilar_cooperativo?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -837,6 +843,8 @@ export type Database = {
           author_id: string;
           tem_cinturao_duelo: boolean;
           is_rei_das_chamas: boolean;
+          is_rei_chamas_superiores: boolean;
+          is_rei_chamas_inferiores: boolean;
           is_pilar_cooperativo: boolean;
         }[];
       };
@@ -853,6 +861,8 @@ export type Database = {
           author_id: string;
           tem_cinturao_duelo: boolean;
           is_rei_das_chamas: boolean;
+          is_rei_chamas_superiores: boolean;
+          is_rei_chamas_inferiores: boolean;
           is_pilar_cooperativo: boolean;
           peso: number;
           series: number;
@@ -941,8 +951,9 @@ export type Database = {
         Args: {
           p_cinturao_superiores_id: string;
           p_cinturao_inferiores_id: string;
+          p_rei_superiores_id: string;
+          p_rei_inferiores_id: string;
           p_pilar_id: string;
-          p_rei_id: string;
           p_todos_id: string;
         };
         Returns: undefined;
