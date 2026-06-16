@@ -556,7 +556,11 @@ export function DashboardClient({
 
                   {activeTab === "comunidade" ? (
                     <div className={DASHBOARD_TAB_CONTENT}>
-                      <ComunidadePageClient userId={userId} phase={phase} />
+                      <ComunidadePageClient
+                        userId={userId}
+                        profileName={profile.name}
+                        phase={phase}
+                      />
                     </div>
                   ) : null}
 

@@ -1,11 +1,14 @@
 "use client";
 
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
-import type { ComunidadeDueloAtivo } from "@/lib/comunidade-data";
+import type { CampeoesCinturao, ComunidadeDueloAtivo } from "@/lib/comunidade-data";
+import { resolveCampeaoCinturaoPorTipo } from "@/lib/comunidade-data";
 
 type DuelosArenaPanelProps = {
   duelos: ComunidadeDueloAtivo[];
-  campeaoCinturaoId: string | null;
+  campeoesCinturao: CampeoesCinturao;
+  /** legado */
+  campeaoCinturaoId?: string | null;
   userId: string;
   loading?: boolean;
 };
@@ -25,12 +28,49 @@ function formatFim(iso: string): string {
   });
 }
 
+function CampeaoCinturaoCard({
+  tipo,
+  campeaoId,
+  userId,
+}: {
+  tipo: ComunidadeDueloAtivo["tipo_confronto"];
+  campeaoId: string | null;
+  userId: string;
+}) {
+  const label = tipo === "SUPERIORES" ? "Superiores" : "Inferiores";
+  if (!campeaoId) {
+    return (
+      <p className="rounded-xl border border-dashed border-[#FF007F]/20 p-3 text-[10px] text-neutral-500">
+        Cinturão {label} · vago
+      </p>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#FF007F]/25 bg-[#FF007F]/5 p-3">
+      <PlutusAvatar temCinturaoDuelo size="sm" name={label} />
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[#FF007F]">
+          Cinturão · {label}
+        </p>
+        <p className="truncate font-mono text-[11px] text-neutral-400">
+          {campeaoId === userId ? "És tu — defende o trono" : campeaoId.slice(0, 8)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function DuelosArenaPanel({
   duelos,
+  campeoesCinturao,
   campeaoCinturaoId,
   userId,
   loading = false,
 }: DuelosArenaPanelProps) {
+  const superioresId =
+    campeoesCinturao.SUPERIORES ?? (campeaoCinturaoId && !campeoesCinturao.INFERIORES ? campeaoCinturaoId : null);
+  const inferioresId = campeoesCinturao.INFERIORES ?? null;
+
   return (
     <section
       className="rounded-2xl border border-fuchsia-500/15 bg-gradient-to-br from-neutral-950/95 via-fuchsia-950/10 to-neutral-950/95 p-4 sm:p-5"
@@ -38,41 +78,27 @@ export function DuelosArenaPanel({
     >
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-fuchsia-300/85">
-          Duelos · King of the Hill
+          Duelos · Cinturões
         </p>
         <h3 className="mt-1 text-sm font-semibold text-fuchsia-50/95 sm:text-base">
-          Cinturão de supergrupos
+          Até 2 campeões em paralelo
         </h3>
+        <p className="mt-1 text-[10px] text-neutral-500">
+          Um cinturão por faixa — Superiores e Inferiores não se anulam.
+        </p>
       </header>
 
-      {campeaoCinturaoId ? (
-        <div className="mt-4 flex items-center gap-3 rounded-xl border border-[#FF007F]/25 bg-[#FF007F]/5 p-3">
-          <PlutusAvatar
-            detemCinturaoDuelo
-            size="sm"
-            name="Campeão"
-          />
-          <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[#FF007F]">
-              Detém o cinturão
-            </p>
-            <p className="truncate font-mono text-[11px] text-neutral-400">
-              {campeaoCinturaoId === userId ? "És tu — defende o trono" : campeaoCinturaoId.slice(0, 8)}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <p className="mt-4 text-[11px] text-neutral-500">
-          Ninguém detém o cinturão — desafia um atleta para conquistar o trono.
-        </p>
-      )}
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <CampeaoCinturaoCard tipo="SUPERIORES" campeaoId={superioresId} userId={userId} />
+        <CampeaoCinturaoCard tipo="INFERIORES" campeaoId={inferioresId} userId={userId} />
+      </div>
 
       <div className="mt-4 space-y-3">
         {loading ? (
           <div className="h-20 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
         ) : duelos.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[11px] text-neutral-500">
-            Sem duelos activos neste momento.
+      <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[11px] leading-relaxed text-neutral-500">
+            Sem duelos activos — desafia um atleta para disputar o cinturão da faixa.
           </p>
         ) : (
           duelos.map((duelo) => {
@@ -81,6 +107,7 @@ export function DuelosArenaPanel({
             const total = duelo.vtc_desafiante + duelo.vtc_desafiado;
             const pctDesafiante =
               total > 0 ? Math.round((duelo.vtc_desafiante / total) * 100) : 50;
+            const campeaoTipoId = resolveCampeaoCinturaoPorTipo(campeoesCinturao, duelo.tipo_confronto);
 
             return (
               <article
@@ -103,14 +130,14 @@ export function DuelosArenaPanel({
                 <div className="mt-3 flex items-center justify-between gap-2">
                   <PlutusAvatar
                     size="sm"
-                    detemCinturaoDuelo={duelo.atleta_desafiante_id === campeaoCinturaoId}
+                    temCinturaoDuelo={duelo.atleta_desafiante_id === campeaoTipoId}
                   />
                   <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600">
                     vs
                   </span>
                   <PlutusAvatar
                     size="sm"
-                    detemCinturaoDuelo={duelo.atleta_desafiado_id === campeaoCinturaoId}
+                    temCinturaoDuelo={duelo.atleta_desafiado_id === campeaoTipoId}
                   />
                 </div>
 

@@ -2,11 +2,17 @@
 
 import { useMemo } from "react";
 
+/** IRIS · bordas concêntricas não misturadas */
+export const IRIS_BORDER_CINTURAO = "#FF007F";
+export const IRIS_BORDER_REI_CHAMAS = "#8B5CF6";
+export const IRIS_BORDER_PILAR_COOP = "#FFD700";
+
 export type PlutusAvatarProps = {
   name?: string | null;
   photoUrl?: string | null;
-  detemCinturaoDuelo?: boolean;
-  isPilarFogoCosmico?: boolean;
+  temCinturaoDuelo?: boolean;
+  isReiDasChamas?: boolean;
+  isPilarCooperativo?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
 };
@@ -25,58 +31,54 @@ function resolveInitials(name: string | null | undefined): string {
   return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
 }
 
+function buildConcentricShadow(
+  cinturao: boolean,
+  rei: boolean,
+  pilar: boolean,
+): string | undefined {
+  const layers: string[] = [];
+  if (cinturao) layers.push(`0 0 0 2px ${IRIS_BORDER_CINTURAO}`);
+  if (rei) layers.push(`0 0 0 ${cinturao ? 4 : 2}px ${IRIS_BORDER_REI_CHAMAS}`);
+  if (pilar) {
+    const offset = (cinturao ? 2 : 0) + (rei ? 2 : 0) + 2;
+    layers.push(`0 0 0 ${offset}px ${IRIS_BORDER_PILAR_COOP}`);
+  }
+  return layers.length ? layers.join(", ") : undefined;
+}
+
 export function PlutusAvatar({
   name,
   photoUrl,
-  detemCinturaoDuelo = false,
-  isPilarFogoCosmico = false,
+  temCinturaoDuelo = false,
+  isReiDasChamas = false,
+  isPilarCooperativo = false,
   size = "md",
   className = "",
 }: PlutusAvatarProps) {
   const initials = useMemo(() => resolveInitials(name), [name]);
-  const hasCinturao = detemCinturaoDuelo;
-  const hasPilar = isPilarFogoCosmico;
-  const dualRing = hasCinturao && hasPilar;
-
-  const ringStyle = useMemo(() => {
-    if (!dualRing) {
-      if (hasCinturao) {
-        return { boxShadow: "0 0 0 2px #FF007F" };
-      }
-      if (hasPilar) {
-        return { boxShadow: "0 0 0 2px #FFD700" };
-      }
-      return undefined;
-    }
-    return {
-      boxShadow: "0 0 0 2px #FF007F, 0 0 0 5px #FFD700",
-    };
-  }, [dualRing, hasCinturao, hasPilar]);
+  const ringStyle = useMemo(
+    () =>
+      buildConcentricShadow(temCinturaoDuelo, isReiDasChamas, isPilarCooperativo),
+    [temCinturaoDuelo, isReiDasChamas, isPilarCooperativo],
+  );
+  const hasOuterGold = isPilarCooperativo;
 
   return (
     <div
       className={`relative inline-flex shrink-0 items-center justify-center rounded-full ${className}`}
-      aria-label={
-        dualRing
-          ? "Avatar com cinturão de duelo e pilar fogo cósmico"
-          : hasCinturao
-            ? "Avatar com cinturão de duelo"
-            : hasPilar
-              ? "Avatar pilar fogo cósmico"
-              : "Avatar do atleta"
-      }
+      aria-label="Avatar do atleta com títulos da comunidade"
     >
       <div
         className={`relative rounded-full p-[2px] transition-shadow duration-300 ${
-          hasPilar && !dualRing ? "animate-pulse" : ""
-        } ${dualRing ? "animate-[plutus-gold-pulse_2.4s_ease-in-out_infinite]" : ""}`}
-        style={ringStyle}
+          hasOuterGold ? "animate-[plutus-gold-pulse_2.4s_ease-in-out_infinite]" : ""
+        }`}
+        style={ringStyle ? { boxShadow: ringStyle } : undefined}
       >
         <div
           className={`relative overflow-hidden rounded-full bg-neutral-950 ${SIZE_CLASS[size]}`}
         >
           {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- blob/capacitor/local
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={photoUrl}
               alt={name?.trim() ? `Foto de ${name.trim()}` : "Foto de perfil"}

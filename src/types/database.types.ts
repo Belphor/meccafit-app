@@ -228,8 +228,11 @@ export type Database = {
           atleta_id: string;
           total_treinos_mensais_planejados: number;
           grupos_obrigatorios: string[];
-          detem_cinturao_duelo: boolean;
-          is_pilar_fogo_cosmico: boolean;
+          tem_cinturao_duelo: boolean;
+          tem_cinturao_superiores: boolean;
+          tem_cinturao_inferiores: boolean;
+          is_rei_das_chamas: boolean;
+          is_pilar_cooperativo: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -237,8 +240,11 @@ export type Database = {
           atleta_id: string;
           total_treinos_mensais_planejados?: number;
           grupos_obrigatorios?: string[];
-          detem_cinturao_duelo?: boolean;
-          is_pilar_fogo_cosmico?: boolean;
+          tem_cinturao_duelo?: boolean;
+          tem_cinturao_superiores?: boolean;
+          tem_cinturao_inferiores?: boolean;
+          is_rei_das_chamas?: boolean;
+          is_pilar_cooperativo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -246,8 +252,11 @@ export type Database = {
           atleta_id?: string;
           total_treinos_mensais_planejados?: number;
           grupos_obrigatorios?: string[];
-          detem_cinturao_duelo?: boolean;
-          is_pilar_fogo_cosmico?: boolean;
+          tem_cinturao_duelo?: boolean;
+          tem_cinturao_superiores?: boolean;
+          tem_cinturao_inferiores?: boolean;
+          is_rei_das_chamas?: boolean;
+          is_pilar_cooperativo?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -825,6 +834,10 @@ export type Database = {
           registrado_em: string;
           atleta_nome: string;
           nome_linhagem: string;
+          author_id: string;
+          tem_cinturao_duelo: boolean;
+          is_rei_das_chamas: boolean;
+          is_pilar_cooperativo: boolean;
         }[];
       };
       argos_fetch_forum_brasa_viva: {
@@ -837,7 +850,10 @@ export type Database = {
           topic_body: string;
           author_name: string;
           author_lineage: string;
-          author_phase_tier: number;
+          author_id: string;
+          tem_cinturao_duelo: boolean;
+          is_rei_das_chamas: boolean;
+          is_pilar_cooperativo: boolean;
           peso: number;
           series: number;
           registrado_em: string;
@@ -912,6 +928,24 @@ export type Database = {
       get_comunidade_arena_snapshot: {
         Args: Record<PropertyKey, never>;
         Returns: Json;
+      };
+      get_rankings_por_membro: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      get_rankings_thoth: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      comunidade_apply_demo_titulos: {
+        Args: {
+          p_cinturao_superiores_id: string;
+          p_cinturao_inferiores_id: string;
+          p_pilar_id: string;
+          p_rei_id: string;
+          p_todos_id: string;
+        };
+        Returns: undefined;
       };
     };
     Enums: {

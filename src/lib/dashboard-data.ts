@@ -231,6 +231,13 @@ export type CommunityMuralRow = {
   registrado_em: string;
   atleta_nome: string;
   nome_linhagem: string;
+  author_id?: string;
+  tem_cinturao_duelo?: boolean;
+  is_rei_das_chamas?: boolean;
+  is_pilar_cooperativo?: boolean;
+  /** legado pré-THOTH */
+  detem_cinturao_duelo?: boolean;
+  is_pilar_fogo_cosmico?: boolean;
 };
 
 export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPost[] {
@@ -240,8 +247,12 @@ export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPo
     weight: normalizeWeight(row.peso),
     series: Math.max(1, Number(row.series) || 1),
     createdAt: row.registrado_em ?? new Date().toISOString(),
+    athleteId: row.author_id ? String(row.author_id) : undefined,
     athleteName: row.atleta_nome?.trim() || "Membro da Linhagem",
     lineageName: row.nome_linhagem?.trim() || "Linhagem Meccafit",
+    temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
+    isReiDasChamas: Boolean(row.is_rei_das_chamas),
+    isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
   }));
 }
 

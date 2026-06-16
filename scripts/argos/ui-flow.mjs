@@ -170,6 +170,22 @@ try {
 
   const hasSoberano = (mural ?? []).some((r) => r.atleta_nome === "Mestre Supremo");
   !hasSoberano ? pass("dashboard:mural:no_soberano") : fail("dashboard:mural:no_soberano", "soberano no feed");
+
+  const { data: arenaSnap, error: arenaErr } = await clienteSession.client.rpc(
+    "get_comunidade_arena_snapshot",
+  );
+  if (!arenaErr && arenaSnap && typeof arenaSnap === "object" && !arenaSnap.error) {
+    const hasMeta = typeof arenaSnap.meta?.tonelagem_atual_acumulada === "number";
+    const hasDuels = Array.isArray(arenaSnap.duelos_ativos);
+    const hasRankings =
+      arenaSnap.rankings_thoth?.vtc_global !== undefined ||
+      arenaSnap.rankings_por_membro?.vtc_global !== undefined;
+    hasMeta && hasDuels && hasRankings
+      ? pass("comunidade:arena:snapshot")
+      : fail("comunidade:arena:snapshot", "shape incompleto");
+  } else {
+    fail("comunidade:arena:snapshot", arenaErr?.message ?? arenaSnap?.error ?? "sem dados");
+  }
 } catch (err) {
   fail("login:cliente:ok", err.message);
 }
@@ -240,7 +256,7 @@ function isRouteStatusOk(route, status) {
   return status === 200 || status === 307 || status === 308;
 }
 
-for (const route of ["/", "/dashboard", "/dashboard?subgrupo=geral"]) {
+for (const route of ["/", "/dashboard", "/dashboard?subgrupo=geral", "/dashboard?tab=comunidade"]) {
   try {
     const res = await fetch(`${appUrl}${route}`, { redirect: "manual" });
     isRouteStatusOk(route, res.status)

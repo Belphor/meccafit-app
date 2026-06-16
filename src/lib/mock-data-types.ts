@@ -47,8 +47,12 @@ export type MuralPost = {
   weight: number;
   series: number;
   createdAt: string;
+  athleteId?: string;
   athleteName?: string;
   lineageName?: string;
+  temCinturaoDuelo?: boolean;
+  isReiDasChamas?: boolean;
+  isPilarCooperativo?: boolean;
   shareImageUrl?: string;
 };
 

@@ -1,11 +1,9 @@
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
 import { mapCommunityMuralRowsToPosts, type CommunityMuralRow } from "@/lib/dashboard-data";
-import { resolveForumCardPhase } from "@/features/forum-brasa-viva/forum-phase-styles";
 import type {
   ForumBrasaVivaRpcRow,
   ForumBrasaVivaTopic,
 } from "@/features/forum-brasa-viva/types";
-import { resolvePhaseTier } from "@/lib/custom-preferences";
 import type { MuralPost } from "@/lib/mock-data";
 import { getActiveSupabaseSession, supabase } from "@/lib/supabase";
 
@@ -18,15 +16,16 @@ function normalizeWeight(value: unknown): number {
 }
 
 function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
-  const authorPhaseTier = resolvePhaseTier(row.author_phase_tier);
   return {
     id: `forum-${row.id}`,
     title: row.topic_title?.trim() || "Tópico Brasa-Viva",
     body: row.topic_body?.trim() || "",
+    authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
     authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
-    authorPhaseTier,
-    authorCardPhase: resolveForumCardPhase(authorPhaseTier),
+    temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
+    isReiDasChamas: Boolean(row.is_rei_das_chamas),
+    isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
     weightKg: normalizeWeight(row.peso),
     series: Math.max(1, Number(row.series) || 1),
     createdAt: row.registrado_em ?? new Date().toISOString(),
@@ -38,10 +37,12 @@ function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] 
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
     body: "Superação registrada no Fórum Brasa-Viva — volume validado por ARGOS.",
+    authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
-    authorPhaseTier: 2,
-    authorCardPhase: resolveForumCardPhase(2),
+    temCinturaoDuelo: post.temCinturaoDuelo ?? false,
+    isReiDasChamas: post.isReiDasChamas ?? false,
+    isPilarCooperativo: post.isPilarCooperativo ?? false,
     weightKg: post.weight,
     series: post.series,
     createdAt: post.createdAt,
@@ -98,10 +99,12 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
     body: "Superação registrada no Fórum Brasa-Viva — volume validado por ARGOS.",
+    authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
-    authorPhaseTier: 2,
-    authorCardPhase: resolveForumCardPhase(2),
+    temCinturaoDuelo: post.temCinturaoDuelo ?? false,
+    isReiDasChamas: post.isReiDasChamas ?? false,
+    isPilarCooperativo: post.isPilarCooperativo ?? false,
     weightKg: post.weight,
     series: post.series,
     createdAt: post.createdAt,

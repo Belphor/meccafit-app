@@ -107,6 +107,26 @@ export const MIGRATION_PATCHES = [
     id: "comunidade_arena",
     files: ["20260620120000_comunidade_arena_cooperativa.sql"],
   },
+  {
+    id: "comunidade_mural_avatars",
+    files: ["20260622100000_comunidade_mural_author_avatars.sql"],
+  },
+  {
+    id: "comunidade_snapshot_volatile",
+    files: ["20260622110000_fix_comunidade_arena_snapshot_volatile.sql"],
+  },
+  {
+    id: "comunidade_thoth",
+    files: ["20260623100000_comunidade_thoth_formula_refactor.sql"],
+  },
+  {
+    id: "comunidade_cinturao_vtc",
+    files: ["20260623120000_comunidade_cinturao_tipo_vtc_rankings.sql"],
+  },
+  {
+    id: "comunidade_safe_update",
+    files: ["20260623130000_fix_comunidade_safe_update_where.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -265,6 +285,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeMidasGrowth(admin, probeUserId));
     probes.push(await probePlanilhasForjador(admin, probeUserId));
     probes.push(await probeComunidadeArena(admin, probeUserId));
+    probes.push(await probeComunidadeSnapshotAuth(admin, probeUserId));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -285,6 +306,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "comunidade_arena",
       ok: false,
       detail: "sem perfil para probe comunidade",
+    });
+    probes.push({
+      id: "comunidade_snapshot_volatile",
+      ok: false,
+      detail: "sem perfil para probe snapshot",
     });
   }
 
@@ -478,16 +504,25 @@ async function probeMidasGrowth(admin, userId) {
 async function probeComunidadeArena(admin, userId) {
   const { data: flagsRow, error: flagsErr } = await admin
     .from("planos_atletas")
-    .select("detem_cinturao_duelo, is_pilar_fogo_cosmico")
+    .select("tem_cinturao_duelo, tem_cinturao_superiores, tem_cinturao_inferiores, is_rei_das_chamas, is_pilar_cooperativo")
     .eq("atleta_id", userId)
     .maybeSingle();
 
+  let flagsLegacy = null;
   if (flagsErr?.code === "42703" || flagsErr?.message?.includes("does not exist")) {
-    return {
-      id: "comunidade_arena",
-      ok: false,
-      detail: "colunas PLUTUS ausentes em planos_atletas",
-    };
+    const legacy = await admin
+      .from("planos_atletas")
+      .select("detem_cinturao_duelo, is_pilar_fogo_cosmico")
+      .eq("atleta_id", userId)
+      .maybeSingle();
+    if (legacy.error?.code === "42703") {
+      return {
+        id: "comunidade_arena",
+        ok: false,
+        detail: "colunas PLUTUS ausentes em planos_atletas",
+      };
+    }
+    flagsLegacy = legacy.data;
   }
 
   const { error: duelosErr } = await admin.from("duelos_supergrupos").select("id").limit(1);
@@ -555,21 +590,147 @@ async function probeComunidadeArena(admin, userId) {
     };
   }
 
-  const plutusOk =
+  const plutusOk = (() => {
+    if (!flagsErr) {
+      return (
+        flagsRow === null ||
+        (typeof flagsRow.tem_cinturao_duelo === "boolean" &&
+          typeof flagsRow.is_rei_das_chamas === "boolean" &&
+          typeof flagsRow.is_pilar_cooperativo === "boolean")
+      );
+    }
+    return (
+      flagsLegacy === null ||
+      (typeof flagsLegacy.detem_cinturao_duelo === "boolean" &&
+        typeof flagsLegacy.is_pilar_fogo_cosmico === "boolean")
+    );
+  })();
+
+  const thothOk =
+    perfil &&
+    typeof perfil === "object" &&
+    (typeof perfil.tem_cinturao_duelo === "boolean" ||
+      typeof perfil.detem_cinturao_duelo === "boolean");
+
+  const cinturaoTipoOk =
     flagsRow === null ||
-    (typeof flagsRow.detem_cinturao_duelo === "boolean" &&
-      typeof flagsRow.is_pilar_fogo_cosmico === "boolean");
+    (typeof flagsRow.tem_cinturao_superiores === "boolean" &&
+      typeof flagsRow.tem_cinturao_inferiores === "boolean");
+
+  const rankingsShape =
+    snapshotRpc &&
+    typeof snapshotRpc === "object" &&
+    (snapshotRpc.rankings_thoth?.vtc_global !== undefined ||
+      snapshotRpc.rankings_por_membro?.vtc_global !== undefined ||
+      snapshotRpc.rankings_por_membro?.rankings !== undefined);
 
   return {
     id: "comunidade_arena",
-    ok: shapeOk && plutusOk && !snapshotErr,
+    ok: shapeOk && plutusOk && thothOk && !snapshotErr,
     detail: shapeOk
       ? plutusOk
-        ? snapshotErr
-          ? snapshotErr.message
-          : "PLUTUS · duelos · metas · RPC ok"
+        ? thothOk
+          ? snapshotErr
+            ? snapshotErr.message
+            : cinturaoTipoOk
+              ? rankingsShape
+                ? "PLUTUS · duelos · VTC THOTH · RPC ok"
+                : "snapshot sem rankings THOTH — aplicar 20260623120000"
+              : "cinturão por tipo ausente — aplicar 20260623120000"
+          : "RPC perfil sem flags THOTH — aplicar 20260623100000"
         : "flags PLUTUS inválidas"
       : "get_perfil_publico_atleta shape inválido",
+  };
+}
+
+async function probeComunidadeSnapshotAuth(admin, userId) {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+  if (!url || !anonKey) {
+    return {
+      id: "comunidade_snapshot_volatile",
+      ok: true,
+      detail: "skip · anon key ausente",
+    };
+  }
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile?.id) {
+    return {
+      id: "comunidade_snapshot_volatile",
+      ok: false,
+      detail: "sem perfil probe",
+    };
+  }
+
+  const { data: userRow } = await admin.auth.admin.getUserById(userId);
+  const email = userRow?.user?.email;
+  if (!email) {
+    return {
+      id: "comunidade_snapshot_volatile",
+      ok: false,
+      detail: "email do probe ausente",
+    };
+  }
+
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: loginErr } = await client.auth.signInWithPassword({
+    email,
+    password: "senha123",
+  });
+
+  if (loginErr) {
+    return {
+      id: "comunidade_snapshot_volatile",
+      ok: false,
+      detail: `login probe: ${loginErr.message}`,
+    };
+  }
+
+  const { data, error } = await client.rpc("get_comunidade_arena_snapshot");
+  await client.auth.signOut();
+
+  if (error) {
+    const readOnly = error.message?.includes("read-only transaction");
+    return {
+      id: "comunidade_snapshot_volatile",
+      ok: false,
+      detail: readOnly
+        ? "RPC STABLE bloqueia writes — aplicar 20260622110000"
+        : error.message,
+    };
+  }
+
+  const meta = data?.meta;
+  const ok =
+    data &&
+    typeof data === "object" &&
+    meta &&
+    typeof meta.tonelagem_atual_acumulada === "number" &&
+    Array.isArray(data.duelos_ativos) &&
+    (data.rankings_por_membro === undefined ||
+      (typeof data.rankings_por_membro === "object" && data.rankings_por_membro !== null));
+
+  return {
+    id: "comunidade_snapshot_volatile",
+    ok,
+    detail: ok
+      ? `arena ok · ${meta.tonelagem_atual_acumulada} kg · ${data.duelos_ativos.length} duelo(s)${
+          data.rankings_por_membro ? " · THOTH rankings" : ""
+        }`
+      : "snapshot shape inválido",
   };
 }
 

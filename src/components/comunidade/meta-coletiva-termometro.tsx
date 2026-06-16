@@ -63,8 +63,8 @@ export function MetaColetivaTermometro({
         </div>
 
         <p className="mt-2 text-[10px] leading-relaxed text-neutral-500">
-          Cada treino registado soma peso × repetições para toda a academia — meta trava no
-          último dia do mês.
+          Soma dos picos de carga de todos os treinos do mês — fórmula de força (sem repetições).
+          Pilares cooperativos saem do Top 3 no fecho mensal.
         </p>
       </div>
     </section>

@@ -20,13 +20,20 @@ export type ForumBrasaVivaViewProps = {
   userId: string;
   /** Quando true, omite card/header externos (uso em /comunidade) */
   embedMode?: boolean;
+  /** Muda quando a página Comunidade actualiza — recarrega o mural */
+  refreshKey?: string | number;
   phase: Pick<
     PhoenixPhaseRuntimeContext,
     "isForumInactive" | "isHydrated" | "vtc30d"
   >;
 };
 
-export function ForumBrasaVivaView({ userId, embedMode = false, phase }: ForumBrasaVivaViewProps) {
+export function ForumBrasaVivaView({
+  userId,
+  embedMode = false,
+  refreshKey = 0,
+  phase,
+}: ForumBrasaVivaViewProps) {
   const [topics, setTopics] = useState<ForumBrasaVivaTopic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +54,7 @@ export function ForumBrasaVivaView({ userId, embedMode = false, phase }: ForumBr
     let cancelled = false;
 
     void (async () => {
+      setLoading(true);
       const result = await fetchForumBrasaVivaTopics();
       if (cancelled) return;
       setLoading(false);
@@ -61,7 +69,7 @@ export function ForumBrasaVivaView({ userId, embedMode = false, phase }: ForumBr
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   useEffect(() => {
     if (!phase.isHydrated || telemetryViewRef.current) return;
@@ -84,8 +92,8 @@ export function ForumBrasaVivaView({ userId, embedMode = false, phase }: ForumBr
             Fórum Brasa-Viva
           </h2>
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
-            Tópicos de ascensão da linhagem. Cada card reflete a fase do autor — Cinza, Brasa,
-            Labareda ou Magma. Forjadores soberanos observam, mas não competem neste fórum.
+            Tópicos de ascensão da linhagem — superações validadas por ARGOS. Forjadores soberanos
+            observam, mas não competem neste fórum.
           </p>
         </>
       ) : null}

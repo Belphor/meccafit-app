@@ -2,9 +2,9 @@
 
 import { type ReactNode } from "react";
 import {
-  FORUM_PHASE_ACTIVE_FILTER,
-  FORUM_PHASE_INACTIVE_FILTER,
-} from "@/features/forum-brasa-viva/forum-phase-styles";
+  THERMAL_ACTIVE_FILTER,
+  THERMAL_INACTIVE_FILTER,
+} from "@/lib/evolution-thermal-styles";
 
 type PhaseWrapperProps = {
   children: ReactNode;
@@ -13,9 +13,7 @@ type PhaseWrapperProps = {
   className?: string;
 };
 
-/**
- * IRIS/HERMES — aplica degradação de 70% (saturate 30%) apenas após hidratação.
- */
+/** Degradação visual quando gravidade térmica está activa (layout em cinzas). */
 export function PhaseWrapper({
   children,
   isInactive,
@@ -23,15 +21,14 @@ export function PhaseWrapper({
   className = "",
 }: PhaseWrapperProps) {
   const filterClass =
-    isHydrated && isInactive ? FORUM_PHASE_INACTIVE_FILTER : FORUM_PHASE_ACTIVE_FILTER;
+    isHydrated && isInactive ? THERMAL_INACTIVE_FILTER : THERMAL_ACTIVE_FILTER;
 
   return (
     <div
-      className={`forum-phase-wrapper relative ${filterClass} ${className}`.trim()}
-      data-forum-phase-inactive={isHydrated && isInactive ? "true" : undefined}
-      data-forum-phase-hydrated={isHydrated ? "true" : undefined}
+      className={`relative ${filterClass} ${className}`.trim()}
+      data-thermal-inactive={isHydrated && isInactive ? "true" : undefined}
     >
       {children}
     </div>
   );
-}
+};
