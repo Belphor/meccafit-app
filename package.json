@@ -36,6 +36,7 @@
     "seed:test-users": "node scripts/seed-test-users.mjs",
     "seed:test-training": "node scripts/seed-test-training.mjs",
     "seed:comunidade-demo": "node scripts/seed-comunidade-demo.mjs",
+    "seed:ranking-top10": "node scripts/seed-ranking-top10.mjs",
     "test:reset-and-seed": "node scripts/reset-test-training.mjs --catalog-only && node scripts/seed-test-training.mjs",
     "argos:load:5k": "node scripts/argos/load-test.mjs --vus 5000 --duration 30 --ramp 10"
   },

@@ -69,6 +69,72 @@ const TEST_USERS = [
     },
   },
   {
+    email: "atleta5@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_5",
+    user_metadata: {
+      full_name: "Atleta Cinco",
+      data_nascimento: "1994-02-14",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos E",
+    },
+  },
+  {
+    email: "atleta6@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_6",
+    user_metadata: {
+      full_name: "Atleta Seis",
+      data_nascimento: "1991-09-03",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos F",
+    },
+  },
+  {
+    email: "atleta7@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_7",
+    user_metadata: {
+      full_name: "Atleta Sete",
+      data_nascimento: "1996-04-22",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos G",
+    },
+  },
+  {
+    email: "atleta8@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_8",
+    user_metadata: {
+      full_name: "Atleta Oito",
+      data_nascimento: "1989-12-11",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos H",
+    },
+  },
+  {
+    email: "atleta9@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_9",
+    user_metadata: {
+      full_name: "Atleta Nove",
+      data_nascimento: "1997-08-30",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos I",
+    },
+  },
+  {
+    email: "atleta10@meccafit.com",
+    password: "senha123",
+    label: "atleta_ranking_10",
+    user_metadata: {
+      full_name: "Atleta Dez",
+      data_nascimento: "1993-05-17",
+      role: "cliente",
+      nome_linhagem: "Linhagem Argos J",
+    },
+  },
+  {
     email: "forjador@meccafit.com",
     password: "senha123",
     label: "forjador_linhagem",
