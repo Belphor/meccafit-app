@@ -1,5 +1,6 @@
 "use client";
 
+import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { formatTonelagemKg, type ComunidadeMeta } from "@/lib/comunidade-data";
 
 type MetaColetivaTermometroProps = {
@@ -17,7 +18,7 @@ export function MetaColetivaTermometro({
 
   return (
     <section
-      className="rounded-2xl border border-amber-500/15 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90 p-4 sm:p-5"
+      className={`${COMUNIDADE_PANEL} border-amber-500/15 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90`}
       aria-label="Meta coletiva mensal da academia"
     >
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -53,11 +54,11 @@ export function MetaColetivaTermometro({
           />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-mono text-lg font-bold tabular-nums text-amber-200 sm:text-xl">
+        <div className="mt-3 flex flex-col gap-1 xs:flex-row xs:flex-wrap xs:items-baseline xs:justify-between xs:gap-2">
+          <p className="font-mono text-base font-bold tabular-nums text-amber-200 xs:text-lg sm:text-xl">
             {loading ? "—" : formatTonelagemKg(meta.tonelagem_atual_acumulada)}
           </p>
-          <p className="text-[11px] uppercase tracking-[0.14em] text-neutral-500">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 xs:text-[11px]">
             Meta · {loading ? "—" : formatTonelagemKg(meta.tonelagem_alvo_kg)}
           </p>
         </div>

@@ -8,6 +8,7 @@ import {
   type SovereignMuscleId,
 } from "@/components/evolution/human-body-constants";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
+import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import type { ComunidadeClienteEvolution } from "@/lib/comunidade-evolution";
 import { resolveEvolutionThermalStyleByLevel } from "@/lib/evolution-thermal-styles";
 
@@ -37,7 +38,8 @@ export function ComunidadeEvolutionStatus({
   return (
     <section
       className={[
-        "rounded-2xl border p-4 sm:p-5 backdrop-blur-md",
+        COMUNIDADE_PANEL,
+        "backdrop-blur-md",
         thermalStyle.borderClass,
         thermalStyle.gradientClass,
         thermalStyle.glowClass,
@@ -70,7 +72,7 @@ export function ComunidadeEvolutionStatus({
             {loading ? "A carregar…" : `Nível · ${CALOR_LEVEL_LABELS[nivel]}`}
           </span>
 
-          <p className="mt-3 font-mono text-2xl font-bold tabular-nums text-amber-50/95 sm:text-3xl">
+          <p className="mt-3 font-mono text-xl font-bold tabular-nums text-amber-50/95 xs:text-2xl sm:text-3xl">
             {loading ? "—" : `${Math.round(evolution?.indiceIgnicao ?? 0)}%`}
           </p>
           <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
@@ -78,7 +80,7 @@ export function ComunidadeEvolutionStatus({
           </p>
 
           {!loading && evolution ? (
-            <dl className="mt-4 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
+            <dl className="mt-4 grid grid-cols-1 gap-2 text-[11px] min-[400px]:grid-cols-2">
               <div className="rounded-xl border border-white/5 bg-black/20 px-3 py-2">
                 <dt className="text-[9px] uppercase tracking-[0.14em] text-neutral-500">
                   Grupo supremo

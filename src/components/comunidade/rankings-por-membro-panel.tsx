@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
+import {
+  COMUNIDADE_LIST_SCROLL,
+  COMUNIDADE_PANEL,
+  COMUNIDADE_TAB_BUTTON,
+  COMUNIDADE_TAB_LIST,
+} from "@/components/comunidade/comunidade-layout";
 import type { RankingsThoth, RankingVtcEntry } from "@/lib/comunidade-data";
 
 type RankingsThothPanelProps = {
@@ -40,7 +46,7 @@ function RankingRow({
 
   return (
     <li
-      className={`flex min-h-[3.25rem] items-center gap-2.5 rounded-xl border px-2.5 py-2 sm:gap-3 sm:px-3 ${
+      className={`flex min-h-11 items-center gap-2 rounded-xl border px-2 py-2 xs:gap-2.5 xs:px-2.5 sm:gap-3 sm:px-3 ${
         isSelf
           ? "border-amber-500/35 bg-amber-950/20"
           : isPodium
@@ -49,7 +55,7 @@ function RankingRow({
       }`}
     >
       <span
-        className={`w-7 shrink-0 text-center font-mono text-[11px] font-bold tabular-nums ${
+        className={`w-6 shrink-0 text-center font-mono text-[10px] font-bold tabular-nums xs:w-7 xs:text-[11px] ${
           isPodium ? "text-violet-200" : "text-amber-200/80"
         }`}
       >
@@ -63,10 +69,10 @@ function RankingRow({
         size="sm"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11px] font-medium text-neutral-200">
+        <p className="truncate text-[10px] font-medium text-neutral-200 xs:text-[11px]">
           {isSelf ? "Tu" : entry.atleta_nome}
         </p>
-        <p className="font-mono text-[10px] tabular-nums text-neutral-500">
+        <p className="truncate font-mono text-[9px] tabular-nums text-neutral-500 xs:text-[10px]">
           {formatVtc(metricValue)} kg · {metricLabel}
         </p>
       </div>
@@ -95,28 +101,24 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
 
   return (
     <section
-      className="rounded-2xl border border-violet-500/15 bg-gradient-to-br from-neutral-950/95 via-violet-950/10 to-neutral-950/95 p-4 sm:p-5"
+      className={`${COMUNIDADE_PANEL} border-violet-500/15 bg-gradient-to-br from-neutral-950/95 via-violet-950/10 to-neutral-950/95`}
       aria-label="Rankings VTC da comunidade"
     >
       <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-violet-300/85">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300/85 sm:tracking-[0.22em]">
           Rankings
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
-          Top 10 · últimos 14 dias
+          Top 10 VTC · Últimos 14 dias
         </h3>
-        <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
+        <p className="mt-2 text-[10px] leading-relaxed text-neutral-500 xs:text-[11px]">
           <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos que
           cada atleta levantou por exercício e por dia — nos grupos peito, ombros, costas e pernas.
           Quanto maior o VTC, mais forte foi o desempenho recente na linhagem.
         </p>
       </header>
 
-      <div
-        className="mt-4 grid grid-cols-3 gap-1.5 sm:grid-cols-5 sm:gap-2"
-        role="tablist"
-        aria-label="Filtrar ranking por grupo muscular"
-      >
+      <div className={`mt-4 ${COMUNIDADE_TAB_LIST}`} role="tablist" aria-label="Filtrar ranking por grupo muscular">
         {TABS.map(({ key, label }) => {
           const selected = activeTab === key;
           return (
@@ -126,7 +128,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               role="tab"
               aria-selected={selected}
               onClick={() => setActiveTab(key)}
-              className={`min-h-11 rounded-full border px-2 text-[9px] font-bold uppercase tracking-[0.1em] transition-colors sm:px-3 sm:text-[10px] sm:tracking-[0.14em] ${
+              className={`${COMUNIDADE_TAB_BUTTON} ${
                 selected
                   ? "border-violet-400/40 bg-violet-950/40 text-violet-100"
                   : "border-neutral-800 bg-neutral-950/60 text-neutral-500"
@@ -145,7 +147,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
           <EmptyState message="Sem dados nesta janela — regista treinos para entrar no ranking." />
         </div>
       ) : (
-        <ul className="mt-4 max-h-[min(28rem,60vh)] space-y-2 overflow-y-auto overscroll-contain pr-0.5">
+        <ul className={`mt-4 ${COMUNIDADE_LIST_SCROLL}`}>
           {activeList.map((entry) => (
             <RankingRow
               key={`${activeTab}-${entry.atleta_id}`}

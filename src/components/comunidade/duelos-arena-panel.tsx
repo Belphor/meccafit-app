@@ -1,5 +1,6 @@
 "use client";
 
+import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import type {
   CampeoesCinturao,
@@ -95,7 +96,7 @@ export function DuelosArenaPanel({
 
   return (
     <section
-      className="rounded-2xl border border-fuchsia-500/15 bg-gradient-to-br from-neutral-950/95 via-fuchsia-950/10 to-neutral-950/95 p-4 sm:p-5"
+      className={`${COMUNIDADE_PANEL} border-fuchsia-500/15 bg-gradient-to-br from-neutral-950/95 via-fuchsia-950/10 to-neutral-950/95`}
       aria-label="Arena de duelos de supergrupos"
     >
       <header>
@@ -110,7 +111,7 @@ export function DuelosArenaPanel({
         </p>
       </header>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-2 min-[360px]:grid-cols-2">
         <CampeaoCinturaoCard
           tipo="SUPERIORES"
           campeaoId={superioresId}

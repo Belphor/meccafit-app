@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { ComunidadeEvolutionStatus } from "@/components/comunidade/comunidade-evolution-status";
+import {
+  COMUNIDADE_NAV,
+  COMUNIDADE_NAV_LINK,
+  COMUNIDADE_SCROLL_MT,
+} from "@/components/comunidade/comunidade-layout";
+import { ComunidadeMuralPanel } from "@/components/comunidade/comunidade-mural-panel";
 import { ComunidadeTitulosPanel } from "@/components/comunidade/comunidade-titulos-panel";
 import { DuelosArenaPanel } from "@/components/comunidade/duelos-arena-panel";
 import { MetaColetivaTermometro } from "@/components/comunidade/meta-coletiva-termometro";
 import { RankingsThothPanel } from "@/components/comunidade/rankings-por-membro-panel";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
-import { ComunidadeMuralPanel } from "@/components/comunidade/comunidade-mural-panel";
 import {
   fetchComunidadeArenaSnapshot,
   type ComunidadeArenaSnapshot,
@@ -91,15 +96,18 @@ export function ComunidadePageClient({
     <BrasaVivaCard
       as="section"
       variant="treino"
-      className={`${DASHBOARD_PANEL_FRAME} overflow-x-hidden`}
+      className={`${DASHBOARD_PANEL_FRAME} max-w-full overflow-x-hidden`}
       aria-labelledby="comunidade-page-title"
     >
       <DashboardPanelHeader chip="Comunidade" meta="Arena cooperativa" />
 
       <div className="mt-3 border-b border-orange-500/10 pb-3 sm:mt-4 sm:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h2 id="comunidade-page-title" className={DASHBOARD_SECTION_TITLE}>
+          <div className="min-w-0 flex-1">
+            <h2
+              id="comunidade-page-title"
+              className={`${DASHBOARD_SECTION_TITLE} text-balance leading-tight`}
+            >
               Conquistas & Ascensão
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
@@ -110,30 +118,23 @@ export function ComunidadePageClient({
             type="button"
             onClick={() => void loadAll()}
             disabled={arenaLoading || evolutionLoading}
-            className="min-h-11 w-full shrink-0 rounded-full border border-orange-500/25 px-4 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200/90 disabled:opacity-50 sm:w-auto"
+            className="min-h-11 w-full shrink-0 rounded-full border border-orange-500/25 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90 disabled:opacity-50 sm:w-auto sm:min-w-[7.5rem]"
           >
             Actualizar
           </button>
         </div>
 
-        <nav
-          className="mt-4 grid grid-cols-5 gap-1 sm:mx-auto sm:max-w-lg sm:gap-2"
-          aria-label="Secções da comunidade"
-        >
+        <nav className={COMUNIDADE_NAV} aria-label="Secções da comunidade">
           {SECTION_NAV.map(({ id, label }) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              className="flex min-h-10 items-center justify-center rounded-full border border-neutral-800/90 bg-neutral-950/70 px-0.5 text-center text-[9px] font-bold uppercase leading-tight tracking-[0.06em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90 min-[380px]:text-[10px] min-[380px]:tracking-[0.1em] sm:min-h-11 sm:px-2 sm:text-[11px]"
-            >
+            <a key={id} href={`#${id}`} className={COMUNIDADE_NAV_LINK}>
               {label}
             </a>
           ))}
         </nav>
       </div>
 
-      <div className="mt-4 space-y-5 sm:mt-6 sm:space-y-7">
-        <div id="comunidade-perfil" className="scroll-mt-20 sm:scroll-mt-24">
+      <div className="mt-4 space-y-4 xs:space-y-5 sm:mt-6 sm:space-y-7">
+        <div id="comunidade-perfil" className={COMUNIDADE_SCROLL_MT}>
           <ComunidadeEvolutionStatus
             evolution={evolution}
             loading={evolutionLoading}
@@ -148,11 +149,11 @@ export function ComunidadePageClient({
           </p>
         ) : null}
 
-        <div id="comunidade-arena" className="scroll-mt-20 space-y-3 sm:scroll-mt-24 sm:space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-600">
+        <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} space-y-3 sm:space-y-4`}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-600 sm:tracking-[0.2em]">
             Arena · meta e duelos
           </p>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 xs:gap-4 md:grid-cols-2">
             <MetaColetivaTermometro
               meta={meta}
               mesReferencia={arena?.mes_referencia}
@@ -171,7 +172,7 @@ export function ComunidadePageClient({
           </div>
         </div>
 
-        <div id="comunidade-titulos" className="scroll-mt-20 sm:scroll-mt-24">
+        <div id="comunidade-titulos" className={COMUNIDADE_SCROLL_MT}>
           <ComunidadeTitulosPanel
             reisChamas={reisChamas}
             pilares={pilares}
@@ -181,7 +182,7 @@ export function ComunidadePageClient({
           />
         </div>
 
-        <div id="comunidade-rankings" className="scroll-mt-20 sm:scroll-mt-24">
+        <div id="comunidade-rankings" className={COMUNIDADE_SCROLL_MT}>
           <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading} />
         </div>
 

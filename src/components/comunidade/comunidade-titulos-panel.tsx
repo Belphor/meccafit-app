@@ -1,5 +1,6 @@
 "use client";
 
+import { COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
   IRIS_BORDER_CINTURAO,
@@ -56,9 +57,8 @@ function TituloCard({
 
   return (
     <li
-      className={`flex min-h-[4.5rem] items-center gap-3 rounded-xl border bg-neutral-950/50 px-3 py-3 sm:px-4 ${
-        pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
-      }`}
+      className={`flex min-h-[4.5rem] items-center gap-3 rounded-xl border bg-neutral-950/50 px-3 py-3 sm:px-4 ${pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
+        }`}
     >
       <PlutusAvatar name={nome} size="md" {...flags} />
       <div className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function ComunidadeTitulosPanel({
 
   return (
     <section
-      className="rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-950/95 via-neutral-900/20 to-neutral-950/95 p-4 sm:p-5"
+      className={`${COMUNIDADE_PANEL} border-white/10 bg-gradient-to-br from-neutral-950/95 via-neutral-900/20 to-neutral-950/95`}
       aria-label="Títulos mensais da arena"
     >
       <header>
@@ -128,7 +128,7 @@ export function ComunidadeTitulosPanel({
           Conquistas do mês na academia
         </h3>
         <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-          Dois Reis das Chamas por faixa, três Pilares no termómetro e cinturões de duelo em
+          Dois Reis das Chamas por faixa, Três Pilares no termómetro e Cinturões de duelo em
           paralelo.
         </p>
       </header>
@@ -163,7 +163,7 @@ export function ComunidadeTitulosPanel({
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFD700]/90">
               Pilares cooperativos · Top 3
             </p>
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 lg:grid-cols-3">
               {pilaresSlots.map((pilar, index) =>
                 pilar ? (
                   <TituloCard

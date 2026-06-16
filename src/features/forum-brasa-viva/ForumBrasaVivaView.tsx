@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { COMUNIDADE_LIST_SCROLL } from "@/components/comunidade/comunidade-layout";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
@@ -142,7 +143,7 @@ export function ForumBrasaVivaView({
         </p>
       ) : (
         <ul
-          className={`${embedMode ? "mt-3 max-h-[min(32rem,65vh)] space-y-3 overflow-y-auto overscroll-contain pr-0.5" : `mt-6 ${DASHBOARD_MURAL_LIST}`}`}
+          className={`${embedMode ? `mt-3 space-y-3 ${COMUNIDADE_LIST_SCROLL}` : `mt-6 ${DASHBOARD_MURAL_LIST}`}`}
         >
           {topics.map((topic) => (
             <li key={topic.id}>

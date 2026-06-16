@@ -28,12 +28,12 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
     <article
       className={
         isComunidade
-          ? "forum-post-card rounded-2xl border border-amber-500/20 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90 p-4 shadow-[inset_0_1px_0_rgba(251,191,36,0.08)] backdrop-blur-sm sm:p-4"
+          ? "forum-post-card rounded-2xl border border-amber-500/20 bg-gradient-to-br from-neutral-950/90 via-amber-950/10 to-neutral-950/90 p-3.5 shadow-[inset_0_1px_0_rgba(251,191,36,0.08)] backdrop-blur-sm xs:p-4"
           : "forum-post-card rounded-[1.35rem] border border-orange-500/12 bg-neutral-950/55 p-4 backdrop-blur-md"
       }
     >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
+      <header className="flex flex-col gap-2 xs:flex-row xs:items-start xs:justify-between xs:gap-3">
+        <div className="flex min-w-0 items-start gap-2.5 xs:gap-3">
           <MuralAuthorAvatar
             authorName={topic.authorName}
             temCinturaoDuelo={topic.temCinturaoDuelo}
@@ -50,7 +50,7 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
             ) : null}
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className="flex w-full items-center justify-between gap-2 xs:w-auto xs:flex-col xs:items-end xs:gap-1.5">
           {isComunidade ? (
             <span className="rounded-full border border-emerald-500/25 bg-emerald-950/30 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-emerald-200/90">
               Recorde
@@ -66,12 +66,12 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
       </header>
 
       <h3
-        className={`${DASHBOARD_ITEM_NAME} mt-3 text-left ${isComunidade ? "text-amber-50/95" : ""}`}
+        className={`${DASHBOARD_ITEM_NAME} mt-3 text-left text-balance ${isComunidade ? "text-sm text-amber-50/95 xs:text-base" : ""}`}
       >
         {topic.title}
       </h3>
       <p
-        className={`mt-2 text-[11px] leading-relaxed sm:text-[12px] ${
+        className={`mt-2 text-balance text-[10px] leading-relaxed xs:text-[11px] sm:text-[12px] ${
           isComunidade ? "text-neutral-300" : "text-neutral-400"
         }`}
       >
