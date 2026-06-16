@@ -1,5 +1,6 @@
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
 import { mapCommunityMuralRowsToPosts, type CommunityMuralRow } from "@/lib/dashboard-data";
+import { muralBodyForExercise, resolveMuralTopicBody } from "@/lib/mural-copy";
 import type {
   ForumBrasaVivaRpcRow,
   ForumBrasaVivaTopic,
@@ -16,34 +17,30 @@ function normalizeWeight(value: unknown): number {
 }
 
 function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
+  const title = row.topic_title?.trim() || "Ascensão no altar";
+  const weightKg = normalizeWeight(row.peso);
+
   return {
     id: `forum-${row.id}`,
-    title: row.topic_title?.trim() || "Tópico Brasa-Viva",
-    body:
-      row.topic_body?.trim() ||
-      muralBodyForExercise(row.topic_title?.trim() || "treino"),
+    title,
+    body: resolveMuralTopicBody(row.topic_body, title, weightKg),
     authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
     authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
     isReiDasChamas: Boolean(row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas),
     isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
-    weightKg: normalizeWeight(row.peso),
+    weightKg,
     series: Math.max(1, Number(row.series) || 1),
     createdAt: row.registrado_em ?? new Date().toISOString(),
   };
-}
-
-function muralBodyForExercise(exerciseName: string): string {
-  const nome = exerciseName.trim() || "treino";
-  return `Bateu o recorde pessoal no ${nome} — cada vitória aquece a chama da linhagem.`;
 }
 
 function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] {
   return mapCommunityMuralRowsToPosts(rows).map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: muralBodyForExercise(post.exerciseName),
+    body: muralBodyForExercise(post.exerciseName, post.weight),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
@@ -105,7 +102,7 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
   return posts.map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: muralBodyForExercise(post.exerciseName),
+    body: muralBodyForExercise(post.exerciseName, post.weight),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",

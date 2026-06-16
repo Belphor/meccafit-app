@@ -92,8 +92,8 @@ export function ForumBrasaVivaView({
             Fórum Brasa-Viva
           </h2>
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
-            Tópicos de ascensão da linhagem — superações validadas por ARGOS. Forjadores soberanos
-            observam, mas não competem neste fórum.
+            Tópicos de ascensão da linhagem — cada recorde pessoal publicado inspira a comunidade.
+            Forjadores soberanos observam, mas não competem neste fórum.
           </p>
         </>
       ) : null}
@@ -109,9 +109,13 @@ export function ForumBrasaVivaView({
       ) : null}
 
       {loading ? (
-        <p className={`${DASHBOARD_EMPTY_STATE} animate-pulse`}>Acendendo o fórum...</p>
+        <p
+          className={`${embedMode ? "mt-3 rounded-xl border border-dashed border-amber-500/15 bg-black/20 px-4 py-6 text-center text-[11px] text-neutral-500" : DASHBOARD_EMPTY_STATE} animate-pulse`}
+        >
+          {embedMode ? "A carregar vitórias da linhagem…" : "Acendendo o fórum..."}
+        </p>
       ) : error ? (
-        <div className={DASHBOARD_EMPTY_STATE}>
+        <div className={embedMode ? "mt-3 rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-4 text-center text-[11px] text-amber-200/90" : DASHBOARD_EMPTY_STATE}>
           <p>{error}</p>
           <button
             type="button"
@@ -125,15 +129,24 @@ export function ForumBrasaVivaView({
           </button>
         </div>
       ) : topics.length === 0 ? (
-        <p className={DASHBOARD_EMPTY_STATE}>
-          Nenhum tópico aceso ainda. Supere seu recorde histórico para publicar no Fórum
-          Brasa-Viva.
+        <p
+          className={
+            embedMode
+              ? "mt-3 rounded-xl border border-dashed border-amber-500/20 bg-black/20 px-4 py-6 text-center text-[11px] leading-relaxed text-neutral-500"
+              : DASHBOARD_EMPTY_STATE
+          }
+        >
+          {embedMode
+            ? "Ainda não há superações no mural. Bate o teu recorde no treino para a linhagem ver a tua ascensão."
+            : "Nenhum tópico aceso ainda. Supere seu recorde histórico para publicar no Fórum Brasa-Viva."}
         </p>
       ) : (
-        <ul className={`${embedMode ? "mt-2" : "mt-6"} ${DASHBOARD_MURAL_LIST}`}>
+        <ul
+          className={`${embedMode ? "mt-3 max-h-[min(32rem,65vh)] space-y-3 overflow-y-auto overscroll-contain pr-0.5" : `mt-6 ${DASHBOARD_MURAL_LIST}`}`}
+        >
           {topics.map((topic) => (
             <li key={topic.id}>
-              <ForumPostCard topic={topic} />
+              <ForumPostCard topic={topic} variant={embedMode ? "comunidade" : "default"} />
             </li>
           ))}
         </ul>

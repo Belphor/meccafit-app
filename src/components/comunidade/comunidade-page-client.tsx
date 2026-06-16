@@ -9,7 +9,7 @@ import { MetaColetivaTermometro } from "@/components/comunidade/meta-coletiva-te
 import { RankingsThothPanel } from "@/components/comunidade/rankings-por-membro-panel";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
-import { ForumBrasaVivaView } from "@/features/forum-brasa-viva/ForumBrasaVivaView";
+import { ComunidadeMuralPanel } from "@/components/comunidade/comunidade-mural-panel";
 import {
   fetchComunidadeArenaSnapshot,
   type ComunidadeArenaSnapshot,
@@ -43,9 +43,6 @@ const SECTION_NAV = [
   { id: "comunidade-rankings", label: "Rankings" },
   { id: "comunidade-mural", label: "Mural" },
 ] as const;
-
-const SECTION_CARD =
-  "rounded-2xl border border-white/10 bg-gradient-to-br from-neutral-950/95 via-neutral-900/15 to-neutral-950/95";
 
 export function ComunidadePageClient({
   userId,
@@ -188,29 +185,7 @@ export function ComunidadePageClient({
           <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading} />
         </div>
 
-        <section
-          id="comunidade-mural"
-          className={`${SECTION_CARD} scroll-mt-20 p-4 sm:scroll-mt-24 sm:p-5`}
-        >
-          <header className="border-b border-orange-500/10 pb-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/75">
-              Mural da linhagem
-            </p>
-            <h3 className="mt-1 text-sm font-semibold text-amber-50/95 sm:text-base">
-              Vitórias partilhadas pela comunidade
-            </h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
-              Cada recorde pessoal aparece aqui para inspirar a academia — a força cresce quando a
-              linhagem vê a ascensão uns dos outros.
-            </p>
-          </header>
-          <ForumBrasaVivaView
-            userId={userId}
-            embedMode
-            phase={phase}
-            refreshKey={refreshToken}
-          />
-        </section>
+        <ComunidadeMuralPanel userId={userId} refreshKey={refreshToken} phase={phase} />
       </div>
     </BrasaVivaCard>
   );
