@@ -1,12 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 import {
-  buildDashboardHref,
+  DASHBOARD_TAB_CHANGE_EVENT,
+  readDashboardTabFromLocation,
+  syncDashboardTabToUrl,
+  type DashboardTabChangeDetail,
+} from "@/lib/dashboard-tab-navigation";
+import {
   DEFAULT_DASHBOARD_TAB,
-  normalizeDashboardTabParam,
   type DashboardTabId,
 } from "@/lib/dashboard-tabs";
 
@@ -17,20 +21,47 @@ const APP_TABS: { tab: DashboardTabId; label: string }[] = [
   { tab: "perfil", label: "Perfil" },
 ];
 
-function resolveActiveTab(searchParams: URLSearchParams): DashboardTabId {
-  return normalizeDashboardTabParam(searchParams.get("tab")) ?? DEFAULT_DASHBOARD_TAB;
-}
-
 export function FenyxiaAppNav() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const onDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  const [activeTab, setActiveTab] = useState<DashboardTabId>(DEFAULT_DASHBOARD_TAB);
+
+  useEffect(() => {
+    if (!onDashboard) return;
+
+    const syncFromLocation = () => {
+      setActiveTab(readDashboardTabFromLocation() ?? DEFAULT_DASHBOARD_TAB);
+    };
+
+    syncFromLocation();
+
+    const onTabChange = (event: Event) => {
+      const detail = (event as CustomEvent<DashboardTabChangeDetail>).detail;
+      if (detail?.tab) setActiveTab(detail.tab);
+    };
+
+    window.addEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+    window.addEventListener("popstate", syncFromLocation);
+
+    return () => {
+      window.removeEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+      window.removeEventListener("popstate", syncFromLocation);
+    };
+  }, [onDashboard]);
+
+  const handleTabPick = useCallback((tab: DashboardTabId) => {
+    setActiveTab(tab);
+    syncDashboardTabToUrl(tab, { dispatch: false });
+    window.dispatchEvent(
+      new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
+        detail: { tab },
+      }),
+    );
+  }, []);
 
   if (!onDashboard) {
     return null;
   }
-
-  const activeTab = resolveActiveTab(searchParams);
 
   return (
     <nav
@@ -43,8 +74,10 @@ export function FenyxiaAppNav() {
 
           return (
             <li key={item.tab} className="flex-1">
-              <Link
-                href={buildDashboardHref({ tab: item.tab })}
+              <button
+                type="button"
+                aria-current={isActive ? "page" : undefined}
+                onClick={() => handleTabPick(item.tab)}
                 className={`${DASHBOARD_TAP_TARGET} flex h-full w-full items-center justify-center rounded-xl border px-1 py-2.5 text-center transition-[border-color,background-color,color] duration-200 ${
                   isActive
                     ? "border-emerald-500/35 bg-emerald-950/25 text-emerald-100"
@@ -54,7 +87,7 @@ export function FenyxiaAppNav() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
                   {item.label}
                 </span>
-              </Link>
+              </button>
             </li>
           );
         })}

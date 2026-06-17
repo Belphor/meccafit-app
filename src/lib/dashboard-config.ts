@@ -247,7 +247,11 @@ export const DASHBOARD_TAB_CONTENT = "mt-4 sm:mt-6";
 
 /** Mantém painéis montados ao trocar aba (preserva estado · evita refetch) */
 export function dashboardTabPanelClass(isActive: boolean): string {
-  return isActive ? DASHBOARD_TAB_CONTENT : `${DASHBOARD_TAB_CONTENT} hidden`;
+  if (isActive) {
+    return `${DASHBOARD_TAB_CONTENT} block min-w-0 max-w-full`;
+  }
+
+  return `${DASHBOARD_TAB_CONTENT} hidden min-w-0 max-w-full overflow-hidden`;
 }
 
 export const DASHBOARD_EMPTY_STATE =

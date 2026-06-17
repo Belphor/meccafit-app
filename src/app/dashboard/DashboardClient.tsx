@@ -28,12 +28,17 @@ import {
   resolveSubgroupByCatalogId,
 } from "@/lib/treino-subgroup";
 import {
-  buildDashboardHref,
   DEFAULT_DASHBOARD_TAB,
   isDietaTabAllowed,
   resolveDashboardTabFromParam,
   type DashboardTabId,
 } from "@/lib/dashboard-tabs";
+import {
+  DASHBOARD_TAB_CHANGE_EVENT,
+  readDashboardTabFromLocation,
+  syncDashboardTabToUrl,
+  type DashboardTabChangeDetail,
+} from "@/lib/dashboard-tab-navigation";
 import {
   fetchCommunityMuralPosts,
   invalidateDashboardCaches,
@@ -173,6 +178,7 @@ export function DashboardClient({
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
   const [hasPersonalBond, setHasPersonalBond] = useState(false);
   const subgroupRef = useRef(subgroup);
+  const tabBootstrappedRef = useRef(false);
   const loadKey = `${reloadToken}`;
   const [trackedLoadKey, setTrackedLoadKey] = useState(loadKey);
   const [trackedUserId, setTrackedUserId] = useState(userId);
@@ -224,7 +230,6 @@ export function DashboardClient({
       setMuralPosts(bundle.data.muralPosts);
       setTrainingTrack(bundle.data.trainingTrack);
       setHasPersonalBond(bundle.data.hasPersonalBond);
-      setActiveTab(resolveDashboardTabFromParam(tabParam, bundle.data.hasPersonalBond));
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
         setLiveSessionVtcKg(thermal.session_vtc_today);
@@ -236,57 +241,73 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [forjadorPrescriptions, loadKey, subgroupParam, tabParam]);
+  }, [forjadorPrescriptions, loadKey, subgroupParam]);
 
-  useEffect(() => {
-    setVisitedTabs((current) => {
-      if (current.has(activeTab)) return current;
-      const next = new Set(current);
-      next.add(activeTab);
-      return next;
-    });
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (!dataReady) return;
-
-    if (tabParam === "dieta" && !hasPersonalBond) {
-      setActiveTab(DEFAULT_DASHBOARD_TAB);
-      router.replace(
-        buildDashboardHref({
-          subgrupo: subgroupParam,
-          tab: DEFAULT_DASHBOARD_TAB,
-        }),
-      );
-      return;
-    }
-
-    const resolvedTab = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
-    setActiveTab((current) => (current === resolvedTab ? current : resolvedTab));
-  }, [dataReady, hasPersonalBond, router, subgroupParam, tabParam]);
-
-  const handleTabChange = useCallback(
+  const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
       if (!isDietaTabAllowed(hasPersonalBond, tab)) {
         setActiveTab(DEFAULT_DASHBOARD_TAB);
-        router.replace(
-          buildDashboardHref({
-            subgrupo: subgroupParam,
-            tab: DEFAULT_DASHBOARD_TAB,
-          }),
-        );
         return;
       }
 
       setActiveTab(tab);
-      router.replace(
-        buildDashboardHref({
-          subgrupo: subgroupParam,
-          tab,
+      setVisitedTabs((current) => {
+        if (current.has(tab)) return current;
+        const next = new Set(current);
+        next.add(tab);
+        return next;
+      });
+    },
+    [hasPersonalBond],
+  );
+
+  useEffect(() => {
+    if (!dataReady || tabBootstrappedRef.current) return;
+
+    tabBootstrappedRef.current = true;
+    const resolved = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
+    applyDashboardTab(resolved);
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add(DEFAULT_DASHBOARD_TAB);
+      next.add(resolved);
+      return next;
+    });
+  }, [applyDashboardTab, dataReady, hasPersonalBond, tabParam]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    const onTabChange = (event: Event) => {
+      const detail = (event as CustomEvent<DashboardTabChangeDetail>).detail;
+      if (detail?.tab) applyDashboardTab(detail.tab);
+    };
+
+    const onPopState = () => {
+      const tab = readDashboardTabFromLocation();
+      if (tab) applyDashboardTab(tab);
+    };
+
+    window.addEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+    window.addEventListener("popstate", onPopState);
+
+    return () => {
+      window.removeEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [applyDashboardTab, dataReady]);
+
+  const handleTabChange = useCallback(
+    (tab: DashboardTabId) => {
+      applyDashboardTab(tab);
+      syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
+      window.dispatchEvent(
+        new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
+          detail: { tab: isDietaTabAllowed(hasPersonalBond, tab) ? tab : DEFAULT_DASHBOARD_TAB },
         }),
       );
     },
-    [hasPersonalBond, router, subgroupParam],
+    [applyDashboardTab, hasPersonalBond, subgroupParam],
   );
 
   const handleSignOut = useCallback(async () => {
