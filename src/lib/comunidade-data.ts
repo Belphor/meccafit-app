@@ -52,10 +52,20 @@ export type RankingVtcEntry = ComunidadeTitulos & {
   vtc_grupo: number;
 };
 
+export type RankingsVtcFaixa = {
+  superiores: RankingVtcEntry[];
+  inferiores: RankingVtcEntry[];
+};
+
 export type RankingsThoth = {
-  janela_dias: number;
+  janela_tipo?: "mensal";
+  mes_referencia?: string;
   janela_inicio: string;
+  janela_fim?: string;
+  /** @deprecated rankings passaram a ser mensais */
+  janela_dias?: number;
   vtc_global: RankingVtcEntry[];
+  vtc_faixa?: RankingsVtcFaixa;
   vtc_por_membro: {
     peito: RankingVtcEntry[];
     ombros: RankingVtcEntry[];
@@ -154,10 +164,31 @@ function parseRankingsThoth(payload: unknown): RankingsThoth | null {
         .filter((entry): entry is RankingVtcEntry => entry !== null)
     : [];
 
+  const faixaRaw = row.vtc_faixa;
+  const faixaObj =
+    faixaRaw && typeof faixaRaw === "object" && !Array.isArray(faixaRaw)
+      ? (faixaRaw as Record<string, unknown>)
+      : null;
+  const mapFaixaList = (key: string) =>
+    faixaObj && Array.isArray(faixaObj[key])
+      ? (faixaObj[key] as unknown[])
+          .map(parseVtcEntry)
+          .filter((entry): entry is RankingVtcEntry => entry !== null)
+      : [];
+
   return {
-    janela_dias: Number(row.janela_dias ?? 14),
+    janela_tipo: row.janela_tipo === "mensal" ? "mensal" : undefined,
+    mes_referencia: row.mes_referencia ? String(row.mes_referencia) : undefined,
     janela_inicio: String(row.janela_inicio ?? ""),
+    janela_fim: row.janela_fim ? String(row.janela_fim) : undefined,
+    janela_dias: row.janela_dias !== undefined ? Number(row.janela_dias) : undefined,
     vtc_global: vtcGlobal,
+    vtc_faixa: faixaObj
+      ? {
+          superiores: mapFaixaList("superiores"),
+          inferiores: mapFaixaList("inferiores"),
+        }
+      : undefined,
     vtc_por_membro: {
       peito: mapList("peito"),
       ombros: mapList("ombros"),

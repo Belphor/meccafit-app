@@ -2,7 +2,7 @@
  * Seed · Ranking Top 10 VTC (Comunidade)
  *
  * Cria atleta5–atleta10 e popula historico_cargas para 10 clientes
- * (cliente + atleta2…atleta10) com VTC global distinto na janela de 14 dias.
+ * (cliente + atleta2…atleta10) com VTC global distinto no mês atual.
  *
  * Pré-requisito: npm run seed:test-users (ou este script cria atleta5–10)
  * Uso: npm run seed:ranking-top10
@@ -195,7 +195,7 @@ try {
   }
   console.log(`  OK · ${athleteIds.length} planos`);
 
-  console.log("\n3. historico_cargas · VTC 14d");
+  console.log("\n3. historico_cargas · VTC mensal");
   await clearRankingCargas();
 
   for (let index = 0; index < RANKING_SEEDS.length; index++) {

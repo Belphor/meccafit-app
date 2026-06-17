@@ -17,18 +17,27 @@ type RankingsThothPanelProps = {
   loading?: boolean;
 };
 
-type TabKey = "global" | "peito" | "ombros" | "costas" | "pernas";
+type TabKey = "superiores" | "pernas" | "global" | "peito" | "ombros" | "costas";
 
-const TABS: { key: TabKey; label: string }[] = [
+const TABS: { key: TabKey; label: string; rei?: boolean }[] = [
+  { key: "superiores", label: "Superiores", rei: true },
+  { key: "pernas", label: "Pernas", rei: true },
   { key: "global", label: "Global" },
   { key: "peito", label: "Peito" },
   { key: "ombros", label: "Ombros" },
   { key: "costas", label: "Costas" },
-  { key: "pernas", label: "Pernas" },
 ];
 
 function formatVtc(value: number): string {
   return Math.round(value).toLocaleString("pt-BR");
+}
+
+function formatMesReferencia(value?: string): string {
+  if (!value) return "mês atual";
+  const [year, month] = value.split("-");
+  if (!year || !month) return "mês atual";
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
 function RankingRow({
@@ -36,28 +45,33 @@ function RankingRow({
   userId,
   metricLabel,
   metricValue,
+  isReiSlot = false,
 }: {
   entry: RankingVtcEntry;
   userId: string;
   metricLabel: string;
   metricValue: number;
+  isReiSlot?: boolean;
 }) {
   const isSelf = entry.atleta_id === userId;
   const isPodium = entry.posicao <= 3;
+  const isReiLeader = isReiSlot && entry.posicao === 1;
 
   return (
     <li
       className={`flex min-h-11 items-center gap-2 rounded-xl border px-2 py-2 xs:gap-2.5 xs:px-2.5 sm:gap-3 sm:px-3 ${
-        isSelf
-          ? "border-amber-500/35 bg-amber-950/20"
-          : isPodium
-            ? "border-violet-500/20 bg-violet-950/10"
-            : "border-neutral-800/80 bg-neutral-950/50"
+        isReiLeader
+          ? "border-violet-400/35 bg-violet-950/25"
+          : isSelf
+            ? "border-amber-500/35 bg-amber-950/20"
+            : isPodium
+              ? "border-violet-500/20 bg-violet-950/10"
+              : "border-neutral-800/80 bg-neutral-950/50"
       }`}
     >
       <span
         className={`w-6 shrink-0 text-center font-mono text-[10px] font-bold tabular-nums xs:w-7 xs:text-[11px] ${
-          isPodium ? "text-violet-200" : "text-amber-200/80"
+          isReiLeader ? "text-violet-100" : isPodium ? "text-violet-200" : "text-amber-200/80"
         }`}
       >
         {entry.posicao}
@@ -72,6 +86,11 @@ function RankingRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[10px] font-medium text-neutral-200 xs:text-[11px]">
           {isSelf ? "Tu" : entry.atleta_nome}
+          {isReiLeader ? (
+            <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-violet-300/90">
+              · líder Rei
+            </span>
+          ) : null}
         </p>
         <p className="truncate font-mono text-[9px] tabular-nums text-neutral-500 xs:text-[10px]">
           {formatVtc(metricValue)} kg · {metricLabel}
@@ -89,16 +108,31 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-export function RankingsThothPanel({ rankings, userId, loading = false }: RankingsThothPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("global");
+function resolveActiveList(rankings: RankingsThoth | null, activeTab: TabKey): RankingVtcEntry[] {
+  if (!rankings) return [];
 
-  const activeList: RankingVtcEntry[] =
-    activeTab === "global"
-      ? (rankings?.vtc_global ?? [])
-      : (rankings?.vtc_por_membro[activeTab] ?? []);
+  if (activeTab === "global") return rankings.vtc_global;
+  if (activeTab === "superiores") return rankings.vtc_faixa?.superiores ?? [];
+  if (activeTab === "pernas") return rankings.vtc_faixa?.inferiores ?? rankings.vtc_por_membro.pernas;
+  return rankings.vtc_por_membro[activeTab] ?? [];
+}
+
+export function RankingsThothPanel({ rankings, userId, loading = false }: RankingsThothPanelProps) {
+  const [activeTab, setActiveTab] = useState<TabKey>("superiores");
+
+  const activeList = resolveActiveList(rankings, activeTab);
+  const mesLabel = formatMesReferencia(rankings?.mes_referencia);
 
   const activeLabel =
-    activeTab === "global" ? "VTC total" : `VTC ${TABS.find((t) => t.key === activeTab)?.label.toLowerCase()}`;
+    activeTab === "global"
+      ? "VTC total"
+      : activeTab === "superiores"
+        ? "VTC superiores"
+        : activeTab === "pernas"
+          ? "VTC pernas"
+          : `VTC ${TABS.find((t) => t.key === activeTab)?.label.toLowerCase()}`;
+
+  const isReiTab = activeTab === "superiores" || activeTab === "pernas";
 
   return (
     <section
@@ -110,17 +144,19 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
           Rankings
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
-          Top 10 VTC · Últimos 14 dias
+          Top 10 VTC · {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos que
-          cada atleta levantou por exercício e por dia — nos grupos peito, ombros, costas e pernas.
-          Quanto maior o VTC, mais forte foi o desempenho recente na linhagem.
+          <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos por
+          exercício e por dia no mês. No fecho mensal, o #1 em{" "}
+          <span className="font-medium text-neutral-300">Superiores</span> e o #1 em{" "}
+          <span className="font-medium text-neutral-300">Pernas</span> viram Rei das Chamas no mês
+          seguinte.
         </p>
       </header>
 
       <div className={`mt-4 ${COMUNIDADE_TAB_LIST}`} role="tablist" aria-label="Filtrar ranking por grupo muscular">
-        {TABS.map(({ key, label }) => {
+        {TABS.map(({ key, label, rei }) => {
           const selected = activeTab === key;
           return (
             <button
@@ -136,6 +172,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               }`}
             >
               {label}
+              {rei ? " · Rei" : ""}
             </button>
           );
         })}
@@ -145,7 +182,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
         <div className="mt-4 h-40 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
       ) : activeList.length === 0 ? (
         <div className="mt-4">
-          <EmptyState message="Sem dados nesta janela — regista treinos para entrar no ranking." />
+          <EmptyState message="Sem dados neste mês — regista treinos para entrar no ranking." />
         </div>
       ) : (
         <ul className={`mt-4 ${COMUNIDADE_LIST_SCROLL}`}>
@@ -155,7 +192,10 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               entry={entry}
               userId={userId}
               metricLabel={activeLabel}
-              metricValue={activeTab === "global" ? entry.vtc_total : entry.vtc_grupo}
+              metricValue={
+                activeTab === "global" ? entry.vtc_total : entry.vtc_grupo || entry.vtc_total
+              }
+              isReiSlot={isReiTab}
             />
           ))}
         </ul>

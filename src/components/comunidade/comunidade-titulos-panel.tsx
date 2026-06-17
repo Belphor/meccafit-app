@@ -81,7 +81,7 @@ function IrisLegend() {
     {
       color: IRIS_BORDER_REI_CHAMAS,
       label: "Rei das Chamas",
-      detail: "Superiores ou Inferiores · Top 1 pico mensal",
+      detail: "Superiores ou Inferiores · #1 VTC mensal no fecho",
     },
     { color: IRIS_BORDER_PILAR_COOP, label: "Pilar cooperativo", detail: "Top 3 no termómetro" },
   ];
@@ -132,8 +132,8 @@ export function ComunidadeTitulosPanel({
           Conquistas do mês na academia
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Dois Reis das Chamas por faixa, Três Pilares no termómetro e Cinturões de duelo em
-          paralelo.
+          Reis das Chamas vêm do ranking mensal: #1 Superiores e #1 Pernas no fecho. Pilares e
+          cinturões seguem regras próprias.
         </p>
       </header>
 
@@ -143,7 +143,7 @@ export function ComunidadeTitulosPanel({
         <div className="mt-4 space-y-4">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/85">
-              Reis das Chamas · 2 faixas
+              Reis das Chamas · VTC mensal · 2 faixas
             </p>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <TituloCard
