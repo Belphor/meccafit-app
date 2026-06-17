@@ -88,7 +88,7 @@ function RankingRow({
           {isSelf ? "Tu" : entry.atleta_nome}
           {isReiLeader ? (
             <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-violet-300/90">
-              · líder Rei
+              · líder para Rei
             </span>
           ) : null}
         </p>
@@ -144,14 +144,14 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
           Rankings
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
-          Top 10 VTC · {mesLabel}
+          Classificação de {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          <span className="font-medium text-neutral-400">VTC</span> é a soma dos maiores pesos por
-          exercício e por dia no mês. No fecho mensal, o #1 em{" "}
-          <span className="font-medium text-neutral-300">Superiores</span> e o #1 em{" "}
-          <span className="font-medium text-neutral-300">Pernas</span> viram Rei das Chamas no mês
-          seguinte.
+          <span className="font-medium text-neutral-300">VTC</span> = soma dos teus melhores pesos
+          por exercício e por dia neste mês. Quem ficar em 1.º em{" "}
+          <span className="font-medium text-neutral-300">Superiores</span> ou{" "}
+          <span className="font-medium text-neutral-300">Pernas</span> no fecho torna-se Rei das
+          Chamas no mês seguinte.
         </p>
       </header>
 
@@ -172,7 +172,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               }`}
             >
               {label}
-              {rei ? " · Rei" : ""}
+              {rei ? " · define Rei" : ""}
             </button>
           );
         })}
@@ -182,7 +182,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
         <div className="mt-4 h-40 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
       ) : activeList.length === 0 ? (
         <div className="mt-4">
-          <EmptyState message="Sem dados neste mês — regista treinos para entrar no ranking." />
+          <EmptyState message="Ainda não há dados neste mês. Regista treinos com peso para entrares na classificação." />
         </div>
       ) : (
         <ul className={`mt-4 ${COMUNIDADE_LIST_SCROLL}`}>

@@ -27,7 +27,7 @@ export function MetaColetivaTermometro({
             Termómetro coletivo
           </p>
           <h3 className="mt-1 text-balance text-sm font-semibold text-amber-50/95 sm:text-base">
-            Meta de tonelagem do mês
+            Quanto a linhagem levantou este mês
           </h3>
         </div>
         {mesReferencia ? (
@@ -63,8 +63,9 @@ export function MetaColetivaTermometro({
         </div>
 
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Soma dos maiores pesos levantados por todos neste mês. Quanto mais a linhagem treina com
-          força, mais rápido o termómetro sobe, e os Três Pilares saem no Top 3 no fecho mensal.
+          Cada treino com peso soma para a meta comum da academia. Quanto mais treinamos, mais a
+          barra enche. No fim do mês, os três atletas que mais contribuíram tornam-se{" "}
+          <span className="font-medium text-neutral-300">Pilares cooperativos</span>.
         </p>
       </div>
     </section>

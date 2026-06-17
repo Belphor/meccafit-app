@@ -104,10 +104,11 @@ export function DuelosArenaPanel({
           Duelos · Cinturões
         </p>
         <h3 className="mt-1 text-sm font-semibold text-fuchsia-50/95 sm:text-base">
-          Até dois campeões em paralelo
+          Desafia alguém pelo cinturão
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Um cinturão por faixa — superiores e inferiores não se anulam.
+          Duelo rápido 1 contra 1: quem somar mais pontos (peso × repetições) na faixa ganha. O
+          cinturão fica contigo até outra pessoa vencer-te num duelo — não expira no fim do mês.
         </p>
       </header>
 
@@ -131,7 +132,8 @@ export function DuelosArenaPanel({
           <div className="h-20 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
         ) : duelos.length === 0 ? (
           <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[11px] leading-relaxed text-neutral-500">
-            Sem duelos activos — desafia um atleta para disputar o cinturão da faixa.
+            Nenhum duelo a decorrer. Desafia um atleta da mesma faixa (superiores ou pernas) para
+            disputar o cinturão.
           </p>
         ) : (
           duelos.map((duelo) => {
@@ -200,8 +202,8 @@ export function DuelosArenaPanel({
                     />
                   </div>
                   <div className="mt-1 flex justify-between font-mono text-[10px] tabular-nums text-neutral-500">
-                    <span>{Math.round(duelo.vtc_desafiante)} kg</span>
-                    <span>{Math.round(duelo.vtc_desafiado)} kg</span>
+                    <span>{Math.round(duelo.vtc_desafiante)} pts</span>
+                    <span>{Math.round(duelo.vtc_desafiado)} pts</span>
                   </div>
                 </div>
               </article>

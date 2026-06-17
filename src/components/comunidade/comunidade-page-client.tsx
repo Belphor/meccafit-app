@@ -113,7 +113,8 @@ export function ComunidadePageClient({
               Conquistas & Ascensão
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
-              Acompanha a tua evolução, a meta da academia, duelos, títulos e o mural da linhagem.
+              Três formas de te destacares: ajuda a academia no termómetro, sobe no ranking mensal
+              para ser Rei, ou ganha duelos pelo cinturão.
             </p>
           </div>
           <button
@@ -152,7 +153,7 @@ export function ComunidadePageClient({
         ) : null}
 
         <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}>
-          <p className={COMUNIDADE_SECTION_LABEL}>Arena · meta e duelos</p>
+          <p className={COMUNIDADE_SECTION_LABEL}>Arena · termómetro colectivo e duelos</p>
           <div className="grid grid-cols-1 gap-3 xs:gap-4 lg:grid-cols-2 lg:items-start">
             <MetaColetivaTermometro
               meta={meta}

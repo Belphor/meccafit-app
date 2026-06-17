@@ -77,19 +77,27 @@ function TituloCard({
 
 function IrisLegend() {
   const items = [
-    { color: IRIS_BORDER_CINTURAO, label: "Cinturão duelo", detail: "1 por faixa · até perder" },
+    {
+      color: IRIS_BORDER_CINTURAO,
+      label: "Rosa · Cinturão",
+      detail: "Ganhaste um duelo e manténs o título até perderes",
+    },
     {
       color: IRIS_BORDER_REI_CHAMAS,
-      label: "Rei das Chamas",
-      detail: "Superiores ou Inferiores · #1 VTC mensal no fecho",
+      label: "Violeta · Rei das Chamas",
+      detail: "Foste #1 no ranking mensal da faixa (superiores ou pernas)",
     },
-    { color: IRIS_BORDER_PILAR_COOP, label: "Pilar cooperativo", detail: "Top 3 no termómetro" },
+    {
+      color: IRIS_BORDER_PILAR_COOP,
+      label: "Dourado · Pilar",
+      detail: "Estiveste entre os 3 que mais ajudaram o termómetro no mês",
+    },
   ];
 
   return (
     <div className="mt-4 rounded-xl border border-white/5 bg-black/25 p-3">
       <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-neutral-500">
-        Bordas IRIS no avatar
+        Cores no avatar
       </p>
       <ul className="mt-2 space-y-2">
         {items.map((item) => (
@@ -129,11 +137,13 @@ export function ComunidadeTitulosPanel({
           Títulos mensais
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-amber-50/95 sm:text-base">
-          Conquistas do mês na academia
+          Quem está em destaque este mês
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Reis das Chamas vêm do ranking mensal: #1 Superiores e #1 Pernas no fecho. Pilares e
-          cinturões seguem regras próprias.
+          Os <span className="font-medium text-neutral-300">Reis</span> vêm do ranking mensal
+          fechado. Os <span className="font-medium text-neutral-300">Pilares</span> vêm do
+          termómetro. O <span className="font-medium text-neutral-300">cinturão</span> é só por
+          duelo — vês os campeões na arena acima.
         </p>
       </header>
 
@@ -142,8 +152,11 @@ export function ComunidadeTitulosPanel({
       ) : (
         <div className="mt-4 space-y-4">
           <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/85">
-              Reis das Chamas · VTC mensal · 2 faixas
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/85">
+              Reis das Chamas
+            </p>
+            <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
+              Vencedores do último fecho mensal — um por faixa (superiores e pernas).
             </p>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <TituloCard
@@ -164,8 +177,11 @@ export function ComunidadeTitulosPanel({
           </div>
 
           <div>
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFD700]/90">
-              Pilares cooperativos · Top 3
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFD700]/90">
+              Pilares cooperativos
+            </p>
+            <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
+              Top 3 que mais ajudaram a encher o termómetro no mês passado.
             </p>
             <ul className="grid grid-cols-1 gap-2 xs:grid-cols-2 lg:grid-cols-3">
               {pilaresSlots.map((pilar, index) =>

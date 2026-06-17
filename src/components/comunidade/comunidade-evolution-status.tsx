@@ -56,8 +56,8 @@ export function ComunidadeEvolutionStatus({
           Teu nível na comunidade
         </p>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Resumo do teu papel na linhagem — como treinas, quão consistente és e onde mais
-          evoluís. Os anéis no avatar aparecem quando conquistas títulos na arena.
+          Aqui vês a tua consistência de treino e os títulos que já conquistaste. O anel colorido
+          no avatar indica se és Rei, Pilar ou detentor do cinturão.
         </p>
       </header>
 
@@ -92,14 +92,14 @@ export function ComunidadeEvolutionStatus({
             {loading ? "—" : `${Math.round(evolution?.indiceIgnicao ?? 0)}%`}
           </p>
           <p className="text-[10px] uppercase tracking-[0.14em] text-neutral-500">
-            Índice de ignição · consistência no mês
+            Índice de ignição · dias de treino neste mês
           </p>
 
           {!loading && evolution ? (
             <dl className="mt-4 grid w-full grid-cols-2 gap-2 text-[11px]">
               <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 px-2.5 py-2 xs:px-3">
                 <dt className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
-                  Grupo supremo
+                  Músculo mais forte · 14 dias
                 </dt>
                 <dd className="mt-1 truncate font-medium text-amber-100/90">
                   {resolveGrupoLabel(evolution.perfilPublico.grupo_supremo)}
@@ -107,7 +107,7 @@ export function ComunidadeEvolutionStatus({
               </div>
               <div className="min-w-0 rounded-xl border border-white/5 bg-black/20 px-2.5 py-2 xs:px-3">
                 <dt className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
-                  Duelos vencidos
+                  Duelos ganhos · cinturão
                 </dt>
                 <dd className="mt-1 font-medium text-amber-100/90">
                   {evolution.perfilPublico.duelos_vencidos}

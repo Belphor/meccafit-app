@@ -37,7 +37,7 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
                 id="comunidade-mural-title"
                 className="mt-1 text-balance text-sm font-semibold text-amber-50 xs:text-base sm:text-lg"
               >
-                Vitórias partilhadas pela comunidade
+                Vitórias da linhagem
               </h3>
             </div>
             <span className="w-fit shrink-0 rounded-full border border-amber-500/30 bg-amber-950/40 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-amber-200/85">
@@ -45,9 +45,8 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
             </span>
           </div>
           <p className={`relative mt-2 max-w-prose ${COMUNIDADE_BODY_TEXT} text-neutral-400`}>
-            Quando um atleta bate o recorde pessoal no treino, a conquista aparece aqui para
-            inspirar toda a academia — a força da linhagem cresce quando todos veem a ascensão uns
-            dos outros.
+            Quando bates o teu recorde num exercício, a conquista aparece aqui para motivar os
+            restantes. Não conta para ranking nem termómetro — é a vitrine social da academia.
           </p>
         </header>
 
