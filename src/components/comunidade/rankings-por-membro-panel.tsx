@@ -4,6 +4,10 @@ import { useState } from "react";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
   COMUNIDADE_BODY_TEXT,
+  COMUNIDADE_EYEBROW,
+  COMUNIDADE_HEADER,
+  COMUNIDADE_HEADING,
+  COMUNIDADE_INNER_CARD,
   COMUNIDADE_LIST_SCROLL,
   COMUNIDADE_PANEL,
   COMUNIDADE_TAB_BUTTON,
@@ -59,7 +63,7 @@ function RankingRow({
 
   return (
     <li
-      className={`flex min-h-11 items-center gap-2 rounded-xl border px-2 py-2 xs:gap-2.5 xs:px-2.5 sm:gap-3 sm:px-3 ${
+      className={`${COMUNIDADE_INNER_CARD} flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 px-2 py-2 xs:gap-x-2.5 xs:px-2.5 sm:gap-3 sm:px-3 ${
         isReiLeader
           ? "border-violet-400/35 bg-violet-950/25"
           : isSelf
@@ -83,16 +87,16 @@ function RankingRow({
         isPilarCooperativo={entry.isPilarCooperativo}
         size="sm"
       />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-[calc(100%-3rem)] xs:basis-auto">
         <p className="break-words text-pretty text-[10px] font-medium text-neutral-200 xs:text-[11px]">
           {isSelf ? "Tu" : entry.atleta_nome}
           {isReiLeader ? (
-            <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-violet-300/90">
+            <span className="block xs:inline xs:ml-1 text-[9px] font-bold uppercase tracking-wide text-violet-300/90">
               · líder Rei
             </span>
           ) : null}
         </p>
-        <p className="break-words font-mono text-[9px] tabular-nums text-neutral-500 xs:text-[10px]">
+        <p className="break-all font-mono text-[9px] tabular-nums text-neutral-500 xs:break-words xs:text-[10px]">
           {formatVtc(metricValue)} kg · {metricLabel}
         </p>
       </div>
@@ -139,11 +143,9 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
       className={`${COMUNIDADE_PANEL} border-violet-500/15 bg-gradient-to-br from-neutral-950/95 via-violet-950/10 to-neutral-950/95`}
       aria-label="Ranking mensal VTC da comunidade"
     >
-      <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300/85 sm:tracking-[0.22em]">
-          Ranking mensal
-        </p>
-        <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
+      <header className={COMUNIDADE_HEADER}>
+        <p className={`${COMUNIDADE_EYEBROW} text-violet-300/85`}>Ranking mensal</p>
+        <h3 className={`${COMUNIDADE_HEADING} text-violet-50/95`}>
           Top 10 · quem lidera em {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>

@@ -1,6 +1,13 @@
 "use client";
 
-import { COMUNIDADE_BODY_TEXT, COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import {
+  COMUNIDADE_BODY_TEXT,
+  COMUNIDADE_EYEBROW,
+  COMUNIDADE_HEADER,
+  COMUNIDADE_HEADING,
+  COMUNIDADE_INNER_CARD,
+  COMUNIDADE_PANEL,
+} from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
   IRIS_BORDER_CINTURAO,
@@ -57,7 +64,7 @@ function TituloCard({
 
   return (
       <li
-      className={`flex min-h-[4.25rem] items-center gap-2.5 rounded-xl border bg-neutral-950/50 px-2.5 py-2.5 xs:gap-3 xs:px-3 xs:py-3 sm:min-h-[4.5rem] sm:px-4 ${
+      className={`${COMUNIDADE_INNER_CARD} flex min-h-[4.25rem] min-w-0 items-center gap-2.5 bg-neutral-950/50 px-2.5 py-2.5 xs:gap-3 xs:px-3 xs:py-3 sm:min-h-[4.5rem] sm:px-4 ${
         pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
       }`}
     >
@@ -101,13 +108,13 @@ function IrisLegend() {
       </p>
       <ul className="mt-2 space-y-2">
         {items.map((item) => (
-          <li key={item.label} className="flex items-start gap-2 text-[10px] text-neutral-400">
+          <li key={item.label} className="flex min-w-0 items-start gap-2 text-[10px] text-neutral-400">
             <span
               className="mt-0.5 h-3 w-3 shrink-0 rounded-full ring-2 ring-offset-1 ring-offset-neutral-950"
               style={{ boxShadow: `0 0 0 2px ${item.color}` }}
               aria-hidden
             />
-            <span>
+            <span className="min-w-0 break-words text-pretty leading-relaxed">
               <span className="font-medium text-neutral-300">{item.label}</span>
               <span className="text-neutral-500"> · {item.detail}</span>
             </span>
@@ -132,11 +139,9 @@ export function ComunidadeTitulosPanel({
       className={`${COMUNIDADE_PANEL} border-white/10 bg-gradient-to-br from-neutral-950/95 via-neutral-900/20 to-neutral-950/95`}
       aria-label="Títulos mensais da arena"
     >
-      <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80">
-          Títulos mensais
-        </p>
-        <h3 className="mt-1 text-balance text-sm font-semibold text-amber-50/95 sm:text-base">
+      <header className={COMUNIDADE_HEADER}>
+        <p className={`${COMUNIDADE_EYEBROW} text-amber-200/80`}>Títulos mensais</p>
+        <h3 className={`${COMUNIDADE_HEADING} text-amber-50/95`}>
           Quem está em destaque este mês
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
@@ -152,7 +157,7 @@ export function ComunidadeTitulosPanel({
       ) : (
         <div className="mt-4 space-y-4">
           <div>
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-violet-300/85">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-violet-300/85 xs:tracking-[0.14em]">
               Reis das Chamas
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
@@ -177,7 +182,7 @@ export function ComunidadeTitulosPanel({
           </div>
 
           <div>
-            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#FFD700]/90">
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[#FFD700]/90 xs:tracking-[0.14em]">
               Pilares cooperativos
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">

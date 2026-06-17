@@ -101,7 +101,7 @@ export function ForumBrasaVivaView({
 
       {phase.isHydrated && phase.isForumInactive ? (
         <p
-          className="mt-3 rounded-xl border border-neutral-600/25 bg-neutral-950/50 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-neutral-500"
+          className="mt-3 break-words rounded-xl border border-neutral-600/25 bg-neutral-950/50 px-3 py-2 text-pretty text-[10px] uppercase tracking-[0.1em] text-neutral-500 xs:tracking-[0.12em]"
           role="status"
         >
           Gravidade térmica · layout em cinzas ({phase.vtc30d.toLocaleString("pt-BR")} kg / 30d).

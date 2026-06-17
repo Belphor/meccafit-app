@@ -19,9 +19,13 @@ export function DashboardPanelHeader({
   const metaClass = metaVariant === "chip" ? DASHBOARD_META_CHIP : DASHBOARD_TAB_LABEL;
 
   return (
-    <div className={DASHBOARD_PANEL_HEADER}>
-      <span className={DASHBOARD_SECTION_CHIP}>{chip}</span>
-      <span className={metaClass}>{meta}</span>
+    <div className={`${DASHBOARD_PANEL_HEADER} min-w-0 max-w-full`}>
+      <span className={`${DASHBOARD_SECTION_CHIP} max-w-full break-words leading-tight`}>{chip}</span>
+      <span
+        className={`${metaClass} max-w-full break-words text-right leading-tight max-sm:tracking-[0.14em] sm:tracking-[0.32em]`}
+      >
+        {meta}
+      </span>
     </div>
   );
 }

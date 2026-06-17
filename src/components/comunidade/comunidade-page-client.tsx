@@ -6,6 +6,7 @@ import { ComunidadeEvolutionStatus } from "@/components/comunidade/comunidade-ev
 import {
   COMUNIDADE_NAV,
   COMUNIDADE_NAV_LINK,
+  COMUNIDADE_PAGE_TITLE,
   COMUNIDADE_SCROLL_MT,
   COMUNIDADE_SECTION_INNER,
   COMUNIDADE_SECTION_LABEL,
@@ -31,10 +32,7 @@ import {
   fetchComunidadeClienteEvolution,
   type ComunidadeClienteEvolution,
 } from "@/lib/comunidade-evolution";
-import {
-  DASHBOARD_PANEL_FRAME,
-  DASHBOARD_SECTION_TITLE,
-} from "@/lib/dashboard-config";
+import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
 
 type ComunidadePageClientProps = {
   userId: string;
@@ -131,7 +129,7 @@ export function ComunidadePageClient({
     <BrasaVivaCard
       as="section"
       variant="treino"
-      className={`${DASHBOARD_PANEL_FRAME} max-w-full overflow-x-hidden`}
+      className={`${DASHBOARD_PANEL_FRAME} min-w-0 max-w-full overflow-x-hidden`}
       aria-labelledby="comunidade-page-title"
     >
       <DashboardPanelHeader chip="Comunidade" meta="Arena cooperativa" />
@@ -139,10 +137,7 @@ export function ComunidadePageClient({
       <div className="mt-3 border-b border-orange-500/10 pb-3 sm:mt-4 sm:pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h2
-              id="comunidade-page-title"
-              className={`${DASHBOARD_SECTION_TITLE} text-balance leading-tight`}
-            >
+            <h2 id="comunidade-page-title" className={`${COMUNIDADE_PAGE_TITLE} text-balance`}>
               Conquistas & Ascensão
             </h2>
             <p className="mt-1 text-pretty text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">

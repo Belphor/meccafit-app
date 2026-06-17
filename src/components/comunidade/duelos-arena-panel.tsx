@@ -1,6 +1,14 @@
 "use client";
 
-import { COMUNIDADE_BODY_TEXT, COMUNIDADE_PANEL } from "@/components/comunidade/comunidade-layout";
+import {
+  COMUNIDADE_BODY_TEXT,
+  COMUNIDADE_CHIP,
+  COMUNIDADE_EYEBROW,
+  COMUNIDADE_HEADER,
+  COMUNIDADE_HEADING,
+  COMUNIDADE_INNER_CARD,
+  COMUNIDADE_PANEL,
+} from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import type {
   CampeoesCinturao,
@@ -59,7 +67,7 @@ function CampeaoCinturaoCard({
   const label = tipo === "SUPERIORES" ? "Superiores" : "Inferiores";
   if (!campeaoId) {
     return (
-      <p className="flex min-h-[3.75rem] items-center justify-center rounded-xl border border-dashed border-[#FF007F]/20 px-3 py-3 text-center text-[11px] text-neutral-500">
+      <p className={`${COMUNIDADE_INNER_CARD} flex min-h-[3.75rem] items-center justify-center border-dashed border-[#FF007F]/20 px-3 py-3 text-center text-[11px] leading-relaxed text-neutral-500`}>
         Cinturão {label} · vago
       </p>
     );
@@ -68,13 +76,13 @@ function CampeaoCinturaoCard({
   const nome = resolveNome(campeaoId, userId, rankings);
 
   return (
-    <div className="flex min-h-[3.75rem] items-center gap-3 rounded-xl border border-[#FF007F]/25 bg-[#FF007F]/5 p-3">
+    <div className={`${COMUNIDADE_INNER_CARD} flex min-h-[3.75rem] min-w-0 items-center gap-3 border-[#FF007F]/25 bg-[#FF007F]/5 p-3`}>
       <PlutusAvatar temCinturaoDuelo size="sm" name={nome ?? label} />
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-[0.14em] text-[#FF007F] xs:tracking-[0.18em]">
+        <p className="text-[10px] uppercase tracking-[0.08em] text-[#FF007F] xs:tracking-[0.12em]">
           Cinturão · {label}
         </p>
-        <p className="break-words text-pretty text-[12px] font-medium text-neutral-200">
+        <p className="break-words text-pretty text-[12px] font-medium leading-snug text-neutral-200">
           {campeaoId === userId ? "És tu — defende o trono" : nome}
         </p>
       </div>
@@ -99,11 +107,9 @@ export function DuelosArenaPanel({
       className={`${COMUNIDADE_PANEL} border-fuchsia-500/15 bg-gradient-to-br from-neutral-950/95 via-fuchsia-950/10 to-neutral-950/95`}
       aria-label="Arena de duelos de supergrupos"
     >
-      <header>
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-fuchsia-300/85">
-          Duelos · Cinturões
-        </p>
-        <h3 className="mt-1 text-sm font-semibold text-fuchsia-50/95 sm:text-base">
+      <header className={COMUNIDADE_HEADER}>
+        <p className={`${COMUNIDADE_EYEBROW} text-fuchsia-300/85`}>Duelos · Cinturões</p>
+        <h3 className={`${COMUNIDADE_HEADING} text-fuchsia-50/95`}>
           Desafia alguém pelo cinturão
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
@@ -149,22 +155,22 @@ export function DuelosArenaPanel({
             return (
               <article
                 key={duelo.id}
-                className={`rounded-xl border p-3 sm:p-3.5 ${
+                className={`${COMUNIDADE_INNER_CARD} min-w-0 p-3 sm:p-3.5 ${
                   isParticipant
                     ? "border-fuchsia-400/30 bg-fuchsia-950/15"
                     : "border-neutral-800/80 bg-neutral-950/40"
                 }`}
               >
-                <div className="flex flex-col gap-2 xs:flex-row xs:items-center xs:justify-between">
-                  <span className="w-fit rounded-full border border-fuchsia-500/20 px-2 py-0.5 text-[9px] uppercase tracking-[0.14em] text-fuchsia-200/90">
+                <div className="flex min-w-0 flex-col gap-2 xs:flex-row xs:flex-wrap xs:items-center xs:justify-between">
+                  <span className={`${COMUNIDADE_CHIP} w-fit border-fuchsia-500/20 text-fuchsia-200/90`}>
                     {labelTipo(duelo.tipo_confronto)}
                   </span>
-                  <time className="text-[9px] uppercase tracking-[0.1em] text-neutral-500">
+                  <time className="min-w-0 break-words text-[9px] uppercase tracking-[0.08em] text-neutral-500 xs:tracking-[0.1em]">
                     Fim · {formatFim(duelo.fim_em)}
                   </time>
                 </div>
 
-                <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <div className="mt-3 flex min-w-0 flex-col items-stretch gap-3 xs:grid xs:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] xs:items-center xs:gap-2">
                   <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
                     <PlutusAvatar
                       size="sm"
@@ -175,7 +181,7 @@ export function DuelosArenaPanel({
                       {nomeDesafiante}
                     </p>
                   </div>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-600">
+                  <span className="hidden text-center font-mono text-[10px] uppercase tracking-[0.12em] text-neutral-600 xs:block">
                     vs
                   </span>
                   <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
