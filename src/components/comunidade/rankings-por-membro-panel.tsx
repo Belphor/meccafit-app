@@ -137,21 +137,25 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
   return (
     <section
       className={`${COMUNIDADE_PANEL} border-violet-500/15 bg-gradient-to-br from-neutral-950/95 via-violet-950/10 to-neutral-950/95`}
-      aria-label="Rankings VTC da comunidade"
+      aria-label="Ranking mensal VTC da comunidade"
     >
       <header>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300/85 sm:tracking-[0.22em]">
-          Rankings
+          Ranking mensal
         </p>
         <h3 className="mt-1 text-balance text-sm font-semibold text-violet-50/95 sm:text-base">
-          Classificação de {mesLabel}
+          Top 10 · quem lidera em {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          <span className="font-medium text-neutral-300">VTC</span> = soma dos teus melhores pesos
-          por exercício e por dia neste mês. Quem ficar em 1.º em{" "}
-          <span className="font-medium text-neutral-300">Superiores</span> ou{" "}
-          <span className="font-medium text-neutral-300">Pernas</span> no fecho torna-se Rei das
-          Chamas no mês seguinte.
+          Contamos o teu <span className="font-medium text-neutral-300">melhor peso do dia</span> em
+          cada exercício e somamos tudo no mês — essa pontuação chama-se{" "}
+          <span className="font-medium text-neutral-300">VTC</span>.
+        </p>
+        <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
+          Nas abas <span className="font-medium text-neutral-300">Superiores</span> e{" "}
+          <span className="font-medium text-neutral-300">Pernas</span>, quem fechar o mês em 1.º
+          lugar torna-se <span className="font-medium text-neutral-300">Rei das Chamas</span> no mês
+          seguinte. As restantes abas servem só para veres o detalhe por músculo.
         </p>
       </header>
 
