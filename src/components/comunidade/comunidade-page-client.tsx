@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { ComunidadeEvolutionStatus } from "@/components/comunidade/comunidade-evolution-status";
 import {
@@ -21,6 +21,12 @@ import {
   fetchComunidadeArenaSnapshot,
   type ComunidadeArenaSnapshot,
 } from "@/lib/comunidade-data";
+import {
+  readCachedComunidadeArena,
+  readCachedComunidadeEvolution,
+  writeCachedComunidadeArena,
+  writeCachedComunidadeEvolution,
+} from "@/lib/comunidade-cache";
 import {
   fetchComunidadeClienteEvolution,
   type ComunidadeClienteEvolution,
@@ -57,37 +63,64 @@ export function ComunidadePageClient({
   profilePhotoUrl,
   phase,
 }: ComunidadePageClientProps) {
-  const [arena, setArena] = useState<ComunidadeArenaSnapshot | null>(null);
-  const [arenaLoading, setArenaLoading] = useState(true);
+  const mountedRef = useRef(false);
+  const [arena, setArena] = useState<ComunidadeArenaSnapshot | null>(
+    () => readCachedComunidadeArena(userId),
+  );
+  const [arenaLoading, setArenaLoading] = useState(() => !readCachedComunidadeArena(userId));
   const [arenaError, setArenaError] = useState<string | null>(null);
-  const [evolution, setEvolution] = useState<ComunidadeClienteEvolution | null>(null);
-  const [evolutionLoading, setEvolutionLoading] = useState(true);
+  const [evolution, setEvolution] = useState<ComunidadeClienteEvolution | null>(
+    () => readCachedComunidadeEvolution(userId),
+  );
+  const [evolutionLoading, setEvolutionLoading] = useState(
+    () => !readCachedComunidadeEvolution(userId),
+  );
   const [refreshToken, setRefreshToken] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadAll = useCallback(async () => {
-    setArenaLoading(true);
-    setEvolutionLoading(true);
-    const [arenaResult, evolutionResult] = await Promise.all([
-      fetchComunidadeArenaSnapshot(),
-      fetchComunidadeClienteEvolution(userId),
-    ]);
-    setArenaLoading(false);
-    setEvolutionLoading(false);
-    setRefreshToken((value) => value + 1);
-    if (arenaResult.error) {
-      setArenaError(arenaResult.error);
-    } else {
-      setArenaError(null);
-      setArena(arenaResult.data);
-    }
-    if (evolutionResult.data) {
-      setEvolution(evolutionResult.data);
-    }
-  }, [userId]);
+  const loadAll = useCallback(
+    async (options?: { background?: boolean }) => {
+      const background = options?.background ?? false;
+      const hasCachedData = Boolean(readCachedComunidadeArena(userId));
+
+      if (!background && !hasCachedData) {
+        setArenaLoading(true);
+        setEvolutionLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      const [arenaResult, evolutionResult] = await Promise.all([
+        fetchComunidadeArenaSnapshot(),
+        fetchComunidadeClienteEvolution(userId),
+      ]);
+
+      setArenaLoading(false);
+      setEvolutionLoading(false);
+      setIsRefreshing(false);
+      setRefreshToken((value) => value + 1);
+
+      if (arenaResult.error) {
+        setArenaError(arenaResult.error);
+      } else if (arenaResult.data) {
+        setArenaError(null);
+        setArena(arenaResult.data);
+        writeCachedComunidadeArena(userId, arenaResult.data);
+      }
+
+      if (evolutionResult.data) {
+        setEvolution(evolutionResult.data);
+        writeCachedComunidadeEvolution(userId, evolutionResult.data);
+      }
+    },
+    [userId],
+  );
 
   useEffect(() => {
-    void loadAll();
-  }, [loadAll]);
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    void loadAll({ background: Boolean(readCachedComunidadeArena(userId)) });
+  }, [loadAll, userId]);
 
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];
@@ -112,18 +145,18 @@ export function ComunidadePageClient({
             >
               Conquistas & Ascensão
             </h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
+            <p className="mt-1 text-pretty text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
               Três formas de te destacares: ajuda a academia no termómetro, sobe no ranking mensal
               para ser Rei, ou ganha duelos pelo cinturão.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => void loadAll()}
-            disabled={arenaLoading || evolutionLoading}
+            onClick={() => void loadAll({ background: true })}
+            disabled={arenaLoading || evolutionLoading || isRefreshing}
             className="min-h-11 w-full shrink-0 rounded-full border border-orange-500/25 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90 disabled:opacity-50 sm:w-auto sm:min-w-[7.5rem]"
           >
-            Actualizar
+            {isRefreshing ? "A actualizar…" : "Actualizar"}
           </button>
         </div>
 
@@ -140,7 +173,7 @@ export function ComunidadePageClient({
         <div id="comunidade-perfil" className={COMUNIDADE_SCROLL_MT}>
           <ComunidadeEvolutionStatus
             evolution={evolution}
-            loading={evolutionLoading}
+            loading={evolutionLoading && !evolution}
             profileName={profileName}
             profilePhotoUrl={profilePhotoUrl}
           />
@@ -158,7 +191,7 @@ export function ComunidadePageClient({
             <MetaColetivaTermometro
               meta={meta}
               mesReferencia={arena?.mes_referencia}
-              loading={arenaLoading}
+              loading={arenaLoading && !arena}
             />
             <DuelosArenaPanel
               duelos={arena?.duelos_ativos ?? []}
@@ -168,7 +201,7 @@ export function ComunidadePageClient({
               campeaoCinturaoId={arena?.campeao_cinturao_id ?? null}
               rankings={rankings}
               userId={userId}
-              loading={arenaLoading}
+              loading={arenaLoading && !arena}
             />
           </div>
         </div>
@@ -179,12 +212,12 @@ export function ComunidadePageClient({
             pilares={pilares}
             rankings={rankings}
             userId={userId}
-            loading={arenaLoading}
+            loading={arenaLoading && !arena}
           />
         </div>
 
         <div id="comunidade-rankings" className={COMUNIDADE_SCROLL_MT}>
-          <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading} />
+          <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading && !arena} />
         </div>
 
         <ComunidadeMuralPanel userId={userId} refreshKey={refreshToken} phase={phase} />

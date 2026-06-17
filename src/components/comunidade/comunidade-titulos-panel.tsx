@@ -62,14 +62,14 @@ function TituloCard({
       }`}
     >
       <PlutusAvatar name={nome} size="md" {...flags} />
-      <div className="min-w-0 flex-1 overflow-hidden">
+      <div className="min-w-0 flex-1">
         <p
-          className="truncate text-[9px] font-bold uppercase tracking-[0.14em] xs:tracking-[0.18em]"
+          className="break-words text-[9px] font-bold uppercase tracking-[0.12em] xs:tracking-[0.16em]"
           style={{ color: borderColor }}
         >
           {label}
         </p>
-        <p className="truncate text-[11px] font-medium text-neutral-200 xs:text-[12px]">{nome}</p>
+        <p className="break-words text-pretty text-[11px] font-medium text-neutral-200 xs:text-[12px]">{nome}</p>
       </div>
     </li>
   );

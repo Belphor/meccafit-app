@@ -73,7 +73,7 @@ export function ComunidadeEvolutionStatus({
               size="lg"
             />
           </div>
-          <p className="max-w-[8.5rem] truncate text-center text-[11px] font-medium text-amber-100/90 md:max-w-[10rem] md:text-left">
+          <p className="max-w-full break-words text-pretty text-center text-[11px] font-medium text-amber-100/90 md:text-left">
             {displayName}
           </p>
         </div>
@@ -101,7 +101,7 @@ export function ComunidadeEvolutionStatus({
                 <dt className="text-[9px] uppercase tracking-[0.12em] text-neutral-500">
                   Músculo mais forte · 14 dias
                 </dt>
-                <dd className="mt-1 truncate font-medium text-amber-100/90">
+                <dd className="mt-1 break-words font-medium text-amber-100/90">
                   {resolveGrupoLabel(evolution.perfilPublico.grupo_supremo)}
                 </dd>
               </div>

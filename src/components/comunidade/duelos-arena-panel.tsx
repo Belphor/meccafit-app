@@ -70,11 +70,11 @@ function CampeaoCinturaoCard({
   return (
     <div className="flex min-h-[3.75rem] items-center gap-3 rounded-xl border border-[#FF007F]/25 bg-[#FF007F]/5 p-3">
       <PlutusAvatar temCinturaoDuelo size="sm" name={nome ?? label} />
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[#FF007F]">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] uppercase tracking-[0.14em] text-[#FF007F] xs:tracking-[0.18em]">
           Cinturão · {label}
         </p>
-        <p className="truncate text-[12px] font-medium text-neutral-200">
+        <p className="break-words text-pretty text-[12px] font-medium text-neutral-200">
           {campeaoId === userId ? "És tu — defende o trono" : nome}
         </p>
       </div>
@@ -171,7 +171,7 @@ export function DuelosArenaPanel({
                       name={nomeDesafiante ?? "?"}
                       temCinturaoDuelo={duelo.atleta_desafiante_id === campeaoTipoId}
                     />
-                    <p className="w-full truncate text-[10px] font-medium text-neutral-300">
+                    <p className="w-full break-words text-pretty text-[10px] font-medium text-neutral-300">
                       {nomeDesafiante}
                     </p>
                   </div>
@@ -184,7 +184,7 @@ export function DuelosArenaPanel({
                       name={nomeDesafiado ?? "?"}
                       temCinturaoDuelo={duelo.atleta_desafiado_id === campeaoTipoId}
                     />
-                    <p className="w-full truncate text-[10px] font-medium text-neutral-300">
+                    <p className="w-full break-words text-pretty text-[10px] font-medium text-neutral-300">
                       {nomeDesafiado}
                     </p>
                   </div>

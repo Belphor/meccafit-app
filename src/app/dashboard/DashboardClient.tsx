@@ -48,7 +48,7 @@ import {
   DASHBOARD_HERO_TITLE,
   DASHBOARD_PORTAL_PADDING,
   DASHBOARD_SHELL,
-  DASHBOARD_TAB_CONTENT,
+  dashboardTabPanelClass,
   PLASMA_HERO_TITLE,
 } from "@/lib/dashboard-config";
 import {
@@ -60,6 +60,7 @@ import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
+import { invalidateComunidadeCache } from "@/lib/comunidade-cache";
 import { supabase } from "@/lib/supabase";
 import type { MuscleCalorRow } from "@/components/evolution/human-body-constants";
 import {
@@ -159,6 +160,9 @@ export function DashboardClient({
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTabId>(DEFAULT_DASHBOARD_TAB);
+  const [visitedTabs, setVisitedTabs] = useState<Set<DashboardTabId>>(
+    () => new Set([DEFAULT_DASHBOARD_TAB]),
+  );
   const [muralPosts, setMuralPosts] = useState<MuralPost[]>([]);
   const [videoModal, setVideoModal] = useState<VideoModalState>(CLOSED_VIDEO);
   const [reloadToken, setReloadToken] = useState(0);
@@ -235,6 +239,15 @@ export function DashboardClient({
   }, [forjadorPrescriptions, loadKey, subgroupParam, tabParam]);
 
   useEffect(() => {
+    setVisitedTabs((current) => {
+      if (current.has(activeTab)) return current;
+      const next = new Set(current);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
+
+  useEffect(() => {
     if (!dataReady) return;
 
     if (tabParam === "dieta" && !hasPersonalBond) {
@@ -277,6 +290,7 @@ export function DashboardClient({
   );
 
   const handleSignOut = useCallback(async () => {
+    invalidateComunidadeCache();
     clearThermicSessionCache();
     await supabase.auth.signOut();
     router.replace("/");
@@ -517,8 +531,8 @@ export function DashboardClient({
                     onTabChange={handleTabChange}
                   />
 
-                  {activeTab === "treino" ? (
-                    trainingTrack.track === "personal" ? (
+                  <div className={dashboardTabPanelClass(activeTab === "treino")}>
+                    {trainingTrack.track === "personal" ? (
                       <PersonalTreinoWorkspace
                         key="personal-treino"
                         trainingTrack={trainingTrack}
@@ -533,17 +547,17 @@ export function DashboardClient({
                         trainingTrack={trainingTrack}
                         {...treinoWorkspaceProps}
                       />
-                    )
-                  ) : null}
+                    )}
+                  </div>
 
-                  {activeTab === "dieta" && hasPersonalBond ? (
-                    <div className={DASHBOARD_TAB_CONTENT}>
+                  {hasPersonalBond && visitedTabs.has("dieta") ? (
+                    <div className={dashboardTabPanelClass(activeTab === "dieta")}>
                       <DietaPanel />
                     </div>
                   ) : null}
 
-                  {activeTab === "evolucao" ? (
-                    <div className={DASHBOARD_TAB_CONTENT}>
+                  {visitedTabs.has("evolucao") ? (
+                    <div className={dashboardTabPanelClass(activeTab === "evolucao")}>
                       <EvolutionAbaPanel
                         userId={userId}
                         initialCalorRows={initialEvolutionCalor}
@@ -554,8 +568,8 @@ export function DashboardClient({
                     </div>
                   ) : null}
 
-                  {activeTab === "comunidade" ? (
-                    <div className={DASHBOARD_TAB_CONTENT}>
+                  {visitedTabs.has("comunidade") ? (
+                    <div className={dashboardTabPanelClass(activeTab === "comunidade")}>
                       <ComunidadePageClient
                         userId={userId}
                         profileName={profile.name}
@@ -564,8 +578,8 @@ export function DashboardClient({
                     </div>
                   ) : null}
 
-                  {activeTab === "perfil" ? (
-                    <div className={DASHBOARD_TAB_CONTENT}>
+                  {visitedTabs.has("perfil") ? (
+                    <div className={dashboardTabPanelClass(activeTab === "perfil")}>
                       <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} />
                     </div>
                   ) : null}

@@ -236,7 +236,6 @@ export default function PortalDeBrasaPage() {
     }
 
     setFeedback({ status: "loading", message: PORTAL_COPY.onboardingSuccess });
-    router.refresh();
     router.replace(dashboardRoute);
   }
 
@@ -296,7 +295,6 @@ export default function PortalDeBrasaPage() {
       }
 
       setFeedback({ status: "loading", message: PORTAL_COPY.loginConfirmed });
-      router.refresh();
 
       if (profile.role === "forjador_soberano") {
         router.push(destination);

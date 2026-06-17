@@ -245,6 +245,11 @@ export const DASHBOARD_PANEL_HEADER =
 
 export const DASHBOARD_TAB_CONTENT = "mt-4 sm:mt-6";
 
+/** Mantém painéis montados ao trocar aba (preserva estado · evita refetch) */
+export function dashboardTabPanelClass(isActive: boolean): string {
+  return isActive ? DASHBOARD_TAB_CONTENT : `${DASHBOARD_TAB_CONTENT} hidden`;
+}
+
 export const DASHBOARD_EMPTY_STATE =
   "mt-6 text-sm leading-relaxed text-neutral-500 sm:text-[15px]";
 

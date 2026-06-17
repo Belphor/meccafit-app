@@ -84,15 +84,15 @@ function RankingRow({
         size="sm"
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[10px] font-medium text-neutral-200 xs:text-[11px]">
+        <p className="break-words text-pretty text-[10px] font-medium text-neutral-200 xs:text-[11px]">
           {isSelf ? "Tu" : entry.atleta_nome}
           {isReiLeader ? (
             <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-violet-300/90">
-              · líder para Rei
+              · líder Rei
             </span>
           ) : null}
         </p>
-        <p className="truncate font-mono text-[9px] tabular-nums text-neutral-500 xs:text-[10px]">
+        <p className="break-words font-mono text-[9px] tabular-nums text-neutral-500 xs:text-[10px]">
           {formatVtc(metricValue)} kg · {metricLabel}
         </p>
       </div>
@@ -176,7 +176,12 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               }`}
             >
               {label}
-              {rei ? " · define Rei" : ""}
+              {rei ? (
+                <>
+                  <span className="hidden sm:inline"> · define Rei</span>
+                  <span className="sm:hidden"> · Rei</span>
+                </>
+              ) : null}
             </button>
           );
         })}
