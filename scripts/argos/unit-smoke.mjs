@@ -194,5 +194,52 @@ assert("indice_ignicao legado", parseIgnitionIndexMirror({ indice_ignicao: 41 })
 assert("ignition_index string", parseIgnitionIndexMirror({ ignition_index: "88.2" }) === 88);
 assert("ignição ausente vira 0", parseIgnitionIndexMirror({}) === 0);
 
+function sanitizeCardioSnapshotMirror(raw, userId, dayKey, goalMs = 1_800_000) {
+  if (!raw || typeof raw !== "object") return null;
+  if (raw.v !== 2 || raw.userId !== userId) return null;
+  if (raw.dayKey !== dayKey) return null;
+  return { ...raw, goalMs };
+}
+
+function mergeCardioMirror(left, right) {
+  if (!left) return right;
+  if (!right) return left;
+  return Date.parse(left.updatedAt) >= Date.parse(right.updatedAt) ? left : right;
+}
+
+const cardioDay = resolveTreinoDayKey();
+const cardioUser = "11111111-1111-1111-1111-111111111111";
+const cardioSnap = {
+  v: 2,
+  userId: cardioUser,
+  dayKey: cardioDay,
+  goalMs: 1_800_000,
+  validatedMs: 120_000,
+  windowAnchorMs: 0,
+  status: "running",
+  sessionStartedAtMs: Date.now(),
+  lastHeartbeatMs: Date.now(),
+  checkInPromptAtMs: null,
+  hiddenAtMs: null,
+  completedAt: null,
+  updatedAt: new Date().toISOString(),
+};
+
+assert(
+  "cardio snapshot aceita dia civil actual",
+  sanitizeCardioSnapshotMirror(cardioSnap, cardioUser, cardioDay)?.validatedMs === 120_000,
+);
+assert(
+  "cardio snapshot rejeita dia civil antigo",
+  sanitizeCardioSnapshotMirror({ ...cardioSnap, dayKey: "1999-01-01" }, cardioUser, cardioDay) === null,
+);
+assert(
+  "cardio merge prefere updatedAt mais recente",
+  mergeCardioMirror(
+    { ...cardioSnap, validatedMs: 10, updatedAt: "2026-06-19T10:00:00.000Z" },
+    { ...cardioSnap, validatedMs: 99, updatedAt: "2026-06-19T11:00:00.000Z" },
+  ).validatedMs === 99,
+);
+
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

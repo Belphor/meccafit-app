@@ -364,6 +364,27 @@ export type Database = {
         };
         Relationships: [];
       };
+      cardio_sessoes_diarias: {
+        Row: {
+          atleta_id: string;
+          dia_civil: string;
+          snapshot: Json;
+          updated_at: string;
+        };
+        Insert: {
+          atleta_id: string;
+          dia_civil: string;
+          snapshot: Json;
+          updated_at?: string;
+        };
+        Update: {
+          atleta_id?: string;
+          dia_civil?: string;
+          snapshot?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       historico_cargas: {
         Row: {
           id: string;

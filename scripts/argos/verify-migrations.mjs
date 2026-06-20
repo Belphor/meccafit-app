@@ -131,6 +131,10 @@ export const MIGRATION_PATCHES = [
     id: "comunidade_rei_chamas_faixa",
     files: ["20260623140000_comunidade_rei_chamas_por_faixa.sql"],
   },
+  {
+    id: "cardio_sessao_diaria",
+    files: ["20260625100000_cardio_sessao_diaria_sync.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -290,6 +294,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probePlanilhasForjador(admin, probeUserId));
     probes.push(await probeComunidadeArena(admin, probeUserId));
     probes.push(await probeComunidadeSnapshotAuth(admin, probeUserId));
+    probes.push(await probeCardioSessaoDiaria(admin));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -315,6 +320,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "comunidade_snapshot_volatile",
       ok: false,
       detail: "sem perfil para probe snapshot",
+    });
+    probes.push({
+      id: "cardio_sessao_diaria",
+      ok: false,
+      detail: "sem perfil para probe cardio",
     });
   }
 
@@ -462,6 +472,24 @@ async function probeOmbrosIsolation(admin, userId) {
     ok,
     detail: ok ? `ombros calor=${ombrosMetric}` : "ombros metrica_bruta=0 após treino probe",
   };
+}
+
+async function probeCardioSessaoDiaria(admin) {
+  const { error } = await admin.from("cardio_sessoes_diarias").select("atleta_id").limit(1);
+
+  if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+    return {
+      id: "cardio_sessao_diaria",
+      ok: false,
+      detail: "tabela cardio_sessoes_diarias ausente",
+    };
+  }
+
+  if (error) {
+    return { id: "cardio_sessao_diaria", ok: false, detail: error.message };
+  }
+
+  return { id: "cardio_sessao_diaria", ok: true, detail: "tabela OK · sync multi-dispositivo" };
 }
 
 async function probeMidasGrowth(admin, userId) {

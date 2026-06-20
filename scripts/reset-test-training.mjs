@@ -180,6 +180,7 @@ async function main() {
     { table: "historico_cargas", column: "atleta_id" },
     { table: "calendario_ignicao", column: "atleta_id" },
     { table: "purity_logs", column: "user_id" },
+    { table: "cardio_sessoes_diarias", column: "atleta_id" },
   ];
 
   const midasResetCounts = {};
@@ -238,6 +239,7 @@ async function main() {
   console.log(`  historico_cargas removido: ${midasResetCounts.historico_cargas ?? 0}`);
   console.log(`  calendario_ignicao removido: ${midasResetCounts.calendario_ignicao ?? 0}`);
   console.log(`  purity_logs removido: ${midasResetCounts.purity_logs ?? 0}`);
+  console.log(`  cardio_sessoes_diarias removido: ${midasResetCounts.cardio_sessoes_diarias ?? 0}`);
 
   const byActor = { cliente: [], forjador: [], desconhecido: [] };
 
@@ -275,6 +277,7 @@ async function main() {
     console.log("Estado inicial pronto — nenhum treino registrado.");
     console.log("No browser (F12 → Console), cole:");
     console.log("  Object.keys(localStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>localStorage.removeItem(k));");
+    console.log("Isso zera cardio local (meccafit:cardio-voo-cinzas:* e altar-daily-cardio:*).");
     console.log("Depois: Ctrl+F5 · /dashboard");
   } else {
     console.log("Próximo passo: npm run seed:test-training");

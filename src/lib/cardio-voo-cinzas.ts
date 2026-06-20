@@ -1,15 +1,18 @@
+import { resolveAppDayKey } from "@/lib/treino-day-key";
+
 /** Voo de Cinzas — metas e janelas (HERMES + ARGOS). */
 export const CARDIO_CHECK_IN_WINDOW_MS = 10 * 60 * 1000;
 export const CARDIO_BACKGROUND_STASIS_MS = 10 * 60 * 1000;
 export const CARDIO_DEFAULT_GOAL_MS = 30 * 60 * 1000;
 export const CARDIO_STORAGE_PREFIX = "meccafit:cardio-voo-cinzas";
-export const CARDIO_SNAPSHOT_VERSION = 1 as const;
+export const CARDIO_SNAPSHOT_VERSION = 2 as const;
 
 export type CardioSessionStatus = "idle" | "running" | "check_in" | "stasis" | "completed";
 
 export type CardioSessionSnapshot = {
   v: typeof CARDIO_SNAPSHOT_VERSION;
   userId: string;
+  dayKey: string;
   goalMs: number;
   validatedMs: number;
   windowAnchorMs: number;
@@ -54,6 +57,7 @@ export function createInitialCardioSession(
   return {
     v: CARDIO_SNAPSHOT_VERSION,
     userId,
+    dayKey: resolveAppDayKey(),
     goalMs,
     validatedMs: 0,
     windowAnchorMs: 0,
@@ -64,6 +68,70 @@ export function createInitialCardioSession(
     hiddenAtMs: null,
     completedAt: null,
     updatedAt: new Date().toISOString(),
+  };
+}
+
+export function sanitizeCardioSessionSnapshot(
+  raw: unknown,
+  userId: string,
+  goalMs?: number,
+): CardioSessionSnapshot | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const data = raw as Partial<CardioSessionSnapshot>;
+  if (data.v !== CARDIO_SNAPSHOT_VERSION || data.userId !== userId) return null;
+
+  const dayKey = resolveAppDayKey();
+  if (data.dayKey !== dayKey) return null;
+
+  const resolvedGoalMs =
+    typeof goalMs === "number" && goalMs > 0
+      ? goalMs
+      : typeof data.goalMs === "number" && data.goalMs > 0
+        ? data.goalMs
+        : CARDIO_DEFAULT_GOAL_MS;
+
+  const validatedMs =
+    typeof data.validatedMs === "number" && Number.isFinite(data.validatedMs)
+      ? Math.max(0, data.validatedMs)
+      : 0;
+
+  const status = data.status ?? "idle";
+  const safeStatus: CardioSessionStatus =
+    status === "running" ||
+    status === "check_in" ||
+    status === "stasis" ||
+    status === "completed"
+      ? status
+      : "idle";
+
+  return {
+    v: CARDIO_SNAPSHOT_VERSION,
+    userId,
+    dayKey,
+    goalMs: resolvedGoalMs,
+    validatedMs: Math.min(validatedMs, resolvedGoalMs),
+    windowAnchorMs:
+      typeof data.windowAnchorMs === "number" && Number.isFinite(data.windowAnchorMs)
+        ? Math.max(0, data.windowAnchorMs)
+        : 0,
+    status: safeStatus,
+    sessionStartedAtMs:
+      typeof data.sessionStartedAtMs === "number" && Number.isFinite(data.sessionStartedAtMs)
+        ? data.sessionStartedAtMs
+        : null,
+    lastHeartbeatMs:
+      typeof data.lastHeartbeatMs === "number" && Number.isFinite(data.lastHeartbeatMs)
+        ? data.lastHeartbeatMs
+        : Date.now(),
+    checkInPromptAtMs:
+      typeof data.checkInPromptAtMs === "number" && Number.isFinite(data.checkInPromptAtMs)
+        ? data.checkInPromptAtMs
+        : null,
+    hiddenAtMs:
+      typeof data.hiddenAtMs === "number" && Number.isFinite(data.hiddenAtMs) ? data.hiddenAtMs : null,
+    completedAt: typeof data.completedAt === "string" ? data.completedAt : null,
+    updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
 }
 
@@ -235,19 +303,19 @@ export function reactivateCardioFromStasis(
   };
 }
 
-function buildStorageKey(userId: string): string {
-  return `${CARDIO_STORAGE_PREFIX}:${userId}`;
+function buildStorageKey(userId: string, dayKey: string = resolveAppDayKey()): string {
+  return `${CARDIO_STORAGE_PREFIX}:${userId}:${dayKey}`;
 }
 
-export function readCardioSession(userId: string): CardioSessionSnapshot | null {
+export function readCardioSession(userId: string, goalMs?: number): CardioSessionSnapshot | null {
   if (typeof window === "undefined" || !userId) return null;
 
   try {
-    const raw = window.localStorage.getItem(buildStorageKey(userId));
+    const dayKey = resolveAppDayKey();
+    const raw = window.localStorage.getItem(buildStorageKey(userId, dayKey));
     if (!raw) return null;
-    const data = JSON.parse(raw) as Partial<CardioSessionSnapshot>;
-    if (data.v !== CARDIO_SNAPSHOT_VERSION || data.userId !== userId) return null;
-    return data as CardioSessionSnapshot;
+    const data = JSON.parse(raw) as unknown;
+    return sanitizeCardioSessionSnapshot(data, userId, goalMs);
   } catch {
     return null;
   }
@@ -256,8 +324,11 @@ export function readCardioSession(userId: string): CardioSessionSnapshot | null 
 export function writeCardioSession(snapshot: CardioSessionSnapshot): void {
   if (typeof window === "undefined" || !snapshot.userId) return;
 
+  const dayKey = snapshot.dayKey || resolveAppDayKey();
+  const payload: CardioSessionSnapshot = { ...snapshot, dayKey };
+
   try {
-    window.localStorage.setItem(buildStorageKey(snapshot.userId), JSON.stringify(snapshot));
+    window.localStorage.setItem(buildStorageKey(snapshot.userId, dayKey), JSON.stringify(payload));
   } catch {
     // noop
   }
