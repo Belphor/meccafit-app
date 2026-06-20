@@ -1,8 +1,9 @@
 /**
- * Seed demo · Comunidade (mural avatares, duelos activos, termómetro colectivo)
+ * Seed demo · Comunidade (mural, duelos, termómetro, títulos)
  *
  * Pré-requisito: npm run seed:test-users
  * Uso: npm run seed:comunidade-demo
+ * Completo (10 clientes + ranking): npm run seed:comunidade-full
  *
  * Mural: usa registrar_treino_com_status (ARGOS bloqueia status em INSERT directo).
  */
@@ -10,9 +11,21 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
-const SEED_TAG = "comunidade-demo-v1";
+const SEED_TAG = "comunidade-demo-v2";
 const DEMO_PASSWORD = "senha123";
-const DEMO_EXERCISE_IDS = [88101, 88102, 88103, 88104];
+
+const ALL_CLIENT_EMAILS = [
+  "cliente@meccafit.com",
+  "atleta2@meccafit.com",
+  "atleta3@meccafit.com",
+  "atleta4@meccafit.com",
+  "atleta5@meccafit.com",
+  "atleta6@meccafit.com",
+  "atleta7@meccafit.com",
+  "atleta8@meccafit.com",
+  "atleta9@meccafit.com",
+  "atleta10@meccafit.com",
+];
 
 const MURAL_SEEDS = [
   {
@@ -51,7 +64,63 @@ const MURAL_SEEDS = [
     series: 4,
     reps: 10,
   },
+  {
+    email: "atleta5@meccafit.com",
+    exercicioId: 88105,
+    nome: "Leg Press Demo",
+    musculo: "pernas",
+    peso: 200,
+    series: 4,
+    reps: 12,
+  },
+  {
+    email: "atleta6@meccafit.com",
+    exercicioId: 88106,
+    nome: "Rosca Demo",
+    musculo: "ombros",
+    peso: 45,
+    series: 3,
+    reps: 12,
+  },
+  {
+    email: "atleta7@meccafit.com",
+    exercicioId: 88107,
+    nome: "Tríceps Demo",
+    musculo: "ombros",
+    peso: 55,
+    series: 4,
+    reps: 10,
+  },
+  {
+    email: "atleta8@meccafit.com",
+    exercicioId: 88108,
+    nome: "Panturrilha Demo",
+    musculo: "pernas",
+    peso: 80,
+    series: 4,
+    reps: 15,
+  },
+  {
+    email: "atleta9@meccafit.com",
+    exercicioId: 88109,
+    nome: "Crucifixo Demo",
+    musculo: "peito",
+    peso: 35,
+    series: 3,
+    reps: 12,
+  },
+  {
+    email: "atleta10@meccafit.com",
+    exercicioId: 88110,
+    nome: "Terra Demo",
+    musculo: "costas",
+    peso: 180,
+    series: 5,
+    reps: 5,
+  },
 ];
+
+const DEMO_EXERCISE_IDS = MURAL_SEEDS.map((seed) => seed.exercicioId);
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -83,20 +152,26 @@ const admin = createClient(url, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-async function resolveAthleteIds() {
-  const { data: listed, error } = await admin.auth.admin.listUsers({ perPage: 200 });
+async function listAllUsers() {
+  const { data, error } = await admin.auth.admin.listUsers({ perPage: 200 });
   if (error) throw error;
+  return data.users;
+}
 
-  const ids = [];
-  for (const seed of MURAL_SEEDS) {
-    const user = listed.users.find((row) => row.email?.toLowerCase() === seed.email.toLowerCase());
+async function resolveAthleteMap() {
+  const users = await listAllUsers();
+  const map = new Map();
+
+  for (const email of ALL_CLIENT_EMAILS) {
+    const user = users.find((row) => row.email?.toLowerCase() === email.toLowerCase());
     if (!user?.id) {
-      console.error(`seed-comunidade-demo: ${seed.email} ausente — rode npm run seed:test-users`);
+      console.error(`seed-comunidade-demo: ${email} ausente — rode npm run seed:test-users`);
       process.exit(1);
     }
-    ids.push(user.id);
+    map.set(email, user.id);
   }
-  return ids;
+
+  return map;
 }
 
 async function clearDemoMural() {
@@ -104,6 +179,14 @@ async function clearDemoMural() {
     .from("historico_treinos")
     .delete()
     .in("exercicio_id", DEMO_EXERCISE_IDS);
+  if (error) throw error;
+}
+
+async function clearDemoTermometroCargas() {
+  const { error } = await admin
+    .from("historico_cargas")
+    .delete()
+    .like("exercicio_id", `${SEED_TAG}-%`);
   if (error) throw error;
 }
 
@@ -140,11 +223,11 @@ async function seedSuperacaoViaRpc(seed) {
   }
 }
 
-async function insertCarga(atletaId, grupo, exercicioId, carga, reps) {
+async function insertCarga(atletaId, grupo, suffix, carga, reps) {
   const { error } = await admin.from("historico_cargas").insert({
     atleta_id: atletaId,
     grupo_muscular: grupo,
-    exercicio_id: `${SEED_TAG}-${exercicioId}-${Date.now()}`,
+    exercicio_id: `${SEED_TAG}-${suffix}`,
     carga_maxima: carga,
     repeticoes_acumuladas: reps,
     data_registro: new Date().toISOString(),
@@ -186,17 +269,29 @@ async function createActiveDuel(desafiante, desafiado, tipo, vtcDesafiante, vtcD
   if (error) throw error;
 }
 
-console.log("\n=== seed-comunidade-demo ===\n");
+console.log("\n=== seed-comunidade-demo (10 clientes) ===\n");
 
 try {
-  const [u1, u2, u3, u4] = await resolveAthleteIds();
-  const athletes = [u1, u2, u3, u4];
+  const athleteMap = await resolveAthleteMap();
+  const athletes = ALL_CLIENT_EMAILS.map((email) => athleteMap.get(email));
+
+  const u1 = athleteMap.get("cliente@meccafit.com");
+  const u2 = athleteMap.get("atleta2@meccafit.com");
+  const u3 = athleteMap.get("atleta3@meccafit.com");
+  const u4 = athleteMap.get("atleta4@meccafit.com");
+  const u5 = athleteMap.get("atleta5@meccafit.com");
+  const u6 = athleteMap.get("atleta6@meccafit.com");
+  const u7 = athleteMap.get("atleta7@meccafit.com");
+  const u8 = athleteMap.get("atleta8@meccafit.com");
+  const u9 = athleteMap.get("atleta9@meccafit.com");
+  const u10 = athleteMap.get("atleta10@meccafit.com");
 
   for (const id of athletes) {
     await ensurePlano(id);
   }
+  console.log(`OK · ${athletes.length} planos atletas`);
 
-  console.log("1. Mural · superações via RPC ARGOS");
+  console.log("\n1. Mural · superações via RPC ARGOS");
   await clearDemoMural();
   for (const seed of MURAL_SEEDS) {
     await seedSuperacaoViaRpc(seed);
@@ -212,31 +307,36 @@ try {
   console.log(`  Verificado · ${muralCount ?? 0} superações no mural demo`);
 
   console.log("\n2. Termómetro colectivo · historico_cargas");
+  await clearDemoTermometroCargas();
   const cargas = [
-    [u1, "PEITO", "a", 80, 40],
-    [u2, "COSTAS", "b", 70, 48],
-    [u3, "PERNAS", "c", 120, 32],
-    [u4, "PERNAS", "f", 100, 40],
-    [u1, "OMBROS", "d", 40, 36],
-    [u2, "PEITO", "e", 90, 30],
+    [u1, "PEITO", "c1-peito", 80, 40],
+    [u2, "COSTAS", "c2-costas", 70, 48],
+    [u3, "PERNAS", "c3-pernas", 120, 32],
+    [u4, "OMBROS", "c4-ombros", 50, 36],
+    [u5, "PEITO", "c5-peito", 90, 30],
+    [u6, "COSTAS", "c6-costas", 85, 28],
+    [u7, "OMBROS", "c7-ombros", 45, 40],
+    [u8, "PERNAS", "c8-pernas", 100, 35],
+    [u9, "PEITO", "c9-peito", 75, 32],
+    [u10, "COSTAS", "c10-costas", 95, 42],
   ];
-  for (const [id, grupo, ex, carga, reps] of cargas) {
-    await insertCarga(id, grupo, ex, carga, reps);
+  for (const [id, grupo, suffix, carga, reps] of cargas) {
+    await insertCarga(id, grupo, suffix, carga, reps);
     console.log(`  OK · ${grupo} · ${carga * reps} kg`);
   }
 
-  console.log("\n3. Duelos activos · ranking");
+  console.log("\n3. Duelos activos");
   await clearDemoDuels(athletes);
-  await createActiveDuel(u2, u3, "SUPERIORES", 4200, 3800);
-  await createActiveDuel(u1, u4, "INFERIORES", 5600, 4900);
-  console.log("  OK · SUPERIORES (atleta2 vs atleta3)");
-  console.log("  OK · INFERIORES (cliente vs atleta4)");
+  await createActiveDuel(u10, u9, "SUPERIORES", 2800, 2550);
+  await createActiveDuel(u6, u5, "INFERIORES", 1800, 1550);
+  console.log("  OK · SUPERIORES (atleta10 vs atleta9)");
+  console.log("  OK · INFERIORES (atleta6 vs atleta5)");
 
   console.log("\n4. Títulos demo · THOTH");
   const { error: titulosErr } = await admin.rpc("comunidade_apply_demo_titulos", {
-    p_cinturao_superiores_id: u2,
+    p_cinturao_superiores_id: u10,
     p_cinturao_inferiores_id: u4,
-    p_rei_superiores_id: u2,
+    p_rei_superiores_id: u10,
     p_rei_inferiores_id: u4,
     p_pilar_id: u3,
     p_todos_id: u1,
@@ -248,9 +348,9 @@ try {
       throw titulosErr;
     }
   } else {
-    console.log("  OK · atleta2 cinturão + rei superiores");
+    console.log("  OK · atleta10 cinturão + rei superiores");
     console.log("  OK · atleta4 cinturão + rei inferiores");
-    console.log("  OK · atleta3 pilar · cliente todos os títulos");
+    console.log("  OK · atleta3 pilar · cliente com todos os títulos");
   }
 
   const { data: meta } = await admin

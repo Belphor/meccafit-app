@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-15T20:11:54.170Z",
+  "generatedAt": "2026-06-20T03:31:56.786Z",
   "users": {
     "cliente_principal": {
       "email": "cliente@meccafit.com",
@@ -12,6 +12,30 @@
     "atleta_carga": {
       "email": "atleta4@meccafit.com",
       "userId": "7bc7e6ce-0557-49f9-8637-100aa929b18d"
+    },
+    "atleta_ranking_5": {
+      "email": "atleta5@meccafit.com",
+      "userId": "f717f098-2eef-4c96-9628-cb368d9990c8"
+    },
+    "atleta_ranking_6": {
+      "email": "atleta6@meccafit.com",
+      "userId": "89a8981a-70c1-452c-b6cc-e88951e22142"
+    },
+    "atleta_ranking_7": {
+      "email": "atleta7@meccafit.com",
+      "userId": "32931412-da87-4885-b304-8d0950486eda"
+    },
+    "atleta_ranking_8": {
+      "email": "atleta8@meccafit.com",
+      "userId": "c4779c07-d542-417a-90b5-1e4bce7de0a2"
+    },
+    "atleta_ranking_9": {
+      "email": "atleta9@meccafit.com",
+      "userId": "79a60c1f-6191-419a-b02b-afe7448b556c"
+    },
+    "atleta_ranking_10": {
+      "email": "atleta10@meccafit.com",
+      "userId": "bcf45f7c-6c4d-4d74-8875-231e769284a4"
     },
     "forjador_linhagem": {
       "email": "forjador@meccafit.com",
