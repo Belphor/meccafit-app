@@ -5,7 +5,7 @@
 import type { ComunidadeArenaSnapshot } from "@/lib/comunidade-data";
 import type { ComunidadeClienteEvolution } from "@/lib/comunidade-evolution";
 
-const TTL_MS = 90_000;
+const TTL_MS = 120_000;
 
 type CacheEntry<T> = {
   userId: string;

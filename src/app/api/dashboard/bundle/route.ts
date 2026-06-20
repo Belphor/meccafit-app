@@ -3,7 +3,7 @@ import {
   applyHistoricoToSubgroup,
   mapCommunityMuralRowsToPosts,
   mapProfileRowToClientProfile,
-  MURAL_COMMUNITY_DEFAULT_LIMIT,
+  MURAL_BUNDLE_LIMIT,
   type CommunityMuralRow,
   type DashboardProfileRow,
   type HistoricoTreinoRow,
@@ -14,20 +14,28 @@ import { resolveAuthedSupabase } from "@/lib/supabase-server";
 import {
   enrichProfileRowWithThermalGravity,
   fetchThermalGravityMetrics,
+  type ThermalGravityMetricsRow,
 } from "@/lib/thermal-gravity-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Enums } from "@/types/database.types";
 import type { TrainingTrackState } from "@/lib/training-track";
 import { fetchTrainingTrackForUser } from "@/lib/training-track.server";
 
-const SERVER_CACHE_TTL_MS = 45_000;
+const SERVER_CACHE_TTL_MS = 90_000;
+const TRAINING_TRACK_CACHE_TTL_MS = 90_000;
 
 type BundleCacheEntry = {
   expiresAt: number;
   body: Record<string, unknown>;
 };
 
+type TrainingTrackCacheEntry = {
+  expiresAt: number;
+  track: TrainingTrackState;
+};
+
 const serverCache = new Map<string, BundleCacheEntry>();
+const trainingTrackCache = new Map<string, TrainingTrackCacheEntry>();
 
 function cacheKey(
   userId: string,
@@ -41,7 +49,27 @@ async function fetchTrainingTrack(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<TrainingTrackState> {
-  return fetchTrainingTrackForUser(supabase, userId);
+  const cached = trainingTrackCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.track;
+  }
+
+  const track = await fetchTrainingTrackForUser(supabase, userId);
+  trainingTrackCache.set(userId, {
+    expiresAt: Date.now() + TRAINING_TRACK_CACHE_TTL_MS,
+    track,
+  });
+  return track;
+}
+
+function parseBundleThermal(raw: unknown): ThermalGravityMetricsRow | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    vtc_30d: Number(row.vtc_30d ?? 0),
+    session_vtc_today: Number(row.session_vtc_today ?? 0),
+    available: row.vtc_30d !== undefined || row.session_vtc_today !== undefined,
+  };
 }
 
 function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
@@ -55,7 +83,7 @@ async function fetchBundleViaRpc(
 ) {
   const { data, error } = await supabase.rpc("fetch_dashboard_bundle", {
     p_musculo: musculo,
-    p_mural_limit: MURAL_COMMUNITY_DEFAULT_LIMIT,
+    p_mural_limit: MURAL_BUNDLE_LIMIT,
   });
 
   if (error || !data || typeof data !== "object") {
@@ -66,6 +94,7 @@ async function fetchBundleViaRpc(
     profile?: DashboardProfileRow | null;
     historico?: HistoricoTreinoRow[] | null;
     mural?: CommunityMuralRow[] | null;
+    thermal_gravity?: { vtc_30d?: number; session_vtc_today?: number } | null;
   };
 
   if (!bundle.profile) {
@@ -78,6 +107,7 @@ async function fetchBundleViaRpc(
     profileRow: bundle.profile,
     historico: bundle.historico ?? [],
     muralPosts: mapCommunityMuralRowsToPosts(bundle.mural ?? []),
+    thermalMetrics: parseBundleThermal(bundle.thermal_gravity),
   };
 }
 
@@ -102,7 +132,7 @@ async function fetchBundleViaParallel(
       .eq("cliente_id", userId)
       .eq("musculo", musculo)
       .order("registrado_em", { ascending: false }),
-    supabase.rpc("argos_fetch_mural_comunidade", { p_limit: MURAL_COMMUNITY_DEFAULT_LIMIT }),
+    supabase.rpc("argos_fetch_mural_comunidade", { p_limit: MURAL_BUNDLE_LIMIT }),
     supabase.rpc("argos_advance_phase_if_eligible", { p_user_id: userId }),
   ]);
 
@@ -128,6 +158,7 @@ async function fetchBundleViaParallel(
     profileRow,
     historico: historicoRes.data ?? [],
     muralPosts: mapCommunityMuralRowsToPosts((muralRes.data ?? []) as CommunityMuralRow[]),
+    thermalMetrics: null as ThermalGravityMetricsRow | null,
   };
 }
 
@@ -151,7 +182,7 @@ export async function GET(request: Request) {
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json(cached.body, {
       headers: {
-        "Cache-Control": "private, max-age=15",
+        "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
         "X-Cache": "HIT",
         "X-Latency-Ms": String(Math.round(performance.now() - started)),
       },
@@ -173,7 +204,11 @@ export async function GET(request: Request) {
   }
 
   const rawProfileRow = bundleResult.profileRow as Record<string, unknown>;
-  const thermalMetrics = await fetchThermalGravityMetrics(supabase, userId);
+  const inlineThermal = "thermalMetrics" in bundleResult ? bundleResult.thermalMetrics : null;
+  const thermalMetrics =
+    inlineThermal?.available === true
+      ? inlineThermal
+      : await fetchThermalGravityMetrics(supabase, userId);
   const enrichedProfileRow = enrichProfileRowWithThermalGravity(rawProfileRow, thermalMetrics);
 
   const body = {
@@ -196,7 +231,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json(body, {
     headers: {
-      "Cache-Control": "private, max-age=15",
+      "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
       "X-Cache": "MISS",
       "X-Latency-Ms": String(Math.round(performance.now() - started)),
     },
@@ -226,6 +261,7 @@ export async function POST(request: Request) {
     for (const key of serverCache.keys()) {
       if (key.startsWith(prefix)) serverCache.delete(key);
     }
+    trainingTrackCache.delete(userId);
   }
 
   return NextResponse.json({ ok: true });

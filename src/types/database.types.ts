@@ -960,7 +960,7 @@ export type Database = {
         Returns: Json;
       };
       get_comunidade_arena_snapshot: {
-        Args: Record<PropertyKey, never>;
+        Args: { p_skip_side_effects?: boolean };
         Returns: Json;
       };
       get_rankings_por_membro: {

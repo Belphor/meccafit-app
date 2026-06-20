@@ -233,7 +233,7 @@ export function DashboardClient({
       setActiveTrainingDay(bootDay);
       setSubgroup(bootSubgroup);
 
-      const historicoResult = await refreshDaySubgroupHistorico(bootSubgroup);
+      const historicoResult = await refreshDaySubgroupHistorico(bootSubgroup, { skipInvalidate: true });
       if (!isMounted) return;
       if (historicoResult.data) {
         setSubgroup(historicoResult.data);
@@ -349,7 +349,7 @@ export function DashboardClient({
       );
       setSubgroup(instant);
 
-      void refreshDaySubgroupHistorico(instant).then((result) => {
+      void refreshDaySubgroupHistorico(instant, { skipInvalidate: true }).then((result) => {
         if (switchToken !== treinoSwitchTokenRef.current) return;
 
         if (result.data) {
@@ -402,16 +402,17 @@ export function DashboardClient({
       const musculos = collectUniqueMusclesFromSubgroup(subgroupRef.current);
       await Promise.all(musculos.map((musculo) => invalidateDashboardCaches(userId, musculo)));
 
-      const subgroupResult = await refreshDaySubgroupHistorico(subgroupRef.current);
-      const muralResult = await fetchCommunityMuralPosts();
-      const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
+      const [subgroupResult, bundleResult] = await Promise.all([
+        refreshDaySubgroupHistorico(subgroupRef.current, { skipInvalidate: true }),
+        loadDashboardTrainingBundle(subgroupParam),
+      ]);
 
       if (subgroupResult.data) {
         setSubgroup(subgroupResult.data);
       }
 
-      if (muralResult.data) {
-        setMuralPosts(muralResult.data);
+      if (bundleResult.data?.muralPosts) {
+        setMuralPosts(bundleResult.data.muralPosts);
       }
 
       if (bundleResult.data?.profileRow) {

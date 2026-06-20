@@ -135,6 +135,10 @@ export const MIGRATION_PATCHES = [
     id: "cardio_sessao_diaria",
     files: ["20260625100000_cardio_sessao_diaria_sync.sql"],
   },
+  {
+    id: "perf_zero_cost_scaling",
+    files: ["20260625200000_perf_zero_cost_scaling.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -295,6 +299,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeComunidadeArena(admin, probeUserId));
     probes.push(await probeComunidadeSnapshotAuth(admin, probeUserId));
     probes.push(await probeCardioSessaoDiaria(admin));
+    probes.push(await probePerfZeroCostScaling(admin, probeUserId));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -325,6 +330,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "cardio_sessao_diaria",
       ok: false,
       detail: "sem perfil para probe cardio",
+    });
+    probes.push({
+      id: "perf_zero_cost_scaling",
+      ok: false,
+      detail: "sem perfil para probe perf",
     });
   }
 
@@ -490,6 +500,97 @@ async function probeCardioSessaoDiaria(admin) {
   }
 
   return { id: "cardio_sessao_diaria", ok: true, detail: "tabela OK · sync multi-dispositivo" };
+}
+
+async function probePerfZeroCostScaling(admin, userId) {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+  if (!url || !anonKey) {
+    return { id: "perf_zero_cost_scaling", ok: true, detail: "skip · anon key ausente" };
+  }
+
+  const { data: userRow } = await admin.auth.admin.getUserById(userId);
+  const email = userRow?.user?.email;
+  if (!email) {
+    return { id: "perf_zero_cost_scaling", ok: false, detail: "email do probe ausente" };
+  }
+
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: loginErr } = await client.auth.signInWithPassword({
+    email,
+    password: "senha123",
+  });
+
+  if (loginErr) {
+    return { id: "perf_zero_cost_scaling", ok: false, detail: `login probe: ${loginErr.message}` };
+  }
+
+  const { data: bundle, error: bundleErr } = await client.rpc("fetch_dashboard_bundle", {
+    p_musculo: "peito",
+    p_mural_limit: 24,
+  });
+
+  const { data: arenaFast, error: arenaErr } = await client.rpc("get_comunidade_arena_snapshot", {
+    p_skip_side_effects: true,
+  });
+
+  await client.auth.signOut();
+
+  if (bundleErr?.code === "PGRST202") {
+    return {
+      id: "perf_zero_cost_scaling",
+      ok: false,
+      detail: "fetch_dashboard_bundle ausente — aplicar 20260625200000",
+    };
+  }
+
+  if (bundleErr) {
+    return { id: "perf_zero_cost_scaling", ok: false, detail: bundleErr.message };
+  }
+
+  const thermal = bundle?.thermal_gravity;
+  const thermalOk =
+    thermal &&
+    typeof thermal === "object" &&
+    typeof thermal.vtc_30d === "number" &&
+    typeof thermal.session_vtc_today === "number";
+
+  if (!thermalOk) {
+    return {
+      id: "perf_zero_cost_scaling",
+      ok: false,
+      detail: "bundle sem thermal_gravity inline — aplicar 20260625200000",
+    };
+  }
+
+  if (arenaErr?.code === "PGRST202") {
+    return {
+      id: "perf_zero_cost_scaling",
+      ok: false,
+      detail: "get_comunidade_arena_snapshot(boolean) ausente",
+    };
+  }
+
+  if (arenaErr) {
+    return { id: "perf_zero_cost_scaling", ok: false, detail: arenaErr.message };
+  }
+
+  const arenaOk = arenaFast && typeof arenaFast === "object" && Array.isArray(arenaFast.duelos_ativos);
+
+  return {
+    id: "perf_zero_cost_scaling",
+    ok: arenaOk,
+    detail: arenaOk
+      ? "bundle thermal inline · arena skip_side_effects ok"
+      : "arena snapshot shape inválido",
+  };
 }
 
 async function probeMidasGrowth(admin, userId) {

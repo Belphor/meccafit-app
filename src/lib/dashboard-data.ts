@@ -229,6 +229,7 @@ export function sumSessionAltarVtc(
   }, 0);
 }
 
+export const MURAL_BUNDLE_LIMIT = 24;
 export const MURAL_COMMUNITY_DEFAULT_LIMIT = 48;
 export const MURAL_COMMUNITY_MAX_LIMIT = 100;
 
@@ -403,7 +404,7 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
   const response = await fetch(`/api/dashboard/bundle${query}`, {
     method: "GET",
     credentials: "same-origin",
-    cache: "no-store",
+    cache: "default",
   });
 
   if (response.status === 401) {
@@ -486,7 +487,7 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
   const rpcResult = await withSupabaseRlsGuard(async () => {
     const { data, error } = await supabase.rpc("fetch_dashboard_bundle", {
       p_musculo: musculo,
-      p_mural_limit: MURAL_COMMUNITY_DEFAULT_LIMIT,
+      p_mural_limit: MURAL_BUNDLE_LIMIT,
     });
     return { data, error };
   });
@@ -496,6 +497,7 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       profile?: DashboardProfileRow | null;
       historico?: HistoricoTreinoRow[] | null;
       mural?: CommunityMuralRow[] | null;
+      thermal_gravity?: { vtc_30d?: number; session_vtc_today?: number } | null;
     };
 
     if (bundle.profile) {
@@ -503,11 +505,20 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       const baseProfileRow = profileRowToEnginePayload(bundle.profile) ?? {};
       let enrichedProfileRow: Record<string, unknown> = baseProfileRow;
 
-      try {
-        const metrics = await fetchThermalGravityMetrics(supabase, session.user.id);
-        enrichedProfileRow = enrichProfileRowWithThermalGravity(baseProfileRow, metrics);
-      } catch {
-        // RPC thermal gravity indisponível — perfil base sem degradação
+      const inlineThermal = bundle.thermal_gravity;
+      if (inlineThermal && (inlineThermal.vtc_30d !== undefined || inlineThermal.session_vtc_today !== undefined)) {
+        enrichedProfileRow = enrichProfileRowWithThermalGravity(baseProfileRow, {
+          vtc_30d: Number(inlineThermal.vtc_30d ?? 0),
+          session_vtc_today: Number(inlineThermal.session_vtc_today ?? 0),
+          available: true,
+        });
+      } else {
+        try {
+          const metrics = await fetchThermalGravityMetrics(supabase, session.user.id);
+          enrichedProfileRow = enrichProfileRowWithThermalGravity(baseProfileRow, metrics);
+        } catch {
+          // RPC thermal gravity indisponível — perfil base sem degradação
+        }
       }
 
       return {
@@ -675,11 +686,12 @@ export async function refreshSubgroupHistorico(
 
 export async function refreshDaySubgroupHistorico(
   subgroup: MuscleSubgroup,
+  options?: { skipInvalidate?: boolean },
 ): Promise<SupabaseGuardResult<MuscleSubgroup>> {
   const session = await getActiveSupabaseSession();
   const musculos = collectUniqueMusclesFromSubgroup(subgroup);
 
-  if (session?.user.id) {
+  if (session?.user.id && !options?.skipInvalidate) {
     await Promise.all(musculos.map((musculo) => invalidateDashboardCaches(session.user.id, musculo)));
   }
 

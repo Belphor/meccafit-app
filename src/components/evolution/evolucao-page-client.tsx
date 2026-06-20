@@ -165,6 +165,8 @@ export function EvolucaoPageClient({
     void (async () => {
       if (!resolvedInitial) {
         setLoading(true);
+      } else {
+        return;
       }
       setScopeError(null);
       try {

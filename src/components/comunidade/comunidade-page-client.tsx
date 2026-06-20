@@ -87,19 +87,22 @@ export function ComunidadePageClient({
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadAll = useCallback(
-    async (options?: { background?: boolean }) => {
+    async (options?: { background?: boolean; refresh?: boolean }) => {
       const background = options?.background ?? false;
+      const refresh = options?.refresh ?? false;
       const hasCachedData = Boolean(readCachedComunidadeArena(userId));
 
       if (!background && !hasCachedData) {
         setArenaLoading(true);
         setEvolutionLoading(true);
-      } else {
+      } else if (refresh || background) {
         setIsRefreshing(true);
+      } else {
+        return;
       }
 
       const [arenaResult, evolutionResult] = await Promise.all([
-        fetchComunidadeArenaSnapshot(),
+        fetchComunidadeArenaSnapshot({ skipSideEffects: !refresh }),
         fetchComunidadeClienteEvolution(userId),
       ]);
 
@@ -171,7 +174,7 @@ export function ComunidadePageClient({
           </div>
           <button
             type="button"
-            onClick={() => void loadAll({ background: true })}
+            onClick={() => void loadAll({ background: true, refresh: true })}
             disabled={arenaLoading || evolutionLoading || isRefreshing}
             className="min-h-11 w-full shrink-0 rounded-full border border-orange-500/25 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90 disabled:opacity-50 sm:w-auto sm:min-w-[7.5rem]"
           >

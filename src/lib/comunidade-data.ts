@@ -277,11 +277,15 @@ function parseSnapshot(payload: unknown): { data: ComunidadeArenaSnapshot | null
   };
 }
 
-export async function fetchComunidadeArenaSnapshot(): Promise<{
+export async function fetchComunidadeArenaSnapshot(options?: {
+  skipSideEffects?: boolean;
+}): Promise<{
   data: ComunidadeArenaSnapshot | null;
   error: string | null;
 }> {
-  const { data, error } = await supabase.rpc("get_comunidade_arena_snapshot");
+  const { data, error } = await supabase.rpc("get_comunidade_arena_snapshot", {
+    p_skip_side_effects: options?.skipSideEffects ?? true,
+  });
 
   if (error) {
     if (error.code === "PGRST202") {

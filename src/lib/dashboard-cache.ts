@@ -4,7 +4,7 @@ import type { ClientProfile, MuralPost } from "@/lib/mock-data";
 import type { TrainingTrackState } from "@/lib/training-track";
 import { DEFAULT_TRAINING_TRACK } from "@/lib/training-track";
 
-export const DASHBOARD_CACHE_TTL_MS = 45_000;
+export const DASHBOARD_CACHE_TTL_MS = 90_000;
 export const DASHBOARD_CACHE_PREFIX = "meccafit:dashboard:bundle:";
 
 export type DashboardBundleCachePayload = {
