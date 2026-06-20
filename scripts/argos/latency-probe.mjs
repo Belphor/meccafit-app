@@ -128,6 +128,22 @@ if (coldRpc.mode === "rpc_missing") {
   console.log("RPC fetch_dashboard_bundle: ausente — rode scripts/apply-latency-migration.mjs");
 } else {
   console.log(`Supabase cold (bundle RPC): ${coldRpc.ms}ms · HTTP ${coldRpc.status}`);
+
+  const warmRpcSamples = [];
+  for (let i = 0; i < samples; i += 1) {
+    const hit = await probeSupabaseCold(token);
+    if (hit.status === 200) warmRpcSamples.push(hit.ms);
+  }
+  const rpcP50 = percentile(warmRpcSamples, 50);
+  const rpcP95 = percentile(warmRpcSamples, 95);
+  const rpcP99 = percentile(warmRpcSamples, 99);
+  console.log(`\nSupabase warm (${samples} hits, bundle RPC — caminho do app):`);
+  console.log(`  p50/p95/p99: ${rpcP50}/${rpcP95}/${rpcP99} ms`);
+
+  if (rpcP95 <= budget) {
+    console.log(`\nARGOS latency-probe: RPC warm p95 dentro do budget (${budget}ms).`);
+    process.exit(0);
+  }
 }
 
 let appOnline = false;
@@ -150,23 +166,14 @@ try {
     const p95 = percentile(warmSamples, 95);
     const p99 = percentile(warmSamples, 99);
 
-    console.log(`\nApp warm (${samples} hits, server cache):`);
+    console.log(`\nApp warm (${samples} hits, BFF legado — fallback):`);
     console.log(`  p50/p95/p99: ${p50}/${p95}/${p99} ms`);
-
-    if (p95 <= budget) {
-      console.log(`\nARGOS latency-probe: warm p95 dentro do budget (${budget}ms).`);
-      process.exit(0);
-    }
-
-    console.error(`\nARGOS latency-probe: warm p95 ${p95}ms > budget ${budget}ms.`);
-    process.exit(2);
   }
 } catch (error) {
   console.warn(`App offline (${appUrl}): ${error.message ?? error}`);
 }
 
-if (!appOnline) {
-  console.log("\nApp offline — budget warm não medido. Inicie: npm run dev");
-  console.log("Supabase cold permanece limitado pelo RTT (~250ms+ fora de sa-east-1).");
-  process.exit(coldRpc.ms <= budget ? 0 : 1);
+if (coldRpc.mode !== "rpc_missing") {
+  console.error(`\nARGOS latency-probe: RPC warm p95 acima do budget ${budget}ms.`);
+  process.exit(2);
 }

@@ -37,12 +37,8 @@ type TrainingTrackCacheEntry = {
 const serverCache = new Map<string, BundleCacheEntry>();
 const trainingTrackCache = new Map<string, TrainingTrackCacheEntry>();
 
-function cacheKey(
-  userId: string,
-  musculo: Enums<"subgrupo_muscular">,
-  track: TrainingTrackState["track"],
-): string {
-  return `${userId}:${musculo}:${track}`;
+function cacheKey(userId: string, musculo: Enums<"subgrupo_muscular">): string {
+  return `${userId}:${musculo}`;
 }
 
 async function fetchTrainingTrack(
@@ -175,9 +171,7 @@ export async function GET(request: Request) {
   }
 
   const { client: supabase, userId } = auth;
-  const trainingTrack = await fetchTrainingTrack(supabase, userId);
-  const hasPersonalBond = Boolean(trainingTrack.bond);
-  const key = cacheKey(userId, musculo, trainingTrack.track);
+  const key = cacheKey(userId, musculo);
   const cached = serverCache.get(key);
   if (cached && cached.expiresAt > Date.now()) {
     return NextResponse.json(cached.body, {
@@ -189,7 +183,11 @@ export async function GET(request: Request) {
     });
   }
 
-  const rpcResult = await fetchBundleViaRpc(supabase, musculo);
+  const [trainingTrack, rpcResult] = await Promise.all([
+    fetchTrainingTrack(supabase, userId),
+    fetchBundleViaRpc(supabase, musculo),
+  ]);
+  const hasPersonalBond = Boolean(trainingTrack.bond);
   const bundleResult = rpcResult.ok
     ? rpcResult
     : isMissingRpc(rpcResult.error)
@@ -255,8 +253,7 @@ export async function POST(request: Request) {
 
   const prefix = `${userId}:`;
   if (musculo) {
-    serverCache.delete(cacheKey(userId, musculo, "common"));
-    serverCache.delete(cacheKey(userId, musculo, "personal"));
+    serverCache.delete(cacheKey(userId, musculo));
   } else {
     for (const key of serverCache.keys()) {
       if (key.startsWith(prefix)) serverCache.delete(key);

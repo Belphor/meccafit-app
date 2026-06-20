@@ -481,16 +481,18 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
 
   const baseSubgroup = resolveSubgroupFromParam(subgroupParam);
   const musculo = subgroupIdToMusculo(baseSubgroup.id);
-  const trainingTrack = await fetchTrainingTrackForUser(supabase, session.user.id);
-  const hasPersonalBond = Boolean(trainingTrack.bond);
 
-  const rpcResult = await withSupabaseRlsGuard(async () => {
-    const { data, error } = await supabase.rpc("fetch_dashboard_bundle", {
-      p_musculo: musculo,
-      p_mural_limit: MURAL_BUNDLE_LIMIT,
-    });
-    return { data, error };
-  });
+  const [trainingTrack, rpcResult] = await Promise.all([
+    fetchTrainingTrackForUser(supabase, session.user.id),
+    withSupabaseRlsGuard(async () => {
+      const { data, error } = await supabase.rpc("fetch_dashboard_bundle", {
+        p_musculo: musculo,
+        p_mural_limit: MURAL_BUNDLE_LIMIT,
+      });
+      return { data, error };
+    }),
+  ]);
+  const hasPersonalBond = Boolean(trainingTrack.bond);
 
   if (!rpcResult.error && rpcResult.data && typeof rpcResult.data === "object") {
     const bundle = rpcResult.data as {
@@ -624,11 +626,11 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
     };
   }
 
-  const apiResult = await fetchDashboardBundleFromApi(subgroupParam);
+  const directResult = await fetchDashboardBundleDirect(subgroupParam);
   const resolved =
-    apiResult.data || apiResult.error?.code === "SESSION_REQUIRED"
-      ? apiResult
-      : await fetchDashboardBundleDirect(subgroupParam);
+    directResult.data || directResult.error?.code === "SESSION_REQUIRED"
+      ? directResult
+      : await fetchDashboardBundleFromApi(subgroupParam);
 
   if (resolved.error || !resolved.data) {
     return { data: null, error: resolved.error };

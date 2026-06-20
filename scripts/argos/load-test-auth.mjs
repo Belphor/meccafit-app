@@ -265,23 +265,24 @@ if (scenarioLatencies.size > 0) {
 }
 
 if (latencyBudget > 0) {
-  const cacheHits = scenarioLatencies.get("app_dashboard_bundle_cache_hit") ?? [];
-  if (cacheHits.length < 5) {
+  const primaryScenario = bundleRpcAvailable ? "dashboard_bundle_rpc" : "app_dashboard_bundle";
+  const primaryLatencies = scenarioLatencies.get(primaryScenario) ?? [];
+  if (primaryLatencies.length < 5) {
     console.warn(
-      `\nARGOS: poucos cache HIT no app (${cacheHits.length}) — budget medido nos hits disponíveis.`,
+      `\nARGOS: poucas amostras em ${primaryScenario} (${primaryLatencies.length}) — budget medido nos hits disponíveis.`,
     );
   }
-  if (cacheHits.length === 0) {
-    console.error("\nARGOS: nenhum cache HIT no app — verifique /api/dashboard/bundle.");
+  if (primaryLatencies.length === 0) {
+    console.error(`\nARGOS: nenhuma amostra em ${primaryScenario} — verifique Supabase RPC.`);
     process.exit(4);
   }
-  const p95 = percentile(cacheHits, 95);
+  const p95 = percentile(primaryLatencies, 95);
   if (p95 > latencyBudget) {
-    console.error(`\nARGOS: app cache HIT p95 ${p95}ms acima do budget ${latencyBudget}ms`);
+    console.error(`\nARGOS: ${primaryScenario} p95 ${p95}ms acima do budget ${latencyBudget}ms`);
     process.exit(4);
   }
   console.log(
-    `\nBudget latência (app X-Cache:HIT, n=${cacheHits.length}): p95=${p95}ms <= ${latencyBudget}ms`,
+    `\nBudget latência (${primaryScenario}, n=${primaryLatencies.length}): p95=${p95}ms <= ${latencyBudget}ms`,
   );
 }
 
