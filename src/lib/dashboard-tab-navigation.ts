@@ -7,6 +7,13 @@ import {
 /** Evento interno · sincroniza abas sem remount do dashboard */
 export const DASHBOARD_TAB_CHANGE_EVENT = "meccafit:dashboard-tab-change";
 
+/** Foca o mural da comunidade após SUPERAÇÃO (scroll + destaque). */
+export const COMUNIDADE_MURAL_FOCUS_EVENT = "meccafit:focus-comunidade-mural";
+
+export type ComunidadeMuralFocusDetail = {
+  exerciseName?: string;
+};
+
 export type DashboardTabChangeDetail = {
   tab: DashboardTabId;
 };

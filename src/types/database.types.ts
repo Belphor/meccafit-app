@@ -400,6 +400,7 @@ export type Database = {
           atleta_id: string;
           dia_semana: number;
           grupo_muscular: string;
+          ordem: number;
           created_at: string;
           updated_at: string;
         };
@@ -408,6 +409,7 @@ export type Database = {
           atleta_id: string;
           dia_semana: number;
           grupo_muscular: string;
+          ordem?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -416,6 +418,7 @@ export type Database = {
           atleta_id?: string;
           dia_semana?: number;
           grupo_muscular?: string;
+          ordem?: number;
           created_at?: string;
           updated_at?: string;
         };

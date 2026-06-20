@@ -153,7 +153,7 @@ function PhoenixInput({
 
   const persistTopWeight = useCallback(
     async (topMetric: number) => {
-      if (savingRef.current) return false;
+      if (isSeriesComplete || savingRef.current) return false;
 
       const uid = String(userId || "").trim();
       if (!uid || uid.length < 20) {
@@ -219,6 +219,7 @@ function PhoenixInput({
       metricKind,
       numericExerciseId,
       prescribedSeries,
+      isSeriesComplete,
       onPersistSuccess,
       onSuperacao,
       onVolumeCommitted,
@@ -246,6 +247,8 @@ function PhoenixInput({
       }
 
       setError(null);
+
+      if (isSeriesComplete) return;
 
       const isNewPeak = topMetric > sessionTopWeightRef.current;
       if (isNewPeak) {

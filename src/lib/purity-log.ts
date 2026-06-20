@@ -1,8 +1,9 @@
 /**
- * Write path · purity_logs
- * Marca o dia civil (America/Sao_Paulo) como "puro" para o Índice de Ignição.
+ * Write path · purity_logs + calendario_ignicao
+ * Marca o dia civil (America/Sao_Paulo) como puro para o Índice de Ignição.
  */
 
+import { dispatchEvolutionCalorRefresh } from "@/lib/evolution-events";
 import { supabase } from "@/lib/supabase";
 import { resolveAppDayKey } from "@/lib/treino-day-key";
 import type { TablesInsert } from "@/types/database.types";
@@ -18,9 +19,11 @@ export async function markDailyPurityLog(
     return { ok: false, detail: "userId inválido" };
   }
 
+  const logDate = resolveAppDayKey();
+
   const row: TablesInsert<"purity_logs"> = {
     user_id: trimmed,
-    log_date: resolveAppDayKey(),
+    log_date: logDate,
     is_pure: true,
   };
 
@@ -36,5 +39,21 @@ export async function markDailyPurityLog(
     return { ok: false, detail: error.message };
   }
 
+  const { error: calendarError } = await supabase.from("calendario_ignicao").upsert(
+    {
+      atleta_id: trimmed,
+      data_registro: logDate,
+    },
+    { onConflict: "atleta_id,data_registro" },
+  );
+
+  if (calendarError) {
+    console.warn(
+      `[meccafit:purity-log] calendario_ignicao falhou (${options?.source ?? "app"}):`,
+      calendarError.message,
+    );
+  }
+
+  dispatchEvolutionCalorRefresh(trimmed, options?.source);
   return { ok: true };
 }

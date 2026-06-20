@@ -5,6 +5,7 @@ import {
   COMUNIDADE_CHIP,
   COMUNIDADE_EYEBROW,
   COMUNIDADE_HEADING,
+  COMUNIDADE_MURAL_SCROLL_MT,
   COMUNIDADE_SCROLL_MT,
 } from "@/components/comunidade/comunidade-layout";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
@@ -20,10 +21,13 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
   return (
     <section
       id="comunidade-mural"
-      className={COMUNIDADE_SCROLL_MT}
+      className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_MURAL_SCROLL_MT}`}
       aria-labelledby="comunidade-mural-title"
     >
-      <div className="relative box-border min-w-0 max-w-full overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-950/25 via-neutral-950/95 to-orange-950/15 p-3 shadow-[0_0_40px_-12px_rgba(251,146,60,0.35)] xs:p-4 sm:p-5">
+      <div
+        data-comunidade-mural-panel
+        className="relative box-border min-w-0 max-w-full overflow-hidden rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-950/25 via-neutral-950/95 to-orange-950/15 p-3 shadow-[0_0_40px_-12px_rgba(251,146,60,0.35)] xs:p-4 sm:p-5"
+      >
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-500/10 blur-3xl"
           aria-hidden

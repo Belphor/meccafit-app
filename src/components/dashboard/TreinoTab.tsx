@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
@@ -11,6 +12,7 @@ import {
   DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SCROLL_LIST,
+  TREINO_MINIMIZE_TOGGLE,
 } from "@/lib/dashboard-config";
 import {
   hasForjadorPrescriptionForMuscle,
@@ -48,6 +50,8 @@ type TreinoTabProps = {
     payload: { weight: number; series: number; vtc: number },
   ) => void;
   onPersistSuccess?: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
+  onSetComplete?: (exerciseId: number) => void;
+  maxLoadsByExerciseId?: Record<number, number>;
 };
 
 export function TreinoTab({
@@ -72,7 +76,10 @@ export function TreinoTab({
   onWatchVideo,
   onSuperacao,
   onPersistSuccess,
+  onSetComplete,
+  maxLoadsByExerciseId = {},
 }: TreinoTabProps) {
+  const [cardsMinimized, setCardsMinimized] = useState(false);
   const displaySubgroup = resolveActiveTreinoSubgroup(
     activeTreinoMuscle,
     subgroup,
@@ -113,6 +120,20 @@ export function TreinoTab({
         ) : null}
 
         <MonumentalSubgroupTitle subgroup={displaySubgroup} />
+
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
+            {displaySubgroup.exercises.length} exercícios
+          </p>
+          <button
+            type="button"
+            onClick={() => setCardsMinimized((value) => !value)}
+            className={TREINO_MINIMIZE_TOGGLE}
+            aria-pressed={cardsMinimized}
+          >
+            {cardsMinimized ? "Expandir cards" : "Minimizar cards"}
+          </button>
+        </div>
       </div>
 
       <ul
@@ -127,6 +148,7 @@ export function TreinoTab({
             <MonumentalExerciseCard
               exercise={exercise}
               isActive={exercise.id === activeExerciseId}
+              isMinimized={cardsMinimized}
               isSuperacaoFlame={exercise.id === superacaoExerciseId}
               musculo={musculo}
               isIncubating={isIncubating}
@@ -144,6 +166,8 @@ export function TreinoTab({
               onWatchVideo={onWatchVideo}
               onSuperacao={onSuperacao}
               onPersistSuccess={onPersistSuccess}
+              onSetComplete={onSetComplete}
+              isMaxLoadRegistered={Boolean(maxLoadsByExerciseId[exercise.id])}
             />
           </li>
         ))}

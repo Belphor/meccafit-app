@@ -15,7 +15,19 @@ import {
   saveCycleSelfie,
   type CycleSelfieDay,
 } from "@/services/local-storage";
-import { DASHBOARD_INNER_FRAME, DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
+import {
+  bindStreamToVideo,
+  captureVideoFrameDataUrl,
+  formatCameraError,
+  requestFrontCameraStream,
+  stopMediaStream,
+} from "@/lib/camera-capture";
+import {
+  CICLO_COMPARACAO_CLIENT_EXPLANATION,
+  DASHBOARD_INNER_FRAME,
+  DASHBOARD_TAP_TARGET,
+} from "@/lib/dashboard-config";
 
 type CycleSlotState = Record<CycleSelfieDay, string | null>;
 
@@ -226,44 +238,20 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
     async (day: CycleSelfieDay) => {
       setFeedback(null);
 
+      let stream: MediaStream | null = null;
+      const video = document.createElement("video");
+
       try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          setFeedback("Câmera não suportada neste dispositivo.");
-          return;
-        }
+        stream = await requestFrontCameraStream();
+        await bindStreamToVideo(video, stream);
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
-
-        const video = document.createElement("video");
-        video.srcObject = stream;
-        video.playsInline = true;
-        video.muted = true;
-        await video.play();
-
-        await new Promise((resolve) => {
-          if (video.readyState >= 2) {
-            resolve(undefined);
-            return;
-          }
-          video.onloadeddata = () => resolve(undefined);
-        });
-
-        const canvas = document.createElement("canvas");
-        canvas.width = video.videoWidth || 720;
-        canvas.height = video.videoHeight || 960;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Canvas indisponível");
-
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        stream.getTracks().forEach((track) => track.stop());
-
-        const dataUrl = canvas.toDataURL("image/webp", 0.92);
+        const dataUrl = captureVideoFrameDataUrl(video, { mirror: true });
         await handleDataUrlCapture(day, dataUrl);
-      } catch {
-        setFeedback("Câmera bloqueada ou indisponível.");
+      } catch (error) {
+        setFeedback(formatCameraError(error));
+      } finally {
+        stopMediaStream(stream);
+        video.srcObject = null;
       }
     },
     [handleDataUrlCapture],
@@ -276,7 +264,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
       data-storage-status={storageStatus}
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <h3
             id={`${rootId}-title`}
             className="font-mono text-[10px] uppercase tracking-[0.22em] text-cyan-400/85"
@@ -295,6 +283,10 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               : "Capture Dia 1 e Dia 30"}
         </p>
       </div>
+
+      <DashboardClientInfoBlock label="Como comparar">
+        {CICLO_COMPARACAO_CLIENT_EXPLANATION}
+      </DashboardClientInfoBlock>
 
       <div
         ref={frameRef}
@@ -397,6 +389,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
                 <input
                   type="file"
                   accept="image/*"
+                  capture="user"
                   className="block w-full cursor-pointer text-[8px] text-neutral-500 file:mr-2 file:rounded-full file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-[8px] file:uppercase file:tracking-wider file:text-neutral-300"
                   disabled={busy || storageStatus === "loading"}
                   onChange={(event) => {

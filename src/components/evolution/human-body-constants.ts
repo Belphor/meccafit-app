@@ -93,6 +93,21 @@ export type EvolutionCalorPayload = {
 
 export const PURITY_PENALTY_THRESHOLD = 50;
 
+/** Normaliza índice de ignição (MIDAS `ignition_index` ou legado `indice_ignicao`). */
+export function parseIgnitionIndex(source: Record<string, unknown>): number {
+  const raw = source.ignition_index ?? source.indice_ignicao;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.max(0, Math.min(100, Math.round(raw)));
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.min(100, Math.round(parsed)));
+    }
+  }
+  return 0;
+}
+
 export const MUSCLE_LABELS: Record<SovereignMuscleId, string> = {
   PEITO: "Peito",
   OMBROS: "Ombros",
@@ -249,11 +264,7 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
     );
   }
 
-  const indiceRaw = source.ignition_index;
-  const indice_ignicao =
-    typeof indiceRaw === "number" && Number.isFinite(indiceRaw)
-      ? Math.max(0, Math.min(100, Math.round(indiceRaw)))
-      : 0;
+  const indice_ignicao = parseIgnitionIndex(source);
 
   const musclesRaw = source.muscles;
   const muscles =
@@ -297,11 +308,7 @@ function parseGroupRecord(raw: unknown): MuscleCalorGroupRecord {
 export function parseEvolutionCalorJson(data: unknown): EvolutionCalorPayload {
   const source = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
 
-  const indiceRaw = source.indice_ignicao;
-  const indice_ignicao =
-    typeof indiceRaw === "number" && Number.isFinite(indiceRaw)
-      ? Math.max(0, Math.min(100, Math.round(indiceRaw)))
-      : 0;
+  const indice_ignicao = parseIgnitionIndex(source);
 
   const calorRows: MuscleCalorRow[] = CALOR_JSON_KEYS.map((key) => {
     const group = parseGroupRecord(source[key]);

@@ -24,6 +24,7 @@ import {
   EXERCISE_CARD_SELECTABLE,
   EXERCISE_CAPSULE_COMPLETE,
   EXERCISE_CAPSULE_IDLE,
+  EXERCISE_COMPLETE_SET_BUTTON,
   EXERCISE_DIVIDER_ACTIVE,
   EXERCISE_DIVIDER_COMPLETE,
   EXERCISE_DIVIDER_IDLE,
@@ -46,6 +47,7 @@ const INCUBATION_MESSAGE = "Aguarde o despertar. Suas chamas estão em incubaç�
 export type MonumentalExerciseCardProps = {
   exercise: Exercise;
   isActive: boolean;
+  isMinimized?: boolean;
   isSuperacaoFlame: boolean;
   musculo: Enums<"subgrupo_muscular">;
   isIncubating: boolean;
@@ -61,11 +63,14 @@ export type MonumentalExerciseCardProps = {
     payload: { weight: number; series: number; vtc: number },
   ) => void;
   onPersistSuccess?: (exerciseId: number, detail: { vtcGenerated: number }) => void;
+  onSetComplete?: (exerciseId: number) => void;
+  isMaxLoadRegistered?: boolean;
 };
 
 export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   exercise,
   isActive,
+  isMinimized = false,
   isSuperacaoFlame,
   musculo,
   isIncubating,
@@ -78,13 +83,17 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   onWatchVideo,
   onSuperacao,
   onPersistSuccess,
+  onSetComplete,
+  isMaxLoadRegistered = false,
 }: MonumentalExerciseCardProps) {
   const [baseVtc, setBaseVtc] = useState(0);
   const [restTimerToken, setRestTimerToken] = useState(0);
   const [showRestTimer, setShowRestTimer] = useState(false);
   const finalVtc = hasBiologicalBalance ? baseVtc * BIOLOGICAL_BALANCE_MULTIPLIER : baseVtc;
   const isSeriesComplete = exercise.completedSets >= exercise.targetSets;
+  const nextSetNumber = Math.min(exercise.completedSets + 1, exercise.targetSets);
   const historicalPrLabel = formatExerciseReferenceMetric(exercise, exercise.metricKind);
+  const showExpandedBody = !isMinimized || isActive;
 
   const handleVolumeCommitted = useCallback(
     (volume: number) => {
@@ -138,6 +147,18 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
     [exercise.id, isSeriesComplete, onWatchVideo],
   );
 
+  const handleSetComplete = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (!isActive || isSeriesComplete || isIncubating) return;
+
+      onSetComplete?.(exercise.id);
+      setRestTimerToken((token) => token + 1);
+      setShowRestTimer(true);
+    },
+    [exercise.id, isActive, isIncubating, isSeriesComplete, onSetComplete],
+  );
+
   const flameActive = isActive && isSuperacaoFlame;
   const showBrasaoBorder = isSeriesComplete || isActive || flameActive;
   const videoInteractive = !isSeriesComplete;
@@ -156,8 +177,8 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   const videoButtonClass = videoInteractive ? EXERCISE_VIDEO_BUTTON : EXERCISE_VIDEO_BUTTON_IDLE;
 
   const seriesPrescriptionText = isSeriesComplete
-    ? EXERCISE_SESSION_REGISTERED_LABEL
-    : `${exercise.targetSets} séries prescritas`;
+    ? `${exercise.targetSets}/${exercise.targetSets} séries · ${EXERCISE_SESSION_REGISTERED_LABEL}`
+    : `${exercise.completedSets}/${exercise.targetSets} séries propostas`;
 
   const cardSurface = isSeriesComplete
     ? EXERCISE_CARD_COMPLETE
@@ -190,9 +211,11 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
       aria-current={isActive ? "true" : undefined}
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
-      className={`${EXERCISE_CARD_SELECTABLE} p-4 sm:p-6 ${cardSurface} ${cardFrameClass}`}
+      className={`${EXERCISE_CARD_SELECTABLE} p-4 sm:p-6 ${cardSurface} ${cardFrameClass} ${
+        isMinimized && !isActive ? "py-3 sm:py-3.5" : ""
+      }`}
       variant={showBrasaoBorder ? "brasao" : "selectable-idle"}
-      overlay={isActive && !isSeriesComplete ? <ExerciseCardContourTrace /> : null}
+      overlay={isActive && !isSeriesComplete && showExpandedBody ? <ExerciseCardContourTrace /> : null}
     >
       <div className="relative grid min-w-0 grid-cols-1 gap-3">
         <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
@@ -233,79 +256,106 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
           </button>
         </div>
 
-        <div className={dividerClass} aria-hidden="true" />
+        {showExpandedBody ? (
+          <>
+            <div className={dividerClass} aria-hidden="true" />
 
-        {isIncubating ? (
-          <p className="font-serif text-base leading-relaxed text-amber-100/90 sm:text-lg">{INCUBATION_MESSAGE}</p>
-        ) : (
-          <div className="relative min-w-0">
-            <div
-              className="flex min-w-0 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              aria-label="Métricas do exercício"
-            >
-              <span className={capsuleClass}>Séries {exercise.targetSets}</span>
-              <span className={`${capsuleClass} ${showBrasaoBorder ? "text-amber-100" : ""}`}>
-                {formatSessionMetricLabel(exercise.metricKind, finalVtc)}
-              </span>
-              {exercise.metricKind === "duration_sec" && exercise.targetDurationSec ? (
-                <span className={capsuleClass}>Meta {formatDuration(exercise.targetDurationSec)}</span>
-              ) : exercise.metricKind === "rep_max" && exercise.targetReps > 0 ? (
-                <span className={capsuleClass}>Meta {exercise.targetReps} rep</span>
-              ) : null}
+            {isIncubating ? (
+              <p className="font-serif text-base leading-relaxed text-amber-100/90 sm:text-lg">{INCUBATION_MESSAGE}</p>
+            ) : (
+              <div className="relative min-w-0">
+                <div
+                  className="flex min-w-0 gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  aria-label="Métricas do exercício"
+                >
+                  <span className={capsuleClass}>
+                    {exercise.completedSets}/{exercise.targetSets} séries
+                  </span>
+                  <span className={`${capsuleClass} ${showBrasaoBorder ? "text-amber-100" : ""}`}>
+                    {formatSessionMetricLabel(exercise.metricKind, finalVtc)}
+                  </span>
+                  {exercise.metricKind === "duration_sec" && exercise.targetDurationSec ? (
+                    <span className={capsuleClass}>Meta {formatDuration(exercise.targetDurationSec)}</span>
+                  ) : exercise.metricKind === "rep_max" && exercise.targetReps > 0 ? (
+                    <span className={capsuleClass}>Meta {exercise.targetReps} rep</span>
+                  ) : null}
+                </div>
+                <p className={EXERCISE_RECORD_META}>
+                  <span className={EXERCISE_RECORD_TERM}>Recorde histórico</span>
+                  {" · "}
+                  {historicalPrLabel}
+                </p>
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-neutral-950/80 to-transparent sm:hidden"
+                  aria-hidden="true"
+                />
+              </div>
+            )}
+          </>
+        ) : null}
+      </div>
+
+      {showExpandedBody && !isIncubating ? (
+        <>
+          {!isSeriesComplete && isActive ? (
+            <div className="relative z-[2] mt-4 flex w-full justify-center" data-exercise-interactive="true">
+              <button
+                type="button"
+                onClick={handleSetComplete}
+                className={EXERCISE_COMPLETE_SET_BUTTON}
+                aria-label={`Concluir série ${nextSetNumber} de ${exercise.targetSets}`}
+              >
+                Concluir série {nextSetNumber}/{exercise.targetSets}
+              </button>
             </div>
-            <p className={EXERCISE_RECORD_META}>
-              <span className={EXERCISE_RECORD_TERM}>Recorde histórico</span>
-              {" · "}
-              {historicalPrLabel}
-            </p>
-            <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-neutral-950/80 to-transparent sm:hidden"
-              aria-hidden="true"
+          ) : null}
+
+          <div className="relative z-[2] mt-5 flex w-full justify-center">
+            <PhoenixInput
+              userId={userId}
+              isExerciseActive={isActive}
+              isSeriesComplete={isMaxLoadRegistered}
+              exercicioId={exercise.id}
+              exercicioNome={exercise.name}
+              fieldIdPrefix={`exercise-${exercise.id}-`}
+              initialWeight={exercise.currentWeight}
+              trainingGoalText={
+                isMaxLoadRegistered
+                  ? PHOENIX_INPUT_GOAL_COMPLETE
+                  : exercise.metricKind === "duration_sec"
+                    ? `Registrar tempo máximo · ${exercise.targetSets} séries propostas`
+                    : exercise.metricKind === "rep_max"
+                      ? `Registrar repetição máxima · ${exercise.targetSets} séries propostas`
+                      : `Registrar carga máxima · ${exercise.targetSets} séries propostas`
+              }
+              prescribedSeries={exercise.targetSets}
+              musculo={musculo}
+              metricKind={exercise.metricKind}
+              onWeightSaved={handleWeightSaved}
+              onVolumeCommitted={handleVolumeCommitted}
+              onSuperacao={(payload) => onSuperacao(exercise.id, payload)}
+              onPersistSuccess={(detail) => {
+                onPersistSuccess?.(exercise.id, detail);
+              }}
             />
           </div>
-        )}
-      </div>
 
-      <div className="relative z-[2] mt-5 flex w-full justify-center">
-        <PhoenixInput
-          userId={userId}
-          isExerciseActive={isActive && !isSeriesComplete}
-          isSeriesComplete={isSeriesComplete}
-          exercicioId={exercise.id}
-          exercicioNome={exercise.name}
-          fieldIdPrefix={`exercise-${exercise.id}-`}
-          initialWeight={exercise.currentWeight}
-          trainingGoalText={
-            isSeriesComplete
-              ? PHOENIX_INPUT_GOAL_COMPLETE
-              : exercise.metricKind === "duration_sec"
-                ? `Registrar tempo máximo · ${exercise.targetSets} séries`
-                : exercise.metricKind === "rep_max"
-                  ? `Registrar repetição máxima · ${exercise.targetSets} séries`
-                  : `Registrar carga máxima · ${exercise.targetSets} séries`
-          }
-          prescribedSeries={exercise.targetSets}
-          musculo={musculo}
-          metricKind={exercise.metricKind}
-          onWeightSaved={handleWeightSaved}
-          onVolumeCommitted={handleVolumeCommitted}
-          onSuperacao={(payload) => onSuperacao(exercise.id, payload)}
-          onPersistSuccess={(detail) => {
-            setRestTimerToken((token) => token + 1);
-            setShowRestTimer(true);
-            onPersistSuccess?.(exercise.id, detail);
-          }}
-        />
-      </div>
+          {!isSeriesComplete && (showRestTimer || isActive) ? (
+            <div className="relative z-[2] mt-3 w-full" data-exercise-interactive="true">
+              <WorkoutTimer
+                variant="exercise"
+                restartToken={restTimerToken}
+                defaultSeconds={restSeconds}
+              />
+            </div>
+          ) : null}
+        </>
+      ) : null}
 
-      {!isIncubating && !isSeriesComplete && (showRestTimer || isActive) ? (
-        <div className="relative z-[2] mt-3 w-full" data-exercise-interactive="true">
-          <WorkoutTimer
-            variant="exercise"
-            restartToken={restTimerToken}
-            defaultSeconds={restSeconds}
-          />
-        </div>
+      {isMinimized && !isActive && !isSeriesComplete ? (
+        <p className="mt-2 font-mono text-[8px] uppercase tracking-[0.14em] text-neutral-500">
+          Toque para expandir · {exercise.completedSets}/{exercise.targetSets} séries
+        </p>
       ) : null}
     </BrasaVivaCard>
   );

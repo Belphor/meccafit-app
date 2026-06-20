@@ -292,7 +292,7 @@ export async function registrarTreinoComStatus(
   );
 
   if (result.data) {
-    void markDailyPurityLog(input.clienteId, { source: "treino_registrado" });
+    await markDailyPurityLog(input.clienteId, { source: "treino_registrado" });
     void recordHistoricoCarga({
       atletaId: input.clienteId,
       musculo,

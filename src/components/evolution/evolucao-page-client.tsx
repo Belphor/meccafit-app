@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
   CALOR_LEVEL_LABELS,
@@ -26,9 +27,15 @@ import {
   DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
+  FENIX_PUREZA_CLIENT_EXPLANATION,
   MAGMA_SPECTRUM,
+  MAPA_TERMICO_CLIENT_EXPLANATION,
 } from "@/lib/dashboard-config";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
+import {
+  EVOLUTION_CALOR_REFRESH_EVENT,
+  type EvolutionCalorRefreshDetail,
+} from "@/lib/evolution-events";
 import { supabase } from "@/lib/supabase";
 import { SelfieComparison } from "@/components/evolution/selfie-comparison";
 
@@ -129,17 +136,36 @@ export function EvolucaoPageClient({
     setNivelTermicoGlobal(resolveNivelTermicoGlobal(payload.indice_ignicao, payload.calorRows));
   }, []);
 
+  const refreshCalor = useCallback(async () => {
+    setRefreshing(true);
+    setScopeError(null);
+    try {
+      const scoped = await assertAuthenticatedScope(userId);
+      if (!scoped) {
+        setScopeError("Sessão inválida. Faça login novamente.");
+        return;
+      }
+      const payload = await fetchCalorPayload(userId);
+      applyPayload(payload);
+    } catch (error) {
+      setScopeError(error instanceof Error ? error.message : "Falha ao atualizar calor.");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [applyPayload, userId]);
+
   useEffect(() => {
     if (resolvedInitial) {
       applyPayload(resolvedInitial);
       setLoading(false);
-      return;
     }
 
     let cancelled = false;
 
     void (async () => {
-      setLoading(true);
+      if (!resolvedInitial) {
+        setLoading(true);
+      }
       setScopeError(null);
       try {
         const scoped = await assertAuthenticatedScope(userId);
@@ -163,23 +189,16 @@ export function EvolucaoPageClient({
     };
   }, [applyPayload, resolvedInitial, userId]);
 
-  const refreshCalor = useCallback(async () => {
-    setRefreshing(true);
-    setScopeError(null);
-    try {
-      const scoped = await assertAuthenticatedScope(userId);
-      if (!scoped) {
-        setScopeError("Sessão inválida. Faça login novamente.");
-        return;
-      }
-      const payload = await fetchCalorPayload(userId);
-      applyPayload(payload);
-    } catch (error) {
-      setScopeError(error instanceof Error ? error.message : "Falha ao atualizar calor.");
-    } finally {
-      setRefreshing(false);
-    }
-  }, [applyPayload, userId]);
+  useEffect(() => {
+    const onRefresh = (event: Event) => {
+      const detail = (event as CustomEvent<EvolutionCalorRefreshDetail>).detail;
+      if (!detail || detail.userId !== userId) return;
+      void refreshCalor();
+    };
+
+    window.addEventListener(EVOLUTION_CALOR_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(EVOLUTION_CALOR_REFRESH_EVENT, onRefresh);
+  }, [refreshCalor, userId]);
 
   const handleSelfieCaptured = useCallback(async (dataUrl: string) => {
     const cycleId = `cycle-${new Date().toISOString().slice(0, 7)}-${Date.now()}`;
@@ -209,9 +228,9 @@ export function EvolucaoPageClient({
             <h2 id="evolucao-aba-title" className={DASHBOARD_SECTION_TITLE}>
               Mapa Térmico
             </h2>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-              6 grupos · pureza dinâmica · ignição mensal
-            </p>
+            <DashboardClientInfoBlock className="mt-3 text-left">
+              {MAPA_TERMICO_CLIENT_EXPLANATION}
+            </DashboardClientInfoBlock>
           </div>
 
           {loading ? (
@@ -289,6 +308,10 @@ export function EvolucaoPageClient({
 
         {!loading && calorRows.length > 0 ? (
           <>
+            <DashboardClientInfoBlock className="mt-4" label="Pureza da Fênix">
+              {FENIX_PUREZA_CLIENT_EXPLANATION}
+            </DashboardClientInfoBlock>
+
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">

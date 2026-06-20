@@ -202,7 +202,7 @@ export function reconcileSessionCompletedSets(
 
 export function reconcileSessionMaxLoads(
   subgroup: MuscleSubgroup,
-  completedSetsByExerciseId: Record<number, number>,
+  _completedSetsByExerciseId: Record<number, number>,
   maxLoadsByExerciseId: Record<number, number>,
 ): Record<number, number> {
   const next: Record<number, number> = {};
@@ -210,14 +210,22 @@ export function reconcileSessionMaxLoads(
   for (const exercise of subgroup.exercises) {
     const load = maxLoadsByExerciseId[exercise.id];
     if (typeof load !== "number" || !Number.isFinite(load) || load <= 0) continue;
-
-    const sessionCompleted = Math.trunc(completedSetsByExerciseId[exercise.id] ?? 0);
-    if (sessionCompleted < exercise.targetSets) continue;
-
     next[exercise.id] = load;
   }
 
   return next;
+}
+
+/** Soma das cargas máximas registradas na sessão — apenas exercícios propostos no treino. */
+export function sumSessionAltarVtc(
+  subgroup: MuscleSubgroup,
+  maxLoadsByExerciseId: Record<number, number>,
+): number {
+  return subgroup.exercises.reduce((sum, exercise) => {
+    const load = maxLoadsByExerciseId[exercise.id];
+    if (typeof load !== "number" || !Number.isFinite(load) || load <= 0) return sum;
+    return sum + load;
+  }, 0);
 }
 
 export const MURAL_COMMUNITY_DEFAULT_LIMIT = 48;

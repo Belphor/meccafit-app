@@ -11,6 +11,13 @@ import {
   DASHBOARD_SECTION_TITLE,
   MAGMA_SPECTRUM,
 } from "@/lib/dashboard-config";
+import {
+  bindStreamToVideo,
+  captureVideoFrameDataUrl,
+  formatCameraError,
+  requestFrontCameraStream,
+  stopMediaStream,
+} from "@/lib/camera-capture";
 
 const SOLAR_GOLD = MAGMA_SPECTRUM.solarGold;
 
@@ -54,26 +61,22 @@ export function EvolucaoSelfiePanel({
 
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
+        const stream = await requestFrontCameraStream();
 
         if (!mounted) {
-          stream.getTracks().forEach((track) => track.stop());
+          stopMediaStream(stream);
           return;
         }
 
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          await bindStreamToVideo(videoRef.current, stream);
         }
         setIsCameraReady(true);
         setCameraError(null);
-      } catch {
+      } catch (error) {
         if (!mounted) return;
-        setCameraError("Câmera indisponível neste dispositivo.");
+        setCameraError(formatCameraError(error));
         setIsCameraReady(false);
       }
     }
@@ -82,7 +85,7 @@ export function EvolucaoSelfiePanel({
 
     return () => {
       mounted = false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      stopMediaStream(streamRef.current);
       streamRef.current = null;
     };
   }, []);
@@ -91,18 +94,22 @@ export function EvolucaoSelfiePanel({
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const dataUrl = captureVideoFrameDataUrl(video, { mirror: true });
+    const snapshot = document.createElement("canvas");
+    snapshot.width = video.videoWidth;
+    snapshot.height = video.videoHeight;
+    const snapshotCtx = snapshot.getContext("2d");
+    if (!snapshotCtx) return;
 
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    applyCinemaFrame(context, canvas.width, canvas.height);
-
-    const dataUrl = canvas.toDataURL("image/png");
-    setCaptureUrl(dataUrl);
-    onCapture?.(dataUrl);
+    const snapshotImage = new window.Image();
+    snapshotImage.onload = () => {
+      snapshotCtx.drawImage(snapshotImage, 0, 0);
+      applyCinemaFrame(snapshotCtx, snapshot.width, snapshot.height);
+      const framedUrl = snapshot.toDataURL("image/png");
+      setCaptureUrl(framedUrl);
+      onCapture?.(framedUrl);
+    };
+    snapshotImage.src = dataUrl;
   }, [onCapture]);
 
   const downloadSelfie = useCallback(() => {
@@ -151,7 +158,8 @@ export function EvolucaoSelfiePanel({
           ref={videoRef}
           playsInline
           muted
-          className="h-full w-full object-cover"
+          autoPlay
+          className="h-full w-full scale-x-[-1] object-cover"
           aria-label="Pré-visualização da câmera frontal"
         />
 

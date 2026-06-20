@@ -175,5 +175,24 @@ assert(
     resolveTreinoPersistPayloadMirror("peito", 30, 4, "load_kg", 1).repeticoes === 1,
 );
 
+function parseIgnitionIndexMirror(source) {
+  const raw = source.ignition_index ?? source.indice_ignicao;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.max(0, Math.min(100, Math.round(raw)));
+  }
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.min(100, Math.round(parsed)));
+    }
+  }
+  return 0;
+}
+
+assert("ignition_index MIDAS", parseIgnitionIndexMirror({ ignition_index: 72.4 }) === 72);
+assert("indice_ignicao legado", parseIgnitionIndexMirror({ indice_ignicao: 41 }) === 41);
+assert("ignition_index string", parseIgnitionIndexMirror({ ignition_index: "88.2" }) === 88);
+assert("ignição ausente vira 0", parseIgnitionIndexMirror({}) === 0);
+
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

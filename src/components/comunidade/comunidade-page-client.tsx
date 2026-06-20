@@ -33,12 +33,19 @@ import {
   type ComunidadeClienteEvolution,
 } from "@/lib/comunidade-evolution";
 import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
+import { focusComunidadeMural } from "@/lib/comunidade-mural-focus";
+import {
+  COMUNIDADE_MURAL_FOCUS_EVENT,
+  type ComunidadeMuralFocusDetail,
+} from "@/lib/dashboard-tab-navigation";
 
 type ComunidadePageClientProps = {
   userId: string;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
   phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtc30d">;
+  muralFocusToken?: number;
+  muralFocusExerciseName?: string;
 };
 
 const EMPTY_META = {
@@ -60,6 +67,8 @@ export function ComunidadePageClient({
   profileName,
   profilePhotoUrl,
   phase,
+  muralFocusToken = 0,
+  muralFocusExerciseName,
 }: ComunidadePageClientProps) {
   const mountedRef = useRef(false);
   const [arena, setArena] = useState<ComunidadeArenaSnapshot | null>(
@@ -119,6 +128,21 @@ export function ComunidadePageClient({
     mountedRef.current = true;
     void loadAll({ background: Boolean(readCachedComunidadeArena(userId)) });
   }, [loadAll, userId]);
+
+  useEffect(() => {
+    if (muralFocusToken <= 0) return;
+    return focusComunidadeMural({ exerciseName: muralFocusExerciseName });
+  }, [muralFocusExerciseName, muralFocusToken]);
+
+  useEffect(() => {
+    const focusMural = (event: Event) => {
+      const detail = (event as CustomEvent<ComunidadeMuralFocusDetail>).detail;
+      focusComunidadeMural(detail ?? {});
+    };
+
+    window.addEventListener(COMUNIDADE_MURAL_FOCUS_EVENT, focusMural);
+    return () => window.removeEventListener(COMUNIDADE_MURAL_FOCUS_EVENT, focusMural);
+  }, []);
 
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];

@@ -5,9 +5,11 @@ import { ExerciseList } from "@/components/training/exercise-list";
 import {
   buildScheduleMap,
   DEFAULT_WEEKLY_SCHEDULE,
+  formatScheduleDayLabel,
   MUSCLE_GROUP_LABELS,
-  normalizeTrainingMuscleGroup,
+  parsePlanilhaDayRows,
   resolveCalendarWeekdayIndex,
+  resolvePrimaryClientMuscleForDay,
   TRAINING_MUSCLE_GROUPS,
   WEEKDAY_LABELS,
   type PlanilhaDayRow,
@@ -25,7 +27,7 @@ export type WeeklyGridProps = {
 };
 
 type WeeklyGridState = {
-  schedule: Record<WeekdayIndex, TrainingMuscleGroup>;
+  schedule: Record<WeekdayIndex, TrainingMuscleGroup[]>;
   activeDay: WeekdayIndex;
   selectedMuscleGroup: TrainingMuscleGroup;
   isOverride: boolean;
@@ -37,7 +39,7 @@ type WeeklyGridState = {
 function resolveInitialState(initialSchedule?: PlanilhaDayRow[]): Omit<WeeklyGridState, "loading" | "error" | "focusMenuOpen"> {
   const schedule = buildScheduleMap(initialSchedule ?? []);
   const activeDay = resolveCalendarWeekdayIndex();
-  const selectedMuscleGroup = schedule[activeDay];
+  const selectedMuscleGroup = resolvePrimaryClientMuscleForDay(schedule[activeDay]);
   return {
     schedule,
     activeDay,
@@ -60,6 +62,7 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
   const [error, setError] = useState<string | null>(null);
 
   const scheduledForActiveDay = schedule[activeDay];
+  const scheduledForActiveDayLabel = formatScheduleDayLabel(scheduledForActiveDay);
 
   const loadSchedule = useCallback(async () => {
     setLoading(true);
@@ -68,8 +71,10 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
     try {
       const { data, error: queryError } = await supabase
         .from("planilhas_forjador")
-        .select("dia_semana, grupo_muscular")
-        .eq("atleta_id", userId);
+        .select("dia_semana, grupo_muscular, ordem")
+        .eq("atleta_id", userId)
+        .order("dia_semana")
+        .order("ordem");
 
       if (queryError) {
         setError(queryError.message);
@@ -77,20 +82,13 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
         return;
       }
 
-      const rows: PlanilhaDayRow[] = (data ?? [])
-        .map((row) => {
-          const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
-          const day = Number(row.dia_semana) as WeekdayIndex;
-          if (!muscle || day < 1 || day > 6) return null;
-          return { dia_semana: day, grupo_muscular: muscle };
-        })
-        .filter((row): row is PlanilhaDayRow => row !== null);
+      const rows: PlanilhaDayRow[] = parsePlanilhaDayRows(data);
 
       const nextSchedule = buildScheduleMap(rows);
       setSchedule(nextSchedule);
 
       setSelectedMuscleGroup((current) => {
-        const dayMuscle = nextSchedule[activeDay];
+        const dayMuscle = resolvePrimaryClientMuscleForDay(nextSchedule[activeDay]);
         return isOverride ? current : dayMuscle;
       });
     } catch {
@@ -112,7 +110,7 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
       setActiveDay(day);
       setFocusMenuOpen(false);
       if (!isOverride) {
-        setSelectedMuscleGroup(schedule[day]);
+        setSelectedMuscleGroup(resolvePrimaryClientMuscleForDay(schedule[day]));
       }
     },
     [isOverride, schedule],
@@ -120,15 +118,15 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
 
   const applyMuscleOverride = useCallback((muscle: TrainingMuscleGroup) => {
     setSelectedMuscleGroup(muscle);
-    setIsOverride(muscle !== schedule[activeDay]);
+    setIsOverride(!scheduledForActiveDay.includes(muscle));
     setFocusMenuOpen(false);
-  }, [activeDay, schedule]);
+  }, [scheduledForActiveDay]);
 
   const resetToScheduled = useCallback(() => {
-    setSelectedMuscleGroup(schedule[activeDay]);
+    setSelectedMuscleGroup(resolvePrimaryClientMuscleForDay(scheduledForActiveDay));
     setIsOverride(false);
     setFocusMenuOpen(false);
-  }, [activeDay, schedule]);
+  }, [scheduledForActiveDay]);
 
   return (
     <section aria-label="Grade semanal de treino" className="space-y-5">
@@ -159,7 +157,8 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
       >
         {WEEKDAY_INDICES.map((day) => {
           const isActive = day === activeDay;
-          const muscle = schedule[day];
+          const muscles = schedule[day];
+          const dayLabel = formatScheduleDayLabel(muscles);
 
           return (
             <button
@@ -186,7 +185,7 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
                   isActive ? "text-amber-50" : "text-neutral-600"
                 }`}
               >
-                {MUSCLE_GROUP_LABELS[muscle]}
+                {dayLabel}
               </p>
             </button>
           );
@@ -223,7 +222,7 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
               onClick={resetToScheduled}
               className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-amber-300/80 underline-offset-2 hover:underline"
             >
-              Restaurar prescrição · {MUSCLE_GROUP_LABELS[scheduledForActiveDay]}
+              Restaurar prescrição · {scheduledForActiveDayLabel}
             </button>
           ) : null}
         </div>

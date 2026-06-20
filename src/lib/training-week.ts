@@ -20,7 +20,13 @@ export const TRAINING_MUSCLE_GROUPS = [
 ] as const;
 
 export type TrainingMuscleGroup = (typeof TRAINING_MUSCLE_GROUPS)[number];
+/** @deprecated Use TrainingMuscleGroup em planilhas (inclui ABDOMEN). */
 export type WeeklyScheduleMuscleGroup = ClientTrainingMuscleGroup;
+
+export type WeeklyScheduleDay = TrainingMuscleGroup[];
+
+/** Máximo de grupos musculares indicados por dia na planilha do forjador. */
+export const MAX_PLANILHA_GRUPOS_POR_DIA = 5;
 
 export const WEEKDAY_LABELS: Record<WeekdayIndex, string> = {
   1: "Segunda",
@@ -49,14 +55,25 @@ export const MUSCLE_GROUP_LABELS: Record<TrainingMuscleGroup, string> = {
   ABDOMEN: "Abdômen",
 };
 
-export const DEFAULT_WEEKLY_SCHEDULE: Record<WeekdayIndex, WeeklyScheduleMuscleGroup> = {
-  1: "PEITO",
-  2: "COSTAS",
-  3: "PERNAS",
-  4: "OMBROS",
-  5: "BRACOS",
-  6: "BRACOS",
+export const DEFAULT_WEEKLY_SCHEDULE: Record<WeekdayIndex, WeeklyScheduleDay> = {
+  1: ["PEITO"],
+  2: ["COSTAS"],
+  3: ["PERNAS"],
+  4: ["OMBROS"],
+  5: ["BRACOS"],
+  6: ["BRACOS"],
 };
+
+function cloneDefaultWeeklySchedule(): Record<WeekdayIndex, WeeklyScheduleDay> {
+  return {
+    1: [...DEFAULT_WEEKLY_SCHEDULE[1]],
+    2: [...DEFAULT_WEEKLY_SCHEDULE[2]],
+    3: [...DEFAULT_WEEKLY_SCHEDULE[3]],
+    4: [...DEFAULT_WEEKLY_SCHEDULE[4]],
+    5: [...DEFAULT_WEEKLY_SCHEDULE[5]],
+    6: [...DEFAULT_WEEKLY_SCHEDULE[6]],
+  };
+}
 
 export const MUSCLE_TO_SUBGROUP_ID: Record<ClientTrainingMuscleGroup, string> = {
   PEITO: "peitoral-superior",
@@ -75,8 +92,53 @@ export function trainingMuscleToSubgroupId(muscle: TrainingMuscleGroup): string 
 
 export type PlanilhaDayRow = {
   dia_semana: WeekdayIndex;
-  grupo_muscular: WeeklyScheduleMuscleGroup;
+  grupo_muscular: TrainingMuscleGroup;
+  ordem?: number;
 };
+
+type PlanilhaRawRow = {
+  dia_semana: number | string | null;
+  grupo_muscular: string | null;
+  ordem?: number | string | null;
+};
+
+export function parsePlanilhaDayRows(data: PlanilhaRawRow[] | null | undefined): PlanilhaDayRow[] {
+  const parsed: PlanilhaDayRow[] = [];
+
+  for (const row of data ?? []) {
+    const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
+    const day = Number(row.dia_semana) as WeekdayIndex;
+    const ordem = Number(row.ordem);
+    if (!muscle || day < 1 || day > 6) continue;
+
+    parsed.push({
+      dia_semana: day,
+      grupo_muscular: muscle,
+      ...(Number.isFinite(ordem) && ordem >= 1 && ordem <= MAX_PLANILHA_GRUPOS_POR_DIA
+        ? { ordem }
+        : {}),
+    });
+  }
+
+  return parsed.sort((a, b) => {
+    if (a.dia_semana !== b.dia_semana) return a.dia_semana - b.dia_semana;
+    const ordemA = a.ordem ?? MAX_PLANILHA_GRUPOS_POR_DIA;
+    const ordemB = b.ordem ?? MAX_PLANILHA_GRUPOS_POR_DIA;
+    if (ordemA !== ordemB) return ordemA - ordemB;
+    return a.grupo_muscular.localeCompare(b.grupo_muscular);
+  });
+}
+
+function appendMuscleToDay(
+  byDay: Map<WeekdayIndex, TrainingMuscleGroup[]>,
+  day: WeekdayIndex,
+  muscle: TrainingMuscleGroup,
+) {
+  const list = byDay.get(day) ?? [];
+  if (list.includes(muscle) || list.length >= MAX_PLANILHA_GRUPOS_POR_DIA) return;
+  list.push(muscle);
+  byDay.set(day, list);
+}
 
 export function resolveCalendarWeekdayIndex(date = new Date()): WeekdayIndex {
   const day = date.getDay();
@@ -106,17 +168,42 @@ export function normalizeWeeklyScheduleMuscle(
   return muscle;
 }
 
-export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleMuscleGroup> {
-  const map = { ...DEFAULT_WEEKLY_SCHEDULE };
+export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleDay> {
+  const map = cloneDefaultWeeklySchedule();
+  const byDay = new Map<WeekdayIndex, TrainingMuscleGroup[]>();
 
   for (const row of rows) {
-    const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
-    if (muscle && row.dia_semana >= 1 && row.dia_semana <= 6) {
-      map[row.dia_semana as WeekdayIndex] = muscle;
-    }
+    const muscle = normalizeTrainingMuscleGroup(row.grupo_muscular);
+    if (!muscle || row.dia_semana < 1 || row.dia_semana > 6) continue;
+    appendMuscleToDay(byDay, row.dia_semana as WeekdayIndex, muscle);
+  }
+
+  for (const [day, muscles] of byDay) {
+    map[day] = muscles.slice(0, MAX_PLANILHA_GRUPOS_POR_DIA);
   }
 
   return map;
+}
+
+export function formatScheduleDayLabel(muscles: WeeklyScheduleDay): string {
+  return muscles.map((muscle) => MUSCLE_GROUP_LABELS[muscle]).join(" · ");
+}
+
+/** Primeiro grupo executável na aba treino (ignora abdômen como foco isolado). */
+export function resolvePrimaryClientMuscleForDay(
+  muscles: WeeklyScheduleDay,
+): ClientTrainingMuscleGroup {
+  const clientMuscle = muscles.find((muscle) =>
+    CLIENT_TRAINING_MUSCLE_GROUPS.includes(muscle as ClientTrainingMuscleGroup),
+  );
+  return (clientMuscle as ClientTrainingMuscleGroup | undefined) ?? "PEITO";
+}
+
+export function scheduleDayIncludesClientMuscle(
+  muscles: WeeklyScheduleDay,
+  muscle: ClientTrainingMuscleGroup,
+): boolean {
+  return muscles.includes(muscle);
 }
 
 export function subgroupIdToClientTrainingMuscle(

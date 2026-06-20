@@ -142,6 +142,26 @@ export const VTC_FORMULA = "Soma das cargas máximas (kg)";
 export const VTC_FORMULA_SHORT = "Σ kg máx";
 export const VTC_SESSION_EXPLANATION = "Soma das cargas máximas registradas na sessão.";
 
+/** Chama do Altar — texto orientativo para o cliente */
+export const CHAMA_ALTAR_CLIENT_EXPLANATION =
+  "Registro vivo da sua forja. O VTC soma as cargas máximas (kg) registradas na sessão de hoje — quanto mais volume forjar, mais intensa fica a chama do altar.";
+
+/** Voo de Cinzas — texto orientativo para o cliente */
+export const VOO_CINZAS_CLIENT_EXPLANATION =
+  "Seu cardio consciente do dia. Acumule o tempo validado e confirme a cada 10 minutos que ainda está ativo. Pausas não apagam o progresso — ao atingir a meta, seu altar energético diário é sincronizado.";
+
+/** Mapa Térmico (Evolução) — texto orientativo para o cliente */
+export const MAPA_TERMICO_CLIENT_EXPLANATION =
+  "O mapa mostra o calor muscular dos 6 grupos principais. Cada região muda de cor conforme o estímulo acumulado na quinzena — de Cinzas até Fogo Cósmico. Toque no corpo para ver detalhes. Membros fora da prescrição do forjador aparecem congelados.";
+
+/** Pureza da Fênix (Evolução) — Índice de Ignição */
+export const FENIX_PUREZA_CLIENT_EXPLANATION =
+  "A Pureza da Fênix é o Índice de Ignição — sua consistência real nos últimos 30 dias. Cada dia com treino registrado ou cardio validado conta como dia puro. O percentual divide seus dias puros pela meta mensal de treinos do seu plano (ajustável no perfil). Abaixo de 50%, o mapa perde saturação: a Fênix não mente, ela reflete o ritmo medido, não a intenção.";
+
+/** Comparação de Ciclo (Evolução) — selfies locais */
+export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
+  "Espelho visual do seu ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e iluminação. Quando tiver Dia 1 e Dia 30 gravados, arraste o divisor para comparar a evolução lado a lado. As fotos ficam só no seu dispositivo — nada é enviado à nuvem.";
+
 export const VTC_METRIC_FRAME =
   "relative overflow-hidden rounded-2xl border border-orange-500/12 bg-black/35 px-4 py-3 backdrop-blur-sm";
 
@@ -153,6 +173,16 @@ export const VTC_METRIC_VALUE =
 
 export const VTC_EXPLANATION_TEXT =
   "text-[10px] font-normal normal-case leading-snug tracking-normal text-neutral-500 sm:text-[11px]";
+
+/** Bloco orientativo visível dentro dos cards do dashboard */
+export const DASHBOARD_CLIENT_INFO_BLOCK =
+  "rounded-2xl border border-orange-500/18 bg-gradient-to-br from-orange-950/40 via-neutral-950/55 to-black/60 px-3.5 py-3 shadow-[inset_0_1px_0_rgba(251,191,36,0.06)] sm:px-4 sm:py-3.5";
+
+export const DASHBOARD_CLIENT_INFO_LABEL =
+  "font-mono text-[10px] uppercase tracking-[0.2em] text-amber-400/90";
+
+export const DASHBOARD_CLIENT_INFO_TEXT =
+  "text-xs leading-relaxed text-amber-50/88 sm:text-sm sm:leading-relaxed";
 
 /** Contador de séries — destaque fora da superação */
 export const EXERCISE_SERIES_CHIP =
@@ -198,6 +228,12 @@ export const PHOENIX_REGISTER_CARGA_IDLE = `${EXERCISE_VIDEO_BUTTON_IDLE} w-full
 
 /** Botão touch 「Registrar carga」 — card selecionado */
 export const PHOENIX_REGISTER_CARGA_ACTIVE = `${EXERCISE_VIDEO_BUTTON} w-full`;
+
+/** Concluir série — sem persistência Supabase */
+export const EXERCISE_COMPLETE_SET_BUTTON = `${EXERCISE_VIDEO_BUTTON} w-full sm:w-auto`;
+
+/** Minimizar / expandir cards da aba treino */
+export const TREINO_MINIMIZE_TOGGLE = `${DASHBOARD_SECTION_CHIP} min-h-9 gap-1.5 px-3.5 py-1.5 text-[9px] tracking-[0.16em]`;
 
 /** Meta do PhoenixInput — exercício concluído na sessão */
 export const PHOENIX_INPUT_META_COMPLETE =
@@ -247,11 +283,13 @@ export const DASHBOARD_TAB_CONTENT = "mt-4 sm:mt-6";
 
 /** Mantém painéis montados ao trocar aba (preserva estado · evita refetch) */
 export function dashboardTabPanelClass(isActive: boolean): string {
+  const base = `${DASHBOARD_TAB_CONTENT} min-w-0 max-w-full`;
+
   if (isActive) {
-    return `${DASHBOARD_TAB_CONTENT} block min-w-0 max-w-full`;
+    return `${base} block`;
   }
 
-  return `${DASHBOARD_TAB_CONTENT} hidden min-w-0 max-w-full overflow-hidden`;
+  return `${base} hidden overflow-hidden [contain:strict] [content-visibility:hidden]`;
 }
 
 export const DASHBOARD_EMPTY_STATE =

@@ -5,9 +5,12 @@ import {
   buildScheduleMap,
   CLIENT_TRAINING_MUSCLE_GROUPS,
   DEFAULT_WEEKLY_SCHEDULE,
+  formatScheduleDayLabel,
+  MAX_PLANILHA_GRUPOS_POR_DIA,
   MUSCLE_GROUP_LABELS,
-  normalizeWeeklyScheduleMuscle,
+  parsePlanilhaDayRows,
   resolveCalendarWeekdayIndex,
+  scheduleDayIncludesClientMuscle,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT_LABELS,
   type ClientTrainingMuscleGroup,
@@ -54,7 +57,8 @@ export function TreinoWeekControls({
   const [loadingIndication, setLoadingIndication] = useState(!initialSchedule?.length);
   const [error, setError] = useState<string | null>(null);
 
-  const indicatedMuscle = schedule[indicatedDay];
+  const indicatedMuscles = schedule[indicatedDay];
+  const indicatedDayLabel = formatScheduleDayLabel(indicatedMuscles);
   const activeLabel = MUSCLE_GROUP_LABELS[activeTreinoMuscle];
 
   const loadSchedule = useCallback(async () => {
@@ -64,8 +68,10 @@ export function TreinoWeekControls({
     try {
       const { data, error: queryError } = await supabase
         .from("planilhas_forjador")
-        .select("dia_semana, grupo_muscular")
-        .eq("atleta_id", userId);
+        .select("dia_semana, grupo_muscular, ordem")
+        .eq("atleta_id", userId)
+        .order("dia_semana")
+        .order("ordem");
 
       if (queryError) {
         setError(queryError.message);
@@ -73,14 +79,7 @@ export function TreinoWeekControls({
         return;
       }
 
-      const rows: PlanilhaDayRow[] = (data ?? [])
-        .map((row) => {
-          const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
-          const day = Number(row.dia_semana) as WeekdayIndex;
-          if (!muscle || day < 1 || day > 6) return null;
-          return { dia_semana: day, grupo_muscular: muscle };
-        })
-        .filter((row): row is PlanilhaDayRow => row !== null);
+      const rows: PlanilhaDayRow[] = parsePlanilhaDayRows(data);
 
       setSchedule(buildScheduleMap(rows));
     } catch {
@@ -117,11 +116,11 @@ export function TreinoWeekControls({
               {isTreinoSwitching ? "…" : ""}
             </p>
           </div>
-          <p className="mt-1.5 text-[9px] uppercase tracking-[0.12em] text-neutral-600">
-            {hasForjadorPlan
-              ? `Planilha do forjador · descanso ${forjadorConfig.descansoPadraoSeg}s · cardio ${forjadorConfig.cardioMetaMinutos} min`
-              : "Treino exemplo · forjador monta planilha, descanso e cardio"}
-          </p>
+          {hasForjadorPlan ? (
+            <p className="mt-1.5 text-[9px] uppercase tracking-[0.12em] text-neutral-600">
+              {`Planilha do forjador · descanso ${forjadorConfig.descansoPadraoSeg}s · cardio ${forjadorConfig.cardioMetaMinutos} min`}
+            </p>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-5">
@@ -160,7 +159,7 @@ export function TreinoWeekControls({
         </div>
 
         <p className="border-t border-emerald-500/8 px-4 py-2.5 text-[9px] uppercase tracking-[0.12em] text-neutral-600">
-          Abdômen integrado nos membros · sem dia exclusivo na semana
+          Até {MAX_PLANILHA_GRUPOS_POR_DIA} grupos por dia · ex.: peito · ombros · braços · costas · abdômen
         </p>
       </section>
 
@@ -172,7 +171,7 @@ export function TreinoWeekControls({
           <p className="mt-1 text-[9px] uppercase tracking-[0.14em] text-neutral-600">
             {loadingIndication
               ? "Sincronizando indicação…"
-              : `${WEEKDAY_LABELS[indicatedDay]} sugere ${MUSCLE_GROUP_LABELS[indicatedMuscle]} · referência apenas`}
+              : `${WEEKDAY_LABELS[indicatedDay]} sugere ${indicatedDayLabel} · referência apenas`}
           </p>
         </div>
 
@@ -180,8 +179,9 @@ export function TreinoWeekControls({
           {WEEKDAY_INDICES.map((day) => {
             const isSelected = day === indicatedDay;
             const isToday = day === calendarToday;
-            const muscle = schedule[day];
-            const matchesChoice = muscle === activeTreinoMuscle;
+            const muscles = schedule[day];
+            const dayLabel = formatScheduleDayLabel(muscles);
+            const matchesChoice = scheduleDayIncludesClientMuscle(muscles, activeTreinoMuscle);
 
             return (
               <button
@@ -213,7 +213,7 @@ export function TreinoWeekControls({
                     matchesChoice ? "text-emerald-300/90" : "text-neutral-500"
                   }`}
                 >
-                  {MUSCLE_GROUP_LABELS[muscle]}
+                  {dayLabel}
                 </p>
               </button>
             );

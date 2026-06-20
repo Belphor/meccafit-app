@@ -164,6 +164,8 @@ export function DashboardClient({
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
+  const [muralFocusToken, setMuralFocusToken] = useState(0);
+  const [muralFocusExerciseName, setMuralFocusExerciseName] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<DashboardTabId>(DEFAULT_DASHBOARD_TAB);
   const [visitedTabs, setVisitedTabs] = useState<Set<DashboardTabId>>(
     () => new Set([DEFAULT_DASHBOARD_TAB]),
@@ -445,13 +447,17 @@ export function DashboardClient({
 
   const publishMuralAscensao = useCallback<
     (exerciseName: string, payload: { weight: number; series: number; vtc: number }) => void
-  >(() => {
+  >((exerciseName) => {
     if (profile?.role === "forjador_soberano") {
       return;
     }
+
     void fetchCommunityMuralPosts().then((result) => {
       if (result.data) setMuralPosts(result.data);
     });
+
+    setMuralFocusExerciseName(exerciseName);
+    setMuralFocusToken((token) => token + 1);
     handleTabChange("comunidade");
   }, [handleTabChange, profile?.role]);
 
@@ -595,6 +601,8 @@ export function DashboardClient({
                         userId={userId}
                         profileName={profile.name}
                         phase={phase}
+                        muralFocusToken={muralFocusToken}
+                        muralFocusExerciseName={muralFocusExerciseName}
                       />
                     </div>
                   ) : null}

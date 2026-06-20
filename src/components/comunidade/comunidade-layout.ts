@@ -7,6 +7,10 @@ export const COMUNIDADE_PANEL =
 /** Âncoras de scroll com header fixo do dashboard */
 export const COMUNIDADE_SCROLL_MT = "scroll-mt-[4.25rem] sm:scroll-mt-24";
 
+/** Mural — offset extra para navegação sticky + SUPERAÇÃO */
+export const COMUNIDADE_MURAL_SCROLL_MT =
+  "scroll-mt-[6.5rem] sm:scroll-mt-[7.5rem] lg:scroll-mt-28";
+
 /** Secção interna — evita overflow em grids aninhados */
 export const COMUNIDADE_SECTION_INNER = "min-w-0 max-w-full";
 

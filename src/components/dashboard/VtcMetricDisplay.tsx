@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import {
   DASHBOARD_INNER_FRAME,
   VTC_EXPLANATION_TEXT,
@@ -17,6 +18,7 @@ type VtcMetricDisplayProps = {
   hasBiologicalBalance?: boolean;
   biologicalMultiplier?: number;
   isChamaReativa?: boolean;
+  chamaIntensity?: string;
   showBiologicalBalance?: boolean;
 };
 
@@ -27,6 +29,7 @@ export function VtcMetricDisplay({
   hasBiologicalBalance = false,
   biologicalMultiplier = 1,
   isChamaReativa = false,
+  chamaIntensity,
   showBiologicalBalance = true,
 }: VtcMetricDisplayProps) {
   const isCompact = variant === "compact";
@@ -46,7 +49,12 @@ export function VtcMetricDisplay({
 
   return (
     <section
-      className={`${VTC_METRIC_FRAME} ${isChamaReativa ? "vtc-metric-live" : ""} ${isCompact ? "" : "mt-4 sm:mt-6"}`}
+      className={`${VTC_METRIC_FRAME} ${isChamaReativa ? "vtc-metric-live chama-altar-metric-glow" : ""} ${isCompact ? "" : "mt-4 sm:mt-6"}`}
+      style={
+        chamaIntensity
+          ? ({ ["--chama-intensity" as string]: chamaIntensity } as CSSProperties)
+          : undefined
+      }
       aria-label={`${VTC_FULL_NAME}: ${formattedValue}`}
     >
       <div className="relative z-[1] grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 sm:gap-4">

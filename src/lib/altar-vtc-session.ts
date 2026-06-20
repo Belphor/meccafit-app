@@ -1,12 +1,16 @@
 import { ALTAR_VTC_SESSION_TARGET_KG } from "@/lib/mock-data";
 import { resolveTreinoDayKey } from "@/lib/treino-day-key";
+import type { ClientTrainingMuscleGroup } from "@/lib/training-week";
 
 const STORAGE_PREFIX = "meccafit:altar-vtc";
 const SNAPSHOT_VERSION = 1 as const;
 
 export type AltarVtcSessionScope = {
   userId: string;
-  subgroupId: string;
+  /** Agrupa a sessão por músculo do dia — todos os exercícios propostos no treino. */
+  muscle: ClientTrainingMuscleGroup | string;
+  /** Chave legada (subgrupo) para migrar sessões antigas. */
+  legacySubgroupId?: string;
 };
 
 export type AltarVtcSessionSnapshot = {
@@ -21,12 +25,15 @@ export type AltarVtcSessionSnapshot = {
 
 function buildStorageKey(scope: AltarVtcSessionScope): string {
   const day = resolveTreinoDayKey();
-  return `${STORAGE_PREFIX}:${scope.userId}:${scope.subgroupId}:${day}`;
+  return `${STORAGE_PREFIX}:${scope.userId}:${scope.muscle}:${day}`;
 }
 
-function sanitizeMaxLoads(
-  value: unknown,
-): Record<number, number> {
+function buildLegacyStorageKey(userId: string, subgroupId: string): string {
+  const day = resolveTreinoDayKey();
+  return `${STORAGE_PREFIX}:${userId}:${subgroupId}:${day}`;
+}
+
+function sanitizeMaxLoads(value: unknown): Record<number, number> {
   if (!value || typeof value !== "object") return {};
 
   const entries = Object.entries(value as Record<string, unknown>);
@@ -72,19 +79,32 @@ function sanitizeSnapshot(raw: unknown): AltarVtcSessionSnapshot | null {
   };
 }
 
-export function readAltarVtcSession(
-  scope: AltarVtcSessionScope,
-): AltarVtcSessionSnapshot | null {
+function readRawSnapshot(key: string): AltarVtcSessionSnapshot | null {
   if (typeof window === "undefined") return null;
-  if (!scope.userId || !scope.subgroupId) return null;
 
   try {
-    const raw = window.localStorage.getItem(buildStorageKey(scope));
+    const raw = window.localStorage.getItem(key);
     if (!raw) return null;
     return sanitizeSnapshot(JSON.parse(raw) as unknown);
   } catch {
     return null;
   }
+}
+
+export function readAltarVtcSession(scope: AltarVtcSessionScope): AltarVtcSessionSnapshot | null {
+  if (typeof window === "undefined") return null;
+  if (!scope.userId || !scope.muscle) return null;
+
+  const primary = readRawSnapshot(buildStorageKey(scope));
+  if (primary) return primary;
+
+  if (!scope.legacySubgroupId) return null;
+
+  const legacy = readRawSnapshot(buildLegacyStorageKey(scope.userId, scope.legacySubgroupId));
+  if (!legacy) return null;
+
+  writeAltarVtcSession(scope, legacy);
+  return legacy;
 }
 
 export function writeAltarVtcSession(
@@ -95,7 +115,7 @@ export function writeAltarVtcSession(
   >,
 ): void {
   if (typeof window === "undefined") return;
-  if (!scope.userId || !scope.subgroupId) return;
+  if (!scope.userId || !scope.muscle) return;
 
   const snapshot: AltarVtcSessionSnapshot = {
     v: SNAPSHOT_VERSION,
@@ -116,7 +136,7 @@ export function writeAltarVtcSession(
 
 export function clearAltarVtcSession(scope: AltarVtcSessionScope): void {
   if (typeof window === "undefined") return;
-  if (!scope.userId || !scope.subgroupId) return;
+  if (!scope.userId || !scope.muscle) return;
 
   try {
     window.localStorage.removeItem(buildStorageKey(scope));

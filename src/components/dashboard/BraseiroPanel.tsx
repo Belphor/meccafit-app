@@ -1,8 +1,16 @@
 import type { ClientProfile } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import { VtcMetricDisplay } from "@/components/dashboard/VtcMetricDisplay";
 import {
+  buildChamaAltarCardStyle,
+  CHAMA_ALTAR_TIER_LABELS,
+  resolveChamaAltarIntensity,
+  resolveChamaAltarTier,
+} from "@/lib/chama-altar-visual";
+import {
+  CHAMA_ALTAR_CLIENT_EXPLANATION,
   DASHBOARD_META_CHIP,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
@@ -12,6 +20,7 @@ type BraseiroPanelProps = {
   profile: ClientProfile;
   isIncubating: boolean;
   formattedVtcTotal: string;
+  vtcTotal: number;
   hasBiologicalBalance: boolean;
   biologicalMultiplier: number;
   isChamaReativa: boolean;
@@ -22,7 +31,6 @@ const PROFILE_ROWS = (profile: ClientProfile) =>
   [
     { label: "Cliente", value: profile.name },
     { label: "Linhagem", value: profile.lineage },
-    { label: "Fase", value: profile.birth },
     { label: "Status", value: profile.status },
   ] as const;
 
@@ -56,23 +64,42 @@ export function BraseiroPanel({
   profile,
   isIncubating,
   formattedVtcTotal,
+  vtcTotal,
   hasBiologicalBalance,
   biologicalMultiplier,
   isChamaReativa,
   className = "",
 }: BraseiroPanelProps) {
+  const chamaTier = resolveChamaAltarTier(vtcTotal);
+  const chamaTierLabel = CHAMA_ALTAR_TIER_LABELS[chamaTier];
+  const chamaIntensity = String(Math.min(1, resolveChamaAltarIntensity(vtcTotal)));
+  const cardStyle = buildChamaAltarCardStyle(vtcTotal);
+
   return (
     <BrasaVivaCard
       as="section"
-      variant="treino"
-      className={`min-w-0 ${DASHBOARD_PANEL_FRAME} ${className}`}
+      variant={chamaTier >= 2 ? "brasao" : "treino"}
+      className={`chama-altar-card chama-altar-tier-${chamaTier} min-w-0 ${DASHBOARD_PANEL_FRAME} ${className}`}
+      style={cardStyle}
+      overlay={chamaTier >= 1 ? <div className="chama-altar-ambient" aria-hidden /> : undefined}
       aria-labelledby="braseiro-title"
     >
       <DashboardPanelHeader chip="Braseiro" meta="Energético" />
 
-      <h2 id="braseiro-title" className={`${DASHBOARD_SECTION_TITLE} mt-3 sm:mt-4`}>
-        Chama do Altar
-      </h2>
+      <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
+        <h2 id="braseiro-title" className={DASHBOARD_SECTION_TITLE}>
+          Chama do Altar
+        </h2>
+        {chamaTier > 0 ? (
+          <span className="rounded-full border border-amber-500/25 bg-amber-950/35 px-2.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.16em] text-amber-200/90">
+            {chamaTierLabel}
+          </span>
+        ) : null}
+      </div>
+
+      <DashboardClientInfoBlock className="mt-3">
+        {CHAMA_ALTAR_CLIENT_EXPLANATION}
+      </DashboardClientInfoBlock>
 
       <VtcMetricDisplay
         formattedValue={formattedVtcTotal}
@@ -81,6 +108,7 @@ export function BraseiroPanel({
         hasBiologicalBalance={hasBiologicalBalance}
         biologicalMultiplier={biologicalMultiplier}
         isChamaReativa={isChamaReativa}
+        chamaIntensity={chamaIntensity}
         showBiologicalBalance
       />
 

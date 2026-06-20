@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioIgnitionBar } from "@/components/dashboard/CardioIgnitionBar";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { HermeticFocusOverlay } from "@/components/dashboard/HermeticFocusOverlay";
 import { resolveCardioGoalMs } from "@/lib/cardio-config";
 import {
@@ -14,6 +15,7 @@ import { useCardioVooCinzas } from "@/hooks/useCardioVooCinzas";
 import {
   CARDIO_VOO_PANEL_ACTIVE,
   CARDIO_VOO_PANEL_ELITE,
+  VOO_CINZAS_CLIENT_EXPLANATION,
 } from "@/lib/dashboard-config";
 import type { CardioSessionStatus } from "@/lib/cardio-voo-cinzas";
 
@@ -125,6 +127,10 @@ export function CardioVooCinzasPanel({
             </button>
           ) : null}
         </div>
+
+        <DashboardClientInfoBlock className="mt-4">
+          {VOO_CINZAS_CLIENT_EXPLANATION}
+        </DashboardClientInfoBlock>
 
         <CardioIgnitionBar percent={percent} band={band} className="mt-4 w-full" />
 

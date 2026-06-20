@@ -9,9 +9,8 @@ import {
 import type { SovereignMuscleId } from "@/components/evolution/human-body-constants";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import {
-  normalizeWeeklyScheduleMuscle,
+  parsePlanilhaDayRows,
   type PlanilhaDayRow,
-  type WeekdayIndex,
 } from "@/lib/training-week";
 import {
   DEFAULT_FORJADOR_TREINO_CONFIG,
@@ -54,17 +53,12 @@ async function fetchWeeklySchedule(userId: string): Promise<PlanilhaDayRow[]> {
 
   const { data } = await supabase
     .from("planilhas_forjador")
-    .select("dia_semana, grupo_muscular")
-    .eq("atleta_id", userId);
+    .select("dia_semana, grupo_muscular, ordem")
+    .eq("atleta_id", userId)
+    .order("dia_semana")
+    .order("ordem");
 
-  return (data ?? [])
-    .map((row) => {
-      const muscle = normalizeWeeklyScheduleMuscle(row.grupo_muscular);
-      const day = Number(row.dia_semana) as WeekdayIndex;
-      if (!muscle || day < 1 || day > 6) return null;
-      return { dia_semana: day, grupo_muscular: muscle };
-    })
-    .filter((row): row is PlanilhaDayRow => row !== null);
+  return parsePlanilhaDayRows(data);
 }
 
 async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
