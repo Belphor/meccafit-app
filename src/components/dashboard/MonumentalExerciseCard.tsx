@@ -355,6 +355,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
                 variant="exercise"
                 restartToken={restTimerToken}
                 defaultSeconds={restSeconds}
+                isExerciseActive={isActive}
               />
             </div>
           ) : null}

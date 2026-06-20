@@ -144,11 +144,15 @@ export const VTC_SESSION_EXPLANATION = "Soma das cargas máximas registradas na 
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  "Sua chama registra o VTC do dia — a soma das cargas máximas (kg) validadas no treino civil. Ela reinicia à meia-noite (horário de São Paulo). Grupos mistos no mesmo dia alimentam uma única chama.";
+  "A Chama registra o VTC do dia da planilha que você está executando — soma das cargas máximas (kg) validadas na sessão civil de hoje. Cada dia da planilha (Seg–Sáb) tem sua própria chama; à meia-noite (horário de São Paulo) ela zera e recomeça. Grupos mistos no mesmo dia alimentam uma única chama.";
 
-/** Planilha do forjador — navegação por dia na aba treino */
+/** Planilha do forjador — painel Treino do dia */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Escolha o dia da planilha que o forjador montou para você. Os exercícios vêm da prescrição dele — não há escolha livre de treino. Cada carga máxima fica travada até a próxima semana: uma tentativa por exercício.";
+  "Lista de exercícios prescritos pelo forjador para o dia escolhido. Execute as séries, registre a carga máxima de cada movimento e avance na planilha — cada registro fica travado até a próxima semana.";
+
+/** Execução — painel de escolha do dia */
+export const TREINO_EXECUTION_CLIENT_EXPLANATION =
+  "Selecione qual dia da planilha semanal você vai executar hoje. O forjador define os grupos de cada dia — você só indica em qual dia está treinando. Dias concluídos nesta semana aparecem com ✓.";
 
 export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
   "Travado até a próxima semana";
@@ -158,9 +162,115 @@ export const PHOENIX_INPUT_HINT_WEEK_LOCKED =
 
 export const TREINO_DIA_CONCLUIDO_LABEL = "Semana concluída";
 
+/** Painel Execução — verde contextual (separado do Treino do dia) */
+export const TREINO_EXECUTION_PANEL_SHELL =
+  "overflow-hidden rounded-[1.75rem] border border-emerald-500/14 bg-neutral-950/50 backdrop-blur-sm shadow-[inset_0_1px_0_rgba(52,211,153,0.04)]";
+
+export const TREINO_EXECUTION_EXPLANATION_ZONE =
+  "border-b border-emerald-500/10 bg-emerald-950/15 px-4 py-3.5 sm:px-5";
+
+export const TREINO_EXECUTION_EXPLANATION_LABEL =
+  "font-mono text-[10px] uppercase tracking-[0.22em] text-emerald-400/75";
+
+export const TREINO_EXECUTION_EXPLANATION_TEXT =
+  "mt-2 text-xs leading-relaxed text-emerald-100/55 sm:text-sm sm:leading-relaxed";
+
+/** Painel Treino do dia — tom âmbar da marca */
+export const TREINO_DIA_PANEL_SHELL =
+  "overflow-hidden rounded-[1.75rem] border border-orange-500/12 bg-gradient-to-br from-orange-950/35 via-neutral-950/60 to-black/70 shadow-[inset_0_1px_0_rgba(251,191,36,0.05)]";
+
+export const TREINO_DIA_EXPLANATION_ZONE =
+  "border-b border-orange-500/10 bg-orange-950/20 px-4 py-4 sm:px-5";
+
+export const TREINO_DIA_EXPLANATION_LABEL =
+  "font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/85";
+
+export const TREINO_DIA_EXPLANATION_TEXT =
+  "mt-2 text-xs leading-relaxed text-amber-50/75 sm:text-sm sm:leading-relaxed";
+
+/** Execução — classes base em globals.css (.treino-execution--*) */
+export const TREINO_EXECUTION_LABEL =
+  "font-mono text-[9px] uppercase tracking-[0.2em] sm:text-[10px] sm:tracking-[0.22em]";
+
+export const TREINO_EXECUTION_DAY_TITLE =
+  "mt-1.5 font-serif text-[clamp(1.125rem,4.5vw,1.625rem)] font-semibold uppercase leading-tight tracking-[0.1em]";
+
+export const TREINO_EXECUTION_MUSCLES =
+  "mt-1 text-[11px] font-medium uppercase leading-snug tracking-[0.08em] sm:text-sm sm:tracking-[0.1em]";
+
+export const TREINO_EXECUTION_META =
+  "mt-2 font-mono text-[8px] uppercase tracking-[0.12em] sm:text-[9px] sm:tracking-[0.14em]";
+
+export const TREINO_EXECUTION_HERO =
+  "treino-execution-hero px-3 py-3 sm:px-5 sm:py-4";
+
+export const TREINO_EXECUTION_PICKER =
+  "treino-execution-picker border-t border-emerald-500/10 px-3 py-3 sm:px-5 sm:py-4";
+
+export const TREINO_DAY_PICKER_LABEL =
+  "font-mono text-[9px] uppercase tracking-[0.18em] text-emerald-400/65 sm:text-[10px] sm:tracking-[0.2em]";
+
+export const TREINO_DAY_BUTTON =
+  "treino-day-btn group relative flex min-h-[3.25rem] flex-col items-center justify-center rounded-xl border px-1.5 py-2 text-center transition-[border-color,background-color,box-shadow,opacity] duration-200 sm:min-h-[4rem] sm:px-2 sm:py-3";
+
+/** Cronômetro — visual distinto do painel Execução (slate/ciano, compacto) */
+export const WORKOUT_TIMER_ROOT = "workout-timer w-full min-w-0";
+
+export const WORKOUT_TIMER_SHELL_IDLE =
+  "workout-timer workout-timer--idle rounded-2xl border border-neutral-700/50 bg-neutral-950/70 px-2.5 py-2 sm:px-3 sm:py-2.5";
+
+export const WORKOUT_TIMER_SHELL_RUNNING =
+  "workout-timer workout-timer--running rounded-2xl border border-cyan-500/22 bg-cyan-950/15 px-2.5 py-2 sm:px-3 sm:py-2.5";
+
+export const WORKOUT_TIMER_SHELL_WARNING =
+  "workout-timer workout-timer--warning rounded-2xl border border-amber-500/30 bg-amber-950/20 px-2.5 py-2 sm:px-3 sm:py-2.5";
+
+export const WORKOUT_TIMER_SHELL_URGENT =
+  "workout-timer workout-timer--urgent workout-timer-urgent rounded-2xl border border-orange-500/35 bg-orange-950/25 px-2.5 py-2 sm:px-3 sm:py-2.5";
+
+export const WORKOUT_TIMER_LABEL =
+  "font-mono text-[7px] uppercase tracking-[0.16em] sm:text-[8px] sm:tracking-[0.18em]";
+
+export const WORKOUT_TIMER_VALUE =
+  "font-mono text-[clamp(1.125rem,5vw,1.375rem)] font-bold tabular-nums leading-none tracking-wide";
+
+export const WORKOUT_TIMER_ACTION =
+  "min-h-9 rounded-full px-2.5 text-[7px] font-bold uppercase tracking-[0.1em] sm:min-h-10 sm:px-3 sm:text-[8px] sm:tracking-[0.12em]";
+
+/** Voo de Cinzas — painéis por contexto (âmbar/laranja/dourado) */
+export const CARDIO_VOO_SHELL_IDLE =
+  "cardio-voo-panel cardio-voo-panel--idle rounded-[1.5rem] border border-orange-500/14 bg-gradient-to-br from-orange-950/25 via-neutral-950/75 to-black/85 p-4 shadow-[0_0_20px_rgba(249,115,22,0.08)] sm:p-5";
+
+export const CARDIO_VOO_SHELL_LIVE =
+  "cardio-voo-panel cardio-voo-panel--live rounded-[1.5rem] border border-orange-500/28 bg-gradient-to-br from-orange-950/45 via-neutral-950/70 to-black/85 p-4 shadow-[0_0_28px_rgba(249,115,22,0.2)] sm:p-5";
+
+export const CARDIO_VOO_SHELL_ELITE =
+  "cardio-voo-panel cardio-voo-panel--elite rounded-[1.5rem] border border-amber-400/30 bg-gradient-to-br from-amber-950/35 via-neutral-950/75 to-black/90 p-4 shadow-[0_0_32px_rgba(255,215,0,0.22)] sm:p-5";
+
+export const CARDIO_VOO_CHIP_IDLE = "font-mono text-[10px] uppercase tracking-[0.22em] text-amber-400/80";
+export const CARDIO_VOO_CHIP_LIVE = "font-mono text-[10px] uppercase tracking-[0.22em] text-orange-300/95";
+export const CARDIO_VOO_CHIP_ELITE = "font-mono text-[10px] uppercase tracking-[0.22em] text-amber-200/95";
+
+export const CARDIO_VOO_TITLE_IDLE = "mt-1 font-serif text-lg uppercase tracking-[0.12em] text-amber-50 sm:text-xl";
+export const CARDIO_VOO_TITLE_LIVE = "mt-1 font-serif text-lg uppercase tracking-[0.12em] text-amber-50 sm:text-xl";
+export const CARDIO_VOO_TITLE_ELITE = "mt-1 font-serif text-lg uppercase tracking-[0.12em] text-[#FFD700] sm:text-xl";
+
+export const CARDIO_VOO_PERCENT_IDLE = "font-serif text-2xl tabular-nums leading-none text-amber-200/90";
+export const CARDIO_VOO_PERCENT_LIVE = "font-serif text-2xl tabular-nums leading-none text-amber-100";
+export const CARDIO_VOO_PERCENT_ELITE = "font-serif text-2xl tabular-nums leading-none text-[#FFD700]";
+
+export const CARDIO_VOO_EXPLANATION_SUBTLE =
+  "rounded-xl border border-orange-500/12 bg-black/35 px-3.5 py-3 sm:px-4 sm:py-3.5";
+
+export const CARDIO_VOO_EXPLANATION_LABEL =
+  "font-mono text-[10px] uppercase tracking-[0.2em] text-amber-400/75";
+
+export const CARDIO_VOO_EXPLANATION_TEXT =
+  "mt-2 text-xs leading-relaxed text-amber-50/70 sm:text-sm";
+
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =
-  "Cardio consciente do dia. Acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso — ao bater a meta, o altar energético sincroniza.";
+  "Cardio consciente do dia. O forjador define sua meta em minutos — acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso; ao bater a meta, o altar energético sincroniza.";
 
 /** Mapa Térmico (Evolução) — texto orientativo para o cliente */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
