@@ -5,6 +5,11 @@ import { BraseiroPanel } from "@/components/dashboard/BraseiroPanel";
 import { TreinoTab } from "@/components/dashboard/TreinoTab";
 import { readAltarVtcSession, writeAltarVtcSession } from "@/lib/altar-vtc-session";
 import {
+  getWeekLockedMaxLoadsForDay,
+  isExerciseWeekLocked,
+  markExerciseWeekLocked,
+} from "@/lib/treino-week-lock";
+import {
   mergeSessionCompletedSets,
   reconcileSessionCompletedSets,
   reconcileSessionMaxLoads,
@@ -20,8 +25,7 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
-import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
-import { resolveCalendarWeekdayIndex } from "@/lib/training-week";
+import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import type { TrainingTrackState } from "@/lib/training-track";
 import type { ForjadorPrescriptionRow, ForjadorTreinoConfig } from "@/lib/forjador-prescriptions";
 
@@ -36,7 +40,7 @@ export type DashboardTreinoWorkspaceProps = {
   profile: ClientProfile;
   authUserId: string;
   initialWeekSchedule?: PlanilhaDayRow[];
-  activeTreinoMuscle: ClientTrainingMuscleGroup;
+  activeTrainingDay: WeekdayIndex;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
   isTreinoSwitching: boolean;
@@ -48,7 +52,7 @@ export type DashboardTreinoWorkspaceProps = {
   onOpenVideo: (exerciseId: number) => void;
   onSuperacaoMural: (exerciseName: string, payload: SuperacaoPayload) => void;
   onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
-  onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
+  onTrainingDayPick: (day: WeekdayIndex) => void;
 };
 
 function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
@@ -57,16 +61,29 @@ function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
 }
 
 function resolveTreinoSessionHydration(
-  sessionScope: { userId: string; muscle: ClientTrainingMuscleGroup; legacySubgroupId?: string },
+  sessionScope: { userId: string; trainingDay: WeekdayIndex; legacyMuscle?: string; legacySubgroupId?: string },
   subgroup: MuscleSubgroup,
 ) {
   const snapshot = readAltarVtcSession(sessionScope);
+  const weekLockedLoads = getWeekLockedMaxLoadsForDay(
+    sessionScope.userId,
+    sessionScope.trainingDay,
+  );
+
   if (!snapshot) {
+    const maxLoadsByExerciseId: Record<number, number> = {};
+    for (const exercise of subgroup.exercises) {
+      const lockedContribution = weekLockedLoads[exercise.id];
+      if (lockedContribution) {
+        maxLoadsByExerciseId[exercise.id] = lockedContribution;
+      }
+    }
+
     return {
-      baseVtcTotal: 0,
+      baseVtcTotal: sumSessionAltarVtc(subgroup, maxLoadsByExerciseId),
       completedSetsByExerciseId: {} as Record<number, number>,
       lastSavedWeight: 0,
-      maxLoadsByExerciseId: {} as Record<number, number>,
+      maxLoadsByExerciseId,
       shouldPersistStale: false,
     };
   }
@@ -80,17 +97,24 @@ function resolveTreinoSessionHydration(
     reconciledCompleted,
     snapshot.maxLoadsByExerciseId,
   );
-  const reconciledVtc = sumSessionAltarVtc(subgroup, reconciledMaxLoads);
+  const mergedMaxLoads = { ...reconciledMaxLoads };
+  for (const exercise of subgroup.exercises) {
+    const lockedContribution = weekLockedLoads[exercise.id];
+    if (lockedContribution) {
+      mergedMaxLoads[exercise.id] = lockedContribution;
+    }
+  }
+  const reconciledVtc = sumSessionAltarVtc(subgroup, mergedMaxLoads);
   const hasStaleSession =
     Object.keys(reconciledCompleted).length !==
       Object.keys(snapshot.completedSetsByExerciseId).length ||
-    Object.keys(reconciledMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length;
+    Object.keys(mergedMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length;
 
   return {
     baseVtcTotal: reconciledVtc,
     completedSetsByExerciseId: reconciledCompleted,
     lastSavedWeight: snapshot.lastSavedWeight,
-    maxLoadsByExerciseId: reconciledMaxLoads,
+    maxLoadsByExerciseId: mergedMaxLoads,
     shouldPersistStale: hasStaleSession,
   };
 }
@@ -100,7 +124,7 @@ export function DashboardTreinoWorkspace({
   profile,
   authUserId,
   initialWeekSchedule,
-  activeTreinoMuscle,
+  activeTrainingDay,
   forjadorConfig,
   forjadorPrescriptions,
   isTreinoSwitching,
@@ -112,20 +136,17 @@ export function DashboardTreinoWorkspace({
   onOpenVideo,
   onSuperacaoMural,
   onTrainingPersisted,
-  onTrainingMusclePick,
+  onTrainingDayPick,
 }: DashboardTreinoWorkspaceProps) {
-  const [indicatedDay, setIndicatedDay] = useState<WeekdayIndex>(() =>
-    resolveCalendarWeekdayIndex(),
-  );
   const sessionScope = useMemo(
     () => ({
       userId: authUserId,
-      muscle: activeTreinoMuscle,
-      legacySubgroupId: subgroup.id,
+      trainingDay: activeTrainingDay,
+      legacySubgroupId: subgroup.id.startsWith("planilha-dia-") ? undefined : subgroup.id,
     }),
-    [authUserId, activeTreinoMuscle, subgroup.id],
+    [authUserId, activeTrainingDay, subgroup.id],
   );
-  const sessionHydrationKey = `${sessionScope.userId}:${sessionScope.muscle}`;
+  const sessionHydrationKey = `${sessionScope.userId}:${sessionScope.trainingDay}`;
   const sessionHydration = useMemo(
     () => resolveTreinoSessionHydration(sessionScope, subgroup),
     [sessionScope, subgroup],
@@ -235,6 +256,8 @@ export function DashboardTreinoWorkspace({
 
   const handleExerciseMaxLoad = useCallback(
     (exerciseId: number, maxLoadKg: number) => {
+      if (isExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId)) return;
+
       const metricKind = resolveCatalogMetricKind(exerciseId);
       const contribution = resolveAltarContribution(metricKind, maxLoadKg);
       const validIds = new Set(mergedSubgroup.exercises.map((exercise) => exercise.id));
@@ -255,11 +278,12 @@ export function DashboardTreinoWorkspace({
       setBaseVtcTotal(total);
       setMaxLoadsByExerciseId({ ...maxLoadsRef.current });
       onAltarMetricsChange(total, lastSavedWeightRef.current);
+      markExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId, maxLoadKg);
       if (sessionHydratedRef.current) {
         persistAltarSession(total, lastSavedWeightRef.current);
       }
     },
-    [mergedSubgroup, onAltarMetricsChange, persistAltarSession],
+    [activeTrainingDay, authUserId, mergedSubgroup, onAltarMetricsChange, persistAltarSession],
   );
 
   const triggerSuperacaoFeedback = useCallback(
@@ -335,11 +359,11 @@ export function DashboardTreinoWorkspace({
     [onTrainingPersisted],
   );
 
-  const handleTrainingMusclePick = useCallback(
-    (muscle: ClientTrainingMuscleGroup) => {
-      onTrainingMusclePick(muscle);
+  const handleTrainingDayPick = useCallback(
+    (day: WeekdayIndex) => {
+      onTrainingDayPick(day);
     },
-    [onTrainingMusclePick],
+    [onTrainingDayPick],
   );
 
   return (
@@ -349,14 +373,12 @@ export function DashboardTreinoWorkspace({
           <TreinoTab
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
-            activeTreinoMuscle={activeTreinoMuscle}
+            activeTrainingDay={activeTrainingDay}
             isTreinoSwitching={isTreinoSwitching}
             forjadorConfig={forjadorConfig}
             forjadorPrescriptions={forjadorPrescriptions}
             trainingTrack={trainingTrack}
-            indicatedDay={indicatedDay}
-            onIndicatedDayChange={setIndicatedDay}
-            onTrainingMusclePick={handleTrainingMusclePick}
+            onTrainingDayPick={handleTrainingDayPick}
             activeExerciseId={activeExerciseId}
             superacaoExerciseId={superacaoExerciseId}
             isIncubating={isIncubating}

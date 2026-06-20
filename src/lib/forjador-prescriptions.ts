@@ -1,5 +1,5 @@
 import type { Exercise, MuscleSubgroup } from "@/lib/mock-data";
-import type { ClientTrainingMuscleGroup } from "@/lib/training-week";
+import type { TrainingMuscleGroup } from "@/lib/training-week";
 
 export type ForjadorTreinoConfig = {
   descansoPadraoSeg: number;
@@ -11,7 +11,7 @@ export type ForjadorPrescriptionRow = {
   id: string;
   atleta_id: string;
   forjador_id: string;
-  grupo_muscular: ClientTrainingMuscleGroup;
+  grupo_muscular: TrainingMuscleGroup;
   exercicio_id: string;
   ordem: number;
   series_alvo: number;
@@ -43,7 +43,7 @@ export function parseForjadorTreinoConfig(row: Record<string, unknown> | null): 
 }
 
 export function parseForjadorPrescriptionRows(rows: unknown[]): ForjadorPrescriptionRow[] {
-  const allowed = new Set(["PEITO", "COSTAS", "PERNAS", "OMBROS", "BRACOS"]);
+  const allowed = new Set(["PEITO", "COSTAS", "PERNAS", "OMBROS", "BRACOS", "ABDOMEN"]);
 
   return rows.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
@@ -89,7 +89,7 @@ export function parseForjadorPrescriptionRows(rows: unknown[]): ForjadorPrescrip
         id: row.id,
         atleta_id: String(row.atleta_id ?? ""),
         forjador_id: String(row.forjador_id ?? ""),
-        grupo_muscular: grupo as ClientTrainingMuscleGroup,
+        grupo_muscular: grupo as TrainingMuscleGroup,
         exercicio_id: row.exercicio_id.trim(),
         ordem: Number.isFinite(ordem) && ordem >= 1 ? ordem : 1,
         series_alvo: series,
@@ -104,7 +104,7 @@ export function parseForjadorPrescriptionRows(rows: unknown[]): ForjadorPrescrip
 
 export function resolvePrescriptionsForMuscle(
   prescriptions: ForjadorPrescriptionRow[],
-  muscle: ClientTrainingMuscleGroup,
+  muscle: TrainingMuscleGroup,
 ): ForjadorPrescriptionRow[] {
   return prescriptions
     .filter((row) => row.grupo_muscular === muscle)
@@ -114,7 +114,7 @@ export function resolvePrescriptionsForMuscle(
 export function resolveExerciseRestSeconds(
   exerciseId: number,
   prescriptions: ForjadorPrescriptionRow[],
-  muscle: ClientTrainingMuscleGroup,
+  muscle: TrainingMuscleGroup,
   config: ForjadorTreinoConfig,
 ): number {
   const match = resolvePrescriptionsForMuscle(prescriptions, muscle).find(
@@ -130,7 +130,7 @@ export function resolveExerciseRestSeconds(
 
 export function applyForjadorPrescriptionsToSubgroup(
   subgroup: MuscleSubgroup,
-  muscle: ClientTrainingMuscleGroup,
+  muscle: TrainingMuscleGroup,
   prescriptions: ForjadorPrescriptionRow[],
 ): MuscleSubgroup {
   const scoped = resolvePrescriptionsForMuscle(prescriptions, muscle);
@@ -163,7 +163,14 @@ export function applyForjadorPrescriptionsToSubgroup(
 
 export function hasForjadorPrescriptionForMuscle(
   prescriptions: ForjadorPrescriptionRow[],
-  muscle: ClientTrainingMuscleGroup,
+  muscle: TrainingMuscleGroup,
 ): boolean {
   return resolvePrescriptionsForMuscle(prescriptions, muscle).length > 0;
+}
+
+export function hasForjadorPrescriptionForDay(
+  prescriptions: ForjadorPrescriptionRow[],
+  dayMuscles: TrainingMuscleGroup[],
+): boolean {
+  return dayMuscles.some((muscle) => hasForjadorPrescriptionForMuscle(prescriptions, muscle));
 }

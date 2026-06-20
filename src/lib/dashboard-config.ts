@@ -144,7 +144,19 @@ export const VTC_SESSION_EXPLANATION = "Soma das cargas máximas registradas na 
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  "Registro vivo da sua forja. O VTC soma as cargas máximas (kg) registradas na sessão de hoje — quanto mais volume forjar, mais intensa fica a chama do altar.";
+  "Registro vivo da sua forja. O VTC soma as cargas máximas (kg) registradas no treino do dia civil — a chama zera à meia-noite (horário de São Paulo) e recomeça no próximo dia. Se o forjador misturou grupos no mesmo dia, todos alimentam a mesma chama.";
+
+/** Planilha do forjador — navegação por dia na aba treino */
+export const TREINO_DIA_CLIENT_EXPLANATION =
+  "O forjador monta sua planilha semanal. Você só escolhe qual dia executar — os exercícios e grupos musculares vêm da prescrição dele. Cada carga máxima registrada fica travada até a próxima semana: uma tentativa por exercício, sem retrabalho.";
+
+export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
+  "Carga máxima travada até a próxima semana";
+
+export const PHOENIX_INPUT_HINT_WEEK_LOCKED =
+  "Travado até a próxima semana — uma tentativa por exercício";
+
+export const TREINO_DIA_CONCLUIDO_LABEL = "Concluído esta semana";
 
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =

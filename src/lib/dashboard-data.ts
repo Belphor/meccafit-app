@@ -30,6 +30,7 @@ import {
   type TrainingTrackState,
 } from "@/lib/training-track";
 import { fetchTrainingTrackForUser } from "@/lib/training-track.server";
+import { collectUniqueMusclesFromSubgroup } from "@/lib/treino-subgroup";
 
 export type DashboardProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
@@ -649,6 +650,10 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
 export async function refreshSubgroupHistorico(
   subgroup: MuscleSubgroup,
 ): Promise<SupabaseGuardResult<MuscleSubgroup>> {
+  if (subgroup.id.startsWith("planilha-dia-")) {
+    return refreshDaySubgroupHistorico(subgroup);
+  }
+
   const session = await getActiveSupabaseSession();
   const musculo = subgroupIdToMusculo(subgroup.id);
 
@@ -664,6 +669,29 @@ export async function refreshSubgroupHistorico(
 
   return {
     data: applyHistoricoToSubgroup(subgroup, historicoResult.data ?? []),
+    error: null,
+  };
+}
+
+export async function refreshDaySubgroupHistorico(
+  subgroup: MuscleSubgroup,
+): Promise<SupabaseGuardResult<MuscleSubgroup>> {
+  const session = await getActiveSupabaseSession();
+  const musculos = collectUniqueMusclesFromSubgroup(subgroup);
+
+  if (session?.user.id) {
+    await Promise.all(musculos.map((musculo) => invalidateDashboardCaches(session.user.id, musculo)));
+  }
+
+  const results = await Promise.all(musculos.map((musculo) => fetchOwnHistoricoTreinos(musculo)));
+  const failed = results.find((result) => result.error);
+  if (failed?.error) {
+    return { data: null, error: failed.error };
+  }
+
+  const merged = results.flatMap((result) => result.data ?? []);
+  return {
+    data: applyHistoricoToSubgroup(subgroup, merged),
     error: null,
   };
 }

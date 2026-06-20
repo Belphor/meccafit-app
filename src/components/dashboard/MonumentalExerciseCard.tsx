@@ -38,6 +38,8 @@ import {
   EXERCISE_SERIES_PROGRESS,
   EXERCISE_SERIES_SUPERACAO,
   PHOENIX_INPUT_GOAL_COMPLETE,
+  PHOENIX_INPUT_GOAL_WEEK_LOCKED,
+  PHOENIX_INPUT_HINT_WEEK_LOCKED,
   EXERCISE_VIDEO_BUTTON,
   EXERCISE_VIDEO_BUTTON_IDLE,
 } from "@/lib/dashboard-config";
@@ -65,6 +67,7 @@ export type MonumentalExerciseCardProps = {
   onPersistSuccess?: (exerciseId: number, detail: { vtcGenerated: number }) => void;
   onSetComplete?: (exerciseId: number) => void;
   isMaxLoadRegistered?: boolean;
+  isWeekLocked?: boolean;
 };
 
 export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
@@ -85,6 +88,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   onPersistSuccess,
   onSetComplete,
   isMaxLoadRegistered = false,
+  isWeekLocked = false,
 }: MonumentalExerciseCardProps) {
   const [baseVtc, setBaseVtc] = useState(0);
   const [restTimerToken, setRestTimerToken] = useState(0);
@@ -319,8 +323,13 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
               exercicioNome={exercise.name}
               fieldIdPrefix={`exercise-${exercise.id}-`}
               initialWeight={exercise.currentWeight}
+              hintCompleteText={
+                isWeekLocked ? PHOENIX_INPUT_HINT_WEEK_LOCKED : undefined
+              }
               trainingGoalText={
-                isMaxLoadRegistered
+                isWeekLocked
+                  ? PHOENIX_INPUT_GOAL_WEEK_LOCKED
+                  : isMaxLoadRegistered
                   ? PHOENIX_INPUT_GOAL_COMPLETE
                   : exercise.metricKind === "duration_sec"
                     ? `Registrar tempo máximo · ${exercise.targetSets} séries propostas`

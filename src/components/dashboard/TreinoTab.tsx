@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
@@ -15,15 +15,22 @@ import {
   TREINO_MINIMIZE_TOGGLE,
 } from "@/lib/dashboard-config";
 import {
-  hasForjadorPrescriptionForMuscle,
+  hasForjadorPrescriptionForDay,
   resolveExerciseRestSeconds,
   type ForjadorPrescriptionRow,
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
-import { resolveActiveTreinoSubgroup } from "@/lib/treino-subgroup";
+import { composeDayTreinoSubgroup, subgroupIdToTrainingMuscle } from "@/lib/treino-subgroup";
 import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-track";
-import type { ClientTrainingMuscleGroup, PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
+import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
+import { buildScheduleMap } from "@/lib/training-week";
+import {
+  isExerciseWeekLocked,
+  listFullyLockedTrainingDays,
+} from "@/lib/treino-week-lock";
+
+const PLANILHA_DAYS: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
 
 type TreinoTabProps = {
   subgroup: MuscleSubgroup;
@@ -33,14 +40,12 @@ type TreinoTabProps = {
   hasBiologicalBalance: boolean;
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
-  activeTreinoMuscle: ClientTrainingMuscleGroup;
+  activeTrainingDay: WeekdayIndex;
   isTreinoSwitching: boolean;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
   trainingTrack?: TrainingTrackState;
-  indicatedDay: WeekdayIndex;
-  onIndicatedDayChange: (day: WeekdayIndex) => void;
-  onTrainingMusclePick: (muscle: ClientTrainingMuscleGroup) => void;
+  onTrainingDayPick: (day: WeekdayIndex) => void;
   onActivate: (exerciseId: number) => void;
   onVolumeCommitted: (exerciseId: number, baseVolume: number) => void;
   onWeightSaved: (exerciseId: number, weight: number) => void;
@@ -62,14 +67,12 @@ export function TreinoTab({
   hasBiologicalBalance,
   userId,
   initialWeekSchedule,
-  activeTreinoMuscle,
+  activeTrainingDay,
   isTreinoSwitching,
   forjadorConfig,
   forjadorPrescriptions,
   trainingTrack = DEFAULT_TRAINING_TRACK,
-  indicatedDay,
-  onIndicatedDayChange,
-  onTrainingMusclePick,
+  onTrainingDayPick,
   onActivate,
   onVolumeCommitted,
   onWeightSaved,
@@ -79,19 +82,29 @@ export function TreinoTab({
   onSetComplete,
   maxLoadsByExerciseId = {},
 }: TreinoTabProps) {
-  const [cardsMinimized, setCardsMinimized] = useState(false);
-  const displaySubgroup = resolveActiveTreinoSubgroup(
-    activeTreinoMuscle,
-    subgroup,
-    trainingTrack,
-    forjadorPrescriptions,
+  const [cardsMinimized, setCardsMinimized] = useState(true);
+  const scheduleMap = useMemo(
+    () => buildScheduleMap(initialWeekSchedule ?? []),
+    [initialWeekSchedule],
   );
-  const musculo = subgroupIdToMusculo(displaySubgroup.id);
-  const hasForjadorPlan = hasForjadorPrescriptionForMuscle(
-    forjadorPrescriptions,
-    activeTreinoMuscle,
-  );
+  const dayMuscles: TrainingMuscleGroup[] = scheduleMap[activeTrainingDay] ?? [];
+  const hasForjadorPlan = hasForjadorPrescriptionForDay(forjadorPrescriptions, dayMuscles);
   const cardioGoalMs = forjadorConfig.cardioMetaMinutos * 60 * 1000;
+
+  const weekLockedDays = useMemo(() => {
+    if (!userId) return [];
+    const dayExerciseIds: Partial<Record<WeekdayIndex, number[]>> = {};
+    for (const day of PLANILHA_DAYS) {
+      const daySubgroup = composeDayTreinoSubgroup(
+        scheduleMap[day] ?? [],
+        trainingTrack,
+        forjadorPrescriptions,
+        day,
+      );
+      dayExerciseIds[day] = daySubgroup.exercises.map((exercise) => exercise.id);
+    }
+    return listFullyLockedTrainingDays(userId, dayExerciseIds);
+  }, [userId, scheduleMap, trainingTrack, forjadorPrescriptions]);
 
   return (
     <BrasaVivaCard
@@ -100,30 +113,32 @@ export function TreinoTab({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="subgrupo-monumental-title"
     >
-      <DashboardPanelHeader chip="Treino" meta="Execução diária" metaVariant="chip" />
+      <DashboardPanelHeader chip="Treino" meta="Planilha do forjador" metaVariant="chip" />
 
       <CardioVooCinzasPanel userId={userId} goalMs={cardioGoalMs} />
 
-      <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
-        {userId ? (
+      {userId ? (
+        <div className="mt-4">
           <TreinoWeekControls
             userId={userId}
             initialSchedule={initialWeekSchedule}
-            activeTreinoMuscle={activeTreinoMuscle}
+            activeTrainingDay={activeTrainingDay}
             isTreinoSwitching={isTreinoSwitching}
             hasForjadorPlan={hasForjadorPlan}
             forjadorConfig={forjadorConfig}
-            indicatedDay={indicatedDay}
-            onIndicatedDayChange={onIndicatedDayChange}
-            onTrainingMusclePick={onTrainingMusclePick}
+            weekLockedDays={weekLockedDays}
+            onTrainingDayPick={onTrainingDayPick}
           />
-        ) : null}
+        </div>
+      ) : null}
 
-        <MonumentalSubgroupTitle subgroup={displaySubgroup} />
+      <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
+        <MonumentalSubgroupTitle subgroup={subgroup} />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
-            {displaySubgroup.exercises.length} exercícios
+            {subgroup.exercises.length} exercício{subgroup.exercises.length === 1 ? "" : "s"}{" "}
+            prescrito{subgroup.exercises.length === 1 ? "" : "s"}
           </p>
           <button
             type="button"
@@ -143,34 +158,45 @@ export function TreinoTab({
         aria-label="Lista de exercícios do dia"
         aria-busy={isTreinoSwitching}
       >
-        {displaySubgroup.exercises.map((exercise) => (
-          <li key={exercise.id} className="min-w-0">
-            <MonumentalExerciseCard
-              exercise={exercise}
-              isActive={exercise.id === activeExerciseId}
-              isMinimized={cardsMinimized}
-              isSuperacaoFlame={exercise.id === superacaoExerciseId}
-              musculo={musculo}
-              isIncubating={isIncubating}
-              hasBiologicalBalance={hasBiologicalBalance}
-              userId={userId}
-              restSeconds={resolveExerciseRestSeconds(
-                exercise.id,
-                forjadorPrescriptions,
-                activeTreinoMuscle,
-                forjadorConfig,
-              )}
-              onActivate={onActivate}
-              onVolumeCommitted={onVolumeCommitted}
-              onWeightSaved={onWeightSaved}
-              onWatchVideo={onWatchVideo}
-              onSuperacao={onSuperacao}
-              onPersistSuccess={onPersistSuccess}
-              onSetComplete={onSetComplete}
-              isMaxLoadRegistered={Boolean(maxLoadsByExerciseId[exercise.id])}
-            />
-          </li>
-        ))}
+        {subgroup.exercises.map((exercise) => {
+          const trainingMuscle = subgroupIdToTrainingMuscle(exercise.subgroupId);
+          const musculo = subgroupIdToMusculo(exercise.subgroupId);
+          const isWeekLocked = Boolean(
+            userId && isExerciseWeekLocked(userId, activeTrainingDay, exercise.id),
+          );
+          const isMaxLoadRegistered =
+            Boolean(maxLoadsByExerciseId[exercise.id]) || isWeekLocked;
+
+          return (
+            <li key={exercise.id} className="min-w-0">
+              <MonumentalExerciseCard
+                exercise={exercise}
+                isActive={exercise.id === activeExerciseId}
+                isMinimized={cardsMinimized}
+                isSuperacaoFlame={exercise.id === superacaoExerciseId}
+                musculo={musculo}
+                isIncubating={isIncubating}
+                hasBiologicalBalance={hasBiologicalBalance}
+                userId={userId}
+                restSeconds={resolveExerciseRestSeconds(
+                  exercise.id,
+                  forjadorPrescriptions,
+                  trainingMuscle,
+                  forjadorConfig,
+                )}
+                onActivate={onActivate}
+                onVolumeCommitted={onVolumeCommitted}
+                onWeightSaved={onWeightSaved}
+                onWatchVideo={onWatchVideo}
+                onSuperacao={onSuperacao}
+                onPersistSuccess={onPersistSuccess}
+                onSetComplete={onSetComplete}
+                isMaxLoadRegistered={isMaxLoadRegistered}
+                isWeekLocked={isWeekLocked}
+              />
+            </li>
+          );
+        })}
       </ul>
     </BrasaVivaCard>
   );

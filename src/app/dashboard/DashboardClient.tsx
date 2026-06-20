@@ -24,8 +24,8 @@ import {
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
 import {
-  composeTreinoSubgroup,
-  resolveSubgroupByCatalogId,
+  composeDayTreinoSubgroup,
+  collectUniqueMusclesFromSubgroup,
 } from "@/lib/treino-subgroup";
 import {
   DEFAULT_DASHBOARD_TAB,
@@ -43,9 +43,8 @@ import {
   fetchCommunityMuralPosts,
   invalidateDashboardCaches,
   loadDashboardTrainingBundle,
-  refreshSubgroupHistorico,
+  refreshDaySubgroupHistorico,
 } from "@/lib/dashboard-data";
-import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { parseThermalGravityState } from "@/lib/thermal-gravity";
 import {
@@ -73,10 +72,10 @@ import {
   resolvePrescriptionsForSubgroup,
   type TrainingTrackState,
 } from "@/lib/training-track";
-import type { PlanilhaDayRow, ClientTrainingMuscleGroup } from "@/lib/training-week";
+import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import {
-  MUSCLE_TO_SUBGROUP_ID,
-  subgroupIdToClientTrainingMuscle,
+  buildScheduleMap,
+  resolveCalendarWeekdayIndex,
 } from "@/lib/training-week";
 
 const EvolutionAbaPanel = dynamic(
@@ -148,19 +147,24 @@ export function DashboardClient({
     [subgroupParam],
   );
 
+  const scheduleMap = useMemo(
+    () => buildScheduleMap(initialWeekSchedule ?? []),
+    [initialWeekSchedule],
+  );
+
   const [dataReady, setDataReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [profileRow, setProfileRow] = useState<Record<string, unknown> | null>(null);
   const [subgroup, setSubgroup] = useState<MuscleSubgroup>(catalogSubgroup);
-  const [activeTreinoMuscle, setActiveTreinoMuscle] = useState<ClientTrainingMuscleGroup>(
-    () => subgroupIdToClientTrainingMuscle(catalogSubgroup.id) ?? "PEITO",
+  const [activeTrainingDay, setActiveTrainingDay] = useState<WeekdayIndex>(() =>
+    resolveCalendarWeekdayIndex(),
   );
   const [isTreinoSwitching, setIsTreinoSwitching] = useState(false);
   const [forjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
   const [forjadorPrescriptions] = useState<ForjadorPrescriptionRow[]>(initialForjadorPrescriptions);
   const treinoSwitchTokenRef = useRef(0);
-  const activeTreinoMuscleRef = useRef(activeTreinoMuscle);
+  const activeTrainingDayRef = useRef(activeTrainingDay);
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
   const [lastSavedWeight, setLastSavedWeight] = useState(0);
   const [showSuperacaoFlash, setShowSuperacaoFlash] = useState(false);
@@ -201,8 +205,8 @@ export function DashboardClient({
   }, [subgroup]);
 
   useEffect(() => {
-    activeTreinoMuscleRef.current = activeTreinoMuscle;
-  }, [activeTreinoMuscle]);
+    activeTrainingDayRef.current = activeTrainingDay;
+  }, [activeTrainingDay]);
 
   useEffect(() => {
     let isMounted = true;
@@ -219,16 +223,22 @@ export function DashboardClient({
 
       setProfile(bundle.data.profile);
       setProfileRow(bundle.data.profileRow);
-      const bootMuscle =
-        subgroupIdToClientTrainingMuscle(bundle.data.subgroup.id) ?? activeTreinoMuscle;
-      const bootSubgroup = composeTreinoSubgroup(
-        bundle.data.subgroup,
-        bootMuscle,
+      const bootDay = resolveCalendarWeekdayIndex();
+      const bootSubgroup = composeDayTreinoSubgroup(
+        scheduleMap[bootDay],
         bundle.data.trainingTrack,
         forjadorPrescriptions,
+        bootDay,
       );
-      setActiveTreinoMuscle(bootMuscle);
+      setActiveTrainingDay(bootDay);
       setSubgroup(bootSubgroup);
+
+      const historicoResult = await refreshDaySubgroupHistorico(bootSubgroup);
+      if (!isMounted) return;
+      if (historicoResult.data) {
+        setSubgroup(historicoResult.data);
+      }
+
       setMuralPosts(bundle.data.muralPosts);
       setTrainingTrack(bundle.data.trainingTrack);
       setHasPersonalBond(bundle.data.hasPersonalBond);
@@ -243,7 +253,7 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [forjadorPrescriptions, loadKey, subgroupParam]);
+  }, [forjadorPrescriptions, loadKey, scheduleMap, subgroupParam]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -323,36 +333,33 @@ export function DashboardClient({
     setReloadToken((token) => token + 1);
   }, []);
 
-  const handleTrainingMusclePick = useCallback(
-    (muscle: ClientTrainingMuscleGroup) => {
-      if (muscle === activeTreinoMuscleRef.current) return;
+  const handleTrainingDayPick = useCallback(
+    (day: WeekdayIndex) => {
+      if (day === activeTrainingDayRef.current) return;
 
       const switchToken = ++treinoSwitchTokenRef.current;
-      setActiveTreinoMuscle(muscle);
+      setActiveTrainingDay(day);
       setIsTreinoSwitching(true);
 
-      const subgroupId = MUSCLE_TO_SUBGROUP_ID[muscle];
-      const instant = composeTreinoSubgroup(
-        resolveSubgroupByCatalogId(subgroupId),
-        muscle,
+      const instant = composeDayTreinoSubgroup(
+        scheduleMap[day],
         trainingTrack,
         forjadorPrescriptions,
+        day,
       );
       setSubgroup(instant);
 
-      void refreshSubgroupHistorico(instant).then((result) => {
+      void refreshDaySubgroupHistorico(instant).then((result) => {
         if (switchToken !== treinoSwitchTokenRef.current) return;
 
         if (result.data) {
-          setSubgroup(
-            composeTreinoSubgroup(result.data, muscle, trainingTrack, forjadorPrescriptions),
-          );
+          setSubgroup(result.data);
         }
 
         setIsTreinoSwitching(false);
       });
     },
-    [forjadorPrescriptions, trainingTrack],
+    [forjadorPrescriptions, scheduleMap, trainingTrack],
   );
 
   useEffect(() => {
@@ -392,22 +399,15 @@ export function DashboardClient({
         );
       }
 
-      const musculo = subgroupIdToMusculo(subgroupRef.current.id);
-      await invalidateDashboardCaches(userId, musculo);
+      const musculos = collectUniqueMusclesFromSubgroup(subgroupRef.current);
+      await Promise.all(musculos.map((musculo) => invalidateDashboardCaches(userId, musculo)));
 
-      const subgroupResult = await refreshSubgroupHistorico(subgroupRef.current);
+      const subgroupResult = await refreshDaySubgroupHistorico(subgroupRef.current);
       const muralResult = await fetchCommunityMuralPosts();
       const bundleResult = await loadDashboardTrainingBundle(subgroupParam);
 
       if (subgroupResult.data) {
-        setSubgroup(
-          composeTreinoSubgroup(
-            subgroupResult.data,
-            activeTreinoMuscleRef.current,
-            trainingTrack,
-            forjadorPrescriptions,
-          ),
-        );
+        setSubgroup(subgroupResult.data);
       }
 
       if (muralResult.data) {
@@ -474,7 +474,7 @@ export function DashboardClient({
     subgroup: treinoSubgroup,
     authUserId: userId,
     initialWeekSchedule,
-    activeTreinoMuscle,
+    activeTrainingDay,
     forjadorConfig,
     forjadorPrescriptions,
     isTreinoSwitching,
@@ -484,7 +484,7 @@ export function DashboardClient({
     onSuperacaoFlashChange: setShowSuperacaoFlash,
     onOpenVideo: handleWatchVideo,
     onSuperacaoMural: publishMuralAscensao,
-    onTrainingMusclePick: handleTrainingMusclePick,
+    onTrainingDayPick: handleTrainingDayPick,
     onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) =>
       void handleTrainingPersisted(exerciseId, detail),
   } as const;

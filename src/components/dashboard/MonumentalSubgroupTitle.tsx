@@ -7,11 +7,12 @@ type MonumentalSubgroupTitleProps = {
 
 export function MonumentalSubgroupTitle({ subgroup }: MonumentalSubgroupTitleProps) {
   const bodyRegionSubtitle = resolveBodyRegionSubtitle(subgroup);
+  const isPlanilhaDay = subgroup.id.startsWith("planilha-dia-");
 
   return (
     <div className="mb-6 text-center" aria-labelledby="subgrupo-monumental-title">
       <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/90">
-        Subgrupo muscular ativo
+        {isPlanilhaDay ? "Treino do dia" : "Subgrupo muscular ativo"}
       </p>
       <h2
         id="subgrupo-monumental-title"

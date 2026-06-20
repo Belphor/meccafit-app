@@ -1,15 +1,16 @@
 import { ALTAR_VTC_SESSION_TARGET_KG } from "@/lib/mock-data";
 import { resolveTreinoDayKey } from "@/lib/treino-day-key";
-import type { ClientTrainingMuscleGroup } from "@/lib/training-week";
+import type { ClientTrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 
 const STORAGE_PREFIX = "meccafit:altar-vtc";
 const SNAPSHOT_VERSION = 1 as const;
 
 export type AltarVtcSessionScope = {
   userId: string;
-  /** Agrupa a sessão por músculo do dia — todos os exercícios propostos no treino. */
-  muscle: ClientTrainingMuscleGroup | string;
-  /** Chave legada (subgrupo) para migrar sessões antigas. */
+  /** Dia da planilha em execução (Seg=1 … Sáb=6) — uma chama por dia civil. */
+  trainingDay: WeekdayIndex;
+  /** Legado · migração de sessões por músculo */
+  legacyMuscle?: ClientTrainingMuscleGroup | string;
   legacySubgroupId?: string;
 };
 
@@ -24,13 +25,21 @@ export type AltarVtcSessionSnapshot = {
 };
 
 function buildStorageKey(scope: AltarVtcSessionScope): string {
-  const day = resolveTreinoDayKey();
-  return `${STORAGE_PREFIX}:${scope.userId}:${scope.muscle}:${day}`;
+  const civilDay = resolveTreinoDayKey();
+  return `${STORAGE_PREFIX}:${scope.userId}:dia-${scope.trainingDay}:${civilDay}`;
 }
 
-function buildLegacyStorageKey(userId: string, subgroupId: string): string {
-  const day = resolveTreinoDayKey();
-  return `${STORAGE_PREFIX}:${userId}:${subgroupId}:${day}`;
+function buildLegacyMuscleStorageKey(
+  userId: string,
+  muscle: ClientTrainingMuscleGroup | string,
+): string {
+  const civilDay = resolveTreinoDayKey();
+  return `${STORAGE_PREFIX}:${userId}:${muscle}:${civilDay}`;
+}
+
+function buildLegacySubgroupStorageKey(userId: string, subgroupId: string): string {
+  const civilDay = resolveTreinoDayKey();
+  return `${STORAGE_PREFIX}:${userId}:${subgroupId}:${civilDay}`;
 }
 
 function sanitizeMaxLoads(value: unknown): Record<number, number> {
@@ -93,18 +102,30 @@ function readRawSnapshot(key: string): AltarVtcSessionSnapshot | null {
 
 export function readAltarVtcSession(scope: AltarVtcSessionScope): AltarVtcSessionSnapshot | null {
   if (typeof window === "undefined") return null;
-  if (!scope.userId || !scope.muscle) return null;
+  if (!scope.userId || !scope.trainingDay) return null;
 
   const primary = readRawSnapshot(buildStorageKey(scope));
   if (primary) return primary;
 
+  if (scope.legacyMuscle) {
+    const legacyMuscle = readRawSnapshot(
+      buildLegacyMuscleStorageKey(scope.userId, scope.legacyMuscle),
+    );
+    if (legacyMuscle) {
+      writeAltarVtcSession(scope, legacyMuscle);
+      return legacyMuscle;
+    }
+  }
+
   if (!scope.legacySubgroupId) return null;
 
-  const legacy = readRawSnapshot(buildLegacyStorageKey(scope.userId, scope.legacySubgroupId));
-  if (!legacy) return null;
+  const legacySubgroup = readRawSnapshot(
+    buildLegacySubgroupStorageKey(scope.userId, scope.legacySubgroupId),
+  );
+  if (!legacySubgroup) return null;
 
-  writeAltarVtcSession(scope, legacy);
-  return legacy;
+  writeAltarVtcSession(scope, legacySubgroup);
+  return legacySubgroup;
 }
 
 export function writeAltarVtcSession(
@@ -115,7 +136,7 @@ export function writeAltarVtcSession(
   >,
 ): void {
   if (typeof window === "undefined") return;
-  if (!scope.userId || !scope.muscle) return;
+  if (!scope.userId || !scope.trainingDay) return;
 
   const snapshot: AltarVtcSessionSnapshot = {
     v: SNAPSHOT_VERSION,
@@ -136,7 +157,7 @@ export function writeAltarVtcSession(
 
 export function clearAltarVtcSession(scope: AltarVtcSessionScope): void {
   if (typeof window === "undefined") return;
-  if (!scope.userId || !scope.muscle) return;
+  if (!scope.userId || !scope.trainingDay) return;
 
   try {
     window.localStorage.removeItem(buildStorageKey(scope));

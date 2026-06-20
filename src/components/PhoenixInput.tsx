@@ -40,6 +40,7 @@ export interface PhoenixInputProps {
   exercicioNome?: string;
   initialWeight?: number;
   trainingGoalText?: string;
+  hintCompleteText?: string;
   prescribedSeries?: number;
   musculo?: Enums<"subgrupo_muscular">;
   metricKind?: ExerciseMetricKind;
@@ -62,6 +63,7 @@ function PhoenixInput({
   exercicioNome,
   initialWeight = 0,
   trainingGoalText = "Alvo do treino",
+  hintCompleteText,
   prescribedSeries = 3,
   musculo = "peito",
   metricKind: metricKindProp,
@@ -318,7 +320,7 @@ function PhoenixInput({
 
   const fieldLabel = isDurationMode ? "Tempo Máximo" : isRepMode ? "Repetição Máxima" : "Carga Máxima";
   const hintText = isSeriesComplete
-    ? PHOENIX_INPUT_HINT_COMPLETE
+    ? hintCompleteText ?? PHOENIX_INPUT_HINT_COMPLETE
     : isTouchPrimary && isExerciseActive
       ? isDurationMode
         ? "Informe o tempo e toque em Registrar tempo"
