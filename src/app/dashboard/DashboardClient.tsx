@@ -523,7 +523,7 @@ export function DashboardClient({
             />
             <SuperacaoOverlay visible={showSuperacaoFlash} />
 
-            <section className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col">
+            <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col">
               <DashboardBrandHeader
                 altarEnergyPercent={altarEnergyPercent}
                 signOutButton={
@@ -540,7 +540,7 @@ export function DashboardClient({
                 className={DASHBOARD_PORTAL_PADDING}
                 aria-label={PORTAL_COPY.portalBrasaAria}
               >
-                <div className="flex flex-col items-center overflow-visible text-center">
+                <div className="flex flex-col items-center overflow-x-clip text-center">
                   <SacredPhoenixSigil altarEnergy={altarEnergy} />
                   <PhoenixDisplayTitle className={DASHBOARD_HERO_TITLE}>
                     {PORTAL_COPY.leaveYesterday}

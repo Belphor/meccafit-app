@@ -329,26 +329,26 @@ export function EvolucaoPageClient({
                   </p>
                 ) : null}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-2 xs:flex-row xs:flex-wrap">
                 <button
                   type="button"
                   disabled={refreshing}
                   onClick={() => void refreshCalor()}
-                  className="rounded-full border border-orange-500/15 bg-neutral-950/60 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200/85 disabled:opacity-50"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-orange-500/15 bg-neutral-950/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/85 disabled:opacity-50 xs:w-auto"
                 >
                   {refreshing ? "Sincronizando…" : "Atualizar calor"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowSelfie((open) => !open)}
-                  className="rounded-full border border-cyan-500/15 bg-neutral-950/60 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/75"
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-cyan-500/15 bg-neutral-950/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/75 xs:w-auto"
                 >
                   {showSelfie ? "Fechar selfie" : "Selfie de ciclo"}
                 </button>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
               {SOVEREIGN_MUSCLES.map((id) => {
                 const row = calorRows.find((item) => item.membro_principal === id);
                 const isActive = activeMuscle === id;
@@ -357,7 +357,7 @@ export function EvolucaoPageClient({
                     key={id}
                     type="button"
                     onClick={() => setActiveMuscle(id)}
-                    className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.14em] ${
+                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] ${
                       isActive
                         ? "border-amber-500/35 bg-amber-950/35 text-amber-100"
                         : "border-orange-500/10 bg-black/30 text-neutral-500"

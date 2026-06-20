@@ -144,7 +144,7 @@ export function TreinoTab({
       ) : null}
 
       <div
-        className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4 transition-opacity duration-150 ${
+        className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} transition-opacity duration-150 ${
           isTreinoSwitching ? "opacity-85" : "opacity-100"
         }`}
         aria-busy={isTreinoSwitching}

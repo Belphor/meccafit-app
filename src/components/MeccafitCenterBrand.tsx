@@ -16,7 +16,7 @@ export function MeccafitCenterBrand({
     <p
       role="banner"
       aria-label={PORTAL_COPY.brandName}
-      className={`${MECCAFIT_CENTER_BRAND} whitespace-nowrap ${
+      className={`${MECCAFIT_CENTER_BRAND} max-[359px]:text-[0.65rem] sm:whitespace-nowrap ${
         isDashboard ? "" : "text-amber-500"
       } ${className}`.trim()}
       style={isDashboard ? { color: MAGMA_SPECTRUM.solarGold } : undefined}

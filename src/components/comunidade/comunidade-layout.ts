@@ -5,7 +5,7 @@ export const COMUNIDADE_PANEL =
   "box-border min-w-0 max-w-full overflow-hidden rounded-2xl border p-3 max-[359px]:p-2.5 xs:p-4 sm:p-5";
 
 /** Âncoras de scroll com header fixo do dashboard */
-export const COMUNIDADE_SCROLL_MT = "scroll-mt-[4.25rem] sm:scroll-mt-24";
+export const COMUNIDADE_SCROLL_MT = "scroll-mt-[5.5rem] sm:scroll-mt-24";
 
 /** Mural — offset extra para navegação sticky + SUPERAÇÃO */
 export const COMUNIDADE_MURAL_SCROLL_MT =

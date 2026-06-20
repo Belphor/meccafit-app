@@ -13,13 +13,13 @@ export function MonumentalSubgroupTitle({ subgroup, compact = false }: Monumenta
   return (
     <div className={`text-center ${compact ? "mb-2" : "mb-6"}`} aria-labelledby="subgrupo-monumental-title">
       {!compact ? (
-        <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/90">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-500/90 xs:tracking-[0.28em] sm:tracking-[0.38em]">
           {isPlanilhaDay ? "Treino do dia" : "Subgrupo muscular ativo"}
         </p>
       ) : null}
       <h2
         id="subgrupo-monumental-title"
-        className={`${PLASMA_TITLE} ${compact ? "mt-0" : "mt-3"} overflow-visible py-1 text-3xl leading-[1.15] tracking-[0.08em] sm:text-4xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-5xl lg:leading-[1.1]`}
+        className={`${PLASMA_TITLE} ${compact ? "mt-0" : "mt-3"} overflow-x-clip py-1 text-balance text-[clamp(1.5rem,7vw,3rem)] leading-[1.15] tracking-[0.06em] sm:text-4xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-5xl lg:leading-[1.1]`}
       >
         {subgroup.monumentalTitle}
       </h2>

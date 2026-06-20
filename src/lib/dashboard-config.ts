@@ -91,7 +91,7 @@ export const SELECTABLE_IDLE_PANEL =
 
 /** Abas inativas — mesma linguagem do portal de brasa */
 export const DASHBOARD_TAB_BUTTON_IDLE =
-  `${DASHBOARD_TAP_TARGET} min-h-11 rounded-full border ${IRIS_IDLE_BORDER} ${IRIS_IDLE_SURFACE} px-5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500 ${IRIS_IDLE_INSET} ${IRIS_IDLE_HOVER} hover:text-amber-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60`;
+  `${DASHBOARD_TAP_TARGET} min-h-11 rounded-full border ${IRIS_IDLE_BORDER} ${IRIS_IDLE_SURFACE} px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-500 sm:px-5 sm:tracking-[0.18em] ${IRIS_IDLE_INSET} ${IRIS_IDLE_HOVER} hover:text-amber-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60`;
 
 /** Cápsulas inativas — cinzas em brasa residual */
 export const EXERCISE_CAPSULE_IDLE =
@@ -235,7 +235,7 @@ export const WORKOUT_TIMER_VALUE =
   "font-mono text-[clamp(1.125rem,5vw,1.375rem)] font-bold tabular-nums leading-none tracking-wide";
 
 export const WORKOUT_TIMER_ACTION =
-  "min-h-9 rounded-full px-2.5 text-[7px] font-bold uppercase tracking-[0.1em] sm:min-h-10 sm:px-3 sm:text-[8px] sm:tracking-[0.12em]";
+  "min-h-11 rounded-full px-2.5 text-[8px] font-bold uppercase tracking-[0.1em] sm:min-h-10 sm:px-3 sm:text-[8px] sm:tracking-[0.12em]";
 
 /** Voo de Cinzas — painéis por contexto (âmbar/laranja/dourado) */
 export const CARDIO_VOO_SHELL_IDLE =
@@ -322,11 +322,11 @@ export const DASHBOARD_HIGHLIGHT_SURFACE =
 export const DASHBOARD_SECTION_CHIP = EXERCISE_VIDEO_BUTTON;
 
 /** Abas do portal — ativo e inativo com alvo de toque */
-export const DASHBOARD_TAB_BUTTON_ACTIVE = `${DASHBOARD_SECTION_CHIP} min-h-11 px-5`;
+export const DASHBOARD_TAB_BUTTON_ACTIVE = `${DASHBOARD_SECTION_CHIP} min-h-11 px-3 sm:px-5`;
 
 /** Saída do altar — compacto no mobile, destaque no desktop */
 export const DASHBOARD_SIGN_OUT_BUTTON =
-  "group relative inline-flex min-h-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-500/30 bg-gradient-to-r from-black via-neutral-950/95 to-orange-950/50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-100/95 shadow-[inset_0_1px_0_rgba(251,191,36,0.08),0_0_16px_rgba(249,115,22,0.12)] backdrop-blur-md transition duration-300 hover:border-amber-400/50 hover:text-amber-50 hover:shadow-[inset_0_1px_0_rgba(251,191,36,0.14),0_0_32px_rgba(251,191,36,0.2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/55 active:scale-[0.98] sm:min-h-11 sm:px-5 sm:py-2.5 sm:text-[10px] sm:tracking-[0.2em]";
+  "group relative inline-flex min-h-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-orange-500/30 bg-gradient-to-r from-black via-neutral-950/95 to-orange-950/50 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-100/95 shadow-[inset_0_1px_0_rgba(251,191,36,0.08),0_0_16px_rgba(249,115,22,0.12)] backdrop-blur-md transition duration-300 hover:border-amber-400/50 hover:text-amber-50 hover:shadow-[inset_0_1px_0_rgba(251,191,36,0.14),0_0_32px_rgba(251,191,36,0.2)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/55 active:scale-[0.98] sm:px-5 sm:py-2.5 sm:text-[10px] sm:tracking-[0.2em]";
 
 export const DASHBOARD_SIGN_OUT_GLOW =
   "pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(249,115,22,0.18),transparent_65%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100";
@@ -336,7 +336,7 @@ export const DASHBOARD_META_CHIP = `${BRASAO_LIGHT_CAPSULE} text-amber-200/85`;
 
 /** Título de seção — uppercase estático */
 export const DASHBOARD_SECTION_TITLE =
-  "font-serif text-2xl font-semibold uppercase tracking-[0.08em] text-amber-100 drop-shadow-[0_0_10px_rgba(251,191,36,0.15)] sm:text-3xl";
+  "font-serif text-[clamp(1.25rem,5vw,1.875rem)] font-semibold uppercase tracking-[0.08em] text-amber-100 drop-shadow-[0_0_10px_rgba(251,191,36,0.15)] sm:text-3xl";
 
 /** Subtítulo de aba */
 export const DASHBOARD_TAB_LABEL =
@@ -344,7 +344,7 @@ export const DASHBOARD_TAB_LABEL =
 
 /** Região corporal abaixo do título monumental (Membro Superior · Inferior · Core) */
 export const MONUMENTAL_BODY_REGION_SUBTITLE =
-  "relative z-[1] font-serif text-sm font-medium uppercase tracking-[0.28em] text-amber-300 sm:text-base sm:tracking-[0.32em]";
+  "relative z-[1] font-serif text-sm font-medium uppercase tracking-[0.12em] text-amber-300 xs:tracking-[0.2em] sm:text-base sm:tracking-[0.32em]";
 
 /** Botão de ação primário */
 export const DASHBOARD_ACTION_BUTTON = `${EXERCISE_VIDEO_BUTTON} w-full sm:w-auto`;
@@ -359,7 +359,7 @@ export const PHOENIX_REGISTER_CARGA_ACTIVE = `${EXERCISE_VIDEO_BUTTON} w-full`;
 export const EXERCISE_COMPLETE_SET_BUTTON = `${EXERCISE_VIDEO_BUTTON} w-full sm:w-auto`;
 
 /** Minimizar / expandir cards da aba treino */
-export const TREINO_MINIMIZE_TOGGLE = `${DASHBOARD_SECTION_CHIP} min-h-9 gap-1.5 px-3.5 py-1.5 text-[9px] tracking-[0.16em]`;
+export const TREINO_MINIMIZE_TOGGLE = `${DASHBOARD_SECTION_CHIP} min-h-11 gap-1.5 px-3.5 py-2 text-[10px] tracking-[0.14em] sm:tracking-[0.16em]`;
 
 /** Meta do PhoenixInput — exercício concluído na sessão */
 export const PHOENIX_INPUT_META_COMPLETE =
@@ -377,7 +377,7 @@ export const DASHBOARD_ITEM_CARD =
 
 /** Frame interno (VTC, câmera, blocos) */
 export const DASHBOARD_INNER_FRAME =
-  `${DASHBOARD_HIGHLIGHT_SURFACE} rounded-[1.75rem] p-5`;
+  `${DASHBOARD_HIGHLIGHT_SURFACE} rounded-[1.75rem] p-3 xs:p-4 sm:p-5`;
 
 /** Nome em listagens — uppercase estático */
 export const DASHBOARD_ITEM_NAME =
@@ -389,7 +389,7 @@ export const MECCAFIT_CENTER_BRAND =
 
 /** Shell do header — reserva espaço lateral para o botão Sair */
 export const MECCAFIT_CENTER_HEADER_SHELL =
-  "pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-[max(3.5rem,15vw)] sm:px-[max(5rem,12vw)]";
+  "pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-[max(4.5rem,18vw)] sm:px-[max(5rem,12vw)]";
 
 /** @deprecated Use MECCAFIT_CENTER_BRAND via MeccafitCenterBrand */
 export const DASHBOARD_BRAND_TITLE = MECCAFIT_CENTER_BRAND;
@@ -397,10 +397,10 @@ export const DASHBOARD_BRAND_TITLE = MECCAFIT_CENTER_BRAND;
 export const DASHBOARD_HERO_TITLE =
   "mt-3 text-balance text-[clamp(1.35rem,6vw,2rem)] leading-tight tracking-[0.06em] sm:mt-4 sm:text-5xl sm:tracking-[0.12em] lg:text-6xl";
 
-export const DASHBOARD_PORTAL_PADDING = "rounded-[1.75rem] p-3.5 sm:rounded-[2.25rem] sm:p-6 lg:p-10";
+export const DASHBOARD_PORTAL_PADDING = "rounded-[1.75rem] p-3 max-[359px]:p-2.5 sm:rounded-[2.25rem] sm:p-6 lg:p-10";
 
 /** Painéis de aba — moldura compartilhada */
-export const DASHBOARD_PANEL_FRAME = "rounded-[1.5rem] p-3.5 sm:rounded-[2rem] sm:p-4 lg:p-8";
+export const DASHBOARD_PANEL_FRAME = "rounded-[1.5rem] p-3 max-[359px]:p-2.5 sm:rounded-[2rem] sm:p-4 lg:p-8";
 
 export const DASHBOARD_PANEL_HEADER =
   "flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/50 pb-4";

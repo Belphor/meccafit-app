@@ -378,7 +378,7 @@ function HudPanel({
 
   return (
     <div
-      className={`evolution-hud-panel relative flex h-full min-h-[460px] flex-1 flex-col items-center justify-center rounded-xl bg-black/65 p-3 shadow-[inset_0_0_48px_rgba(0,0,0,0.5)] ${
+      className={`evolution-hud-panel relative flex h-full min-h-[min(52vh,360px)] flex-1 flex-col items-center justify-center rounded-xl bg-black/65 p-3 shadow-[inset_0_0_48px_rgba(0,0,0,0.5)] sm:min-h-[460px] ${
         flashActive ? "evolution-hud-panel--flash" : ""
       }`}
     >

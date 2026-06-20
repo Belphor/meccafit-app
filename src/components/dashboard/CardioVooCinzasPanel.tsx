@@ -161,7 +161,7 @@ export function CardioVooCinzasPanel({
               <button
                 type="button"
                 onClick={() => setHermeticFocus(true)}
-                className="rounded-full border border-amber-400/30 bg-amber-950/40 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-amber-100 transition hover:border-amber-300/45 hover:bg-amber-900/50"
+                className="inline-flex min-h-11 items-center rounded-full border border-amber-400/30 bg-amber-950/40 px-4 py-2.5 text-[10px] uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-300/45 hover:bg-amber-900/50"
               >
                 Foco Hermético
               </button>
@@ -209,7 +209,7 @@ export function CardioVooCinzasPanel({
             type="button"
             onClick={handleStart}
             disabled={!userId}
-            className="mt-4 w-full rounded-2xl border border-orange-500/28 bg-gradient-to-r from-orange-950/45 via-neutral-950/60 to-black/70 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100 transition hover:border-amber-400/40 hover:from-orange-900/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-4 w-full rounded-2xl border border-orange-500/28 bg-gradient-to-r from-orange-950/45 via-neutral-950/60 to-black/70 py-3.5 text-xs font-semibold uppercase tracking-[0.12em] text-amber-100 transition hover:border-amber-400/40 hover:from-orange-900/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 xs:tracking-[0.2em]"
           >
             Iniciar Voo de Cinzas
           </button>
@@ -219,7 +219,7 @@ export function CardioVooCinzasPanel({
           <button
             type="button"
             onClick={primaryAction.handler}
-            className="mt-4 w-full rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-950/45 to-orange-950/35 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-amber-50 transition hover:border-amber-300/50 hover:from-amber-900/55"
+            className="mt-4 w-full rounded-2xl border border-amber-400/35 bg-gradient-to-r from-amber-950/45 to-orange-950/35 py-3.5 text-xs font-semibold uppercase tracking-[0.12em] text-amber-50 transition hover:border-amber-300/50 hover:from-amber-900/55 xs:tracking-[0.2em]"
           >
             {primaryAction.label}
           </button>

@@ -292,7 +292,7 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
           type="button"
           disabled={isSyncing}
           onClick={() => void handleSync()}
-          className={`${DASHBOARD_TAP_TARGET} relative min-w-[12rem] overflow-hidden rounded-full border border-emerald-500/25 bg-neutral-950/70 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 transition-[opacity,box-shadow] duration-200 hover:shadow-[0_0_14px_rgba(16,185,129,0.22)] disabled:opacity-60`}
+          className={`${DASHBOARD_TAP_TARGET} relative w-full min-w-0 overflow-hidden rounded-full border border-emerald-500/25 bg-neutral-950/70 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 transition-[opacity,box-shadow] duration-200 hover:shadow-[0_0_14px_rgba(16,185,129,0.22)] disabled:opacity-60 sm:min-w-[12rem]`}
         >
           {isSyncing ? (
             <span className="inline-flex items-center gap-2">

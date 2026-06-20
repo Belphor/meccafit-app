@@ -65,7 +65,7 @@ export function FenyxiaAppNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-40 border-t border-orange-500/10 bg-black/85 px-2 py-2 backdrop-blur-md"
+      className="sticky bottom-0 z-40 border-t border-orange-500/10 bg-black/85 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:hidden"
       aria-label="Navegação principal"
     >
       <ul className="mx-auto flex max-w-3xl items-stretch justify-between gap-1">
