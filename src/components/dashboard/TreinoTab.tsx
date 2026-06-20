@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { MuscleSubgroup } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { CardioVooCinzasPanel } from "@/components/dashboard/CardioVooCinzasPanel";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import { MonumentalExerciseCard } from "@/components/dashboard/MonumentalExerciseCard";
 import { MonumentalSubgroupTitle } from "@/components/dashboard/MonumentalSubgroupTitle";
@@ -12,6 +13,7 @@ import {
   DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SCROLL_LIST,
+  TREINO_DIA_CLIENT_EXPLANATION,
   TREINO_MINIMIZE_TOGGLE,
 } from "@/lib/dashboard-config";
 import {
@@ -117,8 +119,22 @@ export function TreinoTab({
 
       <CardioVooCinzasPanel userId={userId} goalMs={cardioGoalMs} />
 
-      {userId ? (
-        <div className="mt-4">
+      <div
+        className={`mt-4 overflow-hidden ${DASHBOARD_INNER_FRAME} transition-opacity duration-150 ${
+          isTreinoSwitching ? "opacity-80" : "opacity-100"
+        }`}
+        aria-busy={isTreinoSwitching}
+      >
+        <div className="border-b border-orange-500/10 px-4 py-4 sm:px-5">
+          <DashboardClientInfoBlock
+            label="Treino do dia"
+            className="border-0 bg-transparent p-0 shadow-none"
+          >
+            {TREINO_DIA_CLIENT_EXPLANATION}
+          </DashboardClientInfoBlock>
+        </div>
+
+        {userId ? (
           <TreinoWeekControls
             userId={userId}
             initialSchedule={initialWeekSchedule}
@@ -129,75 +145,69 @@ export function TreinoTab({
             weekLockedDays={weekLockedDays}
             onTrainingDayPick={onTrainingDayPick}
           />
-        </div>
-      ) : null}
+        ) : null}
 
-      <div className={`mt-4 space-y-4 ${DASHBOARD_INNER_FRAME} p-4`}>
-        <MonumentalSubgroupTitle subgroup={subgroup} />
+        <div className="space-y-4 px-4 py-4 sm:px-5 sm:py-5">
+          <MonumentalSubgroupTitle subgroup={subgroup} compact />
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
-            {subgroup.exercises.length} exercício{subgroup.exercises.length === 1 ? "" : "s"}{" "}
-            prescrito{subgroup.exercises.length === 1 ? "" : "s"}
-          </p>
-          <button
-            type="button"
-            onClick={() => setCardsMinimized((value) => !value)}
-            className={TREINO_MINIMIZE_TOGGLE}
-            aria-pressed={cardsMinimized}
-          >
-            {cardsMinimized ? "Expandir cards" : "Minimizar cards"}
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
+              {subgroup.exercises.length} exercício{subgroup.exercises.length === 1 ? "" : "s"}{" "}
+              prescrito{subgroup.exercises.length === 1 ? "" : "s"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setCardsMinimized((value) => !value)}
+              className={TREINO_MINIMIZE_TOGGLE}
+              aria-pressed={cardsMinimized}
+            >
+              {cardsMinimized ? "Expandir cards" : "Minimizar cards"}
+            </button>
+          </div>
+
+          <ul className={DASHBOARD_SCROLL_LIST} aria-label="Lista de exercícios do dia">
+            {subgroup.exercises.map((exercise) => {
+              const trainingMuscle = subgroupIdToTrainingMuscle(exercise.subgroupId);
+              const musculo = subgroupIdToMusculo(exercise.subgroupId);
+              const isWeekLocked = Boolean(
+                userId && isExerciseWeekLocked(userId, activeTrainingDay, exercise.id),
+              );
+              const isMaxLoadRegistered =
+                Boolean(maxLoadsByExerciseId[exercise.id]) || isWeekLocked;
+
+              return (
+                <li key={exercise.id} className="min-w-0">
+                  <MonumentalExerciseCard
+                    exercise={exercise}
+                    isActive={exercise.id === activeExerciseId}
+                    isMinimized={cardsMinimized}
+                    isSuperacaoFlame={exercise.id === superacaoExerciseId}
+                    musculo={musculo}
+                    isIncubating={isIncubating}
+                    hasBiologicalBalance={hasBiologicalBalance}
+                    userId={userId}
+                    restSeconds={resolveExerciseRestSeconds(
+                      exercise.id,
+                      forjadorPrescriptions,
+                      trainingMuscle,
+                      forjadorConfig,
+                    )}
+                    onActivate={onActivate}
+                    onVolumeCommitted={onVolumeCommitted}
+                    onWeightSaved={onWeightSaved}
+                    onWatchVideo={onWatchVideo}
+                    onSuperacao={onSuperacao}
+                    onPersistSuccess={onPersistSuccess}
+                    onSetComplete={onSetComplete}
+                    isMaxLoadRegistered={isMaxLoadRegistered}
+                    isWeekLocked={isWeekLocked}
+                  />
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </div>
-
-      <ul
-        className={`mt-4 ${DASHBOARD_SCROLL_LIST} transition-opacity duration-150 ${
-          isTreinoSwitching ? "opacity-70" : "opacity-100"
-        }`}
-        aria-label="Lista de exercícios do dia"
-        aria-busy={isTreinoSwitching}
-      >
-        {subgroup.exercises.map((exercise) => {
-          const trainingMuscle = subgroupIdToTrainingMuscle(exercise.subgroupId);
-          const musculo = subgroupIdToMusculo(exercise.subgroupId);
-          const isWeekLocked = Boolean(
-            userId && isExerciseWeekLocked(userId, activeTrainingDay, exercise.id),
-          );
-          const isMaxLoadRegistered =
-            Boolean(maxLoadsByExerciseId[exercise.id]) || isWeekLocked;
-
-          return (
-            <li key={exercise.id} className="min-w-0">
-              <MonumentalExerciseCard
-                exercise={exercise}
-                isActive={exercise.id === activeExerciseId}
-                isMinimized={cardsMinimized}
-                isSuperacaoFlame={exercise.id === superacaoExerciseId}
-                musculo={musculo}
-                isIncubating={isIncubating}
-                hasBiologicalBalance={hasBiologicalBalance}
-                userId={userId}
-                restSeconds={resolveExerciseRestSeconds(
-                  exercise.id,
-                  forjadorPrescriptions,
-                  trainingMuscle,
-                  forjadorConfig,
-                )}
-                onActivate={onActivate}
-                onVolumeCommitted={onVolumeCommitted}
-                onWeightSaved={onWeightSaved}
-                onWatchVideo={onWatchVideo}
-                onSuperacao={onSuperacao}
-                onPersistSuccess={onPersistSuccess}
-                onSetComplete={onSetComplete}
-                isMaxLoadRegistered={isMaxLoadRegistered}
-                isWeekLocked={isWeekLocked}
-              />
-            </li>
-          );
-        })}
-      </ul>
     </BrasaVivaCard>
   );
 }

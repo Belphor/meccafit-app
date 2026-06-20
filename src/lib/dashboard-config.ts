@@ -144,35 +144,39 @@ export const VTC_SESSION_EXPLANATION = "Soma das cargas máximas registradas na 
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  "Registro vivo da sua forja. O VTC soma as cargas máximas (kg) registradas no treino do dia civil — a chama zera à meia-noite (horário de São Paulo) e recomeça no próximo dia. Se o forjador misturou grupos no mesmo dia, todos alimentam a mesma chama.";
+  "Sua chama registra o VTC do dia — a soma das cargas máximas (kg) validadas no treino civil. Ela reinicia à meia-noite (horário de São Paulo). Grupos mistos no mesmo dia alimentam uma única chama.";
 
 /** Planilha do forjador — navegação por dia na aba treino */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "O forjador monta sua planilha semanal. Você só escolhe qual dia executar — os exercícios e grupos musculares vêm da prescrição dele. Cada carga máxima registrada fica travada até a próxima semana: uma tentativa por exercício, sem retrabalho.";
+  "Escolha o dia da planilha que o forjador montou para você. Os exercícios vêm da prescrição dele — não há escolha livre de treino. Cada carga máxima fica travada até a próxima semana: uma tentativa por exercício.";
 
 export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
-  "Carga máxima travada até a próxima semana";
+  "Travado até a próxima semana";
 
 export const PHOENIX_INPUT_HINT_WEEK_LOCKED =
-  "Travado até a próxima semana — uma tentativa por exercício";
+  "Carga já registrada nesta semana — aguarde a próxima para tentar de novo";
 
-export const TREINO_DIA_CONCLUIDO_LABEL = "Concluído esta semana";
+export const TREINO_DIA_CONCLUIDO_LABEL = "Semana concluída";
 
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =
-  "Seu cardio consciente do dia. Acumule o tempo validado e confirme a cada 10 minutos que ainda está ativo. Pausas não apagam o progresso — ao atingir a meta, seu altar energético diário é sincronizado.";
+  "Cardio consciente do dia. Acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso — ao bater a meta, o altar energético sincroniza.";
 
 /** Mapa Térmico (Evolução) — texto orientativo para o cliente */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "O mapa mostra o calor muscular dos 6 grupos principais. Cada região muda de cor conforme o estímulo acumulado na quinzena — de Cinzas até Fogo Cósmico. Toque no corpo para ver detalhes. Membros fora da prescrição do forjador aparecem congelados.";
+  "Visualize o calor dos 6 grupos musculares. Cada região muda de cor conforme o estímulo acumulado na quinzena — de Cinzas até Fogo Cósmico. Toque no corpo para detalhes. Grupos fora da planilha do forjador aparecem congelados.";
 
 /** Pureza da Fênix (Evolução) — Índice de Ignição */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "A Pureza da Fênix é o Índice de Ignição — sua consistência real nos últimos 30 dias. Cada dia com treino registrado ou cardio validado conta como dia puro. O percentual divide seus dias puros pela meta mensal de treinos do seu plano (ajustável no perfil). Abaixo de 50%, o mapa perde saturação: a Fênix não mente, ela reflete o ritmo medido, não a intenção.";
+  "O Índice de Ignição mede sua consistência nos últimos 30 dias. Cada dia com treino ou cardio validado conta como dia puro. O percentual divide dias puros pela meta mensal do seu plano. Abaixo de 50%, o mapa perde saturação — a Fênix reflete ritmo medido, não intenção.";
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
-  "Espelho visual do seu ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e iluminação. Quando tiver Dia 1 e Dia 30 gravados, arraste o divisor para comparar a evolução lado a lado. As fotos ficam só no seu dispositivo — nada é enviado à nuvem.";
+  "Espelho visual do ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e luz. Com Dia 1 e Dia 30 gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo — nada vai para a nuvem.";
+
+/** Comunidade — arena cooperativa */
+export const COMUNIDADE_CLIENT_EXPLANATION =
+  "Três formas de se destacar: contribua no termómetro coletivo da academia, suba no ranking mensal para ser Rei das Chamas, ou dispute duelos pelo cinturão.";
 
 export const VTC_METRIC_FRAME =
   "relative overflow-hidden rounded-2xl border border-orange-500/12 bg-black/35 px-4 py-3 backdrop-blur-sm";

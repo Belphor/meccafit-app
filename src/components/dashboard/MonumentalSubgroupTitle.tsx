@@ -3,25 +3,28 @@ import { resolveBodyRegionSubtitle, type MuscleSubgroup } from "@/lib/mock-data"
 
 type MonumentalSubgroupTitleProps = {
   subgroup: MuscleSubgroup;
+  compact?: boolean;
 };
 
-export function MonumentalSubgroupTitle({ subgroup }: MonumentalSubgroupTitleProps) {
+export function MonumentalSubgroupTitle({ subgroup, compact = false }: MonumentalSubgroupTitleProps) {
   const bodyRegionSubtitle = resolveBodyRegionSubtitle(subgroup);
   const isPlanilhaDay = subgroup.id.startsWith("planilha-dia-");
 
   return (
-    <div className="mb-6 text-center" aria-labelledby="subgrupo-monumental-title">
-      <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/90">
-        {isPlanilhaDay ? "Treino do dia" : "Subgrupo muscular ativo"}
-      </p>
+    <div className={`text-center ${compact ? "mb-2" : "mb-6"}`} aria-labelledby="subgrupo-monumental-title">
+      {!compact ? (
+        <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/90">
+          {isPlanilhaDay ? "Treino do dia" : "Subgrupo muscular ativo"}
+        </p>
+      ) : null}
       <h2
         id="subgrupo-monumental-title"
-        className={`${PLASMA_TITLE} mt-3 overflow-visible py-1 text-4xl leading-[1.15] tracking-[0.08em] sm:text-5xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-7xl lg:leading-[1.1]`}
+        className={`${PLASMA_TITLE} ${compact ? "mt-0" : "mt-3"} overflow-visible py-1 text-3xl leading-[1.15] tracking-[0.08em] sm:text-4xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-5xl lg:leading-[1.1]`}
       >
         {subgroup.monumentalTitle}
       </h2>
       <p
-        className={`${MONUMENTAL_BODY_REGION_SUBTITLE} mt-4`}
+        className={`${MONUMENTAL_BODY_REGION_SUBTITLE} ${compact ? "mt-2" : "mt-4"}`}
         aria-label={`Região corporal: ${bodyRegionSubtitle}`}
       >
         {bodyRegionSubtitle}

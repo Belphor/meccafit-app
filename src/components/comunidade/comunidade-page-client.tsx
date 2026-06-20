@@ -17,6 +17,7 @@ import { DuelosArenaPanel } from "@/components/comunidade/duelos-arena-panel";
 import { MetaColetivaTermometro } from "@/components/comunidade/meta-coletiva-termometro";
 import { RankingsThothPanel } from "@/components/comunidade/rankings-por-membro-panel";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
+import { COMUNIDADE_CLIENT_EXPLANATION } from "@/lib/dashboard-config";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
 import {
   fetchComunidadeArenaSnapshot,
@@ -165,8 +166,7 @@ export function ComunidadePageClient({
               Conquistas & Ascensão
             </h2>
             <p className="mt-1 text-pretty text-[11px] leading-relaxed text-neutral-500 sm:text-[12px]">
-              Três formas de te destacares: ajuda a academia no termómetro, sobe no ranking mensal
-              para ser Rei, ou ganha duelos pelo cinturão.
+              {COMUNIDADE_CLIENT_EXPLANATION}
             </p>
           </div>
           <button
