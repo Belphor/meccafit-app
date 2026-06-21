@@ -5,6 +5,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { resolveTreinoPersistPayload } from "../lib/training-metric.mjs";
+import {
+  PLUTUS_TOLERANCE,
+  computeUsagePct,
+  evaluateLatencyTolerance,
+  evaluateUsageTolerance,
+  summarizePlutusAlerts,
+} from "../lib/plutus-infra-alerts.mjs";
 
 let passed = 0;
 let failed = 0;
@@ -240,6 +247,33 @@ assert(
     { ...cardioSnap, validatedMs: 99, updatedAt: "2026-06-19T11:00:00.000Z" },
   ).validatedMs === 99,
 );
+
+assert("PLUTUS usage 79% → ok", evaluateUsageTolerance({
+  id: "t", label: "Test", used: 395, limit: 500, unit: "MB",
+}).level === "ok");
+assert("PLUTUS usage 80% → warn", evaluateUsageTolerance({
+  id: "t", label: "Test", used: 400, limit: 500, unit: "MB",
+}).level === "warn");
+assert("PLUTUS usage 95% → critical", evaluateUsageTolerance({
+  id: "t", label: "Test", used: 475, limit: 500, unit: "MB",
+}).level === "critical");
+assert("PLUTUS computeUsagePct arredonda", computeUsagePct(1, 3) === 33.33);
+assert("PLUTUS latency dentro budget → ok", evaluateLatencyTolerance({
+  id: "rpc", label: "RPC", observedMs: 120, budgetMs: 150,
+}).level === "ok");
+assert("PLUTUS latency +20% budget → warn", evaluateLatencyTolerance({
+  id: "rpc", label: "RPC", observedMs: 180, budgetMs: 150,
+}).level === "warn");
+assert("PLUTUS latency +50% budget → critical", evaluateLatencyTolerance({
+  id: "rpc", label: "RPC", observedMs: 225, budgetMs: 150,
+}).level === "critical");
+assert("PLUTUS summarize ok quando todos ok", summarizePlutusAlerts([
+  evaluateUsageTolerance({ id: "a", label: "A", used: 10, limit: 100, unit: "MB" }),
+]).ok);
+assert("PLUTUS summarize critical quando há critical", summarizePlutusAlerts([
+  evaluateUsageTolerance({ id: "a", label: "A", used: 96, limit: 100, unit: "MB" }),
+]).worst === "critical");
+assert("PLUTUS tolerance warn threshold", PLUTUS_TOLERANCE.warnPct === 80);
 
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

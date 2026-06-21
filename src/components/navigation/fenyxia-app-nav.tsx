@@ -1,30 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 import {
+  DASHBOARD_BOND_EVENT,
   DASHBOARD_TAB_CHANGE_EVENT,
   readDashboardTabFromLocation,
   syncDashboardTabToUrl,
+  type DashboardBondDetail,
   type DashboardTabChangeDetail,
 } from "@/lib/dashboard-tab-navigation";
 import {
   DEFAULT_DASHBOARD_TAB,
+  filterDashboardTabs,
   type DashboardTabId,
 } from "@/lib/dashboard-tabs";
-
-const APP_TABS: { tab: DashboardTabId; label: string }[] = [
-  { tab: "treino", label: "Treino" },
-  { tab: "evolucao", label: "Evolução" },
-  { tab: "comunidade", label: "Comunidade" },
-  { tab: "perfil", label: "Perfil" },
-];
 
 export function FenyxiaAppNav() {
   const pathname = usePathname();
   const onDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const [activeTab, setActiveTab] = useState<DashboardTabId>(DEFAULT_DASHBOARD_TAB);
+  const [hasPersonalBond, setHasPersonalBond] = useState(false);
 
   useEffect(() => {
     if (!onDashboard) return;
@@ -40,14 +37,28 @@ export function FenyxiaAppNav() {
       if (detail?.tab) setActiveTab(detail.tab);
     };
 
+    const onBondChange = (event: Event) => {
+      const detail = (event as CustomEvent<DashboardBondDetail>).detail;
+      if (typeof detail?.hasPersonalBond === "boolean") {
+        setHasPersonalBond(detail.hasPersonalBond);
+      }
+    };
+
     window.addEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+    window.addEventListener(DASHBOARD_BOND_EVENT, onBondChange);
     window.addEventListener("popstate", syncFromLocation);
 
     return () => {
       window.removeEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
+      window.removeEventListener(DASHBOARD_BOND_EVENT, onBondChange);
       window.removeEventListener("popstate", syncFromLocation);
     };
   }, [onDashboard]);
+
+  const visibleTabs = useMemo(
+    () => filterDashboardTabs(hasPersonalBond),
+    [hasPersonalBond],
+  );
 
   const handleTabPick = useCallback((tab: DashboardTabId) => {
     setActiveTab(tab);
@@ -69,22 +80,22 @@ export function FenyxiaAppNav() {
       aria-label="Navegação principal"
     >
       <ul className="mx-auto flex max-w-3xl items-stretch justify-between gap-1">
-        {APP_TABS.map((item) => {
-          const isActive = activeTab === item.tab;
+        {visibleTabs.map((item) => {
+          const isActive = activeTab === item.id;
 
           return (
-            <li key={item.tab} className="flex-1">
+            <li key={item.id} className="min-w-0 flex-1">
               <button
                 type="button"
                 aria-current={isActive ? "page" : undefined}
-                onClick={() => handleTabPick(item.tab)}
-                className={`${DASHBOARD_TAP_TARGET} flex h-full w-full items-center justify-center rounded-xl border px-1 py-2.5 text-center transition-[border-color,background-color,color] duration-200 ${
+                onClick={() => handleTabPick(item.id)}
+                className={`${DASHBOARD_TAP_TARGET} flex h-full w-full min-h-11 items-center justify-center rounded-xl border px-1 py-2.5 text-center transition-[border-color,background-color,color] duration-200 ${
                   isActive
                     ? "border-emerald-500/35 bg-emerald-950/25 text-emerald-100"
                     : "border-transparent bg-transparent text-neutral-500 hover:border-orange-500/12 hover:text-neutral-300"
                 }`}
               >
-                <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em]">
                   {item.label}
                 </span>
               </button>

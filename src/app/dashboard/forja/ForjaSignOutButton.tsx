@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardSignOutButton } from "@/components/dashboard/DashboardSignOutButton";
+import { FORJA_COPY } from "@/lib/forja-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { supabase } from "@/lib/supabase";
 
@@ -13,7 +14,7 @@ type ForjaSignOutButtonProps = {
 
 export function ForjaSignOutButton({
   className,
-  label = "Sair do altar",
+  label = FORJA_COPY.signOut,
 }: ForjaSignOutButtonProps) {
   const router = useRouter();
 

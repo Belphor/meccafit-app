@@ -18,6 +18,22 @@ export type DashboardTabChangeDetail = {
   tab: DashboardTabId;
 };
 
+/** Sincroniza vínculo VIP com navegação mobile (Dieta condicional). */
+export const DASHBOARD_BOND_EVENT = "meccafit:dashboard-bond-state";
+
+export type DashboardBondDetail = {
+  hasPersonalBond: boolean;
+};
+
+export function publishDashboardBondState(hasPersonalBond: boolean): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<DashboardBondDetail>(DASHBOARD_BOND_EVENT, {
+      detail: { hasPersonalBond },
+    }),
+  );
+}
+
 export function readDashboardTabFromLocation(): DashboardTabId | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);

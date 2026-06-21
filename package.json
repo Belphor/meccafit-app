@@ -27,6 +27,7 @@
     "argos:load:200": "node scripts/argos/load-test-auth.mjs --vus 200 --duration 30 --ramp 10 --latency-budget 100 --app-url http://127.0.0.1:3000",
     "argos:load:auth": "node scripts/argos/load-test-auth.mjs",
     "argos:latency": "node scripts/argos/latency-probe.mjs --budget 100",
+    "argos:plutus": "node scripts/argos/plutus-infra-monitor.mjs",
     "db:apply:latency": "node scripts/apply-latency-migration.mjs",
     "db:apply:thermal": "node scripts/apply-thermal-gravity-migration.mjs",
     "db:apply:comunidade-safe-update": "node scripts/apply-comunidade-safe-update.mjs",
@@ -48,7 +49,8 @@
     "html2canvas": "^1.4.1",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

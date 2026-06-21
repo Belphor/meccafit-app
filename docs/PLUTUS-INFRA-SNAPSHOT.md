@@ -67,9 +67,18 @@
 ## Acções PLUTUS recomendadas
 
 - [ ] Revisar este doc **1× por mês** ou após deploy
-- [ ] Alerta Supabase quando > 80% free tier
+- [x] Alerta Supabase quando > 80% free tier — `npm run argos:plutus`
 - [ ] Antes de Anima: estimar custo por 1000 mensagens
 - [ ] Separar projecto Supabase **CI** vs **produção** quando escalar
+
+### Monitor automático (Jun 2026)
+
+| Comando | Função |
+|---------|--------|
+| `npm run argos:plutus` | Mede DB (se `SUPABASE_DB_URL`), egress amostra, latência RPC · WARN ≥80% · CRIT ≥95% |
+| `npm run argos:unit` | Testes unitários das bandas de tolerância PLUTUS |
+
+Overrides opcionais em `.env.local`: `PLUTUS_DB_SIZE_MB`, `PLUTUS_EGRESS_GB`.
 
 ---
 

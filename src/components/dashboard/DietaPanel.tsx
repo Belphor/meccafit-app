@@ -15,8 +15,9 @@ export function DietaPanel() {
       <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-5 text-center`}>
         <h2 className={DASHBOARD_SECTION_TITLE}>Plano nutricional VIP</h2>
         <p className="mt-3 text-sm leading-relaxed text-amber-100/85">
-          Esta aba está activa porque a sua linhagem possui vínculo com Personal. O plano
-          prescrito pelo seu forjador será exibido aqui nas próximas entregas.
+          Esta aba está activa porque possui vínculo VIP com Personal. Prescrições forjadas em{" "}
+          <span className="text-emerald-300/90">historico_treinos_personais</span> reflectem-se no
+          treino via Personal. Blueprint nutricional termogénico em integração.
         </p>
       </div>
     </BrasaVivaCard>

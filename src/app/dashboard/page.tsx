@@ -20,6 +20,10 @@ import {
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import {
+  FORJA_DASHBOARD_ROUTE,
+  isForjadorPanelRole,
+} from "@/lib/internal-routes";
 
 async function fetchForjadorTreinoConfig(userId: string): Promise<ForjadorTreinoConfig> {
   const supabase = await createSupabaseServerClient();
@@ -105,6 +109,16 @@ export default async function DashboardPage({
 
   if (!user) {
     redirect("/");
+  }
+
+  const { data: roleRow } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (isForjadorPanelRole(roleRow?.role)) {
+    redirect(FORJA_DASHBOARD_ROUTE);
   }
 
   const [evolutionPayload, initialWeekSchedule, initialAthletePlan, initialForjadorConfig, initialForjadorPrescriptions] =

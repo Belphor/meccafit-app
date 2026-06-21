@@ -35,6 +35,7 @@ import {
 } from "@/lib/dashboard-tabs";
 import {
   DASHBOARD_TAB_CHANGE_EVENT,
+  publishDashboardBondState,
   readDashboardTabFromLocation,
   syncDashboardTabToUrl,
   type DashboardTabChangeDetail,
@@ -286,6 +287,11 @@ export function DashboardClient({
       return next;
     });
   }, [applyDashboardTab, dataReady, hasPersonalBond, tabParam]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+    publishDashboardBondState(hasPersonalBond);
+  }, [dataReady, hasPersonalBond]);
 
   useEffect(() => {
     if (!dataReady) return;

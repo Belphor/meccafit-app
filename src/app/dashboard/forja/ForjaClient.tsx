@@ -1,30 +1,57 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { ForjaAntiFraudPanel } from "@/app/dashboard/forja/ForjaAntiFraudPanel";
 import { ForjaAthleteCard } from "@/app/dashboard/forja/ForjaAthleteCard";
 import { ForjaCommandPanel } from "@/app/dashboard/forja/ForjaCommandPanel";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
+import { ExcelDropzone } from "@/components/forjador/excel-dropzone";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import {
+  FORJA_AMBIENT,
   FORJA_COMMAND_PANEL,
+  FORJA_EMPTY_STATE,
   FORJA_LAYOUT,
   FORJA_META,
+  FORJA_PAGE_TITLE,
   FORJA_SECTION_CHIP,
-  FORJA_SECTION_TITLE,
   FORJA_SHELL,
   FORJA_SIDEBAR_SCROLL,
+  FORJA_TAB_ACTIVE,
+  FORJA_TAB_IDLE,
 } from "@/lib/forja-config";
-import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dashboard";
+import {
+  FORJA_COPY,
+  FORJA_WORKSPACE_TABS,
+  resolveForjaPanelSubtitle,
+  resolveForjaPanelTitle,
+  resolveForjaRoleLabel,
+} from "@/lib/forja-copy";
+import type {
+  ForjaBondedAthlete,
+  ForjaDashboardPayload,
+  ForjaWorkspaceTab,
+} from "@/lib/forja-dashboard";
 
 type ForjaClientProps = {
   payload: ForjaDashboardPayload;
 };
 
+function ForjaEmptyWorkspace({ message }: { message: string }) {
+  return (
+    <div className={FORJA_EMPTY_STATE}>
+      <p className={FORJA_SECTION_CHIP}>Nenhum atleta seleccionado</p>
+      <p className={`${FORJA_META} mt-3 max-w-sm`}>{message}</p>
+    </div>
+  );
+}
+
 export function ForjaClient({ payload }: ForjaClientProps) {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(
     payload.athletes[0]?.clientId ?? null,
   );
+  const [activeTab, setActiveTab] = useState<ForjaWorkspaceTab>("comando");
 
   const athleteById = useMemo(() => {
     const map = new Map<string, ForjaBondedAthlete>();
@@ -39,39 +66,47 @@ export function ForjaClient({ payload }: ForjaClientProps) {
     [athleteById, selectedClientId],
   );
 
+  const activeTabMeta = FORJA_WORKSPACE_TABS.find((tab) => tab.id === activeTab);
+
   const handleSelectAthlete = useCallback((clientId: string) => {
     setSelectedClientId(clientId);
   }, []);
 
   return (
     <main className={FORJA_SHELL}>
+      <div className={FORJA_AMBIENT} aria-hidden />
       <section className="relative z-10 mx-auto flex w-full max-w-7xl flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-900 pb-5">
           <div>
             <MeccafitCenterBrand variant="portal" />
-            <p className={`${FORJA_SECTION_CHIP} mt-3`}>Painel da Forja · {payload.sovereign.role}</p>
-            <h1 className={`${FORJA_SECTION_TITLE} mt-1`}>Comando Soberano</h1>
-            <p className={`${FORJA_META} mt-1`}>
-              {payload.sovereign.displayName} · {payload.athletes.length} atleta
-              {payload.athletes.length === 1 ? "" : "s"} vinculado
-              {payload.athletes.length === 1 ? "" : "s"}
+            <p className={`${FORJA_SECTION_CHIP} mt-3`}>
+              Painel da Forja · {resolveForjaRoleLabel(payload.operator.role)}
+            </p>
+            <h1 className={`${FORJA_PAGE_TITLE} mt-1`}>
+              {resolveForjaPanelTitle(payload.operator)}
+            </h1>
+            <p className={`${FORJA_META} mt-1.5`}>
+              {resolveForjaPanelSubtitle(payload.operator, payload.athletes.length)}
             </p>
           </div>
           <ForjaSignOutButton className="shrink-0" />
         </header>
 
         <div className={`${FORJA_LAYOUT} mt-6`}>
-          <aside aria-label="Atletas vinculados">
+          <aside aria-label="Lista de atletas">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <p className={FORJA_SECTION_CHIP}>Linhagem VIP</p>
-              <span className="text-[10px] tabular-nums text-zinc-600">{payload.athletes.length}</span>
+              <p className={FORJA_SECTION_CHIP}>
+                {payload.operator.isSovereign ? FORJA_COPY.sidebarSovereign : FORJA_COPY.sidebarPersonal}
+              </p>
+              <span className="text-xs tabular-nums text-zinc-600">{payload.athletes.length}</span>
             </div>
 
             <div className={FORJA_SIDEBAR_SCROLL}>
               {payload.athletes.length === 0 ? (
                 <p className={`${FORJA_META} rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center`}>
-                  Nenhum vínculo activo em forger_client_bonds. Personais podem forjar bonds com
-                  clientes VIP.
+                  {payload.operator.isSovereign
+                    ? FORJA_COPY.emptyAthletesSovereign
+                    : FORJA_COPY.emptyAthletes}
                 </p>
               ) : (
                 payload.athletes.map((athlete) => (
@@ -87,10 +122,56 @@ export function ForjaClient({ payload }: ForjaClientProps) {
           </aside>
 
           <div className={FORJA_COMMAND_PANEL}>
-            <ForjaCommandPanel
-              key={selectedAthlete?.clientId ?? "forja-command-empty"}
-              athlete={selectedAthlete}
-            />
+            <nav
+              aria-label="Secções do painel"
+              className="mb-5 flex flex-col gap-3 border-b border-zinc-800/80 pb-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between"
+            >
+              <div className="flex flex-wrap gap-2">
+                {FORJA_WORKSPACE_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                      activeTab === tab.id ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              {activeTabMeta ? (
+                <p className={`${FORJA_META} max-w-md text-left sm:text-right`}>
+                  {activeTabMeta.description}
+                </p>
+              ) : null}
+            </nav>
+
+            {activeTab === "comando" ? (
+              <ForjaCommandPanel
+                key={selectedAthlete?.clientId ?? "forja-command-empty"}
+                athlete={selectedAthlete}
+              />
+            ) : null}
+
+            {activeTab === "planilha" ? (
+              selectedAthlete ? (
+                <ExcelDropzone
+                  atletaId={selectedAthlete.clientId}
+                  atletaName={selectedAthlete.displayName}
+                />
+              ) : (
+                <ForjaEmptyWorkspace message={FORJA_COPY.selectAthlete} />
+              )
+            ) : null}
+
+            {activeTab === "antifraude" ? (
+              <ForjaAntiFraudPanel
+                athlete={selectedAthlete}
+                isSovereign={payload.operator.isSovereign}
+                scopeClientId={selectedAthlete?.clientId ?? null}
+              />
+            ) : null}
           </div>
         </div>
 

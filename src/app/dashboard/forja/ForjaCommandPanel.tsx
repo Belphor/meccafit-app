@@ -3,6 +3,9 @@
 import { memo, useCallback, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   FORJA_COMMAND_INNER,
+  FORJA_EMPTY_STATE,
+  FORJA_FEEDBACK_ERROR,
+  FORJA_FEEDBACK_OK,
   FORJA_GHOST_BUTTON,
   FORJA_INPUT,
   FORJA_LABEL,
@@ -11,17 +14,21 @@ import {
   FORJA_SECTION_CHIP,
   FORJA_SECTION_TITLE,
 } from "@/lib/forja-config";
+import { FORJA_COPY } from "@/lib/forja-copy";
 import {
   EMPTY_PRESCRIPTION_DRAFT,
   type ForjaBondedAthlete,
   type ForjaPrescriptionDraft,
 } from "@/lib/forja-dashboard";
-import { resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
+import { syncForjaPersonalPrescription } from "@/lib/forja-prescription-sync";
+import { resolveForjaChipClass, resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
 import { PHASE_TIER_LABELS } from "@/lib/dashboard-config";
 
 type ForjaCommandPanelProps = {
   athlete: ForjaBondedAthlete | null;
 };
+
+type CommandPhase = "idle" | "syncing" | "success" | "error";
 
 function formatBondDate(iso: string): string {
   const parsed = new Date(iso);
@@ -35,112 +42,132 @@ function formatBondDate(iso: string): string {
 
 function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   const [prescription, setPrescription] = useState<ForjaPrescriptionDraft>(EMPTY_PRESCRIPTION_DRAFT);
+  const [phase, setPhase] = useState<CommandPhase>("idle");
   const [commandMessage, setCommandMessage] = useState<string | null>(null);
 
   const handleFieldChange = useCallback(
     (field: keyof ForjaPrescriptionDraft) => (event: ChangeEvent<HTMLInputElement>) => {
       setPrescription((current) => ({ ...current, [field]: event.target.value }));
+      setPhase("idle");
       setCommandMessage(null);
     },
     [],
   );
 
   const handlePrescribeSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!athlete) return;
 
-      const exercicio = prescription.exercicio.trim();
-      const peso = prescription.peso.trim();
-      const repeticoes = prescription.repeticoes.trim();
-      const series = prescription.series.trim() || "3";
-
-      if (!exercicio || !peso || !repeticoes) {
-        setCommandMessage("Preencha exercício, peso e repetições antes de forjar o decreto.");
+      if (!athlete.hasVipBond) {
+        setPhase("error");
+        setCommandMessage(FORJA_COPY.prescription.noVipBond);
         return;
       }
 
+      setPhase("syncing");
+      setCommandMessage(null);
+
+      const result = await syncForjaPersonalPrescription(athlete, prescription);
+
+      if (!result.ok) {
+        setPhase("error");
+        setCommandMessage(result.message);
+        return;
+      }
+
+      setPhase("success");
       setCommandMessage(
-        `Decreto termogénico preparado para ${athlete.displayName}: ${series}×${repeticoes} @ ${peso} kg · ${exercicio}. Integração RPC em breve.`,
+        FORJA_COPY.prescription.success(
+          athlete.displayName,
+          prescription.series || "3",
+          prescription.repeticoes,
+          prescription.peso,
+          prescription.exercicio.trim(),
+        ),
       );
+      setPrescription(EMPTY_PRESCRIPTION_DRAFT);
     },
     [athlete, prescription],
   );
 
-  const handleInjectDietDecree = useCallback(() => {
+  const handleDietInfo = useCallback(() => {
     if (!athlete) return;
-    setCommandMessage(
-      `Preset Dieta VIP aberto para ${athlete.displayName}. Blueprint termogénico será injectado via diet_blueprints.`,
-    );
+    setPhase("idle");
+    setCommandMessage(FORJA_COPY.prescription.dietHint);
   }, [athlete]);
 
   if (!athlete) {
     return (
-      <section className={`${FORJA_COMMAND_INNER} flex min-h-[min(52vh,560px)] items-center justify-center text-center`}>
-        <div className="max-w-sm">
-          <p className={FORJA_SECTION_CHIP}>Área de Comando</p>
-          <p className={`${FORJA_META} mt-3`}>
-            Seleccione um atleta vinculado na coluna esquerda para prescrever treino ou injectar
-            decreto termogénico de dieta VIP.
-          </p>
-        </div>
-      </section>
+      <div className={FORJA_EMPTY_STATE}>
+        <p className={FORJA_SECTION_CHIP}>Prescrição VIP</p>
+        <p className={`${FORJA_META} mt-3 max-w-md`}>{FORJA_COPY.selectAthlete}</p>
+      </div>
     );
   }
 
   const thermal = resolveForjaThermalStyle(athlete.phaseTier);
   const phaseLabel =
     PHASE_TIER_LABELS[athlete.phaseTier as keyof typeof PHASE_TIER_LABELS] ?? thermal.label;
+  const isSyncing = phase === "syncing";
+  const canPrescribe = athlete.hasVipBond !== false;
 
   return (
-    <section aria-label={`Comando · ${athlete.displayName}`}>
-      <header className="border-b border-zinc-800/80 pb-5">
-        <p className={FORJA_SECTION_CHIP}>Área de Comando</p>
-        <h2 className={`${FORJA_SECTION_TITLE} mt-2`}>{athlete.displayName}</h2>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+    <section aria-label={`Prescrição · ${athlete.displayName}`}>
+      <header className="border-b border-zinc-800/80 pb-4">
+        <p className={FORJA_SECTION_CHIP}>Atleta seleccionado</p>
+        <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{athlete.displayName}</h2>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           <span
-            className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] ${thermal.chipClass}`}
+            className={`rounded-md border px-2 py-0.5 font-medium ${resolveForjaChipClass(athlete.phaseTier)}`}
           >
             {thermal.label}
           </span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">
-            Tier {athlete.phaseTier} · {phaseLabel}
-          </span>
-          <span className="text-[10px] uppercase tracking-[0.18em] text-zinc-600">
-            VIP desde {formatBondDate(athlete.bondedAt)}
-          </span>
+          <span>Fase {athlete.phaseTier} · {phaseLabel}</span>
+          {athlete.hasVipBond ? (
+            <span className="text-zinc-400">VIP desde {formatBondDate(athlete.bondedAt)}</span>
+          ) : (
+            <span className="text-amber-400/90">Sem vínculo VIP</span>
+          )}
         </div>
         {athlete.lineageName ? (
           <p className={`${FORJA_META} mt-2`}>Linhagem · {athlete.lineageName}</p>
         ) : null}
+        {athlete.forgerName ? (
+          <p className={`${FORJA_META} mt-1`}>Personal responsável · {athlete.forgerName}</p>
+        ) : null}
       </header>
 
-      <form onSubmit={handlePrescribeSubmit} className={`${FORJA_COMMAND_INNER} mt-5`}>
-        <h3 className="font-serif text-lg text-zinc-100">Prescrever Treino</h3>
-        <p className={`${FORJA_META} mt-1`}>
-          Via personal · registo futuro em{" "}
-          <code className="text-zinc-300">historico_treinos_personais</code>
+      {!canPrescribe ? (
+        <p className={`${FORJA_FEEDBACK_ERROR} mt-4`} role="alert">
+          {FORJA_COPY.prescription.noVipBond}
         </p>
+      ) : null}
+
+      <form onSubmit={(event) => void handlePrescribeSubmit(event)} className={`${FORJA_COMMAND_INNER} mt-4`}>
+        <h3 className="text-base font-medium text-zinc-100">{FORJA_COPY.prescription.title}</h3>
+        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.prescription.hint}</p>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label htmlFor="forja-exercicio" className={FORJA_LABEL}>
-              Exercício
+              {FORJA_COPY.prescription.exercise}
             </label>
             <input
               id="forja-exercicio"
               type="text"
               value={prescription.exercicio}
               onChange={handleFieldChange("exercicio")}
-              placeholder="Ex: Supino reto"
+              placeholder="Ex.: Supino reto"
               className={FORJA_INPUT}
               autoComplete="off"
+              disabled={isSyncing || !canPrescribe}
             />
           </div>
 
           <div>
             <label htmlFor="forja-peso" className={FORJA_LABEL}>
-              Peso (kg)
+              {FORJA_COPY.prescription.weight}
             </label>
             <input
               id="forja-peso"
@@ -153,60 +180,70 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               onChange={handleFieldChange("peso")}
               placeholder="60"
               className={FORJA_INPUT}
+              disabled={isSyncing || !canPrescribe}
             />
           </div>
 
           <div>
             <label htmlFor="forja-repeticoes" className={FORJA_LABEL}>
-              Repetições
+              {FORJA_COPY.prescription.reps}
             </label>
             <input
               id="forja-repeticoes"
               type="number"
               inputMode="numeric"
               min={1}
+              max={100}
               value={prescription.repeticoes}
               onChange={handleFieldChange("repeticoes")}
               placeholder="12"
               className={FORJA_INPUT}
+              disabled={isSyncing || !canPrescribe}
             />
           </div>
 
           <div>
             <label htmlFor="forja-series" className={FORJA_LABEL}>
-              Séries
+              {FORJA_COPY.prescription.sets}
             </label>
             <input
               id="forja-series"
               type="number"
               inputMode="numeric"
               min={1}
+              max={20}
               value={prescription.series}
               onChange={handleFieldChange("series")}
               placeholder="3"
               className={FORJA_INPUT}
+              disabled={isSyncing || !canPrescribe}
             />
           </div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
-          <button type="submit" className={FORJA_PRIMARY_BUTTON}>
-            Forjar Prescrição
+          <button
+            type="submit"
+            className={FORJA_PRIMARY_BUTTON}
+            disabled={isSyncing || !canPrescribe}
+          >
+            {isSyncing ? FORJA_COPY.prescription.submitting : FORJA_COPY.prescription.submit}
           </button>
           <button
             type="button"
-            onClick={handleInjectDietDecree}
+            onClick={handleDietInfo}
             className={FORJA_GHOST_BUTTON}
+            disabled={isSyncing}
           >
-            Injetar Decreto Termogénico
+            {FORJA_COPY.prescription.dietTitle}
           </button>
         </div>
       </form>
 
       {commandMessage ? (
         <p
-          role="status"
-          className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm leading-relaxed text-zinc-300"
+          role={phase === "error" ? "alert" : "status"}
+          className={phase === "error" ? FORJA_FEEDBACK_ERROR : FORJA_FEEDBACK_OK}
         >
           {commandMessage}
         </p>

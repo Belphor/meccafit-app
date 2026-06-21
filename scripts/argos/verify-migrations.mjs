@@ -139,6 +139,10 @@ export const MIGRATION_PATCHES = [
     id: "perf_zero_cost_scaling",
     files: ["20260625200000_perf_zero_cost_scaling.sql"],
   },
+  {
+    id: "forja_sovereign_workspace",
+    files: ["20260626200000_forja_sovereign_judicial_workspace.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -300,6 +304,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeComunidadeSnapshotAuth(admin, probeUserId));
     probes.push(await probeCardioSessaoDiaria(admin));
     probes.push(await probePerfZeroCostScaling(admin, probeUserId));
+    probes.push(await probeForjaSovereignWorkspace(admin));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -335,6 +340,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "perf_zero_cost_scaling",
       ok: false,
       detail: "sem perfil para probe perf",
+    });
+    probes.push({
+      id: "forja_sovereign_workspace",
+      ok: false,
+      detail: "sem perfil para probe forja",
     });
   }
 
@@ -590,6 +600,65 @@ async function probePerfZeroCostScaling(admin, userId) {
     detail: arenaOk
       ? "bundle thermal inline · arena skip_side_effects ok"
       : "arena snapshot shape inválido",
+  };
+}
+
+async function probeForjaSovereignWorkspace(admin) {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+  const { error: tableErr } = await admin.from("argos_forja_audit_log").select("id").limit(1);
+  if (tableErr?.code === "42P01" || tableErr?.message?.includes("does not exist")) {
+    return {
+      id: "forja_sovereign_workspace",
+      ok: false,
+      detail: "argos_forja_audit_log ausente — aplicar 20260626200000",
+    };
+  }
+
+  if (!url || !anonKey) {
+    return { id: "forja_sovereign_workspace", ok: Boolean(!tableErr), detail: "tabela audit ok · rpc skip" };
+  }
+
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: loginErr } = await client.auth.signInWithPassword({
+    email: "master@meccafit.com",
+    password: "senha123",
+  });
+
+  if (loginErr) {
+    return { id: "forja_sovereign_workspace", ok: false, detail: `login soberano: ${loginErr.message}` };
+  }
+
+  const { data, error: rpcErr } = await client.rpc("argos_forja_fraud_signals", {
+    p_cliente_id: null,
+  });
+
+  await client.auth.signOut();
+
+  if (rpcErr?.code === "PGRST202") {
+    return {
+      id: "forja_sovereign_workspace",
+      ok: false,
+      detail: "argos_forja_fraud_signals ausente — aplicar 20260626200000",
+    };
+  }
+
+  if (rpcErr) {
+    return { id: "forja_sovereign_workspace", ok: false, detail: rpcErr.message };
+  }
+
+  const count = typeof data?.count === "number" ? data.count : null;
+  return {
+    id: "forja_sovereign_workspace",
+    ok: count !== null,
+    detail: count !== null ? `audit log ok · ${count} sinal(is)` : "rpc resposta inválida",
   };
 }
 

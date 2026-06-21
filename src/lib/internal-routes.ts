@@ -1,31 +1,50 @@
 import type { ClienteDashboardTab } from "@/types/portal.types";
+import type { PortalProfileRole } from "@/lib/portal-auth";
 
 export const DEFAULT_DASHBOARD_SUBGRUPO = "peitoral-superior" as const;
 
 export const FORJA_DASHBOARD_ROUTE = "/dashboard/forja";
+export const CLIENTE_DASHBOARD_ROUTE = "/dashboard";
+
+export const FORJADOR_PANEL_ROLES = [
+  "forjador",
+  "forjador_linhagem",
+  "forjador_soberano",
+] as const satisfies readonly PortalProfileRole[];
+
+export type ForjadorPanelRole = (typeof FORJADOR_PANEL_ROLES)[number];
+
+export function isForjadorPanelRole(role: string | null | undefined): role is ForjadorPanelRole {
+  return FORJADOR_PANEL_ROLES.includes(role as ForjadorPanelRole);
+}
+
+export function isForjadorSovereign(role: string | null | undefined): boolean {
+  return role === "forjador_soberano";
+}
 
 export function resolveClienteDashboardRoute(
   _subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
 ): string {
-  return "/dashboard";
+  return CLIENTE_DASHBOARD_ROUTE;
 }
 
 export function resolvePostLoginRoute(role: string): string | null {
-  if (role === "forjador_soberano") {
+  if (isForjadorPanelRole(role)) {
     return FORJA_DASHBOARD_ROUTE;
   }
 
   if (role === "cliente") {
-    return "/dashboard";
+    return CLIENTE_DASHBOARD_ROUTE;
   }
 
   return null;
 }
 
+/** @deprecated Rotas legado · sem páginas activas — usar CLIENTE_DASHBOARD_ROUTE + ?tab= */
 export const internalRoutes = {
   cliente: {
     root: "/cliente",
-    dashboard: "/dashboard",
+    dashboard: CLIENTE_DASHBOARD_ROUTE,
     matrixAlma: "/cliente/matrix-da-alma",
     portalBrasa: "/cliente/portal-de-brasa",
     irisEvolucao: "/cliente/iris-evolucao",
@@ -36,11 +55,12 @@ export const internalRoutes = {
   },
   forjador: {
     root: "/forjador",
-    dashboard: "/forjador/dashboard",
-    alunos: "/forjador/alunos",
+    dashboard: FORJA_DASHBOARD_ROUTE,
+    alunos: "/dashboard/forja",
   },
 } as const;
 
+/** @deprecated Tabs legado pré-consolidação dashboard */
 export const clienteDashboardTabs: readonly ClienteDashboardTab[] = [
   {
     id: "matrix_alma",

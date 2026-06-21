@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
@@ -17,7 +17,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import type { TablesInsert } from "@/types/database.types";
 
-/** Ordem 2×3 da matriz muscular · Aba 3 configurar */
+/** Ordem 2×3 da matriz · chaves soberanas persistidas no Postgres */
 const PLAN_MATRIX_MUSCLES: readonly SovereignMuscleId[] = [
   "PEITO",
   "COSTAS",
@@ -27,9 +27,21 @@ const PLAN_MATRIX_MUSCLES: readonly SovereignMuscleId[] = [
   "ABDOMEN",
 ] as const;
 
+/** Rótulos HUD · acentuação PT-BR sem alterar enum soberano */
+const PLAN_MATRIX_HUD_CODE: Record<SovereignMuscleId, string> = {
+  PEITO: "PEITO",
+  COSTAS: "COSTAS",
+  PERNAS: "PERNAS",
+  OMBROS: "OMBROS",
+  BRACOS: "BRAÇOS",
+  ABDOMEN: "ABDÔMEN",
+};
+
 export const PLAN_SESSIONS_MIN = 4;
 export const PLAN_SESSIONS_MAX = 28;
 export const PLAN_SESSIONS_DEFAULT = 16;
+
+const SYNC_SUCCESS_MESSAGE = "Diretrizes sincronizadas com o núcleo MIDAS.";
 
 export type AthletePlanConfig = {
   totalTreinosMensaisPlanejados: number;
@@ -46,7 +58,7 @@ type PlanConfigFormProps = {
   initialPlan?: AthletePlanConfig;
 };
 
-type SubmitPhase = "idle" | "syncing" | "success" | "error";
+type SyncPhase = "idle" | "syncing" | "success" | "error";
 
 function clampSessions(value: number): number {
   return Math.min(PLAN_SESSIONS_MAX, Math.max(PLAN_SESSIONS_MIN, Math.round(value)));
@@ -72,7 +84,7 @@ function normalizeGruposObrigatorios(values: string[] | null | undefined): Sover
   return PLAN_MATRIX_MUSCLES.filter((muscle) => seen.has(muscle));
 }
 
-function buildInitialState(initialPlan?: AthletePlanConfig): PlanConfigFormState {
+function buildPlanState(initialPlan?: AthletePlanConfig): PlanConfigFormState {
   return {
     totalTreinosMensaisPlanejados: clampSessions(
       initialPlan?.totalTreinosMensaisPlanejados ?? PLAN_SESSIONS_DEFAULT,
@@ -81,39 +93,145 @@ function buildInitialState(initialPlan?: AthletePlanConfig): PlanConfigFormState
   };
 }
 
-export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
-  const [formState, setFormState] = useState<PlanConfigFormState>(() =>
-    buildInitialState(initialPlan),
+function planStatesEqual(a: PlanConfigFormState, b: PlanConfigFormState): boolean {
+  if (a.totalTreinosMensaisPlanejados !== b.totalTreinosMensaisPlanejados) return false;
+  if (a.gruposObrigatorios.length !== b.gruposObrigatorios.length) return false;
+  return a.gruposObrigatorios.every((muscle, index) => muscle === b.gruposObrigatorios[index]);
+}
+
+type PlanSessionsSliderProps = {
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+};
+
+function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderProps) {
+  const span = PLAN_SESSIONS_MAX - PLAN_SESSIONS_MIN;
+  const fillPercent = span > 0 ? ((value - PLAN_SESSIONS_MIN) / span) * 100 : 0;
+
+  return (
+    <div className="mt-5 space-y-3">
+      <div className="relative h-2 rounded-full bg-neutral-900 ring-1 ring-orange-500/10">
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-600/35 via-emerald-500/55 to-amber-500/45 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+          style={{ width: `${fillPercent}%` }}
+          aria-hidden
+        />
+        <input
+          type="range"
+          min={PLAN_SESSIONS_MIN}
+          max={PLAN_SESSIONS_MAX}
+          step={1}
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-emerald-200/70 [&::-moz-range-thumb]:bg-emerald-400 [&::-moz-range-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-emerald-200/70 [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)]"
+          aria-valuemin={PLAN_SESSIONS_MIN}
+          aria-valuemax={PLAN_SESSIONS_MAX}
+          aria-valuenow={value}
+          aria-label="Treinos mensais planeados"
+        />
+      </div>
+      <div className="flex justify-between font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-600">
+        <span>{PLAN_SESSIONS_MIN}</span>
+        <span className="text-cyan-500/70">janela mensal</span>
+        <span>{PLAN_SESSIONS_MAX}</span>
+      </div>
+    </div>
   );
-  const [phase, setPhase] = useState<SubmitPhase>("idle");
+}
+
+type MuscleMatrixToggleProps = {
+  muscle: SovereignMuscleId;
+  selected: boolean;
+  disabled: boolean;
+  onToggle: (muscle: SovereignMuscleId) => void;
+};
+
+function MuscleMatrixToggle({ muscle, selected, disabled, onToggle }: MuscleMatrixToggleProps) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onToggle(muscle)}
+      aria-pressed={selected}
+      aria-label={`${MUSCLE_LABELS[muscle]} · ${selected ? "selecionado" : "não selecionado"}`}
+      className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full flex-col gap-1.5 rounded-xl border px-3 py-3 text-center transition-[border-color,box-shadow,opacity,background-color,transform] duration-200 disabled:opacity-50 ${selected
+        ? "border-emerald-400/70 bg-emerald-950/30 shadow-[0_0_16px_rgba(16,185,129,0.38),inset_0_0_12px_rgba(16,185,129,0.12)]"
+        : "border-orange-500/10 bg-black/40 opacity-50 saturate-0 hover:border-orange-500/20 hover:opacity-65"
+        }`}
+    >
+      <span
+        className={`font-mono text-[9px] uppercase tracking-[0.18em] ${selected ? "text-emerald-300/90" : "text-neutral-600"
+          }`}
+      >
+        {PLAN_MATRIX_HUD_CODE[muscle]}
+      </span>
+      <span
+        className={`text-sm font-bold uppercase tracking-[0.12em] ${selected ? "text-emerald-50" : "text-neutral-500"
+          }`}
+      >
+        {MUSCLE_LABELS[muscle]}
+      </span>
+    </button>
+  );
+}
+
+export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
+  const [syncedBaseline, setSyncedBaseline] = useState<PlanConfigFormState>(() =>
+    buildPlanState(initialPlan),
+  );
+  const [draft, setDraft] = useState<PlanConfigFormState>(() => buildPlanState(initialPlan));
+  const [phase, setPhase] = useState<SyncPhase>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const selectedSet = useMemo(
-    () => new Set(formState.gruposObrigatorios),
-    [formState.gruposObrigatorios],
+  useEffect(() => {
+    const hydrated = buildPlanState(initialPlan);
+    setSyncedBaseline(hydrated);
+    setDraft(hydrated);
+    setPhase("idle");
+    setFeedback(null);
+  }, [initialPlan]);
+
+  const hasLocalChanges = useMemo(
+    () => !planStatesEqual(draft, syncedBaseline),
+    [draft, syncedBaseline],
   );
 
-  const handleSessionsChange = useCallback((value: number) => {
-    setFormState((prev) => ({
-      ...prev,
-      totalTreinosMensaisPlanejados: clampSessions(value),
-    }));
+  const selectedSet = useMemo(() => new Set(draft.gruposObrigatorios), [draft.gruposObrigatorios]);
+
+  const clearTransientFeedback = useCallback(() => {
     setPhase("idle");
     setFeedback(null);
   }, []);
 
-  const toggleMuscle = useCallback((muscle: SovereignMuscleId) => {
-    setFormState((prev) => {
-      const has = prev.gruposObrigatorios.includes(muscle);
-      const gruposObrigatorios = has
-        ? prev.gruposObrigatorios.filter((item) => item !== muscle)
-        : [...prev.gruposObrigatorios, muscle];
+  const handleSessionsChange = useCallback(
+    (value: number) => {
+      setDraft((prev) => ({
+        ...prev,
+        totalTreinosMensaisPlanejados: clampSessions(value),
+      }));
+      clearTransientFeedback();
+    },
+    [clearTransientFeedback],
+  );
 
-      return { ...prev, gruposObrigatorios };
-    });
-    setPhase("idle");
-    setFeedback(null);
-  }, []);
+  const toggleMuscle = useCallback(
+    (muscle: SovereignMuscleId) => {
+      setDraft((prev) => {
+        const next = new Set(prev.gruposObrigatorios);
+        if (next.has(muscle)) next.delete(muscle);
+        else next.add(muscle);
+
+        return {
+          ...prev,
+          gruposObrigatorios: PLAN_MATRIX_MUSCLES.filter((item) => next.has(item)),
+        };
+      });
+      clearTransientFeedback();
+    },
+    [clearTransientFeedback],
+  );
 
   const handleSync = useCallback(async () => {
     setPhase("syncing");
@@ -134,8 +252,8 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
 
       const row: TablesInsert<"planos_atletas"> = {
         atleta_id: sessionUserId,
-        total_treinos_mensais_planejados: formState.totalTreinosMensaisPlanejados,
-        grupos_obrigatorios: formState.gruposObrigatorios,
+        total_treinos_mensais_planejados: draft.totalTreinosMensaisPlanejados,
+        grupos_obrigatorios: draft.gruposObrigatorios,
         updated_at: new Date().toISOString(),
       };
 
@@ -149,13 +267,14 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
         return;
       }
 
+      setSyncedBaseline(draft);
       setPhase("success");
-      setFeedback("Diretrizes sincronizadas com o núcleo MIDAS.");
+      setFeedback(SYNC_SUCCESS_MESSAGE);
     } catch {
       setPhase("error");
       setFeedback("Falha de rede ao sincronizar o plano.");
     }
-  }, [formState.gruposObrigatorios, formState.totalTreinosMensaisPlanejados, userId]);
+  }, [draft, userId]);
 
   const isSyncing = phase === "syncing";
 
@@ -166,138 +285,119 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="plan-config-title"
     >
-      <DashboardPanelHeader chip="Plano mensal" meta="Diretrizes do atleta" />
+      <DashboardPanelHeader chip="Plano mensal" meta="Perfil" />
 
-      <div className="mt-4 border-b border-orange-500/10 pb-6">
+      <header className="mt-4 border-b border-orange-500/10 pb-5 sm:pb-6">
         <h2 id="plan-config-title" className={DASHBOARD_SECTION_TITLE}>
-          Configurar Plano Mensal
+          Diretrizes do Plano Mensal
         </h2>
-        <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-          Meta de ignição · matriz muscular obrigatória
+        <p className="mt-2 max-w-prose text-[10px] uppercase leading-relaxed tracking-[0.18em] text-neutral-600">
+          Define a meta de sessões e os grupos musculares obrigatórios. Alimenta o índice de
+          ignição na aba Evolução. Alterações ficam locais até sincronizar.
         </p>
-      </div>
+      </header>
 
-      <div className={`mt-6 space-y-8 ${DASHBOARD_INNER_FRAME} p-4`}>
-        <section aria-labelledby="plan-sessions-label">
-          <div className="flex items-end justify-between gap-3">
-            <div>
+      <div className={`mt-6 space-y-8 ${DASHBOARD_INNER_FRAME}`}>
+        <section aria-labelledby="plan-sessions-label" className="space-y-1">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
               <p
                 id="plan-sessions-label"
-                className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80"
+                className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/85"
               >
                 Treinos mensais planeados
               </p>
               <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-                Janela {PLAN_SESSIONS_MIN}–{PLAN_SESSIONS_MAX} · base do índice de ignição
+                {PLAN_SESSIONS_MIN}–{PLAN_SESSIONS_MAX} sessões · janela rolante 30 dias
               </p>
             </div>
             <div
-              className="rounded-lg border border-cyan-500/20 bg-black/50 px-3 py-2 font-mono text-2xl font-bold tabular-nums text-amber-50"
+              className="rounded-lg border border-cyan-500/25 bg-black/55 px-4 py-2 font-mono text-2xl font-bold tabular-nums text-amber-50 shadow-[0_0_10px_rgba(34,211,238,0.12)]"
               aria-live="polite"
+              aria-atomic="true"
             >
-              {formState.totalTreinosMensaisPlanejados}
+              {draft.totalTreinosMensaisPlanejados}
             </div>
           </div>
 
-          <div className="mt-5">
-            <input
-              type="range"
-              min={PLAN_SESSIONS_MIN}
-              max={PLAN_SESSIONS_MAX}
-              step={1}
-              value={formState.totalTreinosMensaisPlanejados}
-              disabled={isSyncing}
-              onChange={(event) => handleSessionsChange(Number(event.target.value))}
-              className="h-2 w-full cursor-pointer appearance-none rounded-full bg-neutral-800 accent-emerald-500 disabled:opacity-50 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-emerald-300/60 [&::-webkit-slider-thumb]:bg-emerald-500 [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(16,185,129,0.45)]"
-              aria-valuemin={PLAN_SESSIONS_MIN}
-              aria-valuemax={PLAN_SESSIONS_MAX}
-              aria-valuenow={formState.totalTreinosMensaisPlanejados}
-            />
-            <div className="mt-2 flex justify-between font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-600">
-              <span>{PLAN_SESSIONS_MIN}</span>
-              <span>{PLAN_SESSIONS_MAX}</span>
-            </div>
-          </div>
+          <PlanSessionsSlider
+            value={draft.totalTreinosMensaisPlanejados}
+            disabled={isSyncing}
+            onChange={handleSessionsChange}
+          />
         </section>
 
         <section aria-labelledby="plan-muscle-matrix-label">
           <p
             id="plan-muscle-matrix-label"
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80"
+            className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/85"
           >
             Matriz muscular · grupos obrigatórios
           </p>
           <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-            Toque para alternar · alterações locais até sincronizar
+            Toque para alternar · multi-seleção · alvos ≥ 44px
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
-            {PLAN_MATRIX_MUSCLES.map((muscle) => {
-              const selected = selectedSet.has(muscle);
-              return (
-                <button
-                  key={muscle}
-                  type="button"
-                  disabled={isSyncing}
-                  onClick={() => toggleMuscle(muscle)}
-                  aria-pressed={selected}
-                  className={`${DASHBOARD_TAP_TARGET} min-h-[4.5rem] flex-col gap-1 rounded-xl border px-3 py-3 text-center transition-[border-color,box-shadow,opacity,background-color] duration-200 disabled:opacity-50 ${
-                    selected
-                      ? "border-emerald-500 bg-emerald-950/25 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
-                      : "border-orange-500/10 bg-black/35 opacity-55 saturate-50 hover:opacity-70"
-                  }`}
-                >
-                  <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-neutral-500">
-                    {muscle}
-                  </span>
-                  <span
-                    className={`text-sm font-bold uppercase tracking-[0.12em] ${
-                      selected ? "text-emerald-100" : "text-neutral-500"
-                    }`}
-                  >
-                    {MUSCLE_LABELS[muscle]}
-                  </span>
-                </button>
-              );
-            })}
+          <div
+            className="mt-4 grid grid-cols-2 gap-3 sm:gap-4"
+            role="group"
+            aria-label="Grupos musculares obrigatórios"
+          >
+            {PLAN_MATRIX_MUSCLES.map((muscle) => (
+              <MuscleMatrixToggle
+                key={muscle}
+                muscle={muscle}
+                selected={selectedSet.has(muscle)}
+                disabled={isSyncing}
+                onToggle={toggleMuscle}
+              />
+            ))}
           </div>
 
-          <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-600">
+          <p
+            className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500"
+            aria-live="polite"
+          >
             Selecionados:{" "}
-            <span style={{ color: MAGMA_SPECTRUM.solarGold }}>
-              {formState.gruposObrigatorios.length}
+            <span className="font-bold" style={{ color: MAGMA_SPECTRUM.solarGold }}>
+              {draft.gruposObrigatorios.length}
             </span>{" "}
             / {PLAN_MATRIX_MUSCLES.length}
           </p>
         </section>
       </div>
 
-      <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {feedback ? (
-          <p
-            className={`text-[11px] ${
-              phase === "error" ? "text-red-400/90" : "text-emerald-300/85"
-            }`}
-            role={phase === "error" ? "alert" : "status"}
-          >
-            {feedback}
-          </p>
-        ) : (
-          <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-            PLUTUS · uma única gravação por sincronização
-          </p>
-        )}
+      <footer className="mt-6 flex flex-col gap-3 border-t border-orange-500/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          {feedback ? (
+            <p
+              className={`text-[11px] leading-relaxed ${phase === "error" ? "text-red-400/90" : "text-emerald-300/90"
+                }`}
+              role={phase === "error" ? "alert" : "status"}
+            >
+              {feedback}
+            </p>
+          ) : hasLocalChanges ? (
+            <p className="text-[10px] uppercase tracking-[0.16em] text-amber-400/80">
+              Alterações locais · aguardando sincronização
+            </p>
+          ) : (
+            <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+              Uma única gravação por sincronização
+            </p>
+          )}
+        </div>
 
         <button
           type="button"
           disabled={isSyncing}
           onClick={() => void handleSync()}
-          className={`${DASHBOARD_TAP_TARGET} relative w-full min-w-0 overflow-hidden rounded-full border border-emerald-500/25 bg-neutral-950/70 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 transition-[opacity,box-shadow] duration-200 hover:shadow-[0_0_14px_rgba(16,185,129,0.22)] disabled:opacity-60 sm:min-w-[12rem]`}
+          className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full shrink-0 rounded-full border border-emerald-500/30 bg-neutral-950/75 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 transition-[opacity,box-shadow,transform] duration-200 hover:shadow-[0_0_16px_rgba(16,185,129,0.28)] active:scale-[0.98] disabled:opacity-60 sm:min-w-[13rem] sm:w-auto`}
         >
           {isSyncing ? (
             <span className="inline-flex items-center gap-2">
               <span
-                className="inline-block h-3 w-3 animate-spin rounded-full border border-emerald-300/30 border-t-emerald-400"
+                className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-emerald-300/30 border-t-emerald-400"
                 aria-hidden
               />
               Sincronizando…
@@ -306,7 +406,7 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
             "Sincronizar Diretrizes"
           )}
         </button>
-      </div>
+      </footer>
     </BrasaVivaCard>
   );
 }
