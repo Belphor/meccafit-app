@@ -1,12 +1,12 @@
 "use client";
 
 import { memo, useCallback, useState, type ChangeEvent, type FormEvent } from "react";
+import { ForjaDietBlueprintForm } from "@/components/forjador/forja-diet-blueprint-form";
 import {
   FORJA_COMMAND_INNER,
   FORJA_EMPTY_STATE,
   FORJA_FEEDBACK_ERROR,
   FORJA_FEEDBACK_OK,
-  FORJA_GHOST_BUTTON,
   FORJA_INPUT,
   FORJA_LABEL,
   FORJA_META,
@@ -23,6 +23,7 @@ import {
 import { syncForjaPersonalPrescription } from "@/lib/forja-prescription-sync";
 import { resolveForjaChipClass, resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
 import { PHASE_TIER_LABELS } from "@/lib/dashboard-config";
+import { CLIENT_TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
 
 type ForjaCommandPanelProps = {
   athlete: ForjaBondedAthlete | null;
@@ -46,11 +47,12 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   const [commandMessage, setCommandMessage] = useState<string | null>(null);
 
   const handleFieldChange = useCallback(
-    (field: keyof ForjaPrescriptionDraft) => (event: ChangeEvent<HTMLInputElement>) => {
-      setPrescription((current) => ({ ...current, [field]: event.target.value }));
-      setPhase("idle");
-      setCommandMessage(null);
-    },
+    (field: keyof ForjaPrescriptionDraft) =>
+      (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        setPrescription((current) => ({ ...current, [field]: event.target.value }));
+        setPhase("idle");
+        setCommandMessage(null);
+      },
     [],
   );
 
@@ -58,12 +60,6 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!athlete) return;
-
-      if (!athlete.hasVipBond) {
-        setPhase("error");
-        setCommandMessage(FORJA_COPY.prescription.noVipBond);
-        return;
-      }
 
       setPhase("syncing");
       setCommandMessage(null);
@@ -86,21 +82,19 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           prescription.exercicio.trim(),
         ),
       );
-      setPrescription(EMPTY_PRESCRIPTION_DRAFT);
+      setPrescription((current) => ({
+        ...EMPTY_PRESCRIPTION_DRAFT,
+        grupoMuscular: current.grupoMuscular,
+        descansoPadraoSeg: current.descansoPadraoSeg,
+      }));
     },
     [athlete, prescription],
   );
 
-  const handleDietInfo = useCallback(() => {
-    if (!athlete) return;
-    setPhase("idle");
-    setCommandMessage(FORJA_COPY.prescription.dietHint);
-  }, [athlete]);
-
   if (!athlete) {
     return (
       <div className={FORJA_EMPTY_STATE}>
-        <p className={FORJA_SECTION_CHIP}>Prescrição VIP</p>
+        <p className={FORJA_SECTION_CHIP}>Prescrição</p>
         <p className={`${FORJA_META} mt-3 max-w-md`}>{FORJA_COPY.selectAthlete}</p>
       </div>
     );
@@ -110,7 +104,6 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   const phaseLabel =
     PHASE_TIER_LABELS[athlete.phaseTier as keyof typeof PHASE_TIER_LABELS] ?? thermal.label;
   const isSyncing = phase === "syncing";
-  const canPrescribe = athlete.hasVipBond !== false;
 
   return (
     <section aria-label={`Prescrição · ${athlete.displayName}`}>
@@ -123,28 +116,35 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           >
             {thermal.label}
           </span>
-          <span>Fase {athlete.phaseTier} · {phaseLabel}</span>
+          <span>
+            Fase {athlete.phaseTier} · {phaseLabel}
+          </span>
+          <span
+            className={
+              athlete.hasVipBond
+                ? "rounded border border-emerald-800/60 bg-emerald-950/40 px-2 py-0.5 text-emerald-300"
+                : "rounded border border-zinc-700/80 bg-zinc-900/60 px-2 py-0.5 text-zinc-400"
+            }
+          >
+            {athlete.hasVipBond ? FORJA_COPY.athleteVipBadge : FORJA_COPY.athleteStandardBadge}
+          </span>
           {athlete.hasVipBond ? (
             <span className="text-zinc-400">VIP desde {formatBondDate(athlete.bondedAt)}</span>
-          ) : (
-            <span className="text-amber-400/90">Sem vínculo VIP</span>
-          )}
+          ) : null}
         </div>
         {athlete.lineageName ? (
           <p className={`${FORJA_META} mt-2`}>Linhagem · {athlete.lineageName}</p>
         ) : null}
         {athlete.forgerName ? (
-          <p className={`${FORJA_META} mt-1`}>Personal responsável · {athlete.forgerName}</p>
+          <p className={`${FORJA_META} mt-1`}>Personal · {athlete.forgerName}</p>
         ) : null}
       </header>
 
-      {!canPrescribe ? (
-        <p className={`${FORJA_FEEDBACK_ERROR} mt-4`} role="alert">
-          {FORJA_COPY.prescription.noVipBond}
-        </p>
-      ) : null}
-
-      <form onSubmit={(event) => void handlePrescribeSubmit(event)} className={`${FORJA_COMMAND_INNER} mt-4`}>
+      <form
+        onSubmit={(event) => void handlePrescribeSubmit(event)}
+        className={`${FORJA_COMMAND_INNER} mt-4`}
+      >
+        <p className={FORJA_SECTION_CHIP}>Treino · todos os atletas</p>
         <h3 className="text-base font-medium text-zinc-100">{FORJA_COPY.prescription.title}</h3>
         <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.prescription.hint}</p>
 
@@ -161,8 +161,27 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               placeholder="Ex.: Supino reto"
               className={FORJA_INPUT}
               autoComplete="off"
-              disabled={isSyncing || !canPrescribe}
+              disabled={isSyncing}
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="forja-grupo" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.muscleGroup}
+            </label>
+            <select
+              id="forja-grupo"
+              value={prescription.grupoMuscular}
+              onChange={handleFieldChange("grupoMuscular")}
+              className={FORJA_INPUT}
+              disabled={isSyncing}
+            >
+              {CLIENT_TRAINING_MUSCLE_GROUPS.map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -180,7 +199,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               onChange={handleFieldChange("peso")}
               placeholder="60"
               className={FORJA_INPUT}
-              disabled={isSyncing || !canPrescribe}
+              disabled={isSyncing}
             />
           </div>
 
@@ -198,7 +217,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               onChange={handleFieldChange("repeticoes")}
               placeholder="12"
               className={FORJA_INPUT}
-              disabled={isSyncing || !canPrescribe}
+              disabled={isSyncing}
             />
           </div>
 
@@ -216,26 +235,51 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               onChange={handleFieldChange("series")}
               placeholder="3"
               className={FORJA_INPUT}
-              disabled={isSyncing || !canPrescribe}
+              disabled={isSyncing}
             />
+          </div>
+
+          <div>
+            <label htmlFor="forja-descanso-ex" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.restExercise}
+            </label>
+            <input
+              id="forja-descanso-ex"
+              type="number"
+              inputMode="numeric"
+              min={15}
+              max={600}
+              value={prescription.descansoSegundos}
+              onChange={handleFieldChange("descansoSegundos")}
+              placeholder="90"
+              className={FORJA_INPUT}
+              disabled={isSyncing}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="forja-descanso-padrao" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.restDefault}
+            </label>
+            <input
+              id="forja-descanso-padrao"
+              type="number"
+              inputMode="numeric"
+              min={15}
+              max={600}
+              value={prescription.descansoPadraoSeg}
+              onChange={handleFieldChange("descansoPadraoSeg")}
+              placeholder="90"
+              className={FORJA_INPUT}
+              disabled={isSyncing}
+            />
+            <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.restHint}</p>
           </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            type="submit"
-            className={FORJA_PRIMARY_BUTTON}
-            disabled={isSyncing || !canPrescribe}
-          >
+        <div className="mt-5">
+          <button type="submit" className={FORJA_PRIMARY_BUTTON} disabled={isSyncing}>
             {isSyncing ? FORJA_COPY.prescription.submitting : FORJA_COPY.prescription.submit}
-          </button>
-          <button
-            type="button"
-            onClick={handleDietInfo}
-            className={FORJA_GHOST_BUTTON}
-            disabled={isSyncing}
-          >
-            {FORJA_COPY.prescription.dietTitle}
           </button>
         </div>
       </form>
@@ -248,6 +292,16 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           {commandMessage}
         </p>
       ) : null}
+
+      {athlete.hasVipBond ? (
+        <ForjaDietBlueprintForm athlete={athlete} />
+      ) : (
+        <div className={`${FORJA_COMMAND_INNER} mt-8 border-t border-zinc-800/80 pt-6`}>
+          <p className={FORJA_SECTION_CHIP}>Dieta · exclusivo VIP</p>
+          <h3 className="text-base font-medium text-zinc-400">{FORJA_COPY.diet.title}</h3>
+          <p className={`${FORJA_META} mt-2`}>{FORJA_COPY.diet.lockedHint}</p>
+        </div>
+      )}
     </section>
   );
 }

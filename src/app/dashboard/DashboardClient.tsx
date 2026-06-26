@@ -586,7 +586,7 @@ export function DashboardClient({
 
                   {hasPersonalBond && visitedTabs.has("dieta") ? (
                     <div className={dashboardTabPanelClass(activeTab === "dieta")}>
-                      <DietaPanel />
+                      <DietaPanel userId={userId} />
                     </div>
                   ) : null}
 

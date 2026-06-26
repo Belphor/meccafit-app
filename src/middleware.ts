@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createMiddlewareClient } from "@/lib/supabase-middleware";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/evolucao", "/treino", "/comunidade", "/perfil"] as const;
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/evolucao",
+  "/treino",
+  "/comunidade",
+  "/perfil",
+  "/forjador",
+] as const;
 
 const FORJADOR_PANEL_ROLES = new Set([
   "forjador",
@@ -16,7 +23,12 @@ function isProtectedRoute(pathname: string): boolean {
 }
 
 function isForjaRoute(pathname: string): boolean {
-  return pathname === "/dashboard/forja" || pathname.startsWith("/dashboard/forja/");
+  return (
+    pathname === "/dashboard/forja" ||
+    pathname.startsWith("/dashboard/forja/") ||
+    pathname === "/forjador" ||
+    pathname.startsWith("/forjador/")
+  );
 }
 
 function isAccountSuspended(statusAltar: string | null | undefined): boolean {
@@ -90,5 +102,7 @@ export const config = {
     "/comunidade/:path*",
     "/perfil",
     "/perfil/:path*",
+    "/forjador",
+    "/forjador/:path*",
   ],
 };

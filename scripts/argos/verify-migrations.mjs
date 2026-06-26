@@ -143,6 +143,10 @@ export const MIGRATION_PATCHES = [
     id: "forja_sovereign_workspace",
     files: ["20260626200000_forja_sovereign_judicial_workspace.sql"],
   },
+  {
+    id: "diet_blueprints_vip",
+    files: ["20260627100000_diet_blueprints_vip.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -305,6 +309,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeCardioSessaoDiaria(admin));
     probes.push(await probePerfZeroCostScaling(admin, probeUserId));
     probes.push(await probeForjaSovereignWorkspace(admin));
+    probes.push(await probeDietBlueprints(admin));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -345,6 +350,11 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "forja_sovereign_workspace",
       ok: false,
       detail: "sem perfil para probe forja",
+    });
+    probes.push({
+      id: "diet_blueprints_vip",
+      ok: false,
+      detail: "sem perfil para probe dieta",
     });
   }
 
@@ -660,6 +670,22 @@ async function probeForjaSovereignWorkspace(admin) {
     ok: count !== null,
     detail: count !== null ? `audit log ok · ${count} sinal(is)` : "rpc resposta inválida",
   };
+}
+
+async function probeDietBlueprints(admin) {
+  const { error } = await admin.from("diet_blueprints").select("id").limit(1);
+  if (error) {
+    const message = error.message ?? "";
+    if (message.includes("Could not find the table") || message.includes("does not exist")) {
+      return {
+        id: "diet_blueprints_vip",
+        ok: false,
+        detail: "tabela diet_blueprints ausente",
+      };
+    }
+    return { id: "diet_blueprints_vip", ok: false, detail: message };
+  }
+  return { id: "diet_blueprints_vip", ok: true, detail: "tabela diet_blueprints ok" };
 }
 
 async function probeMidasGrowth(admin, userId) {

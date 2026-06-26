@@ -3,6 +3,7 @@ export type DashboardTabId = "treino" | "dieta" | "evolucao" | "comunidade" | "p
 export type DashboardTabDefinition = {
   id: DashboardTabId;
   label: string;
+  /** Aba exclusiva de clientes VIP (forger_client_bonds activo). */
   requiresPersonalBond?: boolean;
 };
 
@@ -28,10 +29,16 @@ export function normalizeDashboardTabParam(
   return isDashboardTabId(normalized) ? normalized : null;
 }
 
+/** Filtra abas visíveis: comuns veem treino/evolução/comunidade/perfil; VIP inclui Dieta. */
 export function filterDashboardTabs(hasPersonalBond: boolean): DashboardTabDefinition[] {
   return DASHBOARD_TAB_DEFINITIONS.filter(
     (tab) => !tab.requiresPersonalBond || hasPersonalBond,
   );
+}
+
+/** Alias explícito — cliente VIP = bond personal activo. */
+export function filterDashboardTabsForVip(isVipClient: boolean): DashboardTabDefinition[] {
+  return filterDashboardTabs(isVipClient);
 }
 
 export function isDashboardTabId(value: string | null | undefined): value is DashboardTabId {

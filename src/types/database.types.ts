@@ -611,6 +611,132 @@ export type Database = {
         };
         Relationships: [];
       };
+      diet_blueprints: {
+        Row: {
+          id: string;
+          client_id: string;
+          forger_id: string;
+          titulo: string;
+          objetivo: string;
+          calorias_alvo: number;
+          proteinas_g: number;
+          carboidratos_g: number;
+          gorduras_g: number;
+          agua_litros: number;
+          refeicoes: Json;
+          observacoes: string | null;
+          activo: boolean;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          forger_id: string;
+          titulo: string;
+          objetivo?: string;
+          calorias_alvo: number;
+          proteinas_g: number;
+          carboidratos_g: number;
+          gorduras_g: number;
+          agua_litros?: number;
+          refeicoes?: Json;
+          observacoes?: string | null;
+          activo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          forger_id?: string;
+          titulo?: string;
+          objetivo?: string;
+          calorias_alvo?: number;
+          proteinas_g?: number;
+          carboidratos_g?: number;
+          gorduras_g?: number;
+          agua_litros?: number;
+          refeicoes?: Json;
+          observacoes?: string | null;
+          activo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [];
+      };
+      vip_dieta_semanal: {
+        Row: {
+          id: string;
+          client_id: string;
+          forger_id: string;
+          semana_ref: string;
+          dias: Json;
+          activo: boolean;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          forger_id: string;
+          semana_ref: string;
+          dias?: Json;
+          activo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          forger_id?: string;
+          semana_ref?: string;
+          dias?: Json;
+          activo?: boolean;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [];
+      };
+      vip_medidas_corporais: {
+        Row: {
+          id: string;
+          client_id: string;
+          forger_id: string;
+          peso_kg: number;
+          altura_cm: number;
+          perimetros: Json;
+          activo: boolean;
+          medido_em: string;
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          forger_id: string;
+          peso_kg: number;
+          altura_cm: number;
+          perimetros?: Json;
+          activo?: boolean;
+          medido_em?: string;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id?: string;
+          client_id?: string;
+          forger_id?: string;
+          peso_kg?: number;
+          altura_cm?: number;
+          perimetros?: Json;
+          activo?: boolean;
+          medido_em?: string;
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [];
+      };
       mecca_global_metrics: {
         Row: {
           id: string;
