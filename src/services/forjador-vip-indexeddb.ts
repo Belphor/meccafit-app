@@ -1,11 +1,13 @@
 import type { BodyMetricsDraft, WeeklyDietDraft } from "@/lib/forjador-vip-types";
+import type { ScientificMetricsEntry } from "@/lib/scientific-metrics-types";
 
 const DB_NAME = "meccafit_forjador_vip_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_DIET_DRAFTS = "diet_weekly_drafts";
 const STORE_DIET_HISTORY = "diet_weekly_history";
 const STORE_METRICS_DRAFTS = "body_metrics_drafts";
 const STORE_METRICS_HISTORY = "body_metrics_history";
+const STORE_SCIENTIFIC_HISTORY = "scientific_metrics_history";
 
 export type DietHistoryEntry = WeeklyDietDraft & {
   id: string;
@@ -52,6 +54,11 @@ function openDatabase(): Promise<IDBDatabase> {
         const history = db.createObjectStore(STORE_METRICS_HISTORY, { keyPath: "id" });
         history.createIndex("clientId", "clientId", { unique: false });
         history.createIndex("savedAt", "savedAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(STORE_SCIENTIFIC_HISTORY)) {
+        const scientific = db.createObjectStore(STORE_SCIENTIFIC_HISTORY, { keyPath: "id" });
+        scientific.createIndex("clientId", "clientId", { unique: false });
+        scientific.createIndex("measuredAt", "measuredAt", { unique: false });
       }
     };
 
@@ -231,4 +238,82 @@ export async function listBodyMetricsHistory(
 
 export function isForjadorVipIndexedDbAvailable(): boolean {
   return isBrowser();
+}
+
+export async function appendScientificMetricsEntry(
+  entry: ScientificMetricsEntry,
+): Promise<ScientificMetricsEntry> {
+  if (isBrowser()) {
+    await withStore<IDBValidKey>(
+      STORE_SCIENTIFIC_HISTORY,
+      "readwrite",
+      (store) => store.put(entry),
+    );
+  }
+  return entry;
+}
+
+export async function listScientificMetricsHistory(
+  clientId: string,
+  limit = 120,
+): Promise<ScientificMetricsEntry[]> {
+  if (!isBrowser()) return [];
+
+  const db = await openDatabase();
+  try {
+    return await new Promise<ScientificMetricsEntry[]>((resolve, reject) => {
+      const tx = db.transaction(STORE_SCIENTIFIC_HISTORY, "readonly");
+      const store = tx.objectStore(STORE_SCIENTIFIC_HISTORY);
+      const index = store.index("clientId");
+      const request = index.openCursor(IDBKeyRange.only(clientId), "prev");
+      const rows: ScientificMetricsEntry[] = [];
+
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor || rows.length >= limit) {
+          rows.sort((a, b) => b.measuredAt.localeCompare(a.measuredAt));
+          resolve(rows);
+          return;
+        }
+        rows.push(cursor.value as ScientificMetricsEntry);
+        cursor.continue();
+      };
+      request.onerror = () =>
+        reject(request.error ?? new Error("Falha ao listar histórico científico"));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export async function deleteScientificMetricsEntry(entryId: string): Promise<void> {
+  if (!isBrowser()) return;
+  await withStore<undefined>(STORE_SCIENTIFIC_HISTORY, "readwrite", (store) => store.delete(entryId));
+}
+
+export async function clearScientificMetricsHistory(clientId: string): Promise<void> {
+  if (!isBrowser()) return;
+
+  const entries = await listScientificMetricsHistory(clientId, 500);
+  const db = await openDatabase();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SCIENTIFIC_HISTORY, "readwrite");
+      const store = tx.objectStore(STORE_SCIENTIFIC_HISTORY);
+      for (const entry of entries) {
+        store.delete(entry.id);
+      }
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("Falha ao limpar histórico científico"));
+    });
+  } finally {
+    db.close();
+  }
+}
+
+export function resolveLatestScientificEntry(
+  entries: ScientificMetricsEntry[],
+): ScientificMetricsEntry | null {
+  if (entries.length === 0) return null;
+  return [...entries].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt))[0] ?? null;
 }

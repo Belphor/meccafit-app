@@ -8,7 +8,6 @@ import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dash
 import {
   createEmptyWeeklyDietDraft,
   parseWeeklyDietDays,
-  resolveIsoWeekRef,
   type WeeklyDietDraft,
 } from "@/lib/forjador-vip-types";
 import {
@@ -34,8 +33,7 @@ function WeeklyDietEditor({
   initialDraft: WeeklyDietDraft | null;
 }) {
   const [draft, setDraft] = useState<WeeklyDietDraft>(() =>
-    initialDraft ??
-      createEmptyWeeklyDietDraft(athlete.clientId, athlete.forgerId, semanaRef),
+    initialDraft ?? createEmptyWeeklyDietDraft(athlete.clientId, athlete.forgerId, semanaRef),
   );
   const [hydrated, setHydrated] = useState(false);
   const [savingLocal, setSavingLocal] = useState(false);
@@ -88,9 +86,7 @@ function WeeklyDietEditor({
   }, [athlete.clientId, athlete.forgerId, initialDraft, semanaRef]);
 
   const persistLocal = useCallback(async (nextDraft: WeeklyDietDraft) => {
-    if (!isForjadorVipIndexedDbAvailable()) {
-      return;
-    }
+    if (!isForjadorVipIndexedDbAvailable()) return;
     await saveWeeklyDietDraft(nextDraft);
     await appendWeeklyDietHistory(nextDraft);
   }, []);
@@ -101,9 +97,7 @@ function WeeklyDietEditor({
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !isForjadorVipIndexedDbAvailable()) {
-      return;
-    }
+    if (!hydrated || !isForjadorVipIndexedDbAvailable()) return;
 
     const timer = window.setTimeout(() => {
       void saveWeeklyDietDraft({
@@ -130,9 +124,9 @@ function WeeklyDietEditor({
       };
       setDraft(stamped);
       await persistLocal(stamped);
-      setFeedback({ kind: "ok", message: "Rascunho guardado localmente (IndexedDB)." });
+      setFeedback({ kind: "ok", message: "Rascunho guardado no dispositivo." });
     } catch {
-      setFeedback({ kind: "error", message: "Falha ao guardar no dispositivo." });
+      setFeedback({ kind: "error", message: "Falha ao guardar localmente." });
     } finally {
       setSavingLocal(false);
     }
@@ -162,12 +156,9 @@ function WeeklyDietEditor({
       };
       setDraft(synced);
       await persistLocal(synced);
-      setFeedback({
-        kind: "ok",
-        message: `Dieta semanal publicada para ${athlete.displayName}.`,
-      });
+      setFeedback({ kind: "ok", message: `Dieta publicada para ${athlete.displayName}.` });
     } catch {
-      setFeedback({ kind: "error", message: "Falha ao sincronizar com o núcleo." });
+      setFeedback({ kind: "error", message: "Falha ao publicar dieta." });
     } finally {
       setSyncing(false);
     }
@@ -190,8 +181,8 @@ export function DietaPageClient({ payload, initialByClient, semanaRef }: DietaPa
   return (
     <ForjadorVipWorkspace
       payload={payload}
-      title="Dieta VIP"
-      description="Tabela Segunda–Domingo com registo local instantâneo. Sincronize manualmente quando quiser publicar o estado activo."
+      title="Dieta semanal VIP"
+      description="Planeamento Seg–Dom para clientes VIP. Guarde no dispositivo e publique quando quiser."
       activeRoute="/forjador/dieta"
     >
       {({ athlete }) =>

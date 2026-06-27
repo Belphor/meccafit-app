@@ -13,9 +13,28 @@ export type ForjaBondedAthlete = {
   isGlobalListing?: boolean;
   /** Vínculo activo em forger_client_bonds (requerido apenas para dieta VIP). */
   hasVipBond?: boolean;
+  /** Monitoramento global — VTC agregado (RPC). */
+  vtcToday?: number;
+  vtcAvg7d?: number;
+  vtc30d?: number;
 };
 
-export type ForjaWorkspaceTab = "comando" | "planilha" | "planilha_dieta" | "antifraude";
+export type ForjaVtcFeedEntry = {
+  clientId: string;
+  displayName: string;
+  forgerName: string;
+  phaseTier: number;
+  statusAltar: string;
+  vtcToday: number;
+  vtcAvg7d: number;
+  vtc30d: number;
+  updatedAt: string;
+  isOwnClient: boolean;
+  hasVipBond?: boolean;
+  alertSpike: boolean;
+};
+
+export type ForjaWorkspaceTab = "comando" | "planilha" | "planilha_treino" | "planilha_dieta";
 
 export type ForjaOperatorProfile = {
   displayName: string;

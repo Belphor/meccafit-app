@@ -31,6 +31,10 @@ type ForjaAntiFraudPanelProps = {
   athlete: ForjaBondedAthlete | null;
   isSovereign: boolean;
   scopeClientId?: string | null;
+  /** Quando true, mostra alertas de todos os clientes se nenhum estiver selecionado. */
+  showGlobalWhenEmpty?: boolean;
+  onSelectClient?: (clientId: string) => void;
+  onActionComplete?: () => void;
 };
 
 type PanelPhase = "idle" | "loading" | "acting" | "error";
@@ -50,6 +54,9 @@ function ForjaAntiFraudPanelComponent({
   athlete,
   isSovereign,
   scopeClientId,
+  showGlobalWhenEmpty = false,
+  onSelectClient,
+  onActionComplete,
 }: ForjaAntiFraudPanelProps) {
   const [signals, setSignals] = useState<ForjaFraudSignal[]>([]);
   const [phase, setPhase] = useState<PanelPhase>("idle");
@@ -61,7 +68,9 @@ function ForjaAntiFraudPanelComponent({
     setPhase("loading");
     setFeedback(null);
 
-    const result = await fetchForjaFraudSignals(scopeClientId ?? athlete?.clientId ?? null);
+    const clientScope = scopeClientId ?? athlete?.clientId ?? null;
+    const useGlobal = showGlobalWhenEmpty && !clientScope;
+    const result = await fetchForjaFraudSignals(useGlobal ? null : clientScope);
 
     if (!result.ok) {
       setPhase("error");
@@ -72,7 +81,7 @@ function ForjaAntiFraudPanelComponent({
 
     setSignals(result.signals);
     setPhase("idle");
-  }, [athlete?.clientId, scopeClientId]);
+  }, [athlete?.clientId, scopeClientId, showGlobalWhenEmpty]);
 
   useEffect(() => {
     void loadSignals();
@@ -102,8 +111,9 @@ function ForjaAntiFraudPanelComponent({
       setPhase("idle");
       setFeedback(FORJA_COPY.monitor.actionSuccess);
       await loadSignals();
+      onActionComplete?.();
     },
-    [athlete, isSovereign, loadSignals],
+    [athlete, isSovereign, loadSignals, onActionComplete],
   );
 
   const handlePurify = useCallback(() => {
@@ -147,7 +157,19 @@ function ForjaAntiFraudPanelComponent({
     );
   }, [athlete, phaseTierDraft, runSovereignAction, vtcDeltaDraft]);
 
+  const handleSimulateVtc = useCallback(() => {
+    if (!athlete) return;
+    void runSovereignAction(() =>
+      sovereignModifyStatistics(athlete.clientId, { vtc_today_delta: 25 }),
+    );
+  }, [athlete, runSovereignAction]);
+
   const isBusy = phase === "loading" || phase === "acting";
+  const isGlobalView = showGlobalWhenEmpty && !athlete && !scopeClientId;
+  const panelTitle = isGlobalView
+    ? FORJA_COPY.monitor.globalAlerts
+    : (athlete?.displayName ?? "—");
+  const emptyLabel = isGlobalView ? FORJA_COPY.monitor.globalEmpty : FORJA_COPY.monitor.empty;
 
   return (
     <section aria-label="Monitoramento ARGOS">
@@ -155,8 +177,10 @@ function ForjaAntiFraudPanelComponent({
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800/80 pb-4">
           <div>
             <p className={FORJA_SECTION_CHIP}>{FORJA_COPY.monitor.title}</p>
-            <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>Alertas de integridade</h2>
-            <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.monitor.hint}</p>
+            <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{panelTitle}</h2>
+            <p className={`${FORJA_META} mt-1`}>
+              {isGlobalView ? FORJA_COPY.monitor.globalHint : FORJA_COPY.monitor.hint}
+            </p>
           </div>
           <button
             type="button"
@@ -171,13 +195,32 @@ function ForjaAntiFraudPanelComponent({
         <div className="mt-4 space-y-2">
           {signals.length === 0 ? (
             <p className={`${FORJA_META} rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center`}>
-              {phase === "loading" ? FORJA_COPY.monitor.loading : FORJA_COPY.monitor.empty}
+              {phase === "loading" ? FORJA_COPY.monitor.loading : emptyLabel}
             </p>
           ) : (
             signals.map((signal) => (
               <article
                 key={`${signal.code}-${signal.atleta_id}`}
-                className={`rounded-xl border px-4 py-3 text-sm ${severityClass(signal.severity)}`}
+                className={[
+                  "rounded-xl border px-4 py-3 text-sm",
+                  severityClass(signal.severity),
+                  onSelectClient ? "cursor-pointer transition hover:brightness-110" : "",
+                ].join(" ")}
+                onClick={
+                  onSelectClient ? () => onSelectClient(signal.atleta_id) : undefined
+                }
+                onKeyDown={
+                  onSelectClient
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onSelectClient(signal.atleta_id);
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={onSelectClient ? 0 : undefined}
+                role={onSelectClient ? "button" : undefined}
               >
                 <p className="text-xs font-medium uppercase tracking-wide opacity-80">
                   {SEVERITY_LABELS[signal.severity]} · {signal.code.replace(/_/g, " ")}
@@ -248,6 +291,17 @@ function ForjaAntiFraudPanelComponent({
             >
               {FORJA_COPY.monitor.modifyStats}
             </button>
+            {process.env.NODE_ENV === "development" || isSovereign ? (
+              <button
+                type="button"
+                className={FORJA_GHOST_BUTTON}
+                disabled={isBusy}
+                onClick={handleSimulateVtc}
+                title={FORJA_COPY.monitor.vtcSimulateHint}
+              >
+                {FORJA_COPY.monitor.vtcSimulate}
+              </button>
+            ) : null}
             <button type="button" className={FORJA_GHOST_BUTTON} disabled={isBusy} onClick={handleReactivate}>
               {FORJA_COPY.monitor.reactivate}
             </button>

@@ -233,3 +233,88 @@ export async function syncForjaPersonalPrescription(
     return { ok: false, code: "NETWORK", message: "Falha de rede ao forjar prescrição." };
   }
 }
+
+export type TreinoPlanilhaBatchResult =
+  | { ok: true; upserted: number }
+  | { ok: false; code: "SESSION" | "VALIDATION" | "RLS" | "NETWORK"; message: string };
+
+export async function batchSyncTreinoPrescriptionsFromPlanilha(
+  athlete: ForjaBondedAthlete,
+  rows: Array<{
+    grupoMuscular: ClientTrainingMuscleGroup;
+    exercicio: string;
+    peso: number;
+    repeticoes: number;
+    series: number;
+    descansoSegundos: number | null;
+  }>,
+  descansoPadraoSeg: number | null,
+): Promise<TreinoPlanilhaBatchResult> {
+  if (rows.length === 0) {
+    return { ok: false, code: "VALIDATION", message: "Planilha sem linhas válidas." };
+  }
+
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    const operatorId = session?.user?.id?.trim();
+    if (sessionError || !operatorId) {
+      return { ok: false, code: "SESSION", message: "Sessão inválida. Faça login novamente." };
+    }
+
+    if (descansoPadraoSeg !== null) {
+      const configError = await upsertTreinoConfig(athlete, operatorId, descansoPadraoSeg);
+      if (configError && !configError.ok) {
+        return { ok: false, code: configError.code, message: configError.message };
+      }
+    }
+
+    let upserted = 0;
+
+    for (const row of rows) {
+      const exercicioId = slugifyExerciseId(row.exercicio);
+
+      const { data: existing } = await supabase
+        .from("prescricoes_treino_forjador")
+        .select("id")
+        .eq("atleta_id", athlete.clientId)
+        .eq("grupo_muscular", row.grupoMuscular)
+        .eq("exercicio_id", exercicioId)
+        .maybeSingle();
+
+      const payload = {
+        atleta_id: athlete.clientId,
+        forjador_id: operatorId,
+        grupo_muscular: row.grupoMuscular,
+        exercicio_id: exercicioId,
+        series_alvo: row.series,
+        repeticoes_alvo: row.repeticoes,
+        peso_prescrito: row.peso,
+        descanso_segundos: row.descansoSegundos,
+        observacoes: `Sheets · ${row.exercicio.trim()}`,
+      };
+
+      const { error } = existing?.id
+        ? await supabase.from("prescricoes_treino_forjador").update(payload).eq("id", existing.id)
+        : await supabase.from("prescricoes_treino_forjador").insert(payload);
+
+      if (error) {
+        const rlsHint = error.message?.toLowerCase().includes("row-level security");
+        return {
+          ok: false,
+          code: rlsHint ? "RLS" : "NETWORK",
+          message: error.message,
+        };
+      }
+
+      upserted += 1;
+    }
+
+    return { ok: true, upserted };
+  } catch {
+    return { ok: false, code: "NETWORK", message: "Falha de rede ao importar planilha de treino." };
+  }
+}

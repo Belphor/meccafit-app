@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { ForjaAthleteCard } from "@/app/dashboard/forja/ForjaAthleteCard";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
+import { ForjaAthleteSidebar } from "@/components/forjador/forja-athlete-sidebar";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import {
@@ -15,27 +15,22 @@ import {
   FORJA_PAGE_TITLE,
   FORJA_SECTION_CHIP,
   FORJA_SHELL,
-  FORJA_SIDEBAR_SCROLL,
 } from "@/lib/forja-config";
-import { resolveForjaPanelSubtitle, resolveForjaRoleLabel } from "@/lib/forja-copy";
+import { resolveForjaRoleLabel } from "@/lib/forja-copy";
+import { filterVipAthletes } from "@/lib/forja-athlete-lists";
 import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dashboard";
+import { FORJADOR_WORKSPACE_NAV, type ForjadorNavRoute } from "@/lib/forjador-vip-nav";
 
 type ForjadorVipWorkspaceProps = {
   payload: ForjaDashboardPayload;
   title: string;
   description: string;
-  activeRoute: "/forjador/dieta" | "/forjador/medidas";
+  activeRoute: ForjadorNavRoute;
   children: (context: {
     athlete: ForjaBondedAthlete | null;
     disabled: boolean;
   }) => React.ReactNode;
 };
-
-const NAV_ITEMS = [
-  { href: "/forjador/dieta" as const, label: "Dieta semanal" },
-  { href: "/forjador/medidas" as const, label: "Medidas" },
-  { href: "/dashboard/forja", label: "Painel Forja" },
-];
 
 export function ForjadorVipWorkspace({
   payload,
@@ -44,12 +39,10 @@ export function ForjadorVipWorkspace({
   activeRoute,
   children,
 }: ForjadorVipWorkspaceProps) {
-  const athletes = useMemo(() => {
-    if (payload.operator.isSovereign) {
-      return payload.athletes;
-    }
-    return payload.athletes.filter((athlete) => athlete.hasVipBond);
-  }, [payload.athletes, payload.operator.isSovereign]);
+  const athletes = useMemo(
+    () => filterVipAthletes(payload.athletes, payload.operator.userId, payload.operator.isSovereign),
+    [payload.athletes, payload.operator.isSovereign, payload.operator.userId],
+  );
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(
     athletes[0]?.clientId ?? null,
@@ -72,7 +65,9 @@ export function ForjadorVipWorkspace({
     setSelectedClientId(clientId);
   }, []);
 
-  const workspaceDisabled = !selectedAthlete?.hasVipBond;
+  const emptyMessage = payload.operator.isSovereign
+    ? "Nenhum cliente VIP na academia."
+    : "Nenhum cliente VIP no seu vínculo.";
 
   return (
     <main className={FORJA_SHELL}>
@@ -85,19 +80,13 @@ export function ForjadorVipWorkspace({
               VIP · {resolveForjaRoleLabel(payload.operator.role)}
             </p>
             <h1 className={`${FORJA_PAGE_TITLE} mt-1`}>{title}</h1>
-            <p className={`${FORJA_META} mt-1.5`}>
-              {resolveForjaPanelSubtitle(payload.operator, athletes.length)}
-            </p>
-            <p className={`${FORJA_META} mt-1 max-w-2xl`}>{description}</p>
+            <p className={`${FORJA_META} mt-1.5 max-w-2xl`}>{description}</p>
           </div>
           <ForjaSignOutButton className="shrink-0" />
         </header>
 
-        <nav
-          aria-label="Navegação VIP"
-          className="mt-4 flex flex-wrap gap-2"
-        >
-          {NAV_ITEMS.map((item) => {
+        <nav aria-label="Navegação forjador" className="mt-4 flex flex-wrap gap-2">
+          {FORJADOR_WORKSPACE_NAV.map((item) => {
             const isActive = item.href === activeRoute;
             return (
               <Link
@@ -117,54 +106,32 @@ export function ForjadorVipWorkspace({
         </nav>
 
         <div className={`${FORJA_LAYOUT} mt-6`}>
-          <aside aria-label="Lista de atletas VIP">
+          <aside aria-label="Clientes VIP">
             <div className="mb-3 flex items-center justify-between gap-2">
               <p className={FORJA_SECTION_CHIP}>
-                {payload.operator.isSovereign ? "Atletas da academia" : "Meus clientes VIP"}
+                {payload.operator.isSovereign ? "Clientes VIP" : "Meus VIP"}
               </p>
-              <span className="text-[10px] text-zinc-600">{athletes.length}</span>
+              <span className="text-xs tabular-nums text-zinc-600">{athletes.length}</span>
             </div>
 
-            {athletes.length === 0 ? (
-              <div className={FORJA_EMPTY_STATE}>
-                <p className={FORJA_META}>
-                  {payload.operator.isSovereign
-                    ? "Nenhum cliente cadastrado na academia."
-                    : "Nenhum cliente VIP vinculado ao seu perfil."}
-                </p>
-              </div>
-            ) : (
-              <div className={FORJA_SIDEBAR_SCROLL}>
-                {athletes.map((athlete) => (
-                  <ForjaAthleteCard
-                    key={athlete.clientId}
-                    athlete={athlete}
-                    isSelected={selectedClientId === athlete.clientId}
-                    onSelect={handleSelectAthlete}
-                  />
-                ))}
-              </div>
-            )}
+            <ForjaAthleteSidebar
+              athletes={athletes}
+              selectedClientId={selectedClientId}
+              onSelect={handleSelectAthlete}
+              emptyMessage={emptyMessage}
+              splitByVip={false}
+              vipOnly
+            />
           </aside>
 
           <div className={FORJA_COMMAND_PANEL}>
             {!selectedAthlete ? (
               <div className={FORJA_EMPTY_STATE}>
-                <p className={FORJA_SECTION_CHIP}>Nenhum atleta seleccionado</p>
-                <p className={`${FORJA_META} mt-3 max-w-sm`}>
-                  Selecione um atleta na lista para editar dados VIP.
-                </p>
-              </div>
-            ) : !selectedAthlete.hasVipBond ? (
-              <div className={FORJA_EMPTY_STATE}>
-                <p className={FORJA_SECTION_CHIP}>Sem vínculo VIP</p>
-                <p className={`${FORJA_META} mt-3 max-w-sm`}>
-                  {selectedAthlete.displayName} não possui bond activo em forger_client_bonds.
-                  Crie o vínculo antes de publicar dieta ou medidas.
-                </p>
+                <p className={FORJA_SECTION_CHIP}>Selecione um cliente</p>
+                <p className={`${FORJA_META} mt-3 max-w-sm`}>{emptyMessage}</p>
               </div>
             ) : (
-              children({ athlete: selectedAthlete, disabled: workspaceDisabled })
+              children({ athlete: selectedAthlete, disabled: false })
             )}
           </div>
         </div>

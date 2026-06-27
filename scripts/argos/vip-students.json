@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T21:55:34.486Z",
+  "generatedAt": "2026-06-27T02:42:00.132Z",
   "password": "vip123",
   "students": {
     "vip_forjador_linhagem": {
@@ -7,14 +7,14 @@
       "password": "vip123",
       "userId": "91444d5e-14ae-4c6f-9c4f-7825ef9b806f",
       "forgerId": "322ad4af-20b7-4035-8e4d-7ebdbc889883",
-      "bondId": "7971b573-dd0d-4ffa-9607-3df6026af13d"
+      "bondId": "4e722614-7ad5-43f0-9f22-d77fbe33c248"
     },
     "vip_forjador_soberano": {
       "email": "vip-soberano@meccafit.com",
       "password": "vip123",
       "userId": "62e91913-0afd-4934-a2d7-087129284a46",
       "forgerId": "d3fe801c-47a6-4b87-849c-6af49e8eb541",
-      "bondId": "cb8d6311-86bb-4e91-b989-864f72fef41c"
+      "bondId": "2e6aa62a-3d5a-4c4c-aedb-236868a3f358"
     }
   }
 }

@@ -1,21 +1,19 @@
 import { redirect } from "next/navigation";
 import {
-  mapServerBodyMetricsRow,
+  mapServerScientificSnapshot,
   MedidasPageClient,
 } from "@/app/(authenticated)/forjador/medidas/MedidasPageClient";
-import {
-  filterAthletesForOperator,
-  loadBondedAthletes,
-} from "@/lib/forja-athletes.server";
+import { loadBondedAthletes } from "@/lib/forja-athletes.server";
 import type { ForjaDashboardPayload } from "@/lib/forja-dashboard";
-import type { BodyMetricsDraft } from "@/lib/forjador-vip-types";
+import { resolveMedidasAthletes } from "@/lib/medidas-access";
 import { isForjadorPanelRole, isForjadorSovereign } from "@/lib/internal-routes";
+import type { ScientificMetricsEntry } from "@/lib/scientific-metrics-types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-async function loadActiveBodyMetrics(
+async function loadActiveScientificSnapshots(
   clientIds: string[],
-): Promise<Record<string, BodyMetricsDraft | null>> {
-  const map: Record<string, BodyMetricsDraft | null> = {};
+): Promise<Record<string, ScientificMetricsEntry | null>> {
+  const map: Record<string, ScientificMetricsEntry | null> = {};
   for (const clientId of clientIds) {
     map[clientId] = null;
   }
@@ -36,7 +34,7 @@ async function loadActiveBodyMetrics(
   }
 
   for (const row of data) {
-    map[row.client_id] = mapServerBodyMetricsRow(row);
+    map[row.client_id] = mapServerScientificSnapshot(row);
   }
 
   return map;
@@ -63,13 +61,11 @@ export default async function ForjadorMedidasPage() {
   }
 
   const sovereign = isForjadorSovereign(profile.role);
-  const athletes = filterAthletesForOperator(
-    await loadBondedAthletes(user.id, sovereign),
-    sovereign,
-  );
+  const allAthletes = await loadBondedAthletes(user.id, sovereign);
+  const athletes = resolveMedidasAthletes(allAthletes, user.id, sovereign);
 
   const clientIds = athletes.map((athlete) => athlete.clientId);
-  const initialByClient = await loadActiveBodyMetrics(clientIds);
+  const initialSnapshotByClient = await loadActiveScientificSnapshots(clientIds);
 
   const payload: ForjaDashboardPayload = {
     operator: {
@@ -82,5 +78,7 @@ export default async function ForjadorMedidasPage() {
     athletes,
   };
 
-  return <MedidasPageClient payload={payload} initialByClient={initialByClient} />;
+  return (
+    <MedidasPageClient payload={payload} initialSnapshotByClient={initialSnapshotByClient} />
+  );
 }

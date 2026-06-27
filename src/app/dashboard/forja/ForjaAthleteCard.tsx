@@ -56,6 +56,9 @@ function ForjaAthleteCardComponent({ athlete, isSelected, onSelect }: ForjaAthle
           <span className="rounded bg-zinc-900 px-1.5 py-0.5 text-zinc-500">Comum</span>
         )}
         {athlete.forgerName ? <span>Personal · {athlete.forgerName}</span> : null}
+        {typeof athlete.vtcToday === "number" && athlete.vtcToday > 0 ? (
+          <span className="tabular-nums text-zinc-500">VTC {Math.round(athlete.vtcToday)} kg</span>
+        ) : null}
       </div>
       {athlete.statusAltar && athlete.statusAltar.toLowerCase() !== "ativo" ? (
         <p className="mt-2 text-[10px] font-medium text-red-400/90">{athlete.statusAltar}</p>

@@ -1,10 +1,15 @@
 import { supabase } from "@/lib/supabase";
+import type { ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
 import type { Database } from "@/types/database.types";
 
 type ForjaRpc = Database["public"]["Functions"] & {
   argos_forja_fraud_signals: {
     Args: { p_cliente_id?: string | null };
     Returns: { signals: ForjaFraudSignal[]; count: number };
+  };
+  argos_forja_vtc_feed: {
+    Args: { p_limit?: number | null };
+    Returns: ForjaVtcFeedEntry[];
   };
   argos_batch_upsert_planilhas_forjador: {
     Args: { p_atleta_id: string; p_rows: unknown };
@@ -80,6 +85,24 @@ export async function fetchForjaFraudSignals(
 
   const payload = data as { signals?: ForjaFraudSignal[] } | null;
   return { ok: true, signals: payload?.signals ?? [] };
+}
+
+export async function fetchForjaVtcFeed(
+  limit = 64,
+): Promise<{ ok: true; entries: ForjaVtcFeedEntry[] } | { ok: false; message: string }> {
+  const session = await requireSession();
+  if (!session.ok) return session;
+
+  const { data, error } = await forjaSupabase.rpc("argos_forja_vtc_feed", {
+    p_limit: limit,
+  });
+
+  if (error) {
+    return { ok: false, message: rpcErrorMessage(error) };
+  }
+
+  const entries = (data as ForjaVtcFeedEntry[] | null) ?? [];
+  return { ok: true, entries: Array.isArray(entries) ? entries : [] };
 }
 
 export async function batchUpsertPlanilhasForjador(

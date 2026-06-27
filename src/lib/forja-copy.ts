@@ -15,11 +15,11 @@ export function resolveForjaPanelTitle(operator: ForjaOperatorProfile): string {
 }
 
 export function resolveForjaPanelSubtitle(operator: ForjaOperatorProfile, athleteCount: number): string {
-  const countLabel = `${athleteCount} atleta${athleteCount === 1 ? "" : "s"}`;
+  const countLabel = `${athleteCount} cliente${athleteCount === 1 ? "" : "s"}`;
   if (operator.isSovereign) {
-    return `${operator.displayName} · ${countLabel} · gestão de toda a academia`;
+    return `${operator.displayName} · ${countLabel}`;
   }
-  return `${operator.displayName} · ${countLabel} · treino para todos · dieta exclusiva VIP`;
+  return `${operator.displayName} · ${countLabel}`;
 }
 
 export const FORJA_WORKSPACE_TABS: Array<{
@@ -31,46 +31,46 @@ export const FORJA_WORKSPACE_TABS: Array<{
   {
     id: "comando",
     label: "Prescrição",
-    description: "Monte exercícios, carga e cronômetro de descanso para qualquer atleta.",
+    description: "Exercício, carga, séries e descanso.",
   },
   {
     id: "planilha",
     label: "Rotina semanal",
-    description: "Importe Seg–Sáb via Google Sheets (grupos musculares por dia).",
+    description: "Importar rotina Seg–Sáb via CSV/XLSX.",
+  },
+  {
+    id: "planilha_treino",
+    label: "Prescrição Sheets",
+    description: "Importar prescrições via CSV/XLSX.",
   },
   {
     id: "planilha_dieta",
     label: "Dieta VIP",
-    description: "Importe plano nutricional — exclusivo clientes com vínculo VIP.",
+    description: "Plano nutricional — só clientes VIP.",
     vipOnly: true,
-  },
-  {
-    id: "antifraude",
-    label: "Monitoramento",
-    description: "Alertas ARGOS e ações administrativas (soberano).",
   },
 ];
 
 export const FORJA_COPY = {
-  sidebarSovereign: "Todos os atletas",
-  sidebarPersonal: "Meus atletas",
-  emptyAthletes: "Nenhum atleta vinculado ao seu perfil (forjador_id).",
-  emptyAthletesSovereign: "Nenhum cliente cadastrado na academia.",
-  selectAthlete: "Selecione um atleta na lista ao lado para continuar.",
+  sidebarSovereign: "Todos os clientes",
+  sidebarPersonal: "Meus clientes",
+  emptyAthletes: "Nenhum cliente vinculado ao seu perfil.",
+  emptyAthletesSovereign: "Nenhum cliente cadastrado.",
+  selectAthlete: "Selecione um cliente na lista.",
   signOut: "Sair",
   athleteVipBadge: "VIP",
   athleteStandardBadge: "Comum",
   prescription: {
     title: "Prescrição de treino",
-    hint: "Disponível para todos os atletas. Aparece na aba Treino com cronômetro de descanso configurável.",
+    hint: "Aparece na aba Treino do cliente com cronômetro de descanso.",
     exercise: "Exercício",
     muscleGroup: "Grupo muscular",
     weight: "Peso (kg)",
     reps: "Repetições",
     sets: "Séries",
     restExercise: "Descanso deste exercício (s)",
-    restDefault: "Descanso padrão do atleta (s)",
-    restHint: "O padrão alimenta o cronômetro quando o exercício não tem descanso próprio (15–600 s).",
+    restDefault: "Descanso padrão (s)",
+    restHint: "Usado quando o exercício não tem descanso próprio (15–600 s).",
     submit: "Salvar prescrição",
     submitting: "Salvando…",
     success: (name: string, series: string, reps: string, weight: string, exercise: string) =>
@@ -78,11 +78,9 @@ export const FORJA_COPY = {
   },
   diet: {
     title: "Plano nutricional VIP",
-    hint: "Exclusivo para atletas com vínculo VIP. Publica na aba Dieta do dashboard.",
-    lockedHint:
-      "Este atleta não possui vínculo VIP. Crie o bond em forger_client_bonds para liberar dieta.",
-    noVipBond:
-      "Vínculo VIP obrigatório. Apenas a dieta é exclusiva VIP — treino e rotina estão liberados para todos.",
+    hint: "Publica na aba Dieta do cliente.",
+    lockedHint: "Cliente sem vínculo VIP — crie o bond antes de publicar dieta.",
+    noVipBond: "Vínculo VIP necessário para dieta. Treino e rotina funcionam para todos.",
     planTitle: "Título do plano",
     objective: "Objetivo",
     calories: "Calorias alvo (kcal)",
@@ -97,53 +95,105 @@ export const FORJA_COPY = {
     submit: "Publicar dieta VIP",
     submitting: "Publicando…",
     success: (name: string, titulo: string) =>
-      `Dieta «${titulo}» publicada para ${name}. Visível na aba Dieta.`,
+      `Dieta «${titulo}» publicada para ${name}.`,
   },
   planilha: {
-    title: "Rotina semanal (Google Sheets)",
-    hint: "Exporte a folha como CSV ou XLSX. Processamento local — nada vai para servidores externos.",
+    title: "Rotina semanal",
+    hint: "Exporte a folha como CSV ou XLSX.",
     drop: "Arraste um ficheiro .csv ou .xlsx",
-    dropBusy: "A processar ficheiro…",
-    columns: "Colunas: dia_semana (1–6) · grupo_muscular (PEITO, COSTAS…) · ordem (opcional)",
+    dropBusy: "A processar…",
+    columns: "Colunas: dia_semana (1–6) · grupo_muscular · ordem (opcional)",
     chooseFile: "Escolher ficheiro",
-    clearPreview: "Limpar pré-visualização",
-    selectAthlete: "Selecione um atleta antes de importar.",
+    clearPreview: "Limpar",
+    selectAthlete: "Selecione um cliente antes de importar.",
     success: (name: string, rows: number) =>
-      `Rotina aplicada a ${name} · ${rows} registo(s) na planilha semanal.`,
+      `Rotina aplicada a ${name} · ${rows} registo(s).`,
+  },
+  planilhaTreino: {
+    title: "Prescrição (Sheets)",
+    hint: "Exporte a folha como CSV ou XLSX.",
+    drop: "Arraste um ficheiro .csv ou .xlsx",
+    dropBusy: "A processar…",
+    columns:
+      "Colunas: grupo_muscular · exercicio · peso · repeticoes · series · descanso_segundos · descanso_padrao_seg",
+    chooseFile: "Escolher ficheiro",
+    clearPreview: "Limpar",
+    selectAthlete: "Selecione um cliente antes de importar.",
+    success: (name: string, rows: number) =>
+      `Prescrição importada para ${name} · ${rows} exercício(s).`,
   },
   planilhaDieta: {
-    title: "Dieta VIP (Google Sheets)",
-    hint: "Exclusivo VIP. Exporte a folha do Google Sheets como CSV ou XLSX.",
-    vipRequired: "Selecione um atleta VIP para importar dieta.",
+    title: "Dieta VIP (Sheets)",
+    hint: "Só clientes VIP. Exporte como CSV ou XLSX.",
+    vipRequired: "Selecione um cliente VIP.",
     drop: "Arraste um ficheiro .csv ou .xlsx",
-    dropBusy: "A processar planilha de dieta…",
+    dropBusy: "A processar…",
     columns:
       "Colunas: titulo · objetivo · calorias_alvo · proteinas_alvo · carboidratos_alvo · gorduras_alvo · agua_litros · observacoes · refeicao · horario · alimento · quantidade · calorias · proteinas_g",
     chooseFile: "Escolher ficheiro",
-    clearPreview: "Limpar pré-visualização",
-    selectAthlete: "Selecione um atleta antes de importar.",
+    clearPreview: "Limpar",
+    selectAthlete: "Selecione um cliente antes de importar.",
     success: (name: string, titulo: string, meals: number) =>
-      `Dieta «${titulo}» aplicada a ${name} · ${meals} refeição(ões) publicada(s).`,
+      `Dieta «${titulo}» aplicada a ${name} · ${meals} refeição(ões).`,
   },
+  searchPlaceholder: "Pesquisar por nome…",
+  searchEmpty: "Nenhum cliente corresponde à pesquisa.",
   monitor: {
-    title: "Monitoramento ARGOS",
-    hint: "Sinais automáticos de volume, conta suspensa e inconsistências de fase.",
+    title: "Monitoramento",
+    hint: "Visão global de VTC de todos os clientes — controle comunitário entre forjadores.",
+    globalHint:
+      "Todos os forjadores consultam estatísticas agregadas. Ações disciplinares ficam com o Forjador Soberano.",
+    filterLabel: "Filtrar clientes",
+    segments: {
+      todos: "Todos",
+      vip: "VIP",
+      comum: "Comuns",
+      meus: "Meus",
+    },
+    statsTitle: "Resumo do monitoramento",
+    statsHint: "Picos de VTC acima de 4× a média dos últimos 7 dias são destacados em amarelo.",
+    statsTotal: "Clientes",
+    statsVip: "VIP",
+    statsComum: "Comuns",
+    statsVtcToday: "VTC hoje",
+    statsSpikes: "Picos",
+    clearSelection: "Limpar seleção",
+    clientDetail: "Detalhe do cliente",
+    vtcFeedTitle: "Atualizações VTC",
+    vtcFeedSubtitle: "Controle geral de volume",
+    vtcFeedHint:
+      "Volume térmico de hoje, ordenado por atividade. Clique em uma linha para ver alertas do cliente.",
+    vtcFeedEmpty: "Nenhum cliente cadastrado ou migration pendente.",
+    vtcColClient: "Cliente",
+    vtcColType: "Tipo",
+    vtcColForjador: "Personal",
+    vtcColToday: "VTC hoje",
+    vtcColAvg7d: "Média 7d",
+    vtcCol30d: "VTC 30d",
+    vtcColPhase: "Fase",
+    vtcSpike: "Pico",
+    vtcOwnClient: "Seu cliente",
+    vtcOtherClient: "Outro personal",
+    globalAlerts: "Alertas globais",
+    globalEmpty: "Nenhum alerta detectado na plataforma.",
     refresh: "Atualizar",
-    loading: "A analisar registos…",
-    empty: "Nenhum alerta no escopo seleccionado.",
-    readOnly: "Modo consulta — alterações administrativas reservadas ao Forjador Soberano.",
-    tribunal: "Acções administrativas",
-    tribunalHint: "Alterações irreversíveis ficam registadas no audit log.",
-    phase: "Fase do atleta (1–5)",
-    vtcToday: "VTC de hoje (+ kg)",
+    loading: "Analisando…",
+    empty: "Nenhum alerta para este cliente.",
+    readOnly: "Consulta apenas — ações reservadas ao Forjador Soberano.",
+    tribunal: "Ações administrativas",
+    tribunalHint: "Alterações ficam registradas no audit log ARGOS.",
+    phase: "Fase (1–5)",
+    vtcToday: "VTC hoje (+ kg)",
+    vtcSimulate: "Simular VTC (+25 kg)",
+    vtcSimulateHint: "Registro de teste via núcleo ARGOS — sem custo adicional.",
     modifyStats: "Aplicar alterações",
-    reactivate: "Reactivar conta",
+    reactivate: "Reativar conta",
     deactivate: "Suspender conta",
-    purify: "Reset mensal (Cinzas)",
+    purify: "Reset mensal",
     purifyConfirm: (name: string) =>
-      `Confirmar reset mensal de ${name}? VTC/VRA do mês serão zerados e a fase volta a Cinzas.`,
+      `Reset mensal de ${name}? VTC do mês será zerado e fase volta a Cinzas.`,
     deactivateConfirm: (name: string) => `Suspender o acesso de ${name}?`,
-    actionSuccess: "Operação concluída e registada no audit log.",
-    invalidPhase: "Informe uma fase entre 1 e 5.",
+    actionSuccess: "Operação concluída.",
+    invalidPhase: "Fase deve ser entre 1 e 5.",
   },
 } as const;

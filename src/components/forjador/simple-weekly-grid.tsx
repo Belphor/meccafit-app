@@ -83,7 +83,7 @@ export function SimpleWeeklyGrid({
             disabled={disabled || syncing}
             className={`${FORJA_PRIMARY_BUTTON} w-full sm:w-auto`}
           >
-            {syncing ? "A sincronizar…" : "Salvar no núcleo"}
+            {syncing ? "A publicar…" : "Publicar"}
           </button>
         </div>
       </div>

@@ -3,10 +3,8 @@ import {
   DietaPageClient,
   mapServerWeeklyDietRow,
 } from "@/app/(authenticated)/forjador/dieta/DietaPageClient";
-import {
-  filterAthletesForOperator,
-  loadBondedAthletes,
-} from "@/lib/forja-athletes.server";
+import { loadBondedAthletes } from "@/lib/forja-athletes.server";
+import { filterVipAthletes } from "@/lib/forja-athlete-lists";
 import type { ForjaDashboardPayload } from "@/lib/forja-dashboard";
 import { resolveIsoWeekRef, type WeeklyDietDraft } from "@/lib/forjador-vip-types";
 import { isForjadorPanelRole, isForjadorSovereign } from "@/lib/internal-routes";
@@ -63,8 +61,9 @@ export default async function ForjadorDietaPage() {
   }
 
   const sovereign = isForjadorSovereign(profile.role);
-  const athletes = filterAthletesForOperator(
+  const athletes = filterVipAthletes(
     await loadBondedAthletes(user.id, sovereign),
+    user.id,
     sovereign,
   );
 

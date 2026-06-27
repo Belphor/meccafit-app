@@ -147,6 +147,14 @@ export const MIGRATION_PATCHES = [
     id: "diet_blueprints_vip",
     files: ["20260627100000_diet_blueprints_vip.sql"],
   },
+  {
+    id: "forja_global_vtc_monitoring",
+    files: ["20260627130000_forja_global_vtc_monitoring.sql"],
+  },
+  {
+    id: "patch_vtc_feed_vip_bond",
+    files: ["20260627140000_patch_vtc_feed_vip_bond.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -309,6 +317,7 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeCardioSessaoDiaria(admin));
     probes.push(await probePerfZeroCostScaling(admin, probeUserId));
     probes.push(await probeForjaSovereignWorkspace(admin));
+    probes.push(await probeForjaGlobalVtcMonitoring(admin));
     probes.push(await probeDietBlueprints(admin));
   } else {
     probes.push({
@@ -669,6 +678,78 @@ async function probeForjaSovereignWorkspace(admin) {
     id: "forja_sovereign_workspace",
     ok: count !== null,
     detail: count !== null ? `audit log ok · ${count} sinal(is)` : "rpc resposta inválida",
+  };
+}
+
+async function probeForjaGlobalVtcMonitoring(admin) {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim()?.replace(/\/$/, "");
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+  const { error: monitorFnErr } = await admin.rpc("argos_forja_monitor_athletes");
+  if (monitorFnErr?.code === "PGRST202") {
+    return {
+      id: "forja_global_vtc_monitoring",
+      ok: false,
+      detail: "argos_forja_monitor_athletes ausente — aplicar 20260627130000",
+    };
+  }
+
+  if (!url || !anonKey) {
+    return {
+      id: "forja_global_vtc_monitoring",
+      ok: !monitorFnErr,
+      detail: monitorFnErr?.message ?? "rpc monitor ok · auth skip",
+    };
+  }
+
+  const client = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { error: loginErr } = await client.auth.signInWithPassword({
+    email: "forjador@meccafit.com",
+    password: "senha123",
+  });
+
+  if (loginErr) {
+    return {
+      id: "forja_global_vtc_monitoring",
+      ok: false,
+      detail: `login forjador: ${loginErr.message}`,
+    };
+  }
+
+  const { data: athletes, error: monitorErr } = await client.rpc("argos_forja_monitor_athletes");
+  const { data: feed, error: feedErr } = await client.rpc("argos_forja_vtc_feed", { p_limit: 8 });
+
+  await client.auth.signOut();
+
+  if (monitorErr?.code === "PGRST202" || feedErr?.code === "PGRST202") {
+    return {
+      id: "forja_global_vtc_monitoring",
+      ok: false,
+      detail: "RPC monitoramento ausente — aplicar 20260627130000",
+    };
+  }
+
+  if (monitorErr || feedErr) {
+    return {
+      id: "forja_global_vtc_monitoring",
+      ok: false,
+      detail: monitorErr?.message ?? feedErr?.message ?? "rpc erro",
+    };
+  }
+
+  const athleteCount = Array.isArray(athletes) ? athletes.length : 0;
+  const feedCount = Array.isArray(feed) ? feed.length : 0;
+
+  return {
+    id: "forja_global_vtc_monitoring",
+    ok: athleteCount > 0 && feedCount > 0,
+    detail: `${athleteCount} cliente(s) · feed ${feedCount} linha(s)`,
   };
 }
 

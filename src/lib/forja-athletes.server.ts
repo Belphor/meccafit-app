@@ -1,4 +1,5 @@
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { filterVipAthletes } from "@/lib/forja-athlete-lists";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 function mapAthleteRow(input: {
@@ -143,7 +144,58 @@ export async function loadBondedAthletes(
 
 export function filterAthletesForOperator(
   athletes: ForjaBondedAthlete[],
-  _sovereign: boolean,
+  operatorId: string,
+  sovereign: boolean,
 ): ForjaBondedAthlete[] {
-  return athletes;
+  return filterVipAthletes(athletes, operatorId, sovereign);
 }
+
+/** Lista global de clientes + VTC agregado — todos os forjadores (RPC · custo zero). */
+export async function loadMonitoringAthletes(
+  operatorId: string,
+): Promise<ForjaBondedAthlete[]> {
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await (
+    supabase as typeof supabase & {
+      rpc(
+        fn: "argos_forja_monitor_athletes",
+        args?: Record<string, never>,
+      ): ReturnType<typeof supabase.rpc>;
+    }
+  ).rpc("argos_forja_monitor_athletes");
+
+  if (error || !data) {
+    return loadBondedAthletes(operatorId, true);
+  }
+
+  const rows = data as Array<Record<string, unknown>>;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return [];
+  }
+
+  return rows.map((row) =>
+    mapAthleteRow({
+      bondId: String(row.bondId ?? `global-${row.clientId}`),
+      clientId: String(row.clientId),
+      forgerId: String(row.forgerId ?? operatorId),
+      displayName: String(row.displayName ?? "Cliente"),
+      lineageName: row.lineageName ? String(row.lineageName) : null,
+      phaseTier: Math.min(5, Math.max(1, Number(row.phaseTier ?? 1))),
+      bondedAt: String(row.bondedAt ?? new Date().toISOString()),
+      forgerName: row.forgerName ? String(row.forgerName) : null,
+      statusAltar: row.statusAltar ? String(row.statusAltar) : null,
+      isGlobalListing: Boolean(row.isGlobalListing),
+      hasVipBond: Boolean(row.hasVipBond),
+    }),
+  ).map((athlete, index) => {
+    const row = rows[index];
+    return {
+      ...athlete,
+      vtcToday: Number(row.vtcToday ?? 0),
+      vtcAvg7d: Number(row.vtcAvg7d ?? 0),
+      vtc30d: Number(row.vtc30d ?? 0),
+    };
+  });
+}
+

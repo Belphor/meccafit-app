@@ -2,25 +2,23 @@
 
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { ForjaAntiFraudPanel } from "@/app/dashboard/forja/ForjaAntiFraudPanel";
-import { ForjaAthleteCard } from "@/app/dashboard/forja/ForjaAthleteCard";
+import { ForjaAthleteSidebar } from "@/components/forjador/forja-athlete-sidebar";
 import { ForjaCommandPanel } from "@/app/dashboard/forja/ForjaCommandPanel";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
 import { DietExcelDropzone } from "@/components/forjador/diet-excel-dropzone";
 import { ExcelDropzone } from "@/components/forjador/excel-dropzone";
+import { TreinoPrescriptionExcelDropzone } from "@/components/forjador/treino-prescription-excel-dropzone";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import {
   FORJA_AMBIENT,
   FORJA_COMMAND_PANEL,
   FORJA_EMPTY_STATE,
-  FORJA_GHOST_BUTTON,
   FORJA_LAYOUT,
   FORJA_META,
   FORJA_PAGE_TITLE,
   FORJA_SECTION_CHIP,
   FORJA_SHELL,
-  FORJA_SIDEBAR_SCROLL,
   FORJA_TAB_ACTIVE,
   FORJA_TAB_IDLE,
 } from "@/lib/forja-config";
@@ -36,6 +34,7 @@ import type {
   ForjaDashboardPayload,
   ForjaWorkspaceTab,
 } from "@/lib/forja-dashboard";
+import { FORJADOR_WORKSPACE_NAV } from "@/lib/forjador-vip-nav";
 
 type ForjaClientProps = {
   payload: ForjaDashboardPayload;
@@ -44,7 +43,7 @@ type ForjaClientProps = {
 function ForjaEmptyWorkspace({ message }: { message: string }) {
   return (
     <div className={FORJA_EMPTY_STATE}>
-      <p className={FORJA_SECTION_CHIP}>Nenhum atleta seleccionado</p>
+      <p className={FORJA_SECTION_CHIP}>Selecione um cliente</p>
       <p className={`${FORJA_META} mt-3 max-w-sm`}>{message}</p>
     </div>
   );
@@ -83,6 +82,10 @@ export function ForjaClient({ payload }: ForjaClientProps) {
     setSelectedClientId(clientId);
   }, []);
 
+  const emptyMessage = payload.operator.isSovereign
+    ? FORJA_COPY.emptyAthletesSovereign
+    : FORJA_COPY.emptyAthletes;
+
   return (
     <main className={FORJA_SHELL}>
       <div className={FORJA_AMBIENT} aria-hidden />
@@ -100,46 +103,45 @@ export function ForjaClient({ payload }: ForjaClientProps) {
               {resolveForjaPanelSubtitle(payload.operator, payload.athletes.length)}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/forjador/dieta" className={FORJA_GHOST_BUTTON}>
-              Dieta semanal VIP
-            </Link>
-            <Link href="/forjador/medidas" className={FORJA_GHOST_BUTTON}>
-              Medidas VIP
-            </Link>
-            <ForjaSignOutButton className="shrink-0" />
-          </div>
+          <ForjaSignOutButton className="shrink-0" />
         </header>
 
+        <nav aria-label="Navegação forjador" className="mt-4 flex flex-wrap gap-2">
+          {FORJADOR_WORKSPACE_NAV.map((item) => {
+            const isActive = item.href === "/dashboard/forja";
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={[
+                  "inline-flex min-h-11 items-center rounded-xl border px-4 py-2.5 text-xs font-medium transition",
+                  isActive
+                    ? "border-zinc-500 bg-zinc-800/80 text-zinc-100"
+                    : "border-zinc-800 bg-zinc-950/40 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300",
+                ].join(" ")}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
         <div className={`${FORJA_LAYOUT} mt-6`}>
-          <aside aria-label="Lista de atletas">
+          <aside aria-label="Lista de clientes">
             <div className="mb-3 flex items-center justify-between gap-2">
               <p className={FORJA_SECTION_CHIP}>
-                {payload.operator.isSovereign ? FORJA_COPY.sidebarSovereign : FORJA_COPY.sidebarPersonal}
+                {payload.operator.isSovereign ? "Clientes" : "Meus clientes"}
               </p>
               <span className="text-xs tabular-nums text-zinc-600">{payload.athletes.length}</span>
             </div>
 
-            <div className={FORJA_SIDEBAR_SCROLL}>
-              {payload.athletes.length === 0 ? (
-                <p
-                  className={`${FORJA_META} rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center`}
-                >
-                  {payload.operator.isSovereign
-                    ? FORJA_COPY.emptyAthletesSovereign
-                    : FORJA_COPY.emptyAthletes}
-                </p>
-              ) : (
-                payload.athletes.map((athlete) => (
-                  <ForjaAthleteCard
-                    key={athlete.bondId}
-                    athlete={athlete}
-                    isSelected={selectedClientId === athlete.clientId}
-                    onSelect={handleSelectAthlete}
-                  />
-                ))
-              )}
-            </div>
+            <ForjaAthleteSidebar
+              athletes={payload.athletes}
+              selectedClientId={selectedClientId}
+              onSelect={handleSelectAthlete}
+              emptyMessage={emptyMessage}
+              splitByVip
+            />
           </aside>
 
           <div className={FORJA_COMMAND_PANEL}>
@@ -189,6 +191,14 @@ export function ForjaClient({ payload }: ForjaClientProps) {
               )
             ) : null}
 
+            {activeTab === "planilha_treino" ? (
+              selectedAthlete ? (
+                <TreinoPrescriptionExcelDropzone athlete={selectedAthlete} />
+              ) : (
+                <ForjaEmptyWorkspace message={FORJA_COPY.selectAthlete} />
+              )
+            ) : null}
+
             {activeTab === "planilha_dieta" ? (
               selectedAthlete ? (
                 selectedAthlete.hasVipBond ? (
@@ -199,14 +209,6 @@ export function ForjaClient({ payload }: ForjaClientProps) {
               ) : (
                 <ForjaEmptyWorkspace message={FORJA_COPY.selectAthlete} />
               )
-            ) : null}
-
-            {activeTab === "antifraude" ? (
-              <ForjaAntiFraudPanel
-                athlete={selectedAthlete}
-                isSovereign={payload.operator.isSovereign}
-                scopeClientId={selectedAthlete?.clientId ?? null}
-              />
             ) : null}
           </div>
         </div>

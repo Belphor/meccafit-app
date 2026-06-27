@@ -105,6 +105,31 @@ const VIP_STUDENTS = [
       series_alvo: 4,
       observacoes: "VIP Linhagem · Supino 80 kg",
     },
+    medidas: {
+      peso_kg: 82.5,
+      altura_cm: 178,
+      perimetros: {
+        gordura_pct: 14.2,
+        massa_magra_kg: 68.4,
+        dobra_peito: 8.5,
+        dobra_axilar_media: 7.2,
+        dobra_triceps: 12.1,
+        dobra_subescapular: 14.3,
+        dobra_abdomen: 16.2,
+        dobra_suprailiaca: 11.4,
+        dobra_coxa: 18.5,
+      },
+    },
+    dietaSemanal: {
+      segunda: { notas: "Café: ovos + aveia · Almoço: frango + arroz · Jantar: salmão", concluido: true },
+      terca: { notas: "Dia de costas — carboidrato moderado", concluido: false },
+      quarta: { notas: "Pernas — pré-treino: pão + whey", concluido: false },
+      quinta: { notas: "Ombros + braços", concluido: false },
+      sexta: { notas: "Peito — refeição livre no jantar", concluido: false },
+      sabado: { notas: "Cardio leve + proteína elevada", concluido: false },
+      domingo: { notas: "Descanso activo — meal prep", concluido: false },
+    },
+    vtcBaseline: 1250,
   },
   {
     label: "vip_forjador_soberano",
@@ -325,6 +350,74 @@ async function ensurePersonalRx(forgerId, clientId, rx) {
   console.log(`OK · prescrição personal ${rx.exercicio_id} ${rx.peso_prescrito}kg`);
 }
 
+function resolveIsoWeekRef(date = new Date()) {
+  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+/** Simulação antropometria — 7 dobras científicas (Jackson-Pollock). */
+async function ensureScientificMedidas(forgerId, clientId, medidas) {
+  await admin.from("vip_medidas_corporais").delete().eq("client_id", clientId);
+
+  const { error } = await admin.from("vip_medidas_corporais").insert({
+    client_id: clientId,
+    forger_id: forgerId,
+    peso_kg: medidas.peso_kg,
+    altura_cm: medidas.altura_cm,
+    perimetros: medidas.perimetros,
+    medido_em: medidas.medido_em ?? new Date().toISOString(),
+    activo: true,
+  });
+
+  if (error) {
+    if (error.message.includes("Could not find the table")) {
+      console.warn("AVISO: vip_medidas_corporais não migrada — medidas ignoradas.");
+      return;
+    }
+    throw error;
+  }
+  console.log(`OK · medidas 7 dobras → ${medidas.peso_kg} kg`);
+}
+
+async function ensureWeeklyDiet(forgerId, clientId, dias) {
+  await admin.from("vip_dieta_semanal").delete().eq("client_id", clientId);
+
+  const { error } = await admin.from("vip_dieta_semanal").insert({
+    client_id: clientId,
+    forger_id: forgerId,
+    semana_ref: resolveIsoWeekRef(),
+    dias,
+    activo: true,
+  });
+
+  if (error) {
+    if (error.message.includes("Could not find the table")) {
+      console.warn("AVISO: vip_dieta_semanal não migrada — dieta semanal ignorada.");
+      return;
+    }
+    throw error;
+  }
+  console.log("OK · dieta semanal VIP publicada");
+}
+
+/** VTC de teste — zero custo (service_role directo, sem RPC pago). */
+async function ensureVtcBaseline(clientId, vtcAtual = 1250) {
+  const { error } = await admin
+    .from("profiles")
+    .update({ vtc_atual: vtcAtual, vtc_total: vtcAtual })
+    .eq("id", clientId);
+
+  if (error && !error.message.includes("Could not find")) {
+    console.warn("AVISO: vtc_atual não actualizado:", error.message);
+    return;
+  }
+  console.log(`OK · VTC baseline ${vtcAtual} kg (simulação)`);
+}
+
 console.log("seed-vip-students · projeto:", url, "\n");
 
 const registry = loadTestUsers();
@@ -339,6 +432,16 @@ try {
     const bondId = await ensureBond(forgerId, clientId);
     await ensureDietBlueprint(forgerId, clientId, student.diet);
     await ensurePersonalRx(forgerId, clientId, student.rx);
+
+    if (student.medidas) {
+      await ensureScientificMedidas(forgerId, clientId, student.medidas);
+    }
+    if (student.dietaSemanal) {
+      await ensureWeeklyDiet(forgerId, clientId, student.dietaSemanal);
+    }
+    if (student.vtcBaseline) {
+      await ensureVtcBaseline(clientId, student.vtcBaseline);
+    }
 
     vipRegistry[student.label] = {
       email: student.email,

@@ -1,196 +1,201 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BodyMetricsForm } from "@/components/forjador/body-metrics-form";
 import { ForjadorVipWorkspace } from "@/components/forjador/forjador-vip-workspace";
-import { syncBodyMetricsToNucleus } from "@/lib/forja-body-metrics-sync";
+import { ScientificMetricsTable } from "@/components/forjador/scientific-metrics-table";
+import { SovereignManagement } from "@/components/forjador/sovereign-management";
 import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dashboard";
+import { syncLatestScientificMetricsToNucleus } from "@/lib/forja-scientific-metrics-sync";
+import { canOperatorAccessMedidasAthlete } from "@/lib/medidas-access";
 import {
-  createEmptyBodyMetricsDraft,
-  parseBodyCircumferences,
-  type BodyMetricsDraft,
-} from "@/lib/forjador-vip-types";
+  parseScientificFromServerRow,
+  type ScientificMetricsEntry,
+} from "@/lib/scientific-metrics-types";
 import {
-  appendBodyMetricsHistory,
+  appendScientificMetricsEntry,
+  deleteScientificMetricsEntry,
   isForjadorVipIndexedDbAvailable,
-  loadBodyMetricsDraft,
-  saveBodyMetricsDraft,
+  listScientificMetricsHistory,
+  resolveLatestScientificEntry,
 } from "@/services/forjador-vip-indexeddb";
 
 type MedidasPageClientProps = {
   payload: ForjaDashboardPayload;
-  initialByClient: Record<string, BodyMetricsDraft | null>;
+  initialSnapshotByClient: Record<string, ScientificMetricsEntry | null>;
 };
 
-function BodyMetricsEditor({
+function ScientificMetricsWorkspace({
   athlete,
-  initialDraft,
+  operatorId,
+  isSovereign,
+  initialSnapshot,
 }: {
   athlete: ForjaBondedAthlete;
-  initialDraft: BodyMetricsDraft | null;
+  operatorId: string;
+  isSovereign: boolean;
+  initialSnapshot: ScientificMetricsEntry | null;
 }) {
-  const [draft, setDraft] = useState<BodyMetricsDraft>(() =>
-    initialDraft ?? createEmptyBodyMetricsDraft(athlete.clientId, athlete.forgerId),
-  );
+  const [entries, setEntries] = useState<ScientificMetricsEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const [savingLocal, setSavingLocal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(
     null,
   );
 
+  const canAccess = canOperatorAccessMedidasAthlete(athlete, operatorId, isSovereign);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function hydrateFromIndexedDb() {
-      if (!isForjadorVipIndexedDbAvailable()) {
-        if (initialDraft) {
-          setDraft(initialDraft);
-        } else {
-          setDraft(createEmptyBodyMetricsDraft(athlete.clientId, athlete.forgerId));
-        }
-        if (!cancelled) setHydrated(true);
-        return;
-      }
-
-      const local = await loadBodyMetricsDraft(athlete.clientId);
-      if (cancelled) return;
-
-      if (local) {
-        setDraft(local);
+    async function hydrate() {
+      if (!canAccess) {
+        setEntries([]);
         setHydrated(true);
         return;
       }
 
-      if (initialDraft) {
-        setDraft(initialDraft);
-        await saveBodyMetricsDraft(initialDraft);
+      if (!isForjadorVipIndexedDbAvailable()) {
+        setEntries(initialSnapshot ? [initialSnapshot] : []);
         if (!cancelled) setHydrated(true);
         return;
       }
 
-      setDraft(createEmptyBodyMetricsDraft(athlete.clientId, athlete.forgerId));
-      if (!cancelled) setHydrated(true);
+      const local = await listScientificMetricsHistory(athlete.clientId);
+
+      if (initialSnapshot && !local.some((row) => row.id === initialSnapshot.id)) {
+        await appendScientificMetricsEntry(initialSnapshot);
+        local.unshift(initialSnapshot);
+      }
+
+      if (cancelled) return;
+      setEntries(local);
+      setHydrated(true);
     }
 
-    void hydrateFromIndexedDb();
+    void hydrate();
     setFeedback(null);
     setHydrated(false);
 
     return () => {
       cancelled = true;
     };
-  }, [athlete.clientId, athlete.forgerId, initialDraft]);
+  }, [athlete.clientId, canAccess, initialSnapshot]);
 
-  const persistLocal = useCallback(async (nextDraft: BodyMetricsDraft) => {
-    if (!isForjadorVipIndexedDbAvailable()) {
+  const handleAddEntry = useCallback(
+    async (entry: ScientificMetricsEntry) => {
+      if (!canAccess) return;
+
+      setSaving(true);
+      setFeedback(null);
+      try {
+        if (isForjadorVipIndexedDbAvailable()) {
+          await appendScientificMetricsEntry(entry);
+        }
+        setEntries((current) => [entry, ...current]);
+        setFeedback({ kind: "ok", message: "Medição guardada localmente." });
+      } catch {
+        setFeedback({ kind: "error", message: "Falha ao guardar medição." });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [canAccess],
+  );
+
+  const handleSyncLatest = useCallback(async () => {
+    if (!canAccess) return;
+
+    const latest = resolveLatestScientificEntry(entries);
+    if (!latest) {
+      setFeedback({ kind: "error", message: "Sem medições para publicar." });
       return;
     }
-    await saveBodyMetricsDraft(nextDraft);
-    await appendBodyMetricsHistory(nextDraft);
-  }, []);
 
-  const handleDraftChange = useCallback((nextDraft: BodyMetricsDraft) => {
-    setDraft(nextDraft);
-    setFeedback(null);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated || !isForjadorVipIndexedDbAvailable()) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void saveBodyMetricsDraft({
-        ...draft,
-        clientId: athlete.clientId,
-        forgerId: athlete.forgerId,
-      });
-    }, 400);
-
-    return () => window.clearTimeout(timer);
-  }, [athlete.clientId, athlete.forgerId, draft, hydrated]);
-
-  const handleSaveLocal = useCallback(async () => {
-    setSavingLocal(true);
-    setFeedback(null);
-    try {
-      const stamped: BodyMetricsDraft = {
-        ...draft,
-        clientId: athlete.clientId,
-        forgerId: athlete.forgerId,
-        updatedAt: new Date().toISOString(),
-      };
-      setDraft(stamped);
-      await persistLocal(stamped);
-      setFeedback({ kind: "ok", message: "Medidas guardadas localmente (IndexedDB)." });
-    } catch {
-      setFeedback({ kind: "error", message: "Falha ao guardar no dispositivo." });
-    } finally {
-      setSavingLocal(false);
-    }
-  }, [athlete.clientId, athlete.forgerId, draft, persistLocal]);
-
-  const handleSyncNucleus = useCallback(async () => {
     setSyncing(true);
     setFeedback(null);
-    try {
-      const stamped: BodyMetricsDraft = {
-        ...draft,
-        clientId: athlete.clientId,
-        forgerId: athlete.forgerId,
-        updatedAt: new Date().toISOString(),
-      };
 
-      const result = await syncBodyMetricsToNucleus(athlete, stamped);
-      if (!result.ok) {
-        setFeedback({ kind: "error", message: result.message });
-        return;
-      }
+    const result = await syncLatestScientificMetricsToNucleus(athlete, latest);
+    setSyncing(false);
 
-      const synced: BodyMetricsDraft = {
-        ...stamped,
-        syncedAt: new Date().toISOString(),
-      };
-      setDraft(synced);
-      await persistLocal(synced);
-      setFeedback({
-        kind: "ok",
-        message: `Medidas publicadas para ${athlete.displayName}.`,
-      });
-    } catch {
-      setFeedback({ kind: "error", message: "Falha ao sincronizar com o núcleo." });
-    } finally {
-      setSyncing(false);
+    if (!result.ok) {
+      setFeedback({ kind: "error", message: result.message });
+      return;
     }
-  }, [athlete, draft, persistLocal]);
+
+    const synced: ScientificMetricsEntry = {
+      ...latest,
+      syncedAt: new Date().toISOString(),
+    };
+
+    if (isForjadorVipIndexedDbAvailable()) {
+      await appendScientificMetricsEntry(synced);
+    }
+
+    setEntries((current) => current.map((row) => (row.id === synced.id ? synced : row)));
+    setFeedback({ kind: "ok", message: `Medição publicada para ${athlete.displayName}.` });
+  }, [athlete, canAccess, entries]);
+
+  const handleDeleteEntry = useCallback(
+    async (entryId: string) => {
+      if (!isSovereign || !canAccess) return;
+      if (!window.confirm("Remover esta medição do histórico local?")) return;
+
+      if (isForjadorVipIndexedDbAvailable()) {
+        await deleteScientificMetricsEntry(entryId);
+      }
+      setEntries((current) => current.filter((row) => row.id !== entryId));
+      setFeedback({ kind: "ok", message: "Medição removida." });
+    },
+    [canAccess, isSovereign],
+  );
+
+  if (!hydrated) {
+    return <p className="text-sm text-zinc-500">A carregar histórico…</p>;
+  }
 
   return (
-    <BodyMetricsForm
-      draft={draft}
-      onDraftChange={handleDraftChange}
-      onSaveLocal={() => void handleSaveLocal()}
-      onSyncNucleus={() => void handleSyncNucleus()}
-      savingLocal={savingLocal}
-      syncing={syncing}
-      feedback={feedback}
-    />
+    <>
+      <ScientificMetricsTable
+        athlete={athlete}
+        entries={entries}
+        onAddEntry={handleAddEntry}
+        onSyncLatest={() => void handleSyncLatest()}
+        onDeleteEntry={isSovereign ? (id) => void handleDeleteEntry(id) : undefined}
+        saving={saving}
+        syncing={syncing}
+        feedback={feedback}
+        allowDelete={isSovereign}
+      />
+
+      {isSovereign ? (
+        <SovereignManagement
+          athlete={athlete}
+          onLocalHistoryCleared={() => setEntries([])}
+          onRemoteSnapshotDeleted={() =>
+            setEntries((current) => current.map((row) => ({ ...row, syncedAt: null })))
+          }
+        />
+      ) : null}
+    </>
   );
 }
 
-export function MedidasPageClient({ payload, initialByClient }: MedidasPageClientProps) {
+export function MedidasPageClient({ payload, initialSnapshotByClient }: MedidasPageClientProps) {
   return (
     <ForjadorVipWorkspace
       payload={payload}
       title="Medidas VIP"
-      description="Registe peso, altura e perímetros com rascunho offline. Publique no núcleo apenas quando confirmar."
+      description="Registo antropométrico com 7 dobras científicas. Guarde localmente e publique quando estiver pronto."
       activeRoute="/forjador/medidas"
     >
       {({ athlete }) =>
         athlete ? (
-          <BodyMetricsEditor
+          <ScientificMetricsWorkspace
             athlete={athlete}
-            initialDraft={initialByClient[athlete.clientId] ?? null}
+            operatorId={payload.operator.userId}
+            isSovereign={payload.operator.isSovereign}
+            initialSnapshot={initialSnapshotByClient[athlete.clientId] ?? null}
           />
         ) : null
       }
@@ -198,7 +203,7 @@ export function MedidasPageClient({ payload, initialByClient }: MedidasPageClien
   );
 }
 
-export function mapServerBodyMetricsRow(row: {
+export function mapServerScientificSnapshot(row: {
   client_id: string;
   forger_id: string;
   peso_kg: number;
@@ -206,16 +211,14 @@ export function mapServerBodyMetricsRow(row: {
   perimetros: unknown;
   medido_em: string;
   atualizado_em: string;
-}): BodyMetricsDraft {
-  const perimetros = parseBodyCircumferences(row.perimetros);
+}): ScientificMetricsEntry {
+  const parsed = parseScientificFromServerRow(row);
   return {
+    id: `server-${row.client_id}-${row.medido_em}`,
     clientId: row.client_id,
     forgerId: row.forger_id,
-    pesoKg: String(row.peso_kg),
-    alturaCm: String(row.altura_cm),
-    perimetros,
-    medidoEm: row.medido_em,
-    updatedAt: row.atualizado_em,
+    savedAt: row.atualizado_em,
     syncedAt: row.atualizado_em,
+    ...parsed,
   };
 }
