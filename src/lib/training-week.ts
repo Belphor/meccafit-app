@@ -1,3 +1,4 @@
+import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
 import type { Enums } from "@/types/database.types";
 
 /** Segunda=1 … Sábado=6 */
@@ -139,8 +140,6 @@ function appendMuscleToDay(
   list.push(muscle);
   byDay.set(day, list);
 }
-
-import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
 
 export function resolveCalendarWeekdayIndex(date = new Date()): WeekdayIndex {
   return resolveBrasiliaTrainingWeekdayIndex(date);

@@ -1,4 +1,6 @@
-import type { Exercise, MuscleSubgroup } from "@/lib/mock-data";
+import type { MuscleSubgroup } from "@/lib/mock-data";
+import { applyPrescriptionRowToSubgroup } from "@/lib/forja-exercise-resolve";
+import { supabase } from "@/lib/supabase";
 import type { TrainingMuscleGroup } from "@/lib/training-week";
 
 export type ForjadorTreinoConfig = {
@@ -136,29 +138,34 @@ export function applyForjadorPrescriptionsToSubgroup(
   const scoped = resolvePrescriptionsForMuscle(prescriptions, muscle);
   if (scoped.length === 0) return subgroup;
 
-  const byCatalogId = new Map(
-    subgroup.exercises.map((exercise) => [String(exercise.id), exercise] as const),
-  );
+  const exercises = scoped.map((row) => applyPrescriptionRowToSubgroup(subgroup, row));
+  const seen = new Set<number>();
 
-  const exercises: Exercise[] = [];
+  const merged = exercises.filter((exercise) => {
+    if (seen.has(exercise.id)) return false;
+    seen.add(exercise.id);
+    return true;
+  });
 
-  for (const row of scoped) {
-    const base = byCatalogId.get(row.exercicio_id);
-    if (!base) continue;
+  if (merged.length === 0) return subgroup;
 
-    exercises.push({
-      ...base,
-      targetSets: row.series_alvo,
-      targetReps: row.repeticoes_alvo,
-      ...(row.peso_prescrito && row.peso_prescrito > 0
-        ? { currentWeight: row.peso_prescrito, historicalPrWeight: row.peso_prescrito }
-        : null),
-    });
-  }
+  return { ...subgroup, exercises: merged };
+}
 
-  if (exercises.length === 0) return subgroup;
+export async function fetchForjadorPrescriptionsClient(
+  userId: string,
+): Promise<ForjadorPrescriptionRow[]> {
+  const { data, error } = await supabase
+    .from("prescricoes_treino_forjador")
+    .select(
+      "id, atleta_id, forjador_id, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, observacoes",
+    )
+    .eq("atleta_id", userId)
+    .order("grupo_muscular")
+    .order("ordem");
 
-  return { ...subgroup, exercises };
+  if (error || !data) return [];
+  return parseForjadorPrescriptionRows(data);
 }
 
 export function hasForjadorPrescriptionForMuscle(

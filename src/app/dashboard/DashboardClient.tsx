@@ -20,6 +20,7 @@ import VideoModal from "@/components/VideoModal";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import {
   DEFAULT_FORJADOR_TREINO_CONFIG,
+  fetchForjadorPrescriptionsClient,
   type ForjadorPrescriptionRow,
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
@@ -163,7 +164,9 @@ export function DashboardClient({
   );
   const [isTreinoSwitching, setIsTreinoSwitching] = useState(false);
   const [forjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
-  const [forjadorPrescriptions] = useState<ForjadorPrescriptionRow[]>(initialForjadorPrescriptions);
+  const [forjadorPrescriptions, setForjadorPrescriptions] = useState<ForjadorPrescriptionRow[]>(
+    initialForjadorPrescriptions,
+  );
   const treinoSwitchTokenRef = useRef(0);
   const activeTrainingDayRef = useRef(activeTrainingDay);
   const [baseVtcTotal, setBaseVtcTotal] = useState(0);
@@ -208,6 +211,51 @@ export function DashboardClient({
   useEffect(() => {
     activeTrainingDayRef.current = activeTrainingDay;
   }, [activeTrainingDay]);
+
+  const refreshForjadorPrescriptions = useCallback(async () => {
+    const rows = await fetchForjadorPrescriptionsClient(userId);
+    setForjadorPrescriptions(rows);
+    return rows;
+  }, [userId]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    void refreshForjadorPrescriptions();
+  }, [activeTab, dataReady, refreshForjadorPrescriptions]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    const onFocus = () => {
+      void refreshForjadorPrescriptions();
+    };
+
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [dataReady, refreshForjadorPrescriptions]);
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    let cancelled = false;
+    const day = activeTrainingDayRef.current;
+    const composed = composeDayTreinoSubgroup(
+      scheduleMap[day],
+      trainingTrack,
+      forjadorPrescriptions,
+      day,
+    );
+
+    void refreshDaySubgroupHistorico(composed, { skipInvalidate: true }).then((result) => {
+      if (cancelled) return;
+      setSubgroup(result.data ?? composed);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataReady, forjadorPrescriptions, scheduleMap, trainingTrack]);
 
   useEffect(() => {
     let isMounted = true;

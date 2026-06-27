@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import type { ForjaBondedAthlete, ForjaPrescriptionDraft } from "@/lib/forja-dashboard";
-import { CLIENT_TRAINING_MUSCLE_GROUPS, type ClientTrainingMuscleGroup } from "@/lib/training-week";
+import { resolveCatalogExerciseId } from "@/lib/forja-exercise-resolve";
+import { TRAINING_MUSCLE_GROUPS, type TrainingMuscleGroup } from "@/lib/training-week";
 
 export type ForjaPrescriptionSyncResult =
   | { ok: true; prescriptionId: string }
@@ -9,22 +10,10 @@ export type ForjaPrescriptionSyncResult =
 const REST_SEC_MIN = 15;
 const REST_SEC_MAX = 600;
 
-function slugifyExerciseId(raw: string): string {
-  const normalized = raw
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return normalized.length > 0 ? `forja-${normalized.slice(0, 48)}` : "forja-exercicio";
-}
-
-function parseMuscleGroup(raw: string): ClientTrainingMuscleGroup | null {
+function parseMuscleGroup(raw: string): TrainingMuscleGroup | null {
   const key = raw.trim().toUpperCase();
-  return CLIENT_TRAINING_MUSCLE_GROUPS.includes(key as ClientTrainingMuscleGroup)
-    ? (key as ClientTrainingMuscleGroup)
+  return TRAINING_MUSCLE_GROUPS.includes(key as TrainingMuscleGroup)
+    ? (key as TrainingMuscleGroup)
     : null;
 }
 
@@ -44,7 +33,7 @@ export function parsePrescriptionDraft(
   draft: ForjaPrescriptionDraft,
 ): { ok: true; payload: {
     exercicioId: string;
-    grupoMuscular: ClientTrainingMuscleGroup;
+    grupoMuscular: TrainingMuscleGroup;
     peso: number;
     repeticoes: number;
     series: number;
@@ -83,7 +72,7 @@ export function parsePrescriptionDraft(
   return {
     ok: true,
     payload: {
-      exercicioId: slugifyExerciseId(label),
+      exercicioId: resolveCatalogExerciseId(grupoMuscular, label),
       grupoMuscular,
       peso,
       repeticoes,
@@ -241,7 +230,7 @@ export type TreinoPlanilhaBatchResult =
 export async function batchSyncTreinoPrescriptionsFromPlanilha(
   athlete: ForjaBondedAthlete,
   rows: Array<{
-    grupoMuscular: ClientTrainingMuscleGroup;
+    grupoMuscular: TrainingMuscleGroup;
     exercicio: string;
     peso: number;
     repeticoes: number;
@@ -275,7 +264,7 @@ export async function batchSyncTreinoPrescriptionsFromPlanilha(
     let upserted = 0;
 
     for (const row of rows) {
-      const exercicioId = slugifyExerciseId(row.exercicio);
+      const exercicioId = resolveCatalogExerciseId(row.grupoMuscular, row.exercicio);
 
       const { data: existing } = await supabase
         .from("prescricoes_treino_forjador")

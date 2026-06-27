@@ -1,13 +1,14 @@
 import {
-  CLIENT_TRAINING_MUSCLE_GROUPS,
   MAX_PLANILHA_GRUPOS_POR_DIA,
   normalizeTrainingMuscleGroup,
+  TRAINING_MUSCLE_GROUPS,
+  type TrainingMuscleGroup,
   type WeekdayIndex,
 } from "@/lib/training-week";
 
 export type PlanilhaImportRow = {
   dia_semana: WeekdayIndex;
-  grupo_muscular: (typeof CLIENT_TRAINING_MUSCLE_GROUPS)[number];
+  grupo_muscular: TrainingMuscleGroup;
   ordem: number;
 };
 
@@ -59,11 +60,8 @@ function parseWeekday(raw: unknown): WeekdayIndex | null {
 
 function parseMuscleForPlanilha(raw: unknown): PlanilhaImportRow["grupo_muscular"] | null {
   const muscle = normalizeTrainingMuscleGroup(String(raw ?? ""));
-  if (!muscle || muscle === "ABDOMEN") return null;
-  if (!CLIENT_TRAINING_MUSCLE_GROUPS.includes(muscle as PlanilhaImportRow["grupo_muscular"])) {
-    return null;
-  }
-  return muscle as PlanilhaImportRow["grupo_muscular"];
+  if (!muscle || !TRAINING_MUSCLE_GROUPS.includes(muscle)) return null;
+  return muscle;
 }
 
 function dedupeAndCapRows(rows: PlanilhaImportRow[]): PlanilhaImportRow[] {

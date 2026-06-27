@@ -1,8 +1,8 @@
-import type { ClientTrainingMuscleGroup } from "@/lib/training-week";
-import { CLIENT_TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
+import type { TrainingMuscleGroup } from "@/lib/training-week";
+import { TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
 
 export type TreinoPlanilhaImportRow = {
-  grupoMuscular: ClientTrainingMuscleGroup;
+  grupoMuscular: TrainingMuscleGroup;
   exercicio: string;
   peso: number;
   repeticoes: number;
@@ -44,10 +44,10 @@ function parseNumber(raw: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function parseMuscle(raw: string): ClientTrainingMuscleGroup | null {
+function parseMuscle(raw: string): TrainingMuscleGroup | null {
   const key = raw.trim().toUpperCase();
-  return CLIENT_TRAINING_MUSCLE_GROUPS.includes(key as ClientTrainingMuscleGroup)
-    ? (key as ClientTrainingMuscleGroup)
+  return TRAINING_MUSCLE_GROUPS.includes(key as TrainingMuscleGroup)
+    ? (key as TrainingMuscleGroup)
     : null;
 }
 
