@@ -140,11 +140,10 @@ function appendMuscleToDay(
   byDay.set(day, list);
 }
 
+import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
+
 export function resolveCalendarWeekdayIndex(date = new Date()): WeekdayIndex {
-  const day = date.getDay();
-  if (day === 0) return 1;
-  if (day === 6) return 6;
-  return day as WeekdayIndex;
+  return resolveBrasiliaTrainingWeekdayIndex(date);
 }
 
 export function normalizeTrainingMuscleGroup(value: string | null | undefined): TrainingMuscleGroup | null {

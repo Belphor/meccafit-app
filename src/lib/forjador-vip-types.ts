@@ -1,3 +1,5 @@
+import { resolveIsoWeekRefBrasilia } from "@/lib/brasilia-time";
+
 export const DIET_WEEK_DAY_IDS = [
   "segunda",
   "terca",
@@ -100,14 +102,9 @@ export function createEmptyBodyMetricsDraft(
   };
 }
 
-/** ISO week key · ex.: 2026-W25 */
+/** Semana ISO conforme calendário de Brasília · ex.: 2026-W25 */
 export function resolveIsoWeekRef(date: Date = new Date()): string {
-  const utc = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = utc.getUTCDay() || 7;
-  utc.setUTCDate(utc.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+  return resolveIsoWeekRefBrasilia(date);
 }
 
 export function parseWeeklyDietDays(raw: unknown): Record<DietWeekDayId, DietWeekDayEntry> {

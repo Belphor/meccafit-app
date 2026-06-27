@@ -37,6 +37,7 @@ import {
   type EvolutionCalorRefreshDetail,
 } from "@/lib/evolution-events";
 import { supabase } from "@/lib/supabase";
+import { EvolutionVipInsights } from "@/components/evolution/evolution-vip-insights";
 import { SelfieComparison } from "@/components/evolution/selfie-comparison";
 
 const EvolucaoSelfiePanel = dynamic(
@@ -55,6 +56,8 @@ type EvolucaoPageClientProps = {
   profileName?: string | null;
   profilePhotoUrl?: string | null;
   variant?: "page" | "dashboard";
+  /** Cliente com vínculo VIP (personal) — mostra medidas e rotina na aba Evolução. */
+  hasPersonalBond?: boolean;
 };
 
 async function assertAuthenticatedScope(expectedUserId: string): Promise<boolean> {
@@ -83,6 +86,7 @@ export function EvolucaoPageClient({
   profileName,
   profilePhotoUrl,
   variant = "page",
+  hasPersonalBond = false,
 }: EvolucaoPageClientProps) {
   const resolvedInitial = useMemo<EvolutionCalorPayload | undefined>(() => {
     if (initialPayload) return initialPayload;
@@ -296,6 +300,14 @@ export function EvolucaoPageClient({
                   <p className="mt-0.5 font-mono text-[10px] text-neutral-600">
                     {activeCalorMetric.hint}
                   </p>
+                  {hasPersonalBond ? (
+                    <EvolutionVipInsights
+                      userId={userId}
+                      activeMuscle={activeMuscle}
+                      enabled={hasPersonalBond}
+                      variant="inline"
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </>

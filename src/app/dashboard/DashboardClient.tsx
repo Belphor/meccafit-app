@@ -598,6 +598,7 @@ export function DashboardClient({
                         initialIgnicao={initialEvolutionIgnicao}
                         profileName={profile.name}
                         variant="dashboard"
+                        hasPersonalBond={hasPersonalBond}
                       />
                     </div>
                   ) : null}

@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useCallback, useState, type ChangeEvent, type FormEvent } from "react";
-import { ForjaDietBlueprintForm } from "@/components/forjador/forja-diet-blueprint-form";
 import {
   FORJA_COMMAND_INNER,
   FORJA_EMPTY_STATE,
@@ -23,7 +22,7 @@ import {
 import { syncForjaPersonalPrescription } from "@/lib/forja-prescription-sync";
 import { resolveForjaChipClass, resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
 import { PHASE_TIER_LABELS } from "@/lib/dashboard-config";
-import { CLIENT_TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
+import { MUSCLE_GROUP_LABELS, TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
 
 type ForjaCommandPanelProps = {
   athlete: ForjaBondedAthlete | null;
@@ -108,7 +107,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   return (
     <section aria-label={`Prescrição · ${athlete.displayName}`}>
       <header className="border-b border-zinc-800/80 pb-4">
-        <p className={FORJA_SECTION_CHIP}>Atleta seleccionado</p>
+        <p className={FORJA_SECTION_CHIP}>Cliente seleccionado</p>
         <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{athlete.displayName}</h2>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           <span
@@ -144,7 +143,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
         onSubmit={(event) => void handlePrescribeSubmit(event)}
         className={`${FORJA_COMMAND_INNER} mt-4`}
       >
-        <p className={FORJA_SECTION_CHIP}>Treino · todos os atletas</p>
+        <p className={FORJA_SECTION_CHIP}>Treino</p>
         <h3 className="text-base font-medium text-zinc-100">{FORJA_COPY.prescription.title}</h3>
         <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.prescription.hint}</p>
 
@@ -176,9 +175,9 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               className={FORJA_INPUT}
               disabled={isSyncing}
             >
-              {CLIENT_TRAINING_MUSCLE_GROUPS.map((group) => (
+              {TRAINING_MUSCLE_GROUPS.map((group) => (
                 <option key={group} value={group}>
-                  {group}
+                  {MUSCLE_GROUP_LABELS[group]}
                 </option>
               ))}
             </select>
@@ -292,16 +291,6 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           {commandMessage}
         </p>
       ) : null}
-
-      {athlete.hasVipBond ? (
-        <ForjaDietBlueprintForm athlete={athlete} />
-      ) : (
-        <div className={`${FORJA_COMMAND_INNER} mt-8 border-t border-zinc-800/80 pt-6`}>
-          <p className={FORJA_SECTION_CHIP}>Dieta · exclusivo VIP</p>
-          <h3 className="text-base font-medium text-zinc-400">{FORJA_COPY.diet.title}</h3>
-          <p className={`${FORJA_META} mt-2`}>{FORJA_COPY.diet.lockedHint}</p>
-        </div>
-      )}
     </section>
   );
 }

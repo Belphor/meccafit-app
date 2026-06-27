@@ -13,6 +13,7 @@ import {
   FORJA_SECTION_CHIP,
   FORJA_SECTION_TITLE,
 } from "@/lib/forja-config";
+import { FORJA_COPY } from "@/lib/forja-copy";
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
 import {
   EMPTY_SCIENTIFIC_DRAFT_INPUT,
@@ -116,16 +117,15 @@ export function ScientificMetricsTable({
   return (
     <div className={FORJA_COMMAND_INNER}>
       <header className="border-b border-zinc-800/80 pb-4">
-        <p className={FORJA_SECTION_CHIP}>7 dobras científicas</p>
+        <p className={FORJA_SECTION_CHIP}>Medidas corporais</p>
         <h2 className={FORJA_SECTION_TITLE}>{athlete.displayName}</h2>
-        <p className={`${FORJA_META} mt-1`}>
-          Registe peso, composição e as 7 dobras (mm). Histórico local · publicar envia só a última
-          medição.
-        </p>
+        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.medidas.description}</p>
       </header>
 
       <form onSubmit={(event) => void handleSubmit(event)} className="mt-5 space-y-4">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">Nova medição</p>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
+          {FORJA_COPY.medidas.formTitle}
+        </p>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field
@@ -170,7 +170,7 @@ export function ScientificMetricsTable({
         </div>
 
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-500">
-          Dobras cutâneas (mm)
+          {FORJA_COPY.medidas.skinfolds}
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {SCIENTIFIC_SKINFOLD_IDS.map((id) => (
@@ -200,7 +200,7 @@ export function ScientificMetricsTable({
             onClick={() => void onSyncLatest()}
             className={`${FORJA_GHOST_BUTTON} ${TOUCH_BUTTON} w-full sm:w-auto`}
           >
-            {syncing ? "A publicar…" : "Publicar última medição"}
+            {syncing ? "A publicar…" : FORJA_COPY.medidas.publish}
           </button>
         </div>
       </form>
@@ -218,7 +218,7 @@ export function ScientificMetricsTable({
                   {SCIENTIFIC_SKINFOLD_LABELS[id]}
                 </th>
               ))}
-              <th className="px-3 py-3 font-medium">Σ dobras</th>
+              <th className="px-3 py-3 font-medium">Total dobras</th>
               {allowDelete ? <th className="px-3 py-3 font-medium"> </th> : null}
             </tr>
           </thead>

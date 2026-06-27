@@ -7,6 +7,7 @@ import { SovereignManagement } from "@/components/forjador/sovereign-management"
 import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dashboard";
 import { syncLatestScientificMetricsToNucleus } from "@/lib/forja-scientific-metrics-sync";
 import { canOperatorAccessMedidasAthlete } from "@/lib/medidas-access";
+import { FORJA_COPY } from "@/lib/forja-copy";
 import {
   parseScientificFromServerRow,
   type ScientificMetricsEntry,
@@ -186,7 +187,7 @@ export function MedidasPageClient({ payload, initialSnapshotByClient }: MedidasP
     <ForjadorVipWorkspace
       payload={payload}
       title="Medidas VIP"
-      description="Registo antropométrico com 7 dobras científicas. Guarde localmente e publique quando estiver pronto."
+      description={FORJA_COPY.medidas.description}
       activeRoute="/forjador/medidas"
     >
       {({ athlete }) =>

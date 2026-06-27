@@ -8,8 +8,8 @@ export const FORJADOR_WORKSPACE_NAV: ReadonlyArray<{
   href: ForjadorNavRoute;
   label: string;
 }> = [
-  { href: "/dashboard/forja", label: "Painel Forja" },
-  { href: "/forjador/dieta", label: "Dieta semanal" },
-  { href: "/forjador/medidas", label: "Medidas" },
+  { href: "/dashboard/forja", label: "Treinos" },
+  { href: "/forjador/dieta", label: "Nutrição VIP" },
+  { href: "/forjador/medidas", label: "Medidas VIP" },
   { href: "/forjador/monitoramento", label: "Monitoramento" },
 ];

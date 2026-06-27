@@ -19,6 +19,8 @@ type ForjaVtcFeedPanelProps = {
   selectedClientId?: string | null;
   refreshVersion?: number;
   onFeedLoaded?: (entries: ForjaVtcFeedEntry[]) => void;
+  /** Mapa clientId → VIP (fallback quando RPC remota não envia hasVipBond). */
+  vipBondByClientId?: Record<string, boolean>;
 };
 
 function formatVtc(value: number): string {
@@ -31,6 +33,7 @@ function ForjaVtcFeedPanelComponent({
   selectedClientId,
   refreshVersion = 0,
   onFeedLoaded,
+  vipBondByClientId = {},
 }: ForjaVtcFeedPanelProps) {
   const [entries, setEntries] = useState<ForjaVtcFeedEntry[]>([]);
   const [phase, setPhase] = useState<"idle" | "loading" | "error">("idle");
@@ -104,6 +107,7 @@ function ForjaVtcFeedPanelComponent({
                 {entries.map((entry) => {
                   const thermal = resolveForjaThermalStyle(entry.phaseTier);
                   const isSelected = selectedClientId === entry.clientId;
+                  const isVip = entry.hasVipBond ?? vipBondByClientId[entry.clientId] ?? false;
 
                   return (
                     <tr
@@ -148,14 +152,12 @@ function ForjaVtcFeedPanelComponent({
                         <span
                           className={[
                             "rounded px-1.5 py-0.5 text-[10px] font-medium",
-                            entry.hasVipBond
+                            isVip
                               ? "bg-zinc-800/80 text-zinc-300"
                               : "bg-zinc-900 text-zinc-500",
                           ].join(" ")}
                         >
-                          {entry.hasVipBond
-                            ? FORJA_COPY.athleteVipBadge
-                            : FORJA_COPY.athleteStandardBadge}
+                          {isVip ? FORJA_COPY.athleteVipBadge : FORJA_COPY.athleteStandardBadge}
                         </span>
                       </td>
                       <td className="px-2 py-2.5 text-zinc-400">{entry.forgerName}</td>

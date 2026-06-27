@@ -54,6 +54,14 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
     [payload.athletes],
   );
 
+  const vipBondByClientId = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const athlete of payload.athletes) {
+      map[athlete.clientId] = Boolean(athlete.hasVipBond);
+    }
+    return map;
+  }, [payload.athletes]);
+
   const stats = useMemo(
     () => computeMonitorStats(payload.athletes, payload.operator.userId, feedEntries),
     [feedEntries, payload.athletes, payload.operator.userId],
@@ -178,6 +186,7 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
               onSelectClient={handleSelectAthlete}
               refreshVersion={feedVersion}
               onFeedLoaded={handleFeedLoaded}
+              vipBondByClientId={vipBondByClientId}
             />
 
             <ForjaAntiFraudPanel
