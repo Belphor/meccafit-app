@@ -12,7 +12,7 @@ export const DASHBOARD_TAB_DEFINITIONS: readonly DashboardTabDefinition[] = [
   { id: "evolucao", label: "Evolução" },
   { id: "comunidade", label: "Comunidade" },
   { id: "perfil", label: "Perfil" },
-  { id: "dieta", label: "Dieta", requiresPersonalBond: true },
+  { id: "dieta", label: "Nutrição", requiresPersonalBond: true },
 ] as const;
 
 export const DEFAULT_DASHBOARD_TAB: DashboardTabId = "treino";

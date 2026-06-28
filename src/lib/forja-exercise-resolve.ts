@@ -26,8 +26,10 @@ export function normalizeExerciseNameKey(raw: string): string {
 
 export function extractPrescriptionExerciseLabel(row: ForjadorPrescriptionRow): string | null {
   const obs = row.observacoes?.trim() ?? "";
-  const match = obs.match(/^(?:Forja|Sheets)\s·\s(.+)$/i);
-  return match?.[1]?.trim() ?? null;
+  if (!obs) return null;
+
+  const prefixed = obs.match(/^(?:Forja|Sheets)\s·\s(.+)$/i);
+  return prefixed?.[1]?.trim() ?? obs;
 }
 
 /** Resolve nome do exercício para ID numérico do catálogo (string). */
@@ -42,22 +44,13 @@ export function resolveCatalogExerciseId(
   const inputKey = normalizeExerciseNameKey(exerciseName);
   if (!inputKey) return slugifyExerciseId(exerciseName);
 
-  let partialMatch: (typeof entry.exercises)[number] | null = null;
-
   for (const exercise of entry.exercises) {
     const catalogKey = normalizeExerciseNameKey(exercise.name);
     if (catalogKey === inputKey) {
       return String(exercise.id);
     }
-    if (
-      !partialMatch &&
-      (catalogKey.includes(inputKey) || inputKey.includes(catalogKey))
-    ) {
-      partialMatch = exercise;
-    }
   }
 
-  if (partialMatch) return String(partialMatch.id);
   return slugifyExerciseId(exerciseName);
 }
 
@@ -73,10 +66,9 @@ function findCatalogExerciseForPrescription(
   const labelKey = label ? normalizeExerciseNameKey(label) : null;
 
   for (const exercise of subgroup.exercises) {
-    const nameKey = normalizeExerciseNameKey(exercise.name);
     if (slugifyExerciseId(exercise.name) === slug) return exercise;
+    const nameKey = normalizeExerciseNameKey(exercise.name);
     if (labelKey && nameKey === labelKey) return exercise;
-    if (labelKey && (nameKey.includes(labelKey) || labelKey.includes(nameKey))) return exercise;
   }
 
   return undefined;
@@ -95,24 +87,37 @@ export function applyPrescriptionRowToSubgroup(
   subgroup: MuscleSubgroup,
   row: ForjadorPrescriptionRow,
 ): Exercise {
+  const prescribedName = extractPrescriptionExerciseLabel(row);
+  const prescribedKey = prescribedName ? normalizeExerciseNameKey(prescribedName) : null;
+  const catalogMatch = findCatalogExerciseForPrescription(subgroup, row);
+
+  const catalogMatchesLabel =
+    catalogMatch &&
+    prescribedKey &&
+    normalizeExerciseNameKey(catalogMatch.name) === prescribedKey;
+
   const base =
-    findCatalogExerciseForPrescription(subgroup, row) ??
-    ({
-      id: syntheticExerciseId(`${row.grupo_muscular}:${row.exercicio_id}`),
-      name: extractPrescriptionExerciseLabel(row) ?? row.exercicio_id.replace(/^forja-/, ""),
-      metricKind: "load_kg" as const,
-      targetSets: row.series_alvo,
-      targetReps: row.repeticoes_alvo,
-      currentWeight: row.peso_prescrito ?? 0,
-      completedSets: 0,
-      video_url: "",
-      subgroupId: subgroup.id,
-    } satisfies Exercise);
+    catalogMatch && (!prescribedKey || catalogMatchesLabel)
+      ? catalogMatch
+      : ({
+          id: syntheticExerciseId(`${row.grupo_muscular}:${row.exercicio_id}:${prescribedKey ?? ""}`),
+          name: prescribedName ?? row.exercicio_id.replace(/^forja-/, "").replace(/-/g, " "),
+          metricKind: catalogMatch?.metricKind ?? ("load_kg" as const),
+          targetSets: row.series_alvo,
+          targetReps: row.repeticoes_alvo,
+          currentWeight: row.peso_prescrito ?? 0,
+          completedSets: 0,
+          video_url: catalogMatch?.video_url ?? "",
+          subgroupId: subgroup.id,
+        } satisfies Exercise);
 
   return {
     ...base,
+    name: prescribedName ?? base.name,
     targetSets: row.series_alvo,
     targetReps: row.repeticoes_alvo,
+    repsPerSet: row.repeticoes_por_serie,
+    progressionAlternatives: row.progressao_alternativas,
     ...(row.peso_prescrito && row.peso_prescrito > 0
       ? { currentWeight: row.peso_prescrito, historicalPrWeight: row.peso_prescrito }
       : null),

@@ -23,9 +23,88 @@ export const DIET_WEEK_DAY_LABELS: Record<DietWeekDayId, string> = {
 };
 
 export type DietWeekDayEntry = {
+  /** Texto legado — derivado das refeições quando existirem. */
   notas: string;
   concluido: boolean;
+  refeicoes: DietMealEntry[];
 };
+
+export const DIET_MEAL_SLOT_IDS = [
+  "cafe_manha",
+  "meio_manha",
+  "almoco",
+  "lanche_tarde",
+  "pre_treino",
+  "pos_treino",
+  "janta",
+  "ceia",
+] as const;
+
+export type DietMealSlotId = (typeof DIET_MEAL_SLOT_IDS)[number];
+
+export const DIET_MEAL_SLOT_LABELS: Record<DietMealSlotId, string> = {
+  cafe_manha: "Café da manhã",
+  meio_manha: "Meio da manhã",
+  almoco: "Almoço",
+  lanche_tarde: "Lanche da tarde",
+  pre_treino: "Pré-treino",
+  pos_treino: "Pós-treino",
+  janta: "Janta",
+  ceia: "Ceia",
+};
+
+export type DietMealEntry = {
+  id: DietMealSlotId;
+  conteudo: string;
+};
+
+export function createEmptyMealEntry(id: DietMealSlotId): DietMealEntry {
+  return { id, conteudo: "" };
+}
+
+export function compileDayNotas(entry: DietWeekDayEntry | undefined | null): string {
+  if (!entry) return "";
+
+  const refeicoes = entry.refeicoes ?? [];
+  const fromMeals = refeicoes
+    .filter((meal) => (meal.conteudo ?? "").trim().length > 0)
+    .map((meal) => `${DIET_MEAL_SLOT_LABELS[meal.id]}\n${meal.conteudo.trim()}`)
+    .join("\n\n");
+
+  if (fromMeals) return fromMeals;
+  return (entry.notas ?? "").trim();
+}
+
+export function parseDayEntry(raw: unknown): DietWeekDayEntry {
+  const base: DietWeekDayEntry = { notas: "", concluido: false, refeicoes: [] };
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return base;
+  }
+
+  const row = raw as Record<string, unknown>;
+  base.concluido = row.concluido === true;
+  base.notas = typeof row.notas === "string" ? row.notas : "";
+
+  if (Array.isArray(row.refeicoes)) {
+    for (const item of row.refeicoes) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+      const meal = item as Record<string, unknown>;
+      const id = String(meal.id ?? "").trim() as DietMealSlotId;
+      if (!DIET_MEAL_SLOT_IDS.includes(id)) continue;
+      base.refeicoes.push({
+        id,
+        conteudo: typeof meal.conteudo === "string" ? meal.conteudo : "",
+      });
+    }
+  }
+
+  if (base.refeicoes.length === 0 && base.notas.trim()) {
+    base.refeicoes = [{ id: "cafe_manha", conteudo: base.notas.trim() }];
+  }
+
+  return base;
+}
 
 export type WeeklyDietDraft = {
   clientId: string;
@@ -68,7 +147,7 @@ export function createEmptyWeeklyDietDraft(
 ): WeeklyDietDraft {
   const dias = {} as Record<DietWeekDayId, DietWeekDayEntry>;
   for (const dayId of DIET_WEEK_DAY_IDS) {
-    dias[dayId] = { notas: "", concluido: false };
+    dias[dayId] = { notas: "", concluido: false, refeicoes: [] };
   }
 
   return {
@@ -118,17 +197,18 @@ export function parseWeeklyDietDays(raw: unknown): Record<DietWeekDayId, DietWee
 
   for (const dayId of DIET_WEEK_DAY_IDS) {
     const entry = source[dayId];
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      continue;
-    }
-    const row = entry as Record<string, unknown>;
-    base[dayId] = {
-      notas: typeof row.notas === "string" ? row.notas : "",
-      concluido: row.concluido === true,
-    };
+    base[dayId] = parseDayEntry(entry);
   }
 
   return base;
+}
+
+/** Garante estrutura completa (ex.: rascunhos legados no IndexedDB sem `refeicoes`). */
+export function normalizeWeeklyDietDraft(draft: WeeklyDietDraft): WeeklyDietDraft {
+  return {
+    ...draft,
+    dias: parseWeeklyDietDays(draft.dias),
+  };
 }
 
 export function parseBodyCircumferences(raw: unknown): Record<BodyCircumferenceId, string> {

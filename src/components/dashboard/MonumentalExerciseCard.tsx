@@ -11,6 +11,10 @@ import { ExerciseForjadoBadge } from "@/components/dashboard/ExerciseForjadoBadg
 import { CameraGlyph } from "@/components/dashboard/DashboardBrandAssets";
 import type { Enums } from "@/types/database.types";
 import type { Exercise } from "@/lib/mock-data";
+import {
+  formatRepsPerSet,
+  resolveProgressionLabel,
+} from "@/lib/prescription-progression";
 import { formatExerciseReferenceMetric, formatDuration, formatSessionMetricLabel } from "@/lib/training-metric";
 import {
   BIOLOGICAL_BALANCE_MULTIPLIER,
@@ -39,6 +43,7 @@ import {
   EXERCISE_SERIES_SUPERACAO,
   PHOENIX_INPUT_GOAL_COMPLETE,
   PHOENIX_INPUT_GOAL_WEEK_LOCKED,
+  PHOENIX_INPUT_GOAL_AWAITING_SETS,
   PHOENIX_INPUT_HINT_WEEK_LOCKED,
   EXERCISE_VIDEO_BUTTON,
   EXERCISE_VIDEO_BUTTON_IDLE,
@@ -98,6 +103,16 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   const nextSetNumber = Math.min(exercise.completedSets + 1, exercise.targetSets);
   const historicalPrLabel = formatExerciseReferenceMetric(exercise, exercise.metricKind);
   const showExpandedBody = !isMinimized || isActive;
+  const prescribedRepsText =
+    exercise.repsPerSet && exercise.repsPerSet.length > 0
+      ? formatRepsPerSet(exercise.repsPerSet)
+      : exercise.targetReps > 0
+        ? `${exercise.targetSets}×${exercise.targetReps}`
+        : "";
+  const currentSetRepTarget =
+    exercise.repsPerSet && exercise.repsPerSet.length > 0
+      ? exercise.repsPerSet[Math.min(nextSetNumber - 1, exercise.repsPerSet.length - 1)]
+      : exercise.targetReps;
 
   const handleVolumeCommitted = useCallback(
     (volume: number) => {
@@ -109,9 +124,12 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
 
   const handleWeightSaved = useCallback(
     (weight: number) => {
+      if (exercise.metricKind !== "load_kg") {
+        setBaseVtc(weight);
+      }
       onWeightSaved(exercise.id, weight);
     },
-    [exercise.id, onWeightSaved],
+    [exercise.id, exercise.metricKind, onWeightSaved],
   );
 
   const handleCardActivate = useCallback(() => {
@@ -244,6 +262,25 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
             <h3 className={`${nameClass} mt-2.5`}>
               {exercise.name}
             </h3>
+            {prescribedRepsText ? (
+              <p className={`${EXERCISE_RECORD_META} mt-1.5`}>
+                <span className={EXERCISE_RECORD_TERM}>Prescrição</span>
+                {" · "}
+                {prescribedRepsText}
+              </p>
+            ) : null}
+            {exercise.progressionAlternatives && exercise.progressionAlternatives.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {exercise.progressionAlternatives.map((item) => (
+                  <span
+                    key={item}
+                    className={`${capsuleClass} text-[11px] uppercase tracking-wide`}
+                  >
+                    {resolveProgressionLabel(item)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <button
@@ -280,6 +317,12 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
                   </span>
                   {exercise.metricKind === "duration_sec" && exercise.targetDurationSec ? (
                     <span className={capsuleClass}>Meta {formatDuration(exercise.targetDurationSec)}</span>
+                  ) : prescribedRepsText ? (
+                    <span className={capsuleClass}>
+                      {typeof currentSetRepTarget === "string" && currentSetRepTarget === "FALHA"
+                        ? `S${nextSetNumber} · FALHA`
+                        : `S${nextSetNumber} · ${currentSetRepTarget} rep`}
+                    </span>
                   ) : exercise.metricKind === "rep_max" && exercise.targetReps > 0 ? (
                     <span className={capsuleClass}>Meta {exercise.targetReps} rep</span>
                   ) : null}
@@ -318,7 +361,8 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
             <PhoenixInput
               userId={userId}
               isExerciseActive={isActive}
-              isSeriesComplete={isMaxLoadRegistered}
+              isPrRegistered={isMaxLoadRegistered}
+              allSetsComplete={isSeriesComplete}
               exercicioId={exercise.id}
               exercicioNome={exercise.name}
               fieldIdPrefix={`exercise-${exercise.id}-`}
@@ -330,12 +374,14 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
                 isWeekLocked
                   ? PHOENIX_INPUT_GOAL_WEEK_LOCKED
                   : isMaxLoadRegistered
-                  ? PHOENIX_INPUT_GOAL_COMPLETE
-                  : exercise.metricKind === "duration_sec"
-                    ? `Registrar tempo máximo · ${exercise.targetSets} séries propostas`
-                    : exercise.metricKind === "rep_max"
-                      ? `Registrar repetição máxima · ${exercise.targetSets} séries propostas`
-                      : `Registrar carga máxima · ${exercise.targetSets} séries propostas`
+                    ? PHOENIX_INPUT_GOAL_COMPLETE
+                    : !isSeriesComplete
+                      ? PHOENIX_INPUT_GOAL_AWAITING_SETS
+                      : exercise.metricKind === "duration_sec"
+                        ? `Registrar tempo máximo · ${exercise.targetSets} séries`
+                        : exercise.metricKind === "rep_max"
+                          ? `Registrar repetição máxima · ${exercise.targetSets} séries`
+                          : `Registrar carga máxima · ${exercise.targetSets} séries`
               }
               prescribedSeries={exercise.targetSets}
               musculo={musculo}

@@ -27,13 +27,14 @@ import {
 
 type ForjaDietBlueprintFormProps = {
   athlete: ForjaBondedAthlete | null;
+  isSovereign?: boolean;
 };
 
 type DietPhase = "idle" | "syncing" | "success" | "error";
 
 const OBJECTIVE_OPTIONS = Object.entries(DIET_OBJECTIVE_LABELS) as Array<[DietObjective, string]>;
 
-function ForjaDietBlueprintFormComponent({ athlete }: ForjaDietBlueprintFormProps) {
+function ForjaDietBlueprintFormComponent({ athlete, isSovereign = false }: ForjaDietBlueprintFormProps) {
   const [draft, setDraft] = useState<ForjaDietBlueprintDraft>(EMPTY_DIET_BLUEPRINT_DRAFT);
   const [phase, setPhase] = useState<DietPhase>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -101,7 +102,7 @@ function ForjaDietBlueprintFormComponent({ athlete }: ForjaDietBlueprintFormProp
       setPhase("syncing");
       setMessage(null);
 
-      const result = await syncForjaDietBlueprint(athlete, parsed.payload);
+      const result = await syncForjaDietBlueprint(athlete, parsed.payload, { isSovereign });
       if (!result.ok) {
         setPhase("error");
         setMessage(result.message);
@@ -112,7 +113,7 @@ function ForjaDietBlueprintFormComponent({ athlete }: ForjaDietBlueprintFormProp
       setMessage(FORJA_COPY.diet.success(athlete.displayName, parsed.payload.titulo));
       setDraft(EMPTY_DIET_BLUEPRINT_DRAFT);
     },
-    [athlete, draft],
+    [athlete, draft, isSovereign],
   );
 
   if (!athlete) {
@@ -135,7 +136,7 @@ function ForjaDietBlueprintFormComponent({ athlete }: ForjaDietBlueprintFormProp
             type="text"
             value={draft.titulo}
             onChange={handleFieldChange("titulo")}
-            placeholder="Ex.: Recomposição Termogénica"
+            placeholder="Ex.: Hipertrofia Elite"
             className={FORJA_INPUT}
             autoComplete="off"
             disabled={isSyncing || !canPublish}

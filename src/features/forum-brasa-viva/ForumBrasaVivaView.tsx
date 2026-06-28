@@ -10,6 +10,7 @@ import { PhaseWrapper } from "@/features/forum-brasa-viva/PhaseWrapper";
 import type { ForumBrasaVivaTopic } from "@/features/forum-brasa-viva/types";
 import { emitClientTelemetry } from "@/lib/client-telemetry";
 import { fetchForumBrasaVivaTopics } from "@/lib/forum-brasa-viva-data";
+import { MURAL_REFRESH_EVENT } from "@/lib/dashboard-tab-navigation";
 import {
   DASHBOARD_EMPTY_STATE,
   DASHBOARD_MURAL_LIST,
@@ -71,6 +72,16 @@ export function ForumBrasaVivaView({
       cancelled = true;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    const onMuralRefresh = () => {
+      setLoading(true);
+      void loadTopics();
+    };
+
+    window.addEventListener(MURAL_REFRESH_EVENT, onMuralRefresh);
+    return () => window.removeEventListener(MURAL_REFRESH_EVENT, onMuralRefresh);
+  }, [loadTopics]);
 
   useEffect(() => {
     if (!phase.isHydrated || telemetryViewRef.current) return;
@@ -138,7 +149,7 @@ export function ForumBrasaVivaView({
           }
         >
           {embedMode
-            ? "Ainda não há superações no mural. Bate o teu recorde no treino para a linhagem ver a tua ascensão."
+            ? "Ainda não há superações hoje no mural. Bate o teu recorde no treino para a linhagem ver a tua ascensão."
             : "Nenhum tópico aceso ainda. Supere seu recorde histórico para publicar no Fórum Brasa-Viva."}
         </p>
       ) : (

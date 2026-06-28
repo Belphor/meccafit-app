@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ForjaAntiFraudPanel } from "@/app/dashboard/forja/ForjaAntiFraudPanel";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
-import { ForjaVtcFeedPanel } from "@/app/dashboard/forja/ForjaVtcFeedPanel";
+import { ForjaVtcFeedPanel, type ClientAlertSeverity } from "@/app/dashboard/forja/ForjaVtcFeedPanel";
+import { ForjaVtcPhaseReferencePanel } from "@/app/dashboard/forja/ForjaVtcPhaseReferencePanel";
 import { ForjaAthleteSidebar } from "@/components/forjador/forja-athlete-sidebar";
 import { ForjaMonitorSegmentFilter } from "@/components/forjador/forja-monitor-segment-filter";
 import { ForjaMonitorStatsBar } from "@/components/forjador/forja-monitor-stats-bar";
@@ -13,7 +14,6 @@ import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import {
   FORJA_AMBIENT,
   FORJA_COMMAND_PANEL,
-  FORJA_GHOST_BUTTON,
   FORJA_LAYOUT,
   FORJA_META,
   FORJA_PAGE_TITLE,
@@ -21,56 +21,80 @@ import {
   FORJA_SHELL,
 } from "@/lib/forja-config";
 import { FORJA_COPY, resolveForjaRoleLabel } from "@/lib/forja-copy";
-import type { ForjaDashboardPayload, ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
+import type { ForjaBondedAthlete, ForjaDashboardPayload, ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
 import {
   computeMonitorStats,
   filterAthletesByMonitorSegment,
+  patchFeedEntryVtcAfterAdjust,
   type ForjaMonitorSegment,
 } from "@/lib/forja-monitor-utils";
 import { FORJADOR_WORKSPACE_NAV } from "@/lib/forjador-vip-nav";
+import { fetchForjaMonitorAthletes } from "@/lib/forja-sovereign-actions";
+import type { ForjaFraudSignal } from "@/lib/forja-sovereign-actions";
 
 type MonitoramentoPageClientProps = {
   payload: ForjaDashboardPayload;
 };
 
 export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProps) {
+  const [athletes, setAthletes] = useState<ForjaBondedAthlete[]>(payload.athletes);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [segment, setSegment] = useState<ForjaMonitorSegment>("todos");
   const [feedEntries, setFeedEntries] = useState<ForjaVtcFeedEntry[]>([]);
   const [feedVersion, setFeedVersion] = useState(0);
+  const [clientAlertSeverity, setClientAlertSeverity] = useState<
+    Record<string, ClientAlertSeverity>
+  >({});
+
+  const handleSignalsLoaded = useCallback((signals: ForjaFraudSignal[]) => {
+    const map: Record<string, ClientAlertSeverity> = {};
+    for (const signal of signals) {
+      const current = map[signal.atleta_id];
+      if (signal.severity === "critical") {
+        map[signal.atleta_id] = "critical";
+      } else if (!current) {
+        map[signal.atleta_id] = "warn";
+      }
+    }
+    setClientAlertSeverity(map);
+  }, []);
+
+  useEffect(() => {
+    setAthletes(payload.athletes);
+  }, [payload.athletes]);
 
   const filteredAthletes = useMemo(
-    () => filterAthletesByMonitorSegment(payload.athletes, segment, payload.operator.userId),
-    [payload.athletes, payload.operator.userId, segment],
+    () => filterAthletesByMonitorSegment(athletes, segment, payload.operator.userId),
+    [athletes, payload.operator.userId, segment],
   );
 
   const segmentCounts = useMemo(
     () => ({
-      todos: payload.athletes.length,
-      vip: payload.athletes.filter((athlete) => athlete.hasVipBond).length,
-      comum: payload.athletes.filter((athlete) => !athlete.hasVipBond).length,
-      meus: payload.athletes.filter((athlete) => !athlete.isGlobalListing).length,
+      todos: athletes.length,
+      vip: athletes.filter((athlete) => athlete.hasVipBond).length,
+      comum: athletes.filter((athlete) => !athlete.hasVipBond).length,
+      meus: athletes.filter((athlete) => !athlete.isGlobalListing).length,
     }),
-    [payload.athletes],
+    [athletes],
   );
 
   const vipBondByClientId = useMemo(() => {
     const map: Record<string, boolean> = {};
-    for (const athlete of payload.athletes) {
+    for (const athlete of athletes) {
       map[athlete.clientId] = Boolean(athlete.hasVipBond);
     }
     return map;
-  }, [payload.athletes]);
+  }, [athletes]);
 
   const stats = useMemo(
-    () => computeMonitorStats(payload.athletes, payload.operator.userId, feedEntries),
-    [feedEntries, payload.athletes, payload.operator.userId],
+    () => computeMonitorStats(athletes, payload.operator.userId, feedEntries),
+    [feedEntries, athletes, payload.operator.userId],
   );
 
   const athleteById = useMemo(() => {
-    const map = new Map(payload.athletes.map((a) => [a.clientId, a]));
+    const map = new Map(athletes.map((a) => [a.clientId, a]));
     return map;
-  }, [payload.athletes]);
+  }, [athletes]);
 
   const selectedAthlete = useMemo(
     () => (selectedClientId ? (athleteById.get(selectedClientId) ?? null) : null),
@@ -91,7 +115,30 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
 
   const handleMonitorRefresh = useCallback(() => {
     setFeedVersion((value) => value + 1);
+    void fetchForjaMonitorAthletes().then((result) => {
+      if (result.ok) {
+        setAthletes(result.athletes);
+      }
+    });
   }, []);
+
+  const handleAthleteUpdated = useCallback((updated: ForjaBondedAthlete) => {
+    setAthletes((current) =>
+      current.map((row) => (row.clientId === updated.clientId ? { ...row, ...updated } : row)),
+    );
+    if (
+      updated.vtcToday !== undefined &&
+      (updated.clientId === selectedClientId || selectedClientId === null)
+    ) {
+      setFeedEntries((current) =>
+        current.map((entry) =>
+          entry.clientId === updated.clientId
+            ? patchFeedEntryVtcAfterAdjust(entry, updated.vtcToday ?? entry.vtcToday)
+            : entry,
+        ),
+      );
+    }
+  }, [selectedClientId]);
 
   const emptyMessage = FORJA_COPY.emptyAthletesSovereign;
 
@@ -164,22 +211,7 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
           </aside>
 
           <div className={`${FORJA_COMMAND_PANEL} space-y-4`}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className={FORJA_SECTION_CHIP}>
-                {selectedAthlete
-                  ? `${FORJA_COPY.monitor.clientDetail} · ${selectedAthlete.displayName}`
-                  : FORJA_COPY.monitor.globalAlerts}
-              </p>
-              {selectedClientId ? (
-                <button
-                  type="button"
-                  className={FORJA_GHOST_BUTTON}
-                  onClick={handleClearSelection}
-                >
-                  {FORJA_COPY.monitor.clearSelection}
-                </button>
-              ) : null}
-            </div>
+            <ForjaVtcPhaseReferencePanel />
 
             <ForjaVtcFeedPanel
               selectedClientId={selectedClientId}
@@ -187,15 +219,20 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
               refreshVersion={feedVersion}
               onFeedLoaded={handleFeedLoaded}
               vipBondByClientId={vipBondByClientId}
+              clientAlertSeverity={clientAlertSeverity}
             />
 
             <ForjaAntiFraudPanel
               athlete={selectedAthlete}
               isSovereign={payload.operator.isSovereign}
               scopeClientId={selectedAthlete?.clientId ?? null}
+              selectedClientId={selectedClientId}
               showGlobalWhenEmpty
               onSelectClient={handleSelectAthlete}
+              onClearSelection={handleClearSelection}
               onActionComplete={handleMonitorRefresh}
+              onAthleteUpdated={handleAthleteUpdated}
+              onSignalsLoaded={handleSignalsLoaded}
             />
           </div>
         </div>

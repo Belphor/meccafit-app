@@ -80,6 +80,11 @@ export function WorkoutTimer({
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onRestCompleteRef = useRef(onRestComplete);
+
+  useEffect(() => {
+    onRestCompleteRef.current = onRestComplete;
+  }, [onRestComplete]);
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -98,7 +103,7 @@ export function WorkoutTimer({
         if (prev <= 1) {
           clearTimer();
           setIsRunning(false);
-          onRestComplete?.();
+          onRestCompleteRef.current?.();
           return 0;
         }
         return prev - 1;
@@ -106,7 +111,7 @@ export function WorkoutTimer({
     }, 1000);
 
     return clearTimer;
-  }, [clearTimer, isRunning, onRestComplete]);
+  }, [clearTimer, isRunning]);
 
   const startRest = useCallback(
     (seconds = defaultSeconds) => {

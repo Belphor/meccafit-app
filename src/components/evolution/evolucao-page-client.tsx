@@ -167,17 +167,15 @@ export function EvolucaoPageClient({
     let cancelled = false;
 
     void (async () => {
-      if (!resolvedInitial) {
-        setLoading(true);
-      } else {
-        return;
-      }
       setScopeError(null);
       try {
         const scoped = await assertAuthenticatedScope(userId);
         if (!scoped) {
           if (!cancelled) setScopeError("Sessão inválida. Faça login novamente.");
           return;
+        }
+        if (!resolvedInitial) {
+          setLoading(true);
         }
         const payload = await fetchCalorPayload(userId);
         if (!cancelled) applyPayload(payload);
@@ -227,7 +225,7 @@ export function EvolucaoPageClient({
         className={DASHBOARD_PANEL_FRAME}
         aria-labelledby="evolucao-aba-title"
       >
-        <DashboardPanelHeader chip="Evolução" meta="Calor muscular" />
+        <DashboardPanelHeader chip="Evolução" meta="Mapa muscular · Índice de Ignição" />
 
         <div className="mt-4 flex flex-col gap-4 border-b border-orange-500/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 text-center sm:text-left">
@@ -262,7 +260,7 @@ export function EvolucaoPageClient({
           ) : calorRows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                Calor muscular ainda não sincronizado
+                Evolução muscular ainda não sincronizada
               </p>
               <button
                 type="button"
@@ -270,7 +268,7 @@ export function EvolucaoPageClient({
                 onClick={() => void refreshCalor()}
                 className="mt-4 rounded-full border border-orange-500/15 bg-neutral-950/60 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200/85 disabled:opacity-50"
               >
-                {refreshing ? "Sincronizando…" : "Sincronizar calor muscular"}
+                {refreshing ? "Sincronizando…" : "Sincronizar evolução"}
               </button>
             </div>
           ) : (
@@ -304,6 +302,7 @@ export function EvolucaoPageClient({
                     <EvolutionVipInsights
                       userId={userId}
                       activeMuscle={activeMuscle}
+                      calorRows={calorRows}
                       enabled={hasPersonalBond}
                       variant="inline"
                     />
@@ -320,26 +319,36 @@ export function EvolucaoPageClient({
           </p>
         ) : null}
 
+        {!loading && calorRows.length > 0 && hasPersonalBond ? (
+          <div className="mt-6">
+            <EvolutionVipInsights
+              userId={userId}
+              enabled={hasPersonalBond}
+              variant="full"
+            />
+          </div>
+        ) : null}
+
         {!loading && calorRows.length > 0 ? (
           <>
-            <DashboardClientInfoBlock className="mt-4" label="Pureza da Fênix">
+            <DashboardClientInfoBlock className="mt-4" label="Índice de Ignição">
               {FENIX_PUREZA_CLIENT_EXPLANATION}
             </DashboardClientInfoBlock>
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                  Índice de ignição ·{" "}
+                  Índice de Ignição ·{" "}
                   <span style={{ color: MAGMA_SPECTRUM.solarGold }}>
                     {Math.round(indiceIgnicao)}%
                   </span>
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-                  Nível global · {CALOR_LEVEL_LABELS[nivelTermicoGlobal ?? computedNivelGlobal]}
+                  Intensidade geral · {CALOR_LEVEL_LABELS[nivelTermicoGlobal ?? computedNivelGlobal]}
                 </p>
                 {indiceIgnicao < PURITY_PENALTY_THRESHOLD ? (
                   <p className="text-[9px] uppercase tracking-[0.14em] text-amber-500/70">
-                    Falha de energia · pureza da Fênix abaixo de {PURITY_PENALTY_THRESHOLD}%
+                    Índice abaixo de {PURITY_PENALTY_THRESHOLD}% — mapa com cores mais suaves
                   </p>
                 ) : null}
               </div>
@@ -350,7 +359,7 @@ export function EvolucaoPageClient({
                   onClick={() => void refreshCalor()}
                   className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-orange-500/15 bg-neutral-950/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/85 disabled:opacity-50 xs:w-auto"
                 >
-                  {refreshing ? "Sincronizando…" : "Atualizar calor"}
+                  {refreshing ? "Sincronizando…" : "Atualizar mapa"}
                 </button>
                 <button
                   type="button"

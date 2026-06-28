@@ -17,7 +17,7 @@ import {
 } from "@/lib/dashboard-data";
 import type { ClientProfile, MuscleSubgroup } from "@/lib/mock-data";
 import { resolveCatalogMetricKind } from "@/lib/exercise-catalog";
-import { resolveAltarContribution } from "@/lib/training-metric";
+import { contributesToSessionVtcKg, resolveSessionVtcContribution } from "@/lib/training-metric";
 import {
   BIOLOGICAL_BALANCE_MULTIPLIER,
   DASHBOARD_TAB_CONTENT,
@@ -40,6 +40,7 @@ export type DashboardTreinoWorkspaceProps = {
   profile: ClientProfile;
   authUserId: string;
   initialWeekSchedule?: PlanilhaDayRow[];
+  useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
@@ -72,10 +73,12 @@ function resolveTreinoSessionHydration(
 
   if (!snapshot) {
     const maxLoadsByExerciseId: Record<number, number> = {};
+    const registeredPrByExerciseId: Record<number, number> = {};
     for (const exercise of subgroup.exercises) {
       const lockedContribution = weekLockedLoads[exercise.id];
       if (lockedContribution) {
         maxLoadsByExerciseId[exercise.id] = lockedContribution;
+        registeredPrByExerciseId[exercise.id] = lockedContribution;
       }
     }
 
@@ -84,6 +87,7 @@ function resolveTreinoSessionHydration(
       completedSetsByExerciseId: {} as Record<number, number>,
       lastSavedWeight: 0,
       maxLoadsByExerciseId,
+      registeredPrByExerciseId,
       shouldPersistStale: false,
     };
   }
@@ -98,23 +102,28 @@ function resolveTreinoSessionHydration(
     snapshot.maxLoadsByExerciseId,
   );
   const mergedMaxLoads = { ...reconciledMaxLoads };
+  const registeredPrByExerciseId = { ...(snapshot.registeredPrByExerciseId ?? {}) };
   for (const exercise of subgroup.exercises) {
     const lockedContribution = weekLockedLoads[exercise.id];
     if (lockedContribution) {
       mergedMaxLoads[exercise.id] = lockedContribution;
+      registeredPrByExerciseId[exercise.id] = lockedContribution;
     }
   }
   const reconciledVtc = sumSessionAltarVtc(subgroup, mergedMaxLoads);
   const hasStaleSession =
     Object.keys(reconciledCompleted).length !==
       Object.keys(snapshot.completedSetsByExerciseId).length ||
-    Object.keys(mergedMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length;
+    Object.keys(mergedMaxLoads).length !== Object.keys(snapshot.maxLoadsByExerciseId).length ||
+    Object.keys(registeredPrByExerciseId).length !==
+      Object.keys(snapshot.registeredPrByExerciseId ?? {}).length;
 
   return {
     baseVtcTotal: reconciledVtc,
     completedSetsByExerciseId: reconciledCompleted,
     lastSavedWeight: snapshot.lastSavedWeight,
     maxLoadsByExerciseId: mergedMaxLoads,
+    registeredPrByExerciseId,
     shouldPersistStale: hasStaleSession,
   };
 }
@@ -124,6 +133,7 @@ export function DashboardTreinoWorkspace({
   profile,
   authUserId,
   initialWeekSchedule,
+  useForjadorSchedule = false,
   activeTrainingDay,
   forjadorConfig,
   forjadorPrescriptions,
@@ -163,13 +173,18 @@ export function DashboardTreinoWorkspace({
   const [maxLoadsByExerciseId, setMaxLoadsByExerciseId] = useState<Record<number, number>>(
     sessionHydration.maxLoadsByExerciseId,
   );
+  const [registeredPrByExerciseId, setRegisteredPrByExerciseId] = useState<Record<number, number>>(
+    sessionHydration.registeredPrByExerciseId,
+  );
   const maxLoadsRef = useRef<Record<number, number>>(sessionHydration.maxLoadsByExerciseId);
+  const registeredPrRef = useRef<Record<number, number>>(sessionHydration.registeredPrByExerciseId);
   const completedSetsRef = useRef<Record<number, number>>(
     sessionHydration.completedSetsByExerciseId,
   );
   const lastSavedWeightRef = useRef(sessionHydration.lastSavedWeight);
   const sessionHydratedRef = useRef(true);
   const prevSubgroupIdRef = useRef(subgroup.id);
+  const lastSessionHydrationKeyRef = useRef(sessionHydrationKey);
   const flameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const muralTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,6 +195,7 @@ export function DashboardTreinoWorkspace({
         baseVtcTotal: nextBaseVtcTotal,
         lastSavedWeight: nextLastSavedWeight,
         maxLoadsByExerciseId: maxLoadsRef.current,
+        registeredPrByExerciseId: registeredPrRef.current,
         completedSetsByExerciseId: completedSetsRef.current,
       });
     },
@@ -192,17 +208,36 @@ export function DashboardTreinoWorkspace({
   );
 
   useEffect(() => {
+    const hydrationKeyChanged = lastSessionHydrationKeyRef.current !== sessionHydrationKey;
+    const subgroupChanged = prevSubgroupIdRef.current !== subgroup.id;
+    const hasActiveSession =
+      Object.values(completedSetsRef.current).some((value) => value > 0) ||
+      Object.values(maxLoadsRef.current).some((value) => value > 0);
+
+    if (!hydrationKeyChanged && !subgroupChanged) return;
+    if (!hydrationKeyChanged && subgroupChanged && hasActiveSession) {
+      prevSubgroupIdRef.current = subgroup.id;
+      if (subgroupChanged) {
+        setActiveExerciseId(resolveDefaultActiveExerciseId(subgroup));
+      }
+      return;
+    }
+
+    lastSessionHydrationKeyRef.current = sessionHydrationKey;
+    prevSubgroupIdRef.current = subgroup.id;
+
     queueMicrotask(() => {
       maxLoadsRef.current = sessionHydration.maxLoadsByExerciseId;
+      registeredPrRef.current = sessionHydration.registeredPrByExerciseId;
       completedSetsRef.current = sessionHydration.completedSetsByExerciseId;
       lastSavedWeightRef.current = sessionHydration.lastSavedWeight;
       setBaseVtcTotal(sessionHydration.baseVtcTotal);
       setCompletedSetsByExerciseId(sessionHydration.completedSetsByExerciseId);
       setMaxLoadsByExerciseId(sessionHydration.maxLoadsByExerciseId);
+      setRegisteredPrByExerciseId(sessionHydration.registeredPrByExerciseId);
 
-      if (prevSubgroupIdRef.current !== subgroup.id) {
+      if (subgroupChanged) {
         setActiveExerciseId(resolveDefaultActiveExerciseId(subgroup));
-        prevSubgroupIdRef.current = subgroup.id;
       }
 
       sessionHydratedRef.current = true;
@@ -213,6 +248,7 @@ export function DashboardTreinoWorkspace({
           baseVtcTotal: sessionHydration.baseVtcTotal,
           lastSavedWeight: sessionHydration.lastSavedWeight,
           maxLoadsByExerciseId: sessionHydration.maxLoadsByExerciseId,
+          registeredPrByExerciseId: sessionHydration.registeredPrByExerciseId,
           completedSetsByExerciseId: sessionHydration.completedSetsByExerciseId,
         });
       }
@@ -244,27 +280,63 @@ export function DashboardTreinoWorkspace({
   );
 
   const handleWeightSaved = useCallback(
-    (_exerciseId: number, weight: number) => {
-      lastSavedWeightRef.current = weight;
-      onAltarMetricsChange(baseVtcTotal, weight);
+    (exerciseId: number, value: number) => {
+      if (isExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId)) return;
+      if (registeredPrRef.current[exerciseId]) return;
+
+      lastSavedWeightRef.current = value;
+      registeredPrRef.current = { ...registeredPrRef.current, [exerciseId]: value };
+      setRegisteredPrByExerciseId({ ...registeredPrRef.current });
+      markExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId, value);
+
+      const exercise = mergedSubgroup.exercises.find((item) => item.id === exerciseId);
+      const metricKind = exercise?.metricKind ?? resolveCatalogMetricKind(exerciseId);
+
+      if (contributesToSessionVtcKg(metricKind)) {
+        const vtcContribution = resolveSessionVtcContribution(metricKind, value);
+        const validIds = new Set(mergedSubgroup.exercises.map((item) => item.id));
+        maxLoadsRef.current = {
+          ...maxLoadsRef.current,
+          [exerciseId]: vtcContribution > 0 ? vtcContribution : value,
+        };
+        for (const key of Object.keys(maxLoadsRef.current)) {
+          const id = Number.parseInt(key, 10);
+          if (!validIds.has(id)) {
+            delete maxLoadsRef.current[id];
+          }
+        }
+        setMaxLoadsByExerciseId({ ...maxLoadsRef.current });
+      }
+
+      const total = sumSessionAltarVtc(mergedSubgroup, maxLoadsRef.current);
+      setBaseVtcTotal(total);
+      onAltarMetricsChange(total, value);
+
       if (sessionHydratedRef.current) {
-        persistAltarSession(baseVtcTotal, weight);
+        persistAltarSession(total, value);
       }
     },
-    [baseVtcTotal, onAltarMetricsChange, persistAltarSession],
+    [
+      activeTrainingDay,
+      authUserId,
+      mergedSubgroup,
+      onAltarMetricsChange,
+      persistAltarSession,
+    ],
   );
 
   const handleExerciseMaxLoad = useCallback(
     (exerciseId: number, maxLoadKg: number) => {
       if (isExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId)) return;
 
-      const metricKind = resolveCatalogMetricKind(exerciseId);
-      const contribution = resolveAltarContribution(metricKind, maxLoadKg);
-      const validIds = new Set(mergedSubgroup.exercises.map((exercise) => exercise.id));
+      const exercise = mergedSubgroup.exercises.find((item) => item.id === exerciseId);
+      const metricKind = exercise?.metricKind ?? resolveCatalogMetricKind(exerciseId);
+      const vtcContribution = resolveSessionVtcContribution(metricKind, maxLoadKg);
+      const validIds = new Set(mergedSubgroup.exercises.map((item) => item.id));
 
       maxLoadsRef.current = {
         ...maxLoadsRef.current,
-        [exerciseId]: contribution,
+        [exerciseId]: vtcContribution > 0 ? vtcContribution : maxLoadKg,
       };
 
       for (const key of Object.keys(maxLoadsRef.current)) {
@@ -373,6 +445,7 @@ export function DashboardTreinoWorkspace({
           <TreinoTab
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
+            useForjadorSchedule={useForjadorSchedule}
             activeTrainingDay={activeTrainingDay}
             isTreinoSwitching={isTreinoSwitching}
             forjadorConfig={forjadorConfig}
@@ -392,6 +465,7 @@ export function DashboardTreinoWorkspace({
             onPersistSuccess={handleExercisePersisted}
             onSetComplete={handleSetComplete}
             maxLoadsByExerciseId={maxLoadsByExerciseId}
+            registeredPrByExerciseId={registeredPrByExerciseId}
           />
         </div>
 

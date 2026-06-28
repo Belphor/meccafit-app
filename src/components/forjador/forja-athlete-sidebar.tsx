@@ -43,11 +43,13 @@ function AthleteSection({
   athletes,
   selectedClientId,
   onSelect,
+  vipHighlight = false,
 }: {
   label: string;
   athletes: ForjaBondedAthlete[];
   selectedClientId: string | null;
   onSelect: (clientId: string) => void;
+  vipHighlight?: boolean;
 }) {
   if (athletes.length === 0) return null;
 
@@ -63,6 +65,7 @@ function AthleteSection({
           athlete={athlete}
           isSelected={selectedClientId === athlete.clientId}
           onSelect={onSelect}
+          vipHighlight={vipHighlight}
         />
       ))}
     </div>
@@ -136,6 +139,7 @@ export function ForjaAthleteSidebar({
               athlete={athlete}
               isSelected={selectedClientId === athlete.clientId}
               onSelect={onSelect}
+              vipHighlight={vipOnly}
             />
           ))}
         </div>
@@ -152,6 +156,7 @@ export function ForjaAthleteSidebar({
           athletes={lists.vip}
           selectedClientId={selectedClientId}
           onSelect={onSelect}
+          vipHighlight
         />
         <AthleteSection
           label="Clientes comuns"

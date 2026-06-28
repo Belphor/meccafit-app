@@ -21,6 +21,7 @@ import type { AthletePlanConfig } from "@/components/evolution/plan-config-form"
 import {
   DEFAULT_FORJADOR_TREINO_CONFIG,
   fetchForjadorPrescriptionsClient,
+  fetchForjadorTreinoConfigClient,
   type ForjadorPrescriptionRow,
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
@@ -37,6 +38,7 @@ import {
 import {
   DASHBOARD_TAB_CHANGE_EVENT,
   publishDashboardBondState,
+  publishMuralRefresh,
   readDashboardTabFromLocation,
   syncDashboardTabToUrl,
   type DashboardTabChangeDetail,
@@ -62,6 +64,10 @@ import {
   STORAGE_VTC_UPDATE_EVENT,
   type StorageVtcUpdateDetail,
 } from "@/lib/cardio-altar-daily";
+import {
+  FORJA_TREINO_UPDATE_EVENT,
+  type ForjaTreinoUpdateDetail,
+} from "@/lib/forja-treino-events";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
@@ -76,7 +82,10 @@ import {
 } from "@/lib/training-track";
 import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import {
+  buildForjadorScheduleMap,
   buildScheduleMap,
+  fetchPlanilhaScheduleClient,
+  hasPlanilhaRows,
   resolveCalendarWeekdayIndex,
 } from "@/lib/training-week";
 
@@ -109,7 +118,7 @@ const DietaPanel = dynamic(
     import("@/components/dashboard/DietaPanel").then((module) => ({
       default: module.DietaPanel,
     })),
-  { loading: () => <DashboardLoading message="Carregando dieta..." /> },
+  { loading: () => <DashboardLoading message="Carregando nutrição..." /> },
 );
 
 type VideoModalState = {
@@ -149,10 +158,15 @@ export function DashboardClient({
     [subgroupParam],
   );
 
-  const scheduleMap = useMemo(
-    () => buildScheduleMap(initialWeekSchedule ?? []),
-    [initialWeekSchedule],
-  );
+  const [weekSchedule, setWeekSchedule] = useState<PlanilhaDayRow[]>(initialWeekSchedule ?? []);
+  const [hasPersonalBond, setHasPersonalBond] = useState(false);
+
+  const scheduleMap = useMemo(() => {
+    if (hasPersonalBond || hasPlanilhaRows(weekSchedule)) {
+      return buildForjadorScheduleMap(weekSchedule);
+    }
+    return buildScheduleMap(weekSchedule);
+  }, [hasPersonalBond, weekSchedule]);
 
   const [dataReady, setDataReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -163,7 +177,7 @@ export function DashboardClient({
     resolveCalendarWeekdayIndex(),
   );
   const [isTreinoSwitching, setIsTreinoSwitching] = useState(false);
-  const [forjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
+  const [forjadorConfig, setForjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
   const [forjadorPrescriptions, setForjadorPrescriptions] = useState<ForjadorPrescriptionRow[]>(
     initialForjadorPrescriptions,
   );
@@ -186,7 +200,6 @@ export function DashboardClient({
   );
   const [liveSessionVtcKg, setLiveSessionVtcKg] = useState(0);
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
-  const [hasPersonalBond, setHasPersonalBond] = useState(false);
   const subgroupRef = useRef(subgroup);
   const tabBootstrappedRef = useRef(false);
   const loadKey = `${reloadToken}`;
@@ -212,39 +225,142 @@ export function DashboardClient({
     activeTrainingDayRef.current = activeTrainingDay;
   }, [activeTrainingDay]);
 
-  const refreshForjadorPrescriptions = useCallback(async () => {
-    const rows = await fetchForjadorPrescriptionsClient(userId);
+  const refreshTreinoData = useCallback(async () => {
+    const [rows, schedule, config] = await Promise.all([
+      fetchForjadorPrescriptionsClient(userId),
+      fetchPlanilhaScheduleClient(userId),
+      fetchForjadorTreinoConfigClient(userId),
+    ]);
+
     setForjadorPrescriptions(rows);
-    return rows;
-  }, [userId]);
+    setWeekSchedule(schedule);
+    setForjadorConfig(config);
+
+    const day = activeTrainingDayRef.current;
+    const scheduleMapNext =
+      hasPersonalBond || hasPlanilhaRows(schedule)
+        ? buildForjadorScheduleMap(schedule)
+        : buildScheduleMap(schedule);
+    const composed = composeDayTreinoSubgroup(
+      scheduleMapNext[day],
+      trainingTrack,
+      rows,
+      day,
+    );
+    setSubgroup(composed);
+
+    const historicoResult = await refreshDaySubgroupHistorico(composed, { skipInvalidate: true });
+    if (historicoResult.data) {
+      setSubgroup(historicoResult.data);
+    }
+  }, [hasPersonalBond, trainingTrack, userId]);
+
+  const refreshTreinoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleTreinoRefresh = useCallback(() => {
+    if (refreshTreinoTimerRef.current) {
+      clearTimeout(refreshTreinoTimerRef.current);
+    }
+    refreshTreinoTimerRef.current = setTimeout(() => {
+      void refreshTreinoData();
+    }, 280);
+  }, [refreshTreinoData]);
 
   useEffect(() => {
-    if (!dataReady) return;
+    return () => {
+      if (refreshTreinoTimerRef.current) {
+        clearTimeout(refreshTreinoTimerRef.current);
+      }
+    };
+  }, []);
 
-    void refreshForjadorPrescriptions();
-  }, [activeTab, dataReady, refreshForjadorPrescriptions]);
+  const treinoBootstrappedRef = useRef(false);
 
   useEffect(() => {
-    if (!dataReady) return;
+    if (!dataReady || !userId) return;
+    if (treinoBootstrappedRef.current) return;
+    treinoBootstrappedRef.current = true;
 
-    const onFocus = () => {
-      void refreshForjadorPrescriptions();
+    if (hasPersonalBond || hasPlanilhaRows(weekSchedule) || forjadorPrescriptions.length > 0) {
+      void refreshTreinoData();
+    }
+  }, [dataReady, forjadorPrescriptions.length, hasPersonalBond, refreshTreinoData, userId, weekSchedule.length]);
+
+  useEffect(() => {
+    if (!dataReady || activeTab !== "treino") return;
+    void refreshTreinoData();
+  }, [activeTab, dataReady, refreshTreinoData]);
+
+  useEffect(() => {
+    if (!dataReady || !userId) return;
+
+    const refreshTreinoFromForja = (event: Event) => {
+      const detail = (event as CustomEvent<ForjaTreinoUpdateDetail>).detail;
+      if (detail?.clientId && detail.clientId !== userId) return;
+      scheduleTreinoRefresh();
     };
 
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [dataReady, refreshForjadorPrescriptions]);
+    window.addEventListener(FORJA_TREINO_UPDATE_EVENT, refreshTreinoFromForja);
+    return () => window.removeEventListener(FORJA_TREINO_UPDATE_EVENT, refreshTreinoFromForja);
+  }, [dataReady, scheduleTreinoRefresh, userId]);
+
+  useEffect(() => {
+    if (!dataReady || !userId) return;
+
+    const channel = supabase
+      .channel(`treino-sync-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "prescricoes_treino_forjador",
+          filter: `atleta_id=eq.${userId}`,
+        },
+        () => {
+          scheduleTreinoRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "planilhas_forjador",
+          filter: `atleta_id=eq.${userId}`,
+        },
+        () => {
+          scheduleTreinoRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "config_treino_atleta",
+          filter: `atleta_id=eq.${userId}`,
+        },
+        () => {
+          scheduleTreinoRefresh();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [dataReady, scheduleTreinoRefresh, userId]);
 
   useEffect(() => {
     if (!dataReady) return;
 
     let cancelled = false;
-    const day = activeTrainingDayRef.current;
     const composed = composeDayTreinoSubgroup(
-      scheduleMap[day],
+      scheduleMap[activeTrainingDay],
       trainingTrack,
       forjadorPrescriptions,
-      day,
+      activeTrainingDay,
     );
 
     void refreshDaySubgroupHistorico(composed, { skipInvalidate: true }).then((result) => {
@@ -255,7 +371,9 @@ export function DashboardClient({
     return () => {
       cancelled = true;
     };
-  }, [dataReady, forjadorPrescriptions, scheduleMap, trainingTrack]);
+  }, [activeTrainingDay, dataReady, forjadorPrescriptions, scheduleMap, trainingTrack]);
+
+  const initialDashboardLoadRef = useRef(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -273,13 +391,17 @@ export function DashboardClient({
       setProfile(bundle.data.profile);
       setProfileRow(bundle.data.profileRow);
       const bootDay = resolveCalendarWeekdayIndex();
+      const composeDay = initialDashboardLoadRef.current ? bootDay : activeTrainingDayRef.current;
       const bootSubgroup = composeDayTreinoSubgroup(
-        scheduleMap[bootDay],
+        scheduleMap[composeDay],
         bundle.data.trainingTrack,
         forjadorPrescriptions,
-        bootDay,
+        composeDay,
       );
-      setActiveTrainingDay(bootDay);
+      if (initialDashboardLoadRef.current) {
+        setActiveTrainingDay(bootDay);
+        initialDashboardLoadRef.current = false;
+      }
       setSubgroup(bootSubgroup);
 
       const historicoResult = await refreshDaySubgroupHistorico(bootSubgroup, { skipInvalidate: true });
@@ -302,7 +424,7 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [forjadorPrescriptions, loadKey, scheduleMap, subgroupParam]);
+  }, [loadKey, subgroupParam]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -367,6 +489,9 @@ export function DashboardClient({
     (tab: DashboardTabId) => {
       applyDashboardTab(tab);
       syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
+      if (tab === "comunidade") {
+        publishMuralRefresh();
+      }
       window.dispatchEvent(
         new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
           detail: { tab: isDietaTabAllowed(hasPersonalBond, tab) ? tab : DEFAULT_DASHBOARD_TAB },
@@ -452,39 +577,8 @@ export function DashboardClient({
           Math.round((current + liveIncrement) * 100) / 100,
         );
       }
-
-      const musculos = collectUniqueMusclesFromSubgroup(subgroupRef.current);
-      await Promise.all(musculos.map((musculo) => invalidateDashboardCaches(userId, musculo)));
-
-      const [subgroupResult, bundleResult] = await Promise.all([
-        refreshDaySubgroupHistorico(subgroupRef.current, { skipInvalidate: true }),
-        loadDashboardTrainingBundle(subgroupParam),
-      ]);
-
-      if (subgroupResult.data) {
-        setSubgroup(subgroupResult.data);
-      }
-
-      if (bundleResult.data?.muralPosts) {
-        setMuralPosts(bundleResult.data.muralPosts);
-      }
-
-      if (bundleResult.data?.profileRow) {
-        setProfileRow(bundleResult.data.profileRow);
-        const thermal = parseThermalGravityState(bundleResult.data.profileRow.thermal_gravity);
-        if (thermal) {
-          setLiveSessionVtcKg((current) =>
-            Math.max(current, thermal.session_vtc_today),
-          );
-        }
-      }
-
-      if (bundleResult.data) {
-        setTrainingTrack(bundleResult.data.trainingTrack);
-        setHasPersonalBond(bundleResult.data.hasPersonalBond);
-      }
     },
-    [forjadorPrescriptions, subgroupParam, trainingTrack, userId],
+    [],
   );
 
   const handleWatchVideo = useCallback(
@@ -507,6 +601,8 @@ export function DashboardClient({
       return;
     }
 
+    publishMuralRefresh();
+
     void fetchCommunityMuralPosts().then((result) => {
       if (result.data) setMuralPosts(result.data);
     });
@@ -528,7 +624,11 @@ export function DashboardClient({
   const treinoWorkspaceProps = {
     subgroup: treinoSubgroup,
     authUserId: userId,
-    initialWeekSchedule,
+    initialWeekSchedule: weekSchedule,
+    useForjadorSchedule:
+      hasPersonalBond ||
+      hasPlanilhaRows(weekSchedule) ||
+      forjadorPrescriptions.length > 0,
     activeTrainingDay,
     forjadorConfig,
     forjadorPrescriptions,

@@ -18,6 +18,7 @@ import {
 import {
   hasForjadorPrescriptionForDay,
   resolveExerciseRestSeconds,
+  resolveMusclesForTrainingDay,
   type ForjadorPrescriptionRow,
   type ForjadorTreinoConfig,
 } from "@/lib/forjador-prescriptions";
@@ -25,7 +26,7 @@ import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { composeDayTreinoSubgroup, subgroupIdToTrainingMuscle } from "@/lib/treino-subgroup";
 import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-track";
 import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
-import { buildScheduleMap } from "@/lib/training-week";
+import { buildForjadorScheduleMap, buildScheduleMap } from "@/lib/training-week";
 import {
   isExerciseWeekLocked,
   listFullyLockedTrainingDays,
@@ -41,6 +42,7 @@ type TreinoTabProps = {
   hasBiologicalBalance: boolean;
   userId: string | null;
   initialWeekSchedule?: PlanilhaDayRow[];
+  useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
   isTreinoSwitching: boolean;
   forjadorConfig: ForjadorTreinoConfig;
@@ -58,6 +60,7 @@ type TreinoTabProps = {
   onPersistSuccess?: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
   onSetComplete?: (exerciseId: number) => void;
   maxLoadsByExerciseId?: Record<number, number>;
+  registeredPrByExerciseId?: Record<number, number>;
 };
 
 export function TreinoTab({
@@ -68,6 +71,7 @@ export function TreinoTab({
   hasBiologicalBalance,
   userId,
   initialWeekSchedule,
+  useForjadorSchedule = false,
   activeTrainingDay,
   isTreinoSwitching,
   forjadorConfig,
@@ -82,14 +86,26 @@ export function TreinoTab({
   onPersistSuccess,
   onSetComplete,
   maxLoadsByExerciseId = {},
+  registeredPrByExerciseId = {},
 }: TreinoTabProps) {
   const [cardsMinimized, setCardsMinimized] = useState(true);
   const scheduleMap = useMemo(
-    () => buildScheduleMap(initialWeekSchedule ?? []),
-    [initialWeekSchedule],
+    () =>
+      useForjadorSchedule
+        ? buildForjadorScheduleMap(initialWeekSchedule ?? [])
+        : buildScheduleMap(initialWeekSchedule ?? []),
+    [initialWeekSchedule, useForjadorSchedule],
   );
-  const dayMuscles: TrainingMuscleGroup[] = scheduleMap[activeTrainingDay] ?? [];
-  const hasForjadorPlan = hasForjadorPrescriptionForDay(forjadorPrescriptions, dayMuscles);
+  const dayMuscles = resolveMusclesForTrainingDay(
+    forjadorPrescriptions,
+    activeTrainingDay,
+    scheduleMap[activeTrainingDay] ?? [],
+  );
+  const hasForjadorPlan = hasForjadorPrescriptionForDay(
+    forjadorPrescriptions,
+    dayMuscles,
+    activeTrainingDay,
+  );
   const cardioGoalMs = forjadorConfig.cardioMetaMinutos * 60 * 1000;
 
   const weekLockedDays = useMemo(() => {
@@ -114,7 +130,7 @@ export function TreinoTab({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="subgrupo-monumental-title"
     >
-      <DashboardPanelHeader chip="Treino" meta="Planilha do forjador" metaVariant="chip" />
+      <DashboardPanelHeader chip="Treino" meta="Rotina do personal" metaVariant="chip" />
 
       <CardioVooCinzasPanel
         userId={userId}
@@ -133,6 +149,7 @@ export function TreinoTab({
           <TreinoWeekControls
             userId={userId}
             initialSchedule={initialWeekSchedule}
+            useForjadorSchedule={useForjadorSchedule}
             activeTrainingDay={activeTrainingDay}
             isTreinoSwitching={isTreinoSwitching}
             hasForjadorPlan={hasForjadorPlan}
@@ -167,14 +184,23 @@ export function TreinoTab({
         </div>
 
         <ul className={DASHBOARD_SCROLL_LIST} aria-label="Lista de exercícios do dia">
-          {subgroup.exercises.map((exercise) => {
+          {subgroup.exercises.length === 0 ? (
+            <li className={`${DASHBOARD_INNER_FRAME} p-6 text-center`}>
+              <p className="text-sm text-amber-100/85">
+                {dayMuscles.length === 0
+                  ? "Seu personal ainda não definiu o treino deste dia. Quando publicar a rotina da semana, os exercícios aparecem aqui."
+                  : "Seu personal ainda não prescreveu exercícios para os grupos deste dia."}
+              </p>
+            </li>
+          ) : (
+            subgroup.exercises.map((exercise) => {
             const trainingMuscle = subgroupIdToTrainingMuscle(exercise.subgroupId);
             const musculo = subgroupIdToMusculo(exercise.subgroupId);
             const isWeekLocked = Boolean(
               userId && isExerciseWeekLocked(userId, activeTrainingDay, exercise.id),
             );
             const isMaxLoadRegistered =
-              Boolean(maxLoadsByExerciseId[exercise.id]) || isWeekLocked;
+              Boolean(registeredPrByExerciseId[exercise.id]) || isWeekLocked;
 
             return (
               <li key={exercise.id} className="min-w-0">
@@ -192,6 +218,7 @@ export function TreinoTab({
                     forjadorPrescriptions,
                     trainingMuscle,
                     forjadorConfig,
+                    activeTrainingDay,
                   )}
                   onActivate={onActivate}
                   onVolumeCommitted={onVolumeCommitted}
@@ -205,7 +232,8 @@ export function TreinoTab({
                 />
               </li>
             );
-          })}
+          })
+          )}
         </ul>
       </div>
     </BrasaVivaCard>

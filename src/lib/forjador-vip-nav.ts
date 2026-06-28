@@ -9,7 +9,7 @@ export const FORJADOR_WORKSPACE_NAV: ReadonlyArray<{
   label: string;
 }> = [
   { href: "/dashboard/forja", label: "Treinos" },
-  { href: "/forjador/dieta", label: "Nutrição VIP" },
-  { href: "/forjador/medidas", label: "Medidas VIP" },
+  { href: "/forjador/dieta", label: "Nutrição" },
+  { href: "/forjador/medidas", label: "Medidas" },
   { href: "/forjador/monitoramento", label: "Monitoramento" },
 ];

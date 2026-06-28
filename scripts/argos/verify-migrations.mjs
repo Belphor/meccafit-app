@@ -148,12 +148,27 @@ export const MIGRATION_PATCHES = [
     files: ["20260627100000_diet_blueprints_vip.sql"],
   },
   {
+    id: "vip_forjador_medidas",
+    files: [
+      "20260627110000_fix_get_muscular_evolution_volatile.sql",
+      "20260627120000_vip_forjador_dieta_medidas.sql",
+    ],
+  },
+  {
     id: "forja_global_vtc_monitoring",
     files: ["20260627130000_forja_global_vtc_monitoring.sql"],
   },
   {
     id: "patch_vtc_feed_vip_bond",
     files: ["20260627140000_patch_vtc_feed_vip_bond.sql"],
+  },
+  {
+    id: "forja_prescricoes_abdomen",
+    files: ["20260627150000_forja_prescricoes_abdomen_rpc.sql"],
+  },
+  {
+    id: "prescricao_progressao",
+    files: ["20260627160000_prescricao_progressao_alternativas.sql"],
   },
 ];
 
@@ -319,6 +334,8 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeForjaSovereignWorkspace(admin));
     probes.push(await probeForjaGlobalVtcMonitoring(admin));
     probes.push(await probeDietBlueprints(admin));
+    probes.push(await probeVipMedidasCorporais(admin));
+    probes.push(await probePrescricaoProgressao(admin));
   } else {
     probes.push({
       id: "abdomen_thermal",
@@ -364,6 +381,16 @@ export async function runMigrationProbes(admin, options = {}) {
       id: "diet_blueprints_vip",
       ok: false,
       detail: "sem perfil para probe dieta",
+    });
+    probes.push({
+      id: "vip_forjador_medidas",
+      ok: false,
+      detail: "sem perfil para probe medidas VIP",
+    });
+    probes.push({
+      id: "prescricao_progressao",
+      ok: false,
+      detail: "sem perfil para probe progressão",
     });
   }
 
@@ -767,6 +794,52 @@ async function probeDietBlueprints(admin) {
     return { id: "diet_blueprints_vip", ok: false, detail: message };
   }
   return { id: "diet_blueprints_vip", ok: true, detail: "tabela diet_blueprints ok" };
+}
+
+async function probeVipMedidasCorporais(admin) {
+  const { error } = await admin.from("vip_medidas_corporais").select("id").limit(1);
+  if (error) {
+    const message = error.message ?? "";
+    if (message.includes("Could not find the table") || message.includes("does not exist")) {
+      return {
+        id: "vip_forjador_medidas",
+        ok: false,
+        detail: "tabela vip_medidas_corporais ausente — aplicar 20260627120000",
+      };
+    }
+    return { id: "vip_forjador_medidas", ok: false, detail: message };
+  }
+  return { id: "vip_forjador_medidas", ok: true, detail: "tabela vip_medidas_corporais ok" };
+}
+
+async function probePrescricaoProgressao(admin) {
+  const { data, error } = await admin
+    .from("prescricoes_treino_forjador")
+    .select("progressao_alternativas, repeticoes_por_serie")
+    .limit(1);
+
+  if (error) {
+    const message = error.message ?? "";
+    if (
+      message.includes("Could not find the table") ||
+      message.includes("does not exist") ||
+      message.includes("progressao_alternativas") ||
+      message.includes("repeticoes_por_serie")
+    ) {
+      return {
+        id: "prescricao_progressao",
+        ok: false,
+        detail: "colunas progressao_alternativas/repeticoes_por_serie ausentes — aplicar 20260627160000",
+      };
+    }
+    return { id: "prescricao_progressao", ok: false, detail: message };
+  }
+
+  return {
+    id: "prescricao_progressao",
+    ok: true,
+    detail: data ? "prescrição progressão ok" : "prescrição progressão ok",
+  };
 }
 
 async function probeMidasGrowth(admin, userId) {

@@ -131,7 +131,7 @@ export function SovereignManagement({
           type="button"
           disabled={isBusy}
           onClick={() =>
-            void runAction("Reset do mês", async () => {
+            void runAction(FORJA_COPY.sovereign.resetMonth, async () => {
               const result = await sovereignPurifyToAshes(athlete.clientId);
               return result.ok ? { ok: true } : { ok: false, message: result.message };
             })

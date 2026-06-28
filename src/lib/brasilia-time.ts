@@ -88,3 +88,69 @@ export function formatBrasiliaDate(date = new Date(), options?: Intl.DateTimeFor
     ...options,
   }).format(date);
 }
+
+/** Valor para `<input type="date">` no calendário de Brasília. */
+export function getBrasiliaDateInputValue(date = new Date()): string {
+  const { year, month, day } = getBrasiliaDateParts(date);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/** Interpreta YYYY-MM-DD como meio-dia em Brasília → ISO UTC. */
+export function brasiliaDateInputToIso(dateInput: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInput.trim());
+  if (!match) return new Date().toISOString();
+
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return new Date().toISOString();
+  }
+
+  // 12:00 em Brasília (UTC−3) = 15:00 UTC
+  return new Date(Date.UTC(year, month - 1, day, 15, 0, 0, 0)).toISOString();
+}
+
+export function formatBrasiliaDateFromIso(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return formatBrasiliaDate(date, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** YYYY-MM-DD → DD/MM/YYYY (calendário Brasília). */
+export function ymdToBrasiliaDisplay(ymd: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!match) return ymd.trim();
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+/** DD/MM/YYYY → YYYY-MM-DD ou null se inválido. */
+export function brasiliaDisplayToYmd(display: string): string | null {
+  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(display.trim());
+  if (!match) return null;
+
+  const day = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const year = Number.parseInt(match[3], 10);
+
+  if (!Number.isFinite(day) || !Number.isFinite(month) || !Number.isFinite(year)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const probe = brasiliaDateInputToIso(
+    `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+  );
+  const probeParts = getBrasiliaDateParts(new Date(probe));
+  if (probeParts.year !== year || probeParts.month !== month || probeParts.day !== day) {
+    return null;
+  }
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function getBrasiliaDateDisplayValue(date = new Date()): string {
+  return ymdToBrasiliaDisplay(getBrasiliaDateInputValue(date));
+}

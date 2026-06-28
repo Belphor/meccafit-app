@@ -209,24 +209,24 @@ export function formatCalorMembroMetric(row: MuscleCalorRow): CalorMembroMetric 
 
   if (row.is_frozen) {
     return {
-      label: "Estase VIP",
-      value: "Membro congelado",
-      hint: "Fora da prescrição ativa do forjador",
+      label: "Sem estímulo",
+      value: "Fora da rotina",
+      hint: "Este grupo não está na planilha activa do personal",
     };
   }
 
   if (row.membro_principal === "ABDOMEN") {
     return {
-      label: "Estímulo de core",
+      label: "Estímulo acumulado",
       value: `${score} rep`,
-      hint: "Quinzena · séries × reps no altar",
+      hint: "Últimos 14 dias · séries × repetições validadas",
     };
   }
 
   return {
-    label: "Índice de calor forjado",
-    value: `${score} calor`,
-    hint: "Quinzena · picos acumulados no membro",
+    label: "Estímulo acumulado",
+    value: `${score} pts`,
+    hint: "Últimos 14 dias · volume máximo registrado no grupo",
   };
 }
 

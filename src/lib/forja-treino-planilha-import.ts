@@ -1,10 +1,10 @@
-import type { TrainingMuscleGroup } from "@/lib/training-week";
+import type { TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 import { TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
 
 export type TreinoPlanilhaImportRow = {
+  diaSemana?: WeekdayIndex;
   grupoMuscular: TrainingMuscleGroup;
   exercicio: string;
-  peso: number;
   repeticoes: number;
   series: number;
   descansoSegundos: number | null;
@@ -56,6 +56,7 @@ export function parseTreinoPlanilhaMatrix(
   dataRows: unknown[][],
 ): TreinoPlanilhaImportResult {
   const grupoIdx = findColumnIndex(headers, ["grupo_muscular", "grupo", "musculo"]);
+  const diaIdx = findColumnIndex(headers, ["dia_semana", "dia", "day"]);
   const exercicioIdx = findColumnIndex(headers, ["exercicio", "exercise", "movimento"]);
   const pesoIdx = findColumnIndex(headers, ["peso", "peso_kg", "carga"]);
   const repsIdx = findColumnIndex(headers, ["repeticoes", "reps", "rep"]);
@@ -63,11 +64,11 @@ export function parseTreinoPlanilhaMatrix(
   const descansoIdx = findColumnIndex(headers, ["descanso_segundos", "descanso", "rest"]);
   const descansoPadraoIdx = findColumnIndex(headers, ["descanso_padrao_seg", "descanso_padrao"]);
 
-  if (grupoIdx === -1 || exercicioIdx === -1 || pesoIdx === -1 || repsIdx === -1 || seriesIdx === -1) {
+  if (grupoIdx === -1 || exercicioIdx === -1 || repsIdx === -1 || seriesIdx === -1) {
     return {
       ok: false,
       message:
-        "Colunas obrigatórias: grupo_muscular, exercicio, peso, repeticoes, series. Opcional: descanso_segundos, descanso_padrao_seg.",
+        "Colunas obrigatórias: grupo_muscular, exercicio, repeticoes, series. Opcional: descanso_segundos, descanso_padrao_seg.",
     };
   }
 
@@ -78,7 +79,7 @@ export function parseTreinoPlanilhaMatrix(
   for (const [index, row] of dataRows.entries()) {
     const grupo = parseMuscle(cellValue(row, grupoIdx));
     const exercicio = cellValue(row, exercicioIdx);
-    const peso = parseNumber(cellValue(row, pesoIdx));
+    const peso = pesoIdx >= 0 ? parseNumber(cellValue(row, pesoIdx)) : null;
     const repeticoes = parseNumber(cellValue(row, repsIdx));
     const series = parseNumber(cellValue(row, seriesIdx));
     const descansoRaw = parseNumber(cellValue(row, descansoIdx));
@@ -95,9 +96,8 @@ export function parseTreinoPlanilhaMatrix(
       continue;
     }
 
-    if (peso === null || peso <= 0 || peso > 9999.99) {
-      warnings.push(`Linha ${index + 2}: peso inválido.`);
-      continue;
+    if (peso !== null && (peso <= 0 || peso > 9999.99)) {
+      warnings.push(`Linha ${index + 2}: peso ignorado (valor inválido).`);
     }
 
     if (repeticoes === null || repeticoes < 1 || repeticoes > 100) {
@@ -113,10 +113,18 @@ export function parseTreinoPlanilhaMatrix(
     const descansoSegundos =
       descansoRaw !== null && descansoRaw >= 15 && descansoRaw <= 600 ? descansoRaw : null;
 
+    const diaRaw = diaIdx >= 0 ? parseNumber(cellValue(row, diaIdx)) : null;
+    const diaSemana =
+      diaRaw !== null && diaRaw >= 1 && diaRaw <= 6 ? (Math.round(diaRaw) as WeekdayIndex) : undefined;
+
+    if (diaIdx >= 0 && diaRaw !== null && diaSemana === undefined) {
+      warnings.push(`Linha ${index + 2}: dia inválido (use 1–6).`);
+    }
+
     parsed.push({
+      ...(diaSemana !== undefined ? { diaSemana } : {}),
       grupoMuscular: grupo,
       exercicio,
-      peso,
       repeticoes: Math.round(repeticoes),
       series: Math.round(series),
       descansoSegundos,

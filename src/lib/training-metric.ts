@@ -35,6 +35,19 @@ export function resolveMetricKind(input: {
   return "load_kg";
 }
 
+/** Apenas cargas em kg entram no VTC diário (kg treinados). Tempo e rep-max ficam fora. */
+export function contributesToSessionVtcKg(metricKind: ExerciseMetricKind): boolean {
+  return metricKind === "load_kg";
+}
+
+export function resolveSessionVtcContribution(
+  metricKind: ExerciseMetricKind,
+  metricValue: number,
+): number {
+  if (!contributesToSessionVtcKg(metricKind) || metricValue <= 0) return 0;
+  return metricValue;
+}
+
 export function parseRepValue(raw: string): number | null {
   const parsed = Number.parseInt(raw.trim(), 10);
   if (raw.trim() === "" || Number.isNaN(parsed)) return null;

@@ -15,6 +15,7 @@ import {
 } from "@/lib/forja-config";
 import { FORJA_COPY } from "@/lib/forja-copy";
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { getBrasiliaDateDisplayValue } from "@/lib/brasilia-time";
 import {
   EMPTY_SCIENTIFIC_DRAFT_INPUT,
   formatScientificDate,
@@ -55,7 +56,7 @@ export function ScientificMetricsTable({
 }: ScientificMetricsTableProps) {
   const [draft, setDraft] = useState<ScientificMetricsDraftInput>(() => ({
     ...EMPTY_SCIENTIFIC_DRAFT_INPUT,
-    measuredAt: new Date().toISOString().slice(0, 10),
+    measuredAt: getBrasiliaDateDisplayValue(),
   }));
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export function ScientificMetricsTable({
       await onAddEntry(entry);
       setDraft({
         ...EMPTY_SCIENTIFIC_DRAFT_INPUT,
-        measuredAt: new Date().toISOString().slice(0, 10),
+        measuredAt: getBrasiliaDateDisplayValue(),
         heightCm: draft.heightCm,
       });
     },
@@ -130,10 +131,11 @@ export function ScientificMetricsTable({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field
             id="sci-date"
-            label="Data"
-            type="date"
+            label="Data (Brasília)"
+            inputMode="numeric"
             value={draft.measuredAt}
             onChange={(value) => updateField("measuredAt", value)}
+            placeholder="27/06/2026"
           />
           <Field
             id="sci-weight"

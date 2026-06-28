@@ -38,13 +38,13 @@ function renderOmbrosCeilingHint(row: MuscleCalorRow) {
   return (
     <>
       <p className="mt-1 font-mono text-[9px] text-cyan-200/75">
-        Próximo teto · {CALOR_LEVEL_LABELS[progress.nextLevel]} ·{" "}
+        Próximo nível · {CALOR_LEVEL_LABELS[progress.nextLevel]} ·{" "}
         <span className="tabular-nums text-amber-200/90">
-          {formatMetricaBruta(progress.ceiling)} calor
+          {formatMetricaBruta(progress.ceiling)} pts
         </span>
       </p>
       <p className="mt-0.5 font-mono text-[9px] text-neutral-600">
-        Faltam {formatMetricaBruta(progress.remaining)} calor · tetos ombros{" "}
+        Faltam {formatMetricaBruta(progress.remaining)} pts · tetos ombros{" "}
         {formatMetricaBruta(ceilings.faisca)} / {formatMetricaBruta(ceilings.brasa)} /{" "}
         {formatMetricaBruta(ceilings.labareda)}
       </p>
@@ -87,12 +87,12 @@ export function MuscleTooltip({
       {muscleId === "OMBROS" ? renderOmbrosCeilingHint(row) : null}
       {row.is_frozen ? (
         <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-cyan-300/80">
-          Estase VIP · membro congelado
+          Fora da rotina · sem estímulo activo
         </p>
       ) : null}
       {purityLow && !row.is_frozen ? (
         <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.14em] text-amber-500/75">
-          Penalidade · pureza da Fênix baixa
+          Índice de Ignição abaixo de 50% — cores mais suaves
         </p>
       ) : null}
     </div>,

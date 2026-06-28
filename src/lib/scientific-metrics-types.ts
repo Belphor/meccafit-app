@@ -1,5 +1,13 @@
 /** Antropometria científica VIP — protocolo Jackson-Pollock 7 dobras (mm). */
 
+import {
+  brasiliaDateInputToIso,
+  brasiliaDisplayToYmd,
+  formatBrasiliaDateFromIso,
+  getBrasiliaDateDisplayValue,
+  getBrasiliaDateInputValue,
+} from "@/lib/brasilia-time";
+
 export const SCIENTIFIC_SKINFOLD_IDS = [
   "peito",
   "axilar_media",
@@ -140,9 +148,15 @@ export function parseScientificDraftInput(
   }
 
   const measuredAtRaw = input.measuredAt.trim();
-  const measuredAt = measuredAtRaw
-    ? new Date(`${measuredAtRaw}T12:00:00`).toISOString()
-    : new Date().toISOString();
+  const ymd =
+    brasiliaDisplayToYmd(measuredAtRaw) ??
+    (/^\d{4}-\d{2}-\d{2}$/.test(measuredAtRaw) ? measuredAtRaw : null);
+
+  if (!ymd) {
+    return { ok: false, message: "Data inválida. Use o formato DD/MM/AAAA (ex.: 27/06/2026)." };
+  }
+
+  const measuredAt = brasiliaDateInputToIso(ymd);
 
   if (Number.isNaN(new Date(measuredAt).getTime())) {
     return { ok: false, message: "Data de medição inválida." };
@@ -224,14 +238,28 @@ export function parseScientificFromServerRow(row: {
   };
 }
 
+export function mapServerScientificSnapshot(row: {
+  client_id: string;
+  forger_id: string;
+  peso_kg: number;
+  altura_cm: number;
+  perimetros: unknown;
+  medido_em: string;
+  atualizado_em: string;
+}): ScientificMetricsEntry {
+  const parsed = parseScientificFromServerRow(row);
+  return {
+    id: `server-${row.client_id}-${row.medido_em}`,
+    clientId: row.client_id,
+    forgerId: row.forger_id,
+    savedAt: row.atualizado_em,
+    syncedAt: row.atualizado_em,
+    ...parsed,
+  };
+}
+
 export function formatScientificDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("pt-PT", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatBrasiliaDateFromIso(iso);
 }
 
 export function formatScientificNumber(value: number | null, suffix = ""): string {
@@ -246,6 +274,37 @@ export function sumScientificSkinfolds(skinfolds: ScientificSkinfolds): number |
   );
   if (values.length === 0) return null;
   return Math.round(values.reduce((acc, v) => acc + v, 0) * 100) / 100;
+}
+
+/** Chave estável para deduplicar medições local vs servidor (mesmo dia civil). */
+export function scientificEntryDayKey(entry: Pick<ScientificMetricsEntry, "clientId" | "measuredAt">): string {
+  const date = new Date(entry.measuredAt);
+  const day =
+    Number.isNaN(date.getTime()) ? entry.measuredAt.slice(0, 10) : date.toISOString().slice(0, 10);
+  return `${entry.clientId}:${day}`;
+}
+
+/** Prefere entrada local (UUID) sobre snapshot do servidor quando coincidem no mesmo dia. */
+export function mergeScientificEntries(entries: ScientificMetricsEntry[]): ScientificMetricsEntry[] {
+  const byDay = new Map<string, ScientificMetricsEntry>();
+
+  for (const entry of entries) {
+    const key = scientificEntryDayKey(entry);
+    const existing = byDay.get(key);
+    if (!existing) {
+      byDay.set(key, entry);
+      continue;
+    }
+
+    const preferNew =
+      (entry.syncedAt && !existing.syncedAt) ||
+      (!entry.id.startsWith("server-") && existing.id.startsWith("server-")) ||
+      entry.savedAt > existing.savedAt;
+
+    byDay.set(key, preferNew ? entry : existing);
+  }
+
+  return [...byDay.values()].sort((a, b) => b.measuredAt.localeCompare(a.measuredAt));
 }
 
 export { DB_KEY_TO_SKINFOLD };

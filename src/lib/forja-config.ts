@@ -15,6 +15,31 @@ export const FORJA_ATHLETE_CARD_IDLE = "hover:bg-zinc-900/55 hover:border-zinc-7
 
 export const FORJA_ATHLETE_CARD_SELECTED = "bg-zinc-900/75 border-zinc-600/70";
 
+export const FORJA_ATHLETE_CARD_VIP =
+  "border-emerald-900/45 bg-gradient-to-br from-emerald-950/35 via-zinc-950/40 to-amber-950/20 hover:border-emerald-700/50 hover:from-emerald-950/45";
+
+export const FORJA_ATHLETE_CARD_VIP_SELECTED =
+  "border-amber-600/45 bg-gradient-to-br from-emerald-950/55 via-zinc-900/70 to-amber-950/35 shadow-[0_0_0_1px_rgba(251,191,36,0.12)]";
+
+export const FORJA_VIP_BADGE =
+  "rounded-md border border-amber-600/35 bg-amber-950/45 px-1.5 py-0.5 font-semibold uppercase tracking-[0.12em] text-amber-200/90";
+
+export const FORJA_ATHLETE_CARD_COMUM =
+  "border-zinc-800/90 bg-gradient-to-br from-zinc-950/70 via-zinc-900/35 to-slate-950/50 hover:border-zinc-600/70 hover:from-zinc-900/60";
+
+export const FORJA_ATHLETE_CARD_COMUM_SELECTED =
+  "border-zinc-500/55 bg-gradient-to-br from-zinc-900/80 via-zinc-800/45 to-slate-900/55 shadow-[0_0_0_1px_rgba(148,163,184,0.14)]";
+
+export const FORJA_COMUM_BADGE =
+  "rounded-md border border-slate-700/50 bg-slate-950/55 px-1.5 py-0.5 font-medium uppercase tracking-[0.1em] text-slate-400";
+
+/** Badge compacto para células de tabela (ex.: ranking VTC). */
+export const FORJA_TABLE_VIP_BADGE =
+  "inline-block rounded border border-amber-700/40 bg-amber-950/35 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-amber-200/85";
+
+export const FORJA_TABLE_COMUM_BADGE =
+  "inline-block rounded border border-slate-700/45 bg-slate-950/45 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-slate-500";
+
 export const FORJA_COMMAND_PANEL =
   "relative min-h-[min(72vh,720px)] rounded-2xl border border-zinc-800/90 bg-zinc-900/25 p-5 backdrop-blur-md sm:p-6 lg:p-8";
 

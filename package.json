@@ -36,6 +36,7 @@
     "db:apply:abdomen-thermal": "node scripts/apply-abdomen-thermal.mjs",
     "reset:test-training": "node scripts/reset-test-training.mjs",
     "reset:first-run": "node scripts/reset-test-training.mjs --first-run",
+    "reset:full": "node scripts/reset-full-test-environment.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs",
     "seed:vip-students": "node scripts/seed-vip-students.mjs",
     "seed:test-training": "node scripts/seed-test-training.mjs",

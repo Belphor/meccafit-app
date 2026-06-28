@@ -392,7 +392,7 @@ function HudPanel({
           {title}
         </p>
         <p className="font-mono text-[9px] tabular-nums uppercase tracking-[0.14em] text-neutral-500">
-          IGN {Math.round(indice_ignicao)}%
+          Ignição {Math.round(indice_ignicao)}%
         </p>
       </div>
 

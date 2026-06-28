@@ -148,17 +148,20 @@ export const CHAMA_ALTAR_CLIENT_EXPLANATION =
 
 /** Planilha do forjador — painel Treino do dia */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Lista de exercícios prescritos pelo forjador para o dia escolhido. Execute as séries, registre a carga máxima de cada movimento e avance na planilha — cada registro fica travado até a próxima semana.";
+  "Exercícios prescritos para o dia escolhido. Conclua as séries de cada movimento e só então registre carga, repetição ou tempo máximo. Cada registro vale uma vez por semana neste dia.";
 
 /** Execução — painel de escolha do dia */
 export const TREINO_EXECUTION_CLIENT_EXPLANATION =
   "Selecione qual dia da planilha semanal você vai executar hoje. O forjador define os grupos de cada dia — você só indica em qual dia está treinando. Dias concluídos nesta semana aparecem com ✓.";
 
 export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
-  "Travado até a próxima semana";
+  "Travado até o próximo treino deste dia";
 
 export const PHOENIX_INPUT_HINT_WEEK_LOCKED =
-  "Carga já registrada nesta semana — aguarde a próxima para tentar de novo";
+  "Recorde já registrado nesta semana. Volte na próxima semana, conclua as séries e tente superar.";
+
+export const PHOENIX_INPUT_GOAL_AWAITING_SETS =
+  "Conclua todas as séries para liberar o registro";
 
 export const TREINO_DIA_CONCLUIDO_LABEL = "Semana concluída";
 
@@ -274,11 +277,15 @@ export const VOO_CINZAS_CLIENT_EXPLANATION =
 
 /** Mapa Térmico (Evolução) — texto orientativo para o cliente */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "Visualize o calor dos 6 grupos musculares. Cada região muda de cor conforme o estímulo acumulado na quinzena — de Cinzas até Fogo Cósmico. Toque no corpo para detalhes. Grupos fora da planilha do forjador aparecem congelados.";
+  "Cada grupo muscular muda de cor conforme o estímulo acumulado nos últimos 14 dias — de Cinzas até Fogo Cósmico. Toque no corpo para ver o detalhe do músculo selecionado. Grupos que não estão na sua planilha aparecem sem estímulo ativo.";
 
-/** Pureza da Fênix (Evolução) — Índice de Ignição */
+/** Índice de Ignição (Evolução) — consistência de treino */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "O Índice de Ignição mede sua consistência nos últimos 30 dias. Cada dia com treino ou cardio validado conta como dia puro. O percentual divide dias puros pela meta mensal do seu plano. Abaixo de 50%, o mapa perde saturação — a Fênix reflete ritmo medido, não intenção.";
+  "O Índice de Ignição mede sua consistência nos últimos 30 dias: quantos dias você treinou ou fez cardio em relação à meta do plano. É diferente do estímulo de cada músculo no mapa. Abaixo de 50%, as cores ficam mais apagadas.";
+
+/** Nutrição VIP — plano alimentar de longo prazo */
+export const DIETA_CLIENT_EXPLANATION =
+  "Plano alimentar definido pelo seu personal. Mostra metas diárias, refeições sugeridas e observações — válido por semanas ou meses.";
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
@@ -365,9 +372,9 @@ export const TREINO_MINIMIZE_TOGGLE = `${DASHBOARD_SECTION_CHIP} min-h-11 gap-1.
 export const PHOENIX_INPUT_META_COMPLETE =
   "text-[10px] font-bold uppercase tracking-[0.28em] text-[#FFD700]/80";
 
-export const PHOENIX_INPUT_GOAL_COMPLETE = "Carga máxima registrada";
+export const PHOENIX_INPUT_GOAL_COMPLETE = "Recorde registrado neste treino";
 
-export const PHOENIX_INPUT_HINT_COMPLETE = "Registro salvo nesta sessão";
+export const PHOENIX_INPUT_HINT_COMPLETE = "Valor salvo. Só poderá registrar de novo na próxima semana neste dia.";
 
 export const EXERCISE_SESSION_REGISTERED_LABEL = "Sessão registrada";
 

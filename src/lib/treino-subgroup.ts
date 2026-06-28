@@ -4,6 +4,7 @@ import {
 } from "@/lib/training-track";
 import {
   applyForjadorPrescriptionsToSubgroup,
+  resolveMusclesForTrainingDay,
   type ForjadorPrescriptionRow,
 } from "@/lib/forjador-prescriptions";
 import {
@@ -42,21 +43,38 @@ export function composeTreinoSubgroup(
   return next;
 }
 
-/** Monta o treino completo do dia — todos os grupos da planilha do forjador em sequência. */
+/** Monta o treino completo do dia — grupos prescritos pelo forjador na planilha. */
 export function composeDayTreinoSubgroup(
   dayMuscles: TrainingMuscleGroup[],
   track: TrainingTrackState,
   forjadorPrescriptions: ForjadorPrescriptionRow[],
   trainingDay: WeekdayIndex,
 ): MuscleSubgroup {
-  const muscles = dayMuscles.length > 0 ? dayMuscles : (["PEITO"] as TrainingMuscleGroup[]);
+  const effectiveMuscles = resolveMusclesForTrainingDay(
+    forjadorPrescriptions,
+    trainingDay,
+    dayMuscles,
+  );
+
+  if (effectiveMuscles.length === 0) {
+    const emptyAnchor = resolveSubgroupByCatalogId(MUSCLE_TO_SUBGROUP_ID.PEITO);
+    return {
+      ...emptyAnchor,
+      id: `planilha-dia-${trainingDay}`,
+      slug: `planilha-dia-${trainingDay}`,
+      name: "Sem treino prescrito",
+      monumentalTitle: "Aguardando prescrição",
+      exercises: [],
+    };
+  }
+
   const exercises: Exercise[] = [];
   const seenIds = new Set<number>();
 
-  for (const muscle of muscles) {
+  for (const muscle of effectiveMuscles) {
     const subgroupId = trainingMuscleToSubgroupId(muscle);
     const base = resolveSubgroupByCatalogId(subgroupId);
-    let next = applyForjadorPrescriptionsToSubgroup(base, muscle, forjadorPrescriptions);
+    let next = applyForjadorPrescriptionsToSubgroup(base, muscle, forjadorPrescriptions, trainingDay);
 
     if (track.track === "personal") {
       next = applyPersonalPrescriptionsToSubgroup(next, track.personalPrescriptions);
@@ -69,8 +87,8 @@ export function composeDayTreinoSubgroup(
     }
   }
 
-  const label = formatScheduleDayLabel(muscles);
-  const anchor = resolveSubgroupByCatalogId(trainingMuscleToSubgroupId(muscles[0]));
+  const label = formatScheduleDayLabel(effectiveMuscles);
+  const anchor = resolveSubgroupByCatalogId(trainingMuscleToSubgroupId(effectiveMuscles[0]));
 
   return {
     ...anchor,

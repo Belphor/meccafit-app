@@ -1,5 +1,6 @@
 import type { DietMeal, DietObjective } from "@/lib/diet-data";
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { resolveVipForgerIdForPublish } from "@/lib/forja-vip-publish";
 import { supabase } from "@/lib/supabase";
 
 export type ForjaDietBlueprintSyncResult =
@@ -113,6 +114,7 @@ export function normalizeDietMeals(refeicoes: DietMeal[]): DietMeal[] {
 export async function syncForjaDietBlueprint(
   athlete: ForjaBondedAthlete,
   payload: ForjaDietBlueprintPayload,
+  options?: { isSovereign?: boolean },
 ): Promise<ForjaDietBlueprintSyncResult> {
   const validation = validateDietBlueprintPayload(payload);
   if (!validation.ok) {
@@ -139,6 +141,11 @@ export async function syncForjaDietBlueprint(
     }
 
     const refeicoes = normalizeDietMeals(payload.refeicoes);
+    const forgerId = resolveVipForgerIdForPublish(
+      athlete,
+      operatorId,
+      options?.isSovereign ?? false,
+    );
     const row = {
       titulo: payload.titulo.trim(),
       objetivo: payload.objetivo,
@@ -149,7 +156,7 @@ export async function syncForjaDietBlueprint(
       agua_litros: payload.aguaLitros,
       refeicoes,
       observacoes: payload.observacoes?.trim() || null,
-      forger_id: athlete.forgerId,
+      forger_id: forgerId,
     };
 
     const { data: existing, error: fetchError } = await supabase
@@ -186,7 +193,7 @@ export async function syncForjaDietBlueprint(
       }
 
       if (!data?.id) {
-        return { ok: false, code: "NETWORK", message: "Dieta não confirmada pelo núcleo." };
+        return { ok: false, code: "NETWORK", message: "Plano alimentar não confirmado." };
       }
 
       return { ok: true, blueprintId: data.id };
@@ -212,7 +219,7 @@ export async function syncForjaDietBlueprint(
     }
 
     if (!data?.id) {
-      return { ok: false, code: "NETWORK", message: "Dieta não confirmada pelo núcleo." };
+      return { ok: false, code: "NETWORK", message: "Plano alimentar não confirmado." };
     }
 
     return { ok: true, blueprintId: data.id };

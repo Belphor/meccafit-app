@@ -1,4 +1,6 @@
 import type { PortalProfileRole } from "@/lib/portal-auth";
+import type { PrescriptionProgressionId } from "@/lib/prescription-progression";
+import type { TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 
 export type ForjaBondedAthlete = {
   bondId: string;
@@ -52,25 +54,35 @@ export type ForjaDashboardPayload = {
 };
 
 export type ForjaPrescriptionDraft = {
+  /** Dia da planilha (Seg=1 … Sáb=6) em que o exercício será prescrito. */
+  diaSemana: WeekdayIndex;
+  /** Grupos musculares activos neste dia (planilha semanal do cliente). */
+  musculosDoDia: TrainingMuscleGroup[];
   exercicio: string;
   grupoMuscular: string;
-  peso: string;
-  repeticoes: string;
+  /** Uma entrada por série — número ou "FALHA". */
+  repeticoesPorSerie: string[];
   series: string;
+  progressaoAlternativas: PrescriptionProgressionId[];
   /** Descanso deste exercício (s) — opcional; usa o padrão se vazio. */
   descansoSegundos: string;
   /** Descanso padrão do atleta (cronômetro global) — opcional. */
   descansoPadraoSeg: string;
+  /** Meta diária de cardio (minutos). */
+  cardioMetaMinutos: string;
 };
 
 export const EMPTY_PRESCRIPTION_DRAFT: ForjaPrescriptionDraft = {
+  diaSemana: 1,
+  musculosDoDia: [],
   exercicio: "",
   grupoMuscular: "PEITO",
-  peso: "",
-  repeticoes: "",
-  series: "",
+  repeticoesPorSerie: ["12", "12", "12"],
+  series: "3",
+  progressaoAlternativas: [],
   descansoSegundos: "",
   descansoPadraoSeg: "90",
+  cardioMetaMinutos: "30",
 };
 
 export type ForjaDietMealDraft = {

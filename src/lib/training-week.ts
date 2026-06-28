@@ -1,4 +1,5 @@
 import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
+import { supabase } from "@/lib/supabase";
 import type { Enums } from "@/types/database.types";
 
 /** Segunda=1 … Sábado=6 */
@@ -74,6 +75,10 @@ function cloneDefaultWeeklySchedule(): Record<WeekdayIndex, WeeklyScheduleDay> {
     5: [...DEFAULT_WEEKLY_SCHEDULE[5]],
     6: [...DEFAULT_WEEKLY_SCHEDULE[6]],
   };
+}
+
+function cloneEmptyWeeklySchedule(): Record<WeekdayIndex, WeeklyScheduleDay> {
+  return { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 }
 
 export const MUSCLE_TO_SUBGROUP_ID: Record<ClientTrainingMuscleGroup, string> = {
@@ -166,8 +171,10 @@ export function normalizeWeeklyScheduleMuscle(
   return muscle;
 }
 
-export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleDay> {
-  const map = cloneDefaultWeeklySchedule();
+function applyPlanilhaRowsToSchedule(
+  map: Record<WeekdayIndex, WeeklyScheduleDay>,
+  rows: PlanilhaDayRow[],
+): Record<WeekdayIndex, WeeklyScheduleDay> {
   const byDay = new Map<WeekdayIndex, TrainingMuscleGroup[]>();
 
   for (const row of rows) {
@@ -183,7 +190,22 @@ export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, W
   return map;
 }
 
+/** Planilha comum — preenche dias vazios com rotina padrão. */
+export function buildScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleDay> {
+  return applyPlanilhaRowsToSchedule(cloneDefaultWeeklySchedule(), rows);
+}
+
+/** Planilha do forjador — só dias prescritos; demais ficam vazios. */
+export function buildForjadorScheduleMap(rows: PlanilhaDayRow[]): Record<WeekdayIndex, WeeklyScheduleDay> {
+  return applyPlanilhaRowsToSchedule(cloneEmptyWeeklySchedule(), rows);
+}
+
+export function hasPlanilhaRows(rows: PlanilhaDayRow[] | null | undefined): boolean {
+  return (rows?.length ?? 0) > 0;
+}
+
 export function formatScheduleDayLabel(muscles: WeeklyScheduleDay): string {
+  if (muscles.length === 0) return "Sem treino";
   return muscles.map((muscle) => MUSCLE_GROUP_LABELS[muscle]).join(" · ");
 }
 
@@ -213,6 +235,18 @@ export function subgroupIdToClientTrainingMuscle(
     }
   }
   return null;
+}
+
+export async function fetchPlanilhaScheduleClient(userId: string): Promise<PlanilhaDayRow[]> {
+  const { data, error } = await supabase
+    .from("planilhas_forjador")
+    .select("dia_semana, grupo_muscular, ordem")
+    .eq("atleta_id", userId)
+    .order("dia_semana")
+    .order("ordem");
+
+  if (error || !data) return [];
+  return parsePlanilhaDayRows(data);
 }
 
 export function trainingMuscleToSubgrupo(

@@ -226,7 +226,6 @@ export function TreinoPrescriptionExcelDropzone({
                 <tr>
                   <th className="px-3 py-2 font-medium">Grupo</th>
                   <th className="px-3 py-2 font-medium">Exercício</th>
-                  <th className="px-3 py-2 font-medium">Peso</th>
                   <th className="px-3 py-2 font-medium">Reps</th>
                   <th className="px-3 py-2 font-medium">Séries</th>
                   <th className="px-3 py-2 font-medium">Descanso</th>
@@ -235,12 +234,11 @@ export function TreinoPrescriptionExcelDropzone({
               <tbody>
                 {preview.map((row) => (
                   <tr
-                    key={`${row.grupoMuscular}-${row.exercicio}-${row.peso}`}
+                    key={`${row.grupoMuscular}-${row.exercicio}-${row.series}`}
                     className="border-t border-zinc-900"
                   >
                     <td className="px-3 py-2">{row.grupoMuscular}</td>
                     <td className="px-3 py-2">{row.exercicio}</td>
-                    <td className="px-3 py-2 tabular-nums">{row.peso} kg</td>
                     <td className="px-3 py-2 tabular-nums">{row.repeticoes}</td>
                     <td className="px-3 py-2 tabular-nums">{row.series}</td>
                     <td className="px-3 py-2 tabular-nums">

@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   MUSCLE_GROUP_LABELS,
   type TrainingMuscleGroup,
   WEEKDAY_LABELS,
 } from "@/lib/training-week";
 import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
-import { MUSCLE_LABELS, type SovereignMuscleId } from "@/components/evolution/human-body-constants";
-import { parseScientificFromServerRow } from "@/lib/scientific-metrics-types";
+import {
+  CALOR_LEVEL_LABELS,
+  formatCalorMembroMetric,
+  MUSCLE_LABELS,
+  type MuscleCalorRow,
+  type SovereignMuscleId,
+} from "@/components/evolution/human-body-constants";
+import {
+  formatScientificDate,
+  formatScientificNumber,
+  parseScientificFromServerRow,
+  SCIENTIFIC_SKINFOLD_IDS,
+  SCIENTIFIC_SKINFOLD_LABELS,
+  sumScientificSkinfolds,
+} from "@/lib/scientific-metrics-types";
+import { VIP_MEDIDAS_UPDATE_EVENT, type VipMedidasUpdateDetail } from "@/lib/vip-medidas-events";
 import { supabase } from "@/lib/supabase";
 
 const SOVEREIGN_TO_TRAINING: Record<SovereignMuscleId, TrainingMuscleGroup> = {
@@ -22,9 +36,10 @@ const SOVEREIGN_TO_TRAINING: Record<SovereignMuscleId, TrainingMuscleGroup> = {
 
 type EvolutionVipInsightsProps = {
   userId: string;
-  activeMuscle: SovereignMuscleId;
+  activeMuscle?: SovereignMuscleId;
+  calorRows?: MuscleCalorRow[];
   enabled: boolean;
-  variant?: "card" | "inline";
+  variant?: "card" | "inline" | "full";
 };
 
 type MeasuresSnapshot = {
@@ -33,17 +48,62 @@ type MeasuresSnapshot = {
   bodyFatPct: number | null;
   leanMassKg: number | null;
   heightCm: number | null;
+  skinfolds: ReturnType<typeof parseScientificFromServerRow>["skinfolds"];
 };
 
 export function EvolutionVipInsights({
   userId,
   activeMuscle,
+  calorRows = [],
   enabled,
   variant = "card",
 }: EvolutionVipInsightsProps) {
   const [measures, setMeasures] = useState<MeasuresSnapshot | null>(null);
   const [todayGroups, setTodayGroups] = useState<TrainingMuscleGroup[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const loadInsights = useCallback(async () => {
+    if (!enabled) return;
+
+    setLoading(true);
+    const weekday = resolveBrasiliaTrainingWeekdayIndex();
+
+    const [measuresResult, planResult] = await Promise.all([
+      supabase
+        .from("vip_medidas_corporais")
+        .select("peso_kg, altura_cm, perimetros, medido_em")
+        .eq("client_id", userId)
+        .eq("activo", true)
+        .maybeSingle(),
+      supabase
+        .from("planilhas_forjador")
+        .select("grupo_muscular")
+        .eq("atleta_id", userId)
+        .eq("dia_semana", weekday)
+        .order("ordem", { ascending: true }),
+    ]);
+
+    if (measuresResult.data) {
+      const parsed = parseScientificFromServerRow(measuresResult.data);
+      setMeasures({
+        measuredAt: parsed.measuredAt,
+        weightKg: parsed.weightKg,
+        bodyFatPct: parsed.bodyFatPct,
+        leanMassKg: parsed.leanMassKg,
+        heightCm: parsed.heightCm,
+        skinfolds: parsed.skinfolds,
+      });
+    } else {
+      setMeasures(null);
+    }
+
+    const groups = (planResult.data ?? [])
+      .map((row) => String(row.grupo_muscular ?? "").toUpperCase())
+      .filter(Boolean) as TrainingMuscleGroup[];
+
+    setTodayGroups(groups);
+    setLoading(false);
+  }, [enabled, userId]);
 
   useEffect(() => {
     if (!enabled) {
@@ -52,124 +112,161 @@ export function EvolutionVipInsights({
       return;
     }
 
-    let cancelled = false;
-    setLoading(true);
+    void loadInsights();
+  }, [enabled, loadInsights]);
 
-    void (async () => {
-      const weekday = resolveBrasiliaTrainingWeekdayIndex();
+  useEffect(() => {
+    if (!enabled) return;
 
-      const [measuresResult, planResult] = await Promise.all([
-        supabase
-          .from("vip_medidas_corporais")
-          .select("peso_kg, altura_cm, perimetros, medido_em")
-          .eq("client_id", userId)
-          .eq("activo", true)
-          .maybeSingle(),
-        supabase
-          .from("planilhas_forjador")
-          .select("grupo_muscular")
-          .eq("atleta_id", userId)
-          .eq("dia_semana", weekday)
-          .order("ordem", { ascending: true }),
-      ]);
-
-      if (cancelled) return;
-
-      if (measuresResult.data) {
-        const parsed = parseScientificFromServerRow(measuresResult.data);
-        setMeasures({
-          measuredAt: parsed.measuredAt,
-          weightKg: parsed.weightKg,
-          bodyFatPct: parsed.bodyFatPct,
-          leanMassKg: parsed.leanMassKg,
-          heightCm: parsed.heightCm,
-        });
-      } else {
-        setMeasures(null);
+    const onMedidasUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<VipMedidasUpdateDetail>).detail;
+      if (detail?.clientId === userId) {
+        void loadInsights();
       }
-
-      const groups = (planResult.data ?? [])
-        .map((row) => String(row.grupo_muscular ?? "").toUpperCase())
-        .filter(Boolean) as TrainingMuscleGroup[];
-
-      setTodayGroups(groups);
-      setLoading(false);
-    })();
-
-    return () => {
-      cancelled = true;
     };
-  }, [enabled, userId]);
+
+    window.addEventListener(VIP_MEDIDAS_UPDATE_EVENT, onMedidasUpdate);
+    return () => {
+      window.removeEventListener(VIP_MEDIDAS_UPDATE_EVENT, onMedidasUpdate);
+    };
+  }, [enabled, loadInsights, userId]);
 
   if (!enabled) return null;
 
-  const trainingMuscle = SOVEREIGN_TO_TRAINING[activeMuscle];
   const weekday = resolveBrasiliaTrainingWeekdayIndex();
-  const scheduledToday = todayGroups.includes(trainingMuscle);
+  const trainingMuscle = activeMuscle ? SOVEREIGN_TO_TRAINING[activeMuscle] : null;
+  const scheduledToday = trainingMuscle ? todayGroups.includes(trainingMuscle) : false;
+  const activeCalorRow = activeMuscle
+    ? calorRows.find((item) => item.membro_principal === activeMuscle)
+    : null;
+  const activeCalorMetric = activeCalorRow ? formatCalorMembroMetric(activeCalorRow) : null;
 
   const wrapperClass =
     variant === "inline"
       ? "mt-4 space-y-3 border-t border-amber-500/15 pt-4"
-      : "mt-4 space-y-3 rounded-lg border border-amber-500/20 bg-amber-950/10 p-4";
+      : variant === "full"
+        ? "space-y-4 rounded-lg border border-amber-500/20 bg-amber-950/10 p-4"
+        : "mt-4 space-y-3 rounded-lg border border-amber-500/20 bg-amber-950/10 p-4";
+
+  const skinfoldTotal = measures ? sumScientificSkinfolds(measures.skinfolds) : null;
+
+  if (variant === "inline" && activeMuscle) {
+    return (
+      <div className={wrapperClass}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
+          Acompanhamento · {MUSCLE_LABELS[activeMuscle]}
+        </p>
+
+        {loading ? (
+          <p className="text-xs text-neutral-500">Carregando dados do personal…</p>
+        ) : (
+          <>
+            {activeCalorRow && activeCalorMetric ? (
+              <div className="rounded-lg border border-cyan-500/15 bg-black/30 p-3 text-xs">
+                <p className="text-neutral-500">
+                  Estímulo acumulado nos últimos 14 dias — independente do Índice de Ignição.
+                </p>
+                <p className="mt-2 text-sm font-semibold text-amber-50">
+                  {CALOR_LEVEL_LABELS[activeCalorRow.nivel_calculado]}
+                  {activeCalorRow.is_frozen ? " · Fora da rotina" : ""}
+                </p>
+                <p className="mt-1 text-neutral-400">
+                  {activeCalorMetric.label}:{" "}
+                  <span className="text-amber-200/85">{activeCalorMetric.value}</span>
+                </p>
+                <p className="mt-0.5 text-neutral-600">{activeCalorMetric.hint}</p>
+              </div>
+            ) : null}
+
+            {trainingMuscle ? (
+              <p className="text-sm text-neutral-300">
+                <span className="text-neutral-500">Rotina de hoje ({WEEKDAY_LABELS[weekday]}): </span>
+                {scheduledToday
+                  ? `${MUSCLE_GROUP_LABELS[trainingMuscle]} está prescrito para hoje`
+                  : `${MUSCLE_GROUP_LABELS[trainingMuscle]} não está na planilha de hoje`}
+              </p>
+            ) : null}
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={wrapperClass}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
-        Acompanhamento VIP · {MUSCLE_LABELS[activeMuscle]}
+        Medidas do personal
       </p>
 
       {loading ? (
         <p className="text-xs text-neutral-500">Carregando dados do personal…</p>
-      ) : (
+      ) : measures ? (
         <>
-          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <p className="text-neutral-300">
-              <span className="text-neutral-500">Treino de hoje ({WEEKDAY_LABELS[weekday]}): </span>
-              {todayGroups.length > 0
-                ? todayGroups.map((group) => MUSCLE_GROUP_LABELS[group]).join(", ")
-                : "Não definido pelo personal"}
-            </p>
-            <p className="text-neutral-300">
-              <span className="text-neutral-500">Foco seleccionado: </span>
-              {scheduledToday
-                ? `${MUSCLE_GROUP_LABELS[trainingMuscle]} está na rotina de hoje`
-                : `${MUSCLE_GROUP_LABELS[trainingMuscle]} não está na rotina de hoje`}
-            </p>
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-neutral-800/80 bg-black/30 p-3 text-xs sm:grid-cols-3 lg:grid-cols-5">
+            <MetricCell label="Peso" value={`${measures.weightKg} kg`} />
+            <MetricCell
+              label="Altura"
+              value={
+                measures.heightCm != null ? `${formatScientificNumber(measures.heightCm)} cm` : "—"
+              }
+            />
+            <MetricCell
+              label="Gordura"
+              value={
+                measures.bodyFatPct != null
+                  ? `${formatScientificNumber(measures.bodyFatPct)}%`
+                  : "—"
+              }
+            />
+            <MetricCell
+              label="Massa magra"
+              value={
+                measures.leanMassKg != null
+                  ? `${formatScientificNumber(measures.leanMassKg)} kg`
+                  : "—"
+              }
+            />
+            <MetricCell label="Medido em" value={formatScientificDate(measures.measuredAt)} />
           </div>
 
-          {measures ? (
-            <div className="grid grid-cols-2 gap-2 rounded-lg border border-neutral-800/80 bg-black/30 p-3 text-xs sm:grid-cols-4">
-              <div>
-                <p className="text-neutral-500">Peso</p>
-                <p className="font-medium text-neutral-100">{measures.weightKg} kg</p>
-              </div>
-              <div>
-                <p className="text-neutral-500">Gordura</p>
-                <p className="font-medium text-neutral-100">
-                  {measures.bodyFatPct != null ? `${measures.bodyFatPct}%` : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-neutral-500">Massa magra</p>
-                <p className="font-medium text-neutral-100">
-                  {measures.leanMassKg != null ? `${measures.leanMassKg} kg` : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-neutral-500">Medido em</p>
-                <p className="font-medium text-neutral-100">
-                  {new Date(measures.measuredAt).toLocaleDateString("pt-BR")}
-                </p>
+          {variant === "full" ? (
+            <div className="rounded-lg border border-neutral-800/80 bg-black/30 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                Dobras cutâneas (mm)
+                {skinfoldTotal != null ? (
+                  <span className="ml-2 text-amber-200/80">
+                    · Total {formatScientificNumber(skinfoldTotal)}
+                  </span>
+                ) : null}
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-4">
+                {SCIENTIFIC_SKINFOLD_IDS.map((id) => (
+                  <div key={id}>
+                    <p className="text-neutral-500">{SCIENTIFIC_SKINFOLD_LABELS[id]}</p>
+                    <p className="font-medium text-neutral-100">
+                      {formatScientificNumber(measures.skinfolds[id])}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <p className="text-xs text-neutral-500">
-              Ainda não há medidas publicadas pelo seu personal. Elas aparecem aqui quando forem
-              sincronizadas na aba Medidas VIP.
-            </p>
-          )}
+          ) : null}
         </>
+      ) : (
+        <p className="text-xs text-neutral-500">
+          Ainda não há medidas publicadas pelo seu personal. Elas aparecem aqui quando forem
+          sincronizadas na aba Medidas.
+        </p>
       )}
+    </div>
+  );
+}
+
+function MetricCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-neutral-500">{label}</p>
+      <p className="font-medium text-neutral-100">{value}</p>
     </div>
   );
 }

@@ -477,6 +477,7 @@ export type Database = {
           id: string;
           atleta_id: string;
           forjador_id: string;
+          dia_semana: number;
           grupo_muscular: string;
           exercicio_id: string;
           ordem: number;
@@ -484,6 +485,8 @@ export type Database = {
           repeticoes_alvo: number;
           peso_prescrito: number | null;
           descanso_segundos: number | null;
+          progressao_alternativas: unknown;
+          repeticoes_por_serie: unknown;
           observacoes: string | null;
           created_at: string;
           updated_at: string;
@@ -492,6 +495,7 @@ export type Database = {
           id?: string;
           atleta_id: string;
           forjador_id: string;
+          dia_semana: number;
           grupo_muscular: string;
           exercicio_id: string;
           ordem?: number;
@@ -499,6 +503,8 @@ export type Database = {
           repeticoes_alvo: number;
           peso_prescrito?: number | null;
           descanso_segundos?: number | null;
+          progressao_alternativas?: unknown;
+          repeticoes_por_serie?: unknown;
           observacoes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -507,6 +513,7 @@ export type Database = {
           id?: string;
           atleta_id?: string;
           forjador_id?: string;
+          dia_semana?: number;
           grupo_muscular?: string;
           exercicio_id?: string;
           ordem?: number;
@@ -514,6 +521,8 @@ export type Database = {
           repeticoes_alvo?: number;
           peso_prescrito?: number | null;
           descanso_segundos?: number | null;
+          progressao_alternativas?: unknown;
+          repeticoes_por_serie?: unknown;
           observacoes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -1062,6 +1071,20 @@ export type Database = {
           p_token: string;
         };
         Returns: boolean;
+      };
+      argos_forja_upsert_prescricao_treino: {
+        Args: {
+          p_atleta_id: string;
+          p_payload: Json;
+        };
+        Returns: Json;
+      };
+      argos_forja_publish_vip_medidas: {
+        Args: {
+          p_client_id: string;
+          p_payload: Json;
+        };
+        Returns: Json;
       };
       obter_calor_muscular_atleta: {
         Args: {

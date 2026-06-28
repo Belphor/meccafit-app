@@ -42,9 +42,10 @@ async function fetchForjadorPrescriptions(userId: string): Promise<ForjadorPresc
   const { data, error } = await supabase
     .from("prescricoes_treino_forjador")
     .select(
-      "id, atleta_id, forjador_id, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, observacoes",
+      "id, atleta_id, forjador_id, dia_semana, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, progressao_alternativas, repeticoes_por_serie, observacoes",
     )
     .eq("atleta_id", userId)
+    .order("dia_semana")
     .order("grupo_muscular")
     .order("ordem");
 

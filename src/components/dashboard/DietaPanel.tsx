@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
+import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
   BRASA_PANEL,
@@ -9,6 +10,7 @@ import {
   DASHBOARD_META_CHIP,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
+  DIETA_CLIENT_EXPLANATION,
 } from "@/lib/dashboard-config";
 import {
   DIET_OBJECTIVE_LABELS,
@@ -17,7 +19,6 @@ import {
   type DietBlueprint,
   type DietMeal,
 } from "@/lib/diet-data";
-import { fetchActiveWeeklyDiet, type ClientWeeklyDiet } from "@/lib/client-weekly-diet";
 import { VIP_CLIENT_LABEL } from "@/lib/vip-client";
 
 type DietaPanelProps = {
@@ -110,7 +111,7 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
 
         {blueprint.forgerName ? (
           <p className="mt-3 text-xs text-amber-200/75">
-            Forjado por <span className="text-amber-100">{blueprint.forgerName}</span>
+            Plano do personal <span className="text-amber-100">{blueprint.forgerName}</span>
           </p>
         ) : null}
 
@@ -150,7 +151,7 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
       {blueprint.observacoes ? (
         <div className={`${BRASA_PANEL} rounded-2xl border px-4 py-3`}>
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500/90">
-            Notas do Forjador
+            Observações do personal
           </p>
           <p className="mt-2 text-sm leading-relaxed text-amber-100/85">{blueprint.observacoes}</p>
         </div>
@@ -159,7 +160,7 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
       {blueprint.refeicoes.length > 0 ? (
         <div className="space-y-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-500/90">
-            Refeições do dia
+            Refeições do plano
           </p>
           {blueprint.refeicoes.map((meal) => (
             <MealCard key={meal.id} meal={meal} />
@@ -168,81 +169,8 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
       ) : null}
 
       <p className="text-center text-[11px] text-neutral-600">
-        Plano actualizado em{" "}
+        Plano publicado em{" "}
         {new Date(blueprint.atualizadoEm).toLocaleDateString("pt-BR", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })}
-      </p>
-    </div>
-  );
-}
-
-function WeeklyDietView({ weeklyDiet }: { weeklyDiet: ClientWeeklyDiet }) {
-  const today = weeklyDiet.dias.find((day) => day.isToday);
-
-  return (
-    <div className="space-y-4">
-      <div className={`${BRASA_PANEL} rounded-2xl border px-4 py-4`}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500/90">
-          Plano da semana · {weeklyDiet.semanaRef}
-        </p>
-        {today?.notas.trim() ? (
-          <div className="mt-3">
-            <p className="text-xs text-neutral-500">Hoje · {today.label}</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-amber-100/90">
-              {today.notas.trim()}
-            </p>
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-amber-100/75">
-            O personal ainda não definiu as refeições de hoje.
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-500">
-          Todos os dias
-        </p>
-        {weeklyDiet.dias.map((day) => (
-          <article
-            key={day.id}
-            className={`${BRASA_PANEL} rounded-xl border px-3 py-3 ${day.isToday ? "border-emerald-500/25" : ""}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-amber-50">
-                {day.label}
-                {day.isToday ? (
-                  <span className="ml-2 text-[10px] font-normal text-emerald-300/80">Hoje</span>
-                ) : null}
-              </p>
-              <span
-                className={[
-                  "rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide",
-                  day.concluido
-                    ? "bg-emerald-950/50 text-emerald-300"
-                    : "bg-neutral-900 text-neutral-500",
-                ].join(" ")}
-              >
-                {day.concluido ? "Concluído" : "Pendente"}
-              </span>
-            </div>
-            {day.notas.trim() ? (
-              <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-amber-100/80">
-                {day.notas.trim()}
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-neutral-600">Sem orientações para este dia.</p>
-            )}
-          </article>
-        ))}
-      </div>
-
-      <p className="text-center text-[11px] text-neutral-600">
-        Plano semanal atualizado em{" "}
-        {new Date(weeklyDiet.atualizadoEm).toLocaleDateString("pt-BR", {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -254,7 +182,6 @@ function WeeklyDietView({ weeklyDiet }: { weeklyDiet: ClientWeeklyDiet }) {
 
 export function DietaPanel({ userId }: DietaPanelProps) {
   const [blueprint, setBlueprint] = useState<DietBlueprint | null>(null);
-  const [weeklyDiet, setWeeklyDiet] = useState<ClientWeeklyDiet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -264,20 +191,13 @@ export function DietaPanel({ userId }: DietaPanelProps) {
     async function load() {
       setLoading(true);
       setError(null);
-      const [blueprintResult, weeklyResult] = await Promise.all([
-        fetchActiveDietBlueprint(userId),
-        fetchActiveWeeklyDiet(userId),
-      ]);
+      const blueprintResult = await fetchActiveDietBlueprint(userId);
       if (cancelled) return;
 
       if (blueprintResult.error && blueprintResult.error !== "MIGRATION_PENDING") {
         setError(blueprintResult.error);
       }
-      if (weeklyResult.error) {
-        setError((current) => current ?? weeklyResult.error);
-      }
       setBlueprint(blueprintResult.blueprint);
-      setWeeklyDiet(weeklyResult.diet);
       setLoading(false);
     }
 
@@ -289,31 +209,28 @@ export function DietaPanel({ userId }: DietaPanelProps) {
 
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
-      <DashboardPanelHeader chip="Dieta" meta="Consultoria personal · exclusivo VIP" />
+      <DashboardPanelHeader chip="Nutrição" meta="Plano alimentar · VIP" />
+
+      <DashboardClientInfoBlock className="mt-4">
+        {DIETA_CLIENT_EXPLANATION}
+      </DashboardClientInfoBlock>
 
       {loading ? (
         <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-8 text-center`}>
-          <p className="text-sm text-amber-200/75">Carregando plano termogénico...</p>
+          <p className="text-sm text-amber-200/75">Carregando plano alimentar…</p>
         </div>
       ) : error ? (
         <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-5 text-center`}>
           <p className="text-sm text-rose-300/90">Não foi possível carregar a dieta: {error}</p>
         </div>
-      ) : blueprint || weeklyDiet ? (
-        <div className="mt-4 space-y-6">
-          {weeklyDiet ? <WeeklyDietView weeklyDiet={weeklyDiet} /> : null}
-          {blueprint ? <DietBlueprintView blueprint={blueprint} /> : null}
-        </div>
+      ) : blueprint ? (
+        <DietBlueprintView blueprint={blueprint} />
       ) : (
         <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-5 text-center`}>
-          <h2 className={DASHBOARD_SECTION_TITLE}>Plano nutricional VIP</h2>
+          <h2 className={DASHBOARD_SECTION_TITLE}>Plano alimentar</h2>
           <p className="mt-3 text-sm leading-relaxed text-amber-100/85">
-            O seu vínculo VIP está activo. O personal ainda não publicou o plano alimentar — assim que
-            for enviado, aparece aqui com as orientações de cada dia.
-          </p>
-          <p className="mt-3 text-xs text-neutral-500">
-            Enquanto isso, mantenha pureza diária (água, sono, treino) para sustentar a recomposição
-            termogénica.
+            Seu vínculo VIP está ativo. O personal ainda não publicou o plano alimentar — quando
+            enviar, aparece aqui com metas, refeições e observações.
           </p>
         </div>
       )}

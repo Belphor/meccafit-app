@@ -217,12 +217,15 @@ export function reconcileSessionMaxLoads(
   return next;
 }
 
-/** Soma das cargas máximas registradas na sessão — apenas exercícios propostos no treino. */
+/** Soma das cargas máximas registradas na sessão — apenas exercícios com carga em kg. */
 export function sumSessionAltarVtc(
   subgroup: MuscleSubgroup,
   maxLoadsByExerciseId: Record<number, number>,
 ): number {
   return subgroup.exercises.reduce((sum, exercise) => {
+    const kind = exercise.metricKind ?? "load_kg";
+    if (kind !== "load_kg") return sum;
+
     const load = maxLoadsByExerciseId[exercise.id];
     if (typeof load !== "number" || !Number.isFinite(load) || load <= 0) return sum;
     return sum + load;
@@ -236,6 +239,7 @@ export const MURAL_COMMUNITY_MAX_LIMIT = 100;
 export type CommunityMuralRow = {
   id: number;
   exercicio_nome: string;
+  exercicio_id?: number | null;
   peso: number;
   series: number;
   registrado_em: string;
@@ -256,6 +260,10 @@ export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPo
   return rows.map((row) => ({
     id: `mural-${row.id}`,
     exerciseName: row.exercicio_nome?.trim() || "Exercício",
+    exercicioId:
+      row.exercicio_id === null || row.exercicio_id === undefined
+        ? null
+        : Number(row.exercicio_id),
     weight: normalizeWeight(row.peso),
     series: Math.max(1, Number(row.series) || 1),
     createdAt: row.registrado_em ?? new Date().toISOString(),

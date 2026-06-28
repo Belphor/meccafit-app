@@ -1,8 +1,12 @@
 import { supabase } from "@/lib/supabase";
-import type { ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
+import type { ForjaBondedAthlete, ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
 import type { Database } from "@/types/database.types";
 
 type ForjaRpc = Database["public"]["Functions"] & {
+  argos_forja_monitor_athletes: {
+    Args: Record<string, never>;
+    Returns: ForjaBondedAthlete[] | unknown;
+  };
   argos_forja_fraud_signals: {
     Args: { p_cliente_id?: string | null };
     Returns: { signals: ForjaFraudSignal[]; count: number };
@@ -28,6 +32,10 @@ type ForjaRpc = Database["public"]["Functions"] & {
     Returns: Record<string, unknown>;
   };
   argos_sovereign_modify_statistics: {
+    Args: { p_target_id: string; p_patch: Record<string, unknown> };
+    Returns: Record<string, unknown>;
+  };
+  argos_forja_adjust_client_vtc: {
     Args: { p_target_id: string; p_patch: Record<string, unknown> };
     Returns: Record<string, unknown>;
   };
@@ -66,7 +74,45 @@ async function requireSession(): Promise<{ ok: true; userId: string } | { ok: fa
 }
 
 function rpcErrorMessage(error: { message?: string } | null): string {
-  return error?.message?.trim() || "Operação recusada pelo núcleo ARGOS.";
+  return error?.message?.trim() || "Operação recusada. Verifique permissões e tente novamente.";
+}
+
+function mapMonitorAthleteRow(row: Record<string, unknown>): ForjaBondedAthlete {
+  return {
+    bondId: String(row.bondId ?? `global-${row.clientId}`),
+    clientId: String(row.clientId),
+    forgerId: String(row.forgerId ?? ""),
+    displayName: String(row.displayName ?? "Cliente"),
+    lineageName: row.lineageName ? String(row.lineageName) : null,
+    phaseTier: Math.min(5, Math.max(1, Number(row.phaseTier ?? 1))),
+    bondedAt: String(row.bondedAt ?? new Date().toISOString()),
+    forgerName: row.forgerName ? String(row.forgerName) : null,
+    statusAltar: row.statusAltar ? String(row.statusAltar) : null,
+    isGlobalListing: Boolean(row.isGlobalListing),
+    hasVipBond: Boolean(row.hasVipBond),
+    vtcToday: Number(row.vtcToday ?? 0),
+    vtcAvg7d: Number(row.vtcAvg7d ?? 0),
+    vtc30d: Number(row.vtc30d ?? 0),
+  };
+}
+
+export async function fetchForjaMonitorAthletes(): Promise<
+  { ok: true; athletes: ForjaBondedAthlete[] } | { ok: false; message: string }
+> {
+  const session = await requireSession();
+  if (!session.ok) return session;
+
+  const { data, error } = await forjaSupabase.rpc(
+    "argos_forja_monitor_athletes" as keyof ForjaRpc,
+    {} as ForjaRpc["argos_forja_monitor_athletes"]["Args"],
+  );
+
+  if (error) {
+    return { ok: false, message: rpcErrorMessage(error) };
+  }
+
+  const rows = (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>;
+  return { ok: true, athletes: rows.map(mapMonitorAthleteRow) };
 }
 
 export async function fetchForjaFraudSignals(
@@ -164,6 +210,13 @@ export async function sovereignReactivateAccount(targetId: string): Promise<Forj
 export type SovereignStatsPatch = {
   phase_tier?: number;
   vtc_today_delta?: number;
+  vtc_today_set?: number;
+  reset_vtc_today?: boolean;
+};
+
+export type ForjaVtcAdjustPatch = {
+  vtc_today_delta?: number;
+  vtc_today_set?: number;
   reset_vtc_today?: boolean;
 };
 
@@ -175,6 +228,22 @@ export async function sovereignModifyStatistics(
   if (!session.ok) return session;
 
   const { data, error } = await forjaSupabase.rpc("argos_sovereign_modify_statistics", {
+    p_target_id: targetId,
+    p_patch: patch,
+  });
+
+  if (error) return { ok: false, message: rpcErrorMessage(error) };
+  return { ok: true, data: (data as Record<string, unknown>) ?? {} };
+}
+
+export async function forjaAdjustClientVtc(
+  targetId: string,
+  patch: ForjaVtcAdjustPatch,
+): Promise<ForjaActionResult> {
+  const session = await requireSession();
+  if (!session.ok) return session;
+
+  const { data, error } = await forjaSupabase.rpc("argos_forja_adjust_client_vtc", {
     p_target_id: targetId,
     p_patch: patch,
   });

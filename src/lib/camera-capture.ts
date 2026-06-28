@@ -61,10 +61,25 @@ function resolveGetUserMedia(): (
 }
 
 export async function requestFrontCameraStream(): Promise<MediaStream> {
+  return requestCameraStream({ preferFront: true });
+}
+
+/** Tenta câmera frontal, traseira ou genérica — máxima compatibilidade com celulares. */
+export async function requestCameraStream(options?: {
+  preferFront?: boolean;
+}): Promise<MediaStream> {
+  const preferFront = options?.preferFront ?? true;
   const getUserMedia = resolveGetUserMedia();
   let lastError: unknown;
 
-  for (const video of VIDEO_CONSTRAINT_CANDIDATES) {
+  const orderedCandidates = preferFront
+    ? VIDEO_CONSTRAINT_CANDIDATES
+    : [
+        ...VIDEO_CONSTRAINT_CANDIDATES.slice(2),
+        ...VIDEO_CONSTRAINT_CANDIDATES.slice(0, 2),
+      ];
+
+  for (const video of orderedCandidates) {
     try {
       return await getUserMedia({ video, audio: false });
     } catch (error) {
@@ -73,6 +88,14 @@ export async function requestFrontCameraStream(): Promise<MediaStream> {
   }
 
   throw lastError ?? new DOMException("Câmera indisponível", "NotReadableError");
+}
+
+export async function requestAnyCameraStream(): Promise<MediaStream> {
+  try {
+    return await requestCameraStream({ preferFront: true });
+  } catch {
+    return requestCameraStream({ preferFront: false });
+  }
 }
 
 export function configureVideoElement(video: HTMLVideoElement): void {

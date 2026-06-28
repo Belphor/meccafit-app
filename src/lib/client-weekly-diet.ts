@@ -1,7 +1,9 @@
 import {
+  compileDayNotas,
   DIET_WEEK_DAY_IDS,
   DIET_WEEK_DAY_LABELS,
   parseWeeklyDietDays,
+  type DietMealEntry,
   type DietWeekDayId,
   type WeeklyDietDraft,
 } from "@/lib/forjador-vip-types";
@@ -12,6 +14,7 @@ export type ClientWeeklyDietDay = {
   id: DietWeekDayId;
   label: string;
   notas: string;
+  refeicoes: DietMealEntry[];
   concluido: boolean;
   isToday: boolean;
 };
@@ -43,13 +46,17 @@ export async function fetchActiveWeeklyDiet(
   const parsed = parseWeeklyDietDays(data.dias);
   const todayId = resolveBrasiliaDietDayId();
 
-  const dias: ClientWeeklyDietDay[] = DIET_WEEK_DAY_IDS.map((dayId) => ({
-    id: dayId,
-    label: DIET_WEEK_DAY_LABELS[dayId],
-    notas: parsed[dayId].notas,
-    concluido: parsed[dayId].concluido,
-    isToday: dayId === todayId,
-  }));
+  const dias: ClientWeeklyDietDay[] = DIET_WEEK_DAY_IDS.map((dayId) => {
+    const entry = parsed[dayId];
+    return {
+      id: dayId,
+      label: DIET_WEEK_DAY_LABELS[dayId],
+      notas: compileDayNotas(entry),
+      refeicoes: entry.refeicoes.filter((meal) => meal.conteudo.trim().length > 0),
+      concluido: entry.concluido,
+      isToday: dayId === todayId,
+    };
+  });
 
   return {
     diet: {

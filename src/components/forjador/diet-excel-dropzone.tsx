@@ -25,13 +25,18 @@ import { DIET_OBJECTIVE_LABELS } from "@/lib/diet-data";
 type DietExcelDropzoneProps = {
   athlete: ForjaBondedAthlete | null;
   disabled?: boolean;
+  isSovereign?: boolean;
 };
 
 type DropPhase = "idle" | "parsing" | "uploading" | "success" | "error";
 
 const ACCEPT = ".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-export function DietExcelDropzone({ athlete, disabled = false }: DietExcelDropzoneProps) {
+export function DietExcelDropzone({
+  athlete,
+  disabled = false,
+  isSovereign = false,
+}: DietExcelDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [phase, setPhase] = useState<DropPhase>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -50,7 +55,7 @@ export function DietExcelDropzone({ athlete, disabled = false }: DietExcelDropzo
       setWarnings(parsed.warnings);
       setPreview(parsed.blueprint);
 
-      const result = await syncForjaDietBlueprint(athlete, parsed.blueprint);
+      const result = await syncForjaDietBlueprint(athlete, parsed.blueprint, { isSovereign });
 
       if (!result.ok) {
         setPhase("error");

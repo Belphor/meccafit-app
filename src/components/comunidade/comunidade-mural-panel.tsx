@@ -49,12 +49,12 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
               </h3>
             </div>
             <span className={`${COMUNIDADE_CHIP} w-fit shrink-0 border-amber-500/30 bg-amber-950/40 text-amber-200/85`}>
-              Superações
+              Superações de hoje
             </span>
           </div>
           <p className={`relative mt-2 max-w-prose ${COMUNIDADE_BODY_TEXT} text-neutral-400`}>
-            Quando bates o teu recorde num exercício, a conquista aparece aqui para motivar os
-            restantes. Não conta para ranking nem termómetro — é a vitrine social da academia.
+            Superações de hoje (horário de Brasília). Quando bates o teu recorde num exercício, a
+            conquista aparece aqui para motivar os restantes.
           </p>
         </header>
 

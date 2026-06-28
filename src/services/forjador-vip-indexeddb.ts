@@ -1,4 +1,8 @@
-import type { BodyMetricsDraft, WeeklyDietDraft } from "@/lib/forjador-vip-types";
+import {
+  normalizeWeeklyDietDraft,
+  type BodyMetricsDraft,
+  type WeeklyDietDraft,
+} from "@/lib/forjador-vip-types";
 import type { ScientificMetricsEntry } from "@/lib/scientific-metrics-types";
 
 const DB_NAME = "meccafit_forjador_vip_db";
@@ -100,7 +104,7 @@ export async function loadWeeklyDietDraft(
     "readonly",
     (store) => store.get(key),
   );
-  return row ?? null;
+  return row ? normalizeWeeklyDietDraft(row) : null;
 }
 
 export async function saveWeeklyDietDraft(draft: WeeklyDietDraft): Promise<void> {

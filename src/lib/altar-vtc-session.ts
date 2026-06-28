@@ -19,6 +19,8 @@ export type AltarVtcSessionSnapshot = {
   baseVtcTotal: number;
   lastSavedWeight: number;
   maxLoadsByExerciseId: Record<number, number>;
+  /** PR registrado nesta sessão (kg, rep ou segundos) — uma vez por exercício. */
+  registeredPrByExerciseId: Record<number, number>;
   completedSetsByExerciseId: Record<number, number>;
   targetKg: number;
   updatedAt: string;
@@ -66,6 +68,7 @@ function sanitizeSnapshot(raw: unknown): AltarVtcSessionSnapshot | null {
   if (data.v !== SNAPSHOT_VERSION) return null;
 
   const maxLoadsByExerciseId = sanitizeMaxLoads(data.maxLoadsByExerciseId);
+  const registeredPrByExerciseId = sanitizeMaxLoads(data.registeredPrByExerciseId ?? {});
   const completedSetsByExerciseId = sanitizeMaxLoads(data.completedSetsByExerciseId ?? {});
   const baseVtcTotal =
     typeof data.baseVtcTotal === "number" && Number.isFinite(data.baseVtcTotal)
@@ -82,6 +85,7 @@ function sanitizeSnapshot(raw: unknown): AltarVtcSessionSnapshot | null {
     baseVtcTotal,
     lastSavedWeight,
     maxLoadsByExerciseId,
+    registeredPrByExerciseId,
     completedSetsByExerciseId,
     targetKg: ALTAR_VTC_SESSION_TARGET_KG,
     updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
@@ -132,7 +136,11 @@ export function writeAltarVtcSession(
   scope: AltarVtcSessionScope,
   payload: Pick<
     AltarVtcSessionSnapshot,
-    "baseVtcTotal" | "lastSavedWeight" | "maxLoadsByExerciseId" | "completedSetsByExerciseId"
+    | "baseVtcTotal"
+    | "lastSavedWeight"
+    | "maxLoadsByExerciseId"
+    | "registeredPrByExerciseId"
+    | "completedSetsByExerciseId"
   >,
 ): void {
   if (typeof window === "undefined") return;
@@ -143,6 +151,7 @@ export function writeAltarVtcSession(
     baseVtcTotal: Math.max(0, payload.baseVtcTotal),
     lastSavedWeight: Math.max(0, payload.lastSavedWeight),
     maxLoadsByExerciseId: sanitizeMaxLoads(payload.maxLoadsByExerciseId),
+    registeredPrByExerciseId: sanitizeMaxLoads(payload.registeredPrByExerciseId),
     completedSetsByExerciseId: sanitizeMaxLoads(payload.completedSetsByExerciseId),
     targetKg: ALTAR_VTC_SESSION_TARGET_KG,
     updatedAt: new Date().toISOString(),

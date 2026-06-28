@@ -4,6 +4,7 @@ import {
   snapshotPayloadToPerimetrosJson,
   type ScientificMetricsEntry,
 } from "@/lib/scientific-metrics-types";
+import { publishVipMedidasUpdate } from "@/lib/vip-medidas-events";
 import { supabase } from "@/lib/supabase";
 
 export type ScientificMetricsSyncResult =
@@ -13,6 +14,7 @@ export type ScientificMetricsSyncResult =
 export async function syncLatestScientificMetricsToNucleus(
   athlete: ForjaBondedAthlete,
   entry: ScientificMetricsEntry,
+  options?: { operatorId?: string; isSovereign?: boolean },
 ): Promise<ScientificMetricsSyncResult> {
   if (!athlete.hasVipBond) {
     return {
@@ -36,63 +38,17 @@ export async function syncLatestScientificMetricsToNucleus(
       return { ok: false, code: "SESSION", message: "Sessão inválida. Faça login novamente." };
     }
 
-    const { data: existing, error: fetchError } = await supabase
-      .from("vip_medidas_corporais")
-      .select("id")
-      .eq("client_id", athlete.clientId)
-      .eq("activo", true)
-      .maybeSingle();
-
-    if (fetchError) {
-      const rlsHint = fetchError.message?.toLowerCase().includes("row-level security");
-      return {
-        ok: false,
-        code: rlsHint ? "RLS" : "NETWORK",
-        message: fetchError.message,
-      };
-    }
-
-    const row = {
+    const rpcPayload = {
       peso_kg: payload.pesoKg,
       altura_cm: payload.alturaCm,
       perimetros,
       medido_em: payload.medidoEm,
-      forger_id: athlete.forgerId,
     };
 
-    if (existing?.id) {
-      const { data, error } = await supabase
-        .from("vip_medidas_corporais")
-        .update(row)
-        .eq("id", existing.id)
-        .select("id")
-        .single();
-
-      if (error) {
-        const rlsHint = error.message?.toLowerCase().includes("row-level security");
-        return {
-          ok: false,
-          code: rlsHint ? "RLS" : "NETWORK",
-          message: error.message,
-        };
-      }
-
-      if (!data?.id) {
-        return { ok: false, code: "NETWORK", message: "Snapshot não confirmado pelo núcleo." };
-      }
-
-      return { ok: true, recordId: data.id };
-    }
-
-    const { data, error } = await supabase
-      .from("vip_medidas_corporais")
-      .insert({
-        client_id: athlete.clientId,
-        activo: true,
-        ...row,
-      })
-      .select("id")
-      .single();
+    const { data, error } = await supabase.rpc("argos_forja_publish_vip_medidas", {
+      p_client_id: athlete.clientId,
+      p_payload: rpcPayload,
+    });
 
     if (error) {
       const rlsHint = error.message?.toLowerCase().includes("row-level security");
@@ -103,11 +59,13 @@ export async function syncLatestScientificMetricsToNucleus(
       };
     }
 
-    if (!data?.id) {
-      return { ok: false, code: "NETWORK", message: "Snapshot não confirmado pelo núcleo." };
+    const record = (data as unknown) as { ok?: boolean; id?: string } | null;
+    if (!record?.id) {
+      return { ok: false, code: "NETWORK", message: "Medição não confirmada." };
     }
 
-    return { ok: true, recordId: data.id };
+    publishVipMedidasUpdate(athlete.clientId);
+    return { ok: true, recordId: record.id };
   } catch {
     return { ok: false, code: "NETWORK", message: "Falha de rede ao sincronizar antropometria." };
   }

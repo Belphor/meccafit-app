@@ -1,6 +1,8 @@
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { resolveVipForgerIdForPublish } from "@/lib/forja-vip-publish";
 import {
   DIET_WEEK_DAY_IDS,
+  compileDayNotas,
   type DietWeekDayId,
   type WeeklyDietDraft,
 } from "@/lib/forjador-vip-types";
@@ -10,12 +12,25 @@ export type ForjadorVipSyncResult =
   | { ok: true; recordId: string }
   | { ok: false; code: "SESSION" | "VALIDATION" | "RLS" | "NETWORK"; message: string };
 
-function buildDiasPayload(draft: WeeklyDietDraft): Record<DietWeekDayId, { notas: string; concluido: boolean }> {
-  const payload = {} as Record<DietWeekDayId, { notas: string; concluido: boolean }>;
+function buildDiasPayload(
+  draft: WeeklyDietDraft,
+): Record<
+  DietWeekDayId,
+  { notas: string; concluido: boolean; refeicoes: WeeklyDietDraft["dias"][DietWeekDayId]["refeicoes"] }
+> {
+  const payload = {} as Record<
+    DietWeekDayId,
+    { notas: string; concluido: boolean; refeicoes: WeeklyDietDraft["dias"][DietWeekDayId]["refeicoes"] }
+  >;
   for (const dayId of DIET_WEEK_DAY_IDS) {
+    const day = draft.dias[dayId] ?? { notas: "", concluido: false, refeicoes: [] };
+    const refeicoes = (day.refeicoes ?? [])
+      .map((meal) => ({ id: meal.id, conteudo: meal.conteudo.trim() }))
+      .filter((meal) => meal.conteudo.length > 0);
     payload[dayId] = {
-      notas: draft.dias[dayId].notas.trim(),
-      concluido: draft.dias[dayId].concluido,
+      notas: compileDayNotas({ ...day, refeicoes }),
+      concluido: day.concluido,
+      refeicoes,
     };
   }
   return payload;
@@ -37,6 +52,7 @@ export function validateWeeklyDietDraft(draft: WeeklyDietDraft): { ok: true } | 
 export async function syncWeeklyDietToNucleus(
   athlete: ForjaBondedAthlete,
   draft: WeeklyDietDraft,
+  options?: { isSovereign?: boolean },
 ): Promise<ForjadorVipSyncResult> {
   const validation = validateWeeklyDietDraft(draft);
   if (!validation.ok) {
@@ -63,6 +79,11 @@ export async function syncWeeklyDietToNucleus(
     }
 
     const dias = buildDiasPayload(draft);
+    const forgerId = resolveVipForgerIdForPublish(
+      athlete,
+      operatorId,
+      options?.isSovereign ?? false,
+    );
 
     const { data: existing, error: fetchError } = await supabase
       .from("vip_dieta_semanal")
@@ -86,7 +107,7 @@ export async function syncWeeklyDietToNucleus(
         .update({
           semana_ref: draft.semanaRef,
           dias,
-          forger_id: athlete.forgerId,
+          forger_id: forgerId,
         })
         .eq("id", existing.id)
         .select("id")
@@ -102,7 +123,7 @@ export async function syncWeeklyDietToNucleus(
       }
 
       if (!data?.id) {
-        return { ok: false, code: "NETWORK", message: "Dieta semanal não confirmada pelo núcleo." };
+        return { ok: false, code: "NETWORK", message: "Dieta semanal não confirmada." };
       }
 
       return { ok: true, recordId: data.id };
@@ -112,7 +133,7 @@ export async function syncWeeklyDietToNucleus(
       .from("vip_dieta_semanal")
       .insert({
         client_id: athlete.clientId,
-        forger_id: athlete.forgerId,
+        forger_id: forgerId,
         semana_ref: draft.semanaRef,
         dias,
         activo: true,
@@ -130,7 +151,7 @@ export async function syncWeeklyDietToNucleus(
     }
 
     if (!data?.id) {
-      return { ok: false, code: "NETWORK", message: "Dieta semanal não confirmada pelo núcleo." };
+      return { ok: false, code: "NETWORK", message: "Dieta semanal não confirmada." };
     }
 
     return { ok: true, recordId: data.id };

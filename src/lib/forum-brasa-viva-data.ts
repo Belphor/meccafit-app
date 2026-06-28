@@ -1,6 +1,7 @@
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
 import { mapCommunityMuralRowsToPosts, type CommunityMuralRow } from "@/lib/dashboard-data";
 import { muralBodyForExercise, resolveMuralTopicBody } from "@/lib/mural-copy";
+import { formatMuralMetricBadge } from "@/lib/mural-metric";
 import type {
   ForumBrasaVivaRpcRow,
   ForumBrasaVivaTopic,
@@ -19,11 +20,16 @@ function normalizeWeight(value: unknown): number {
 function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
   const title = row.topic_title?.trim() || "Ascensão no altar";
   const weightKg = normalizeWeight(row.peso);
+  const series = Math.max(1, Number(row.series) || 1);
+  const exercicioId =
+    row.exercicio_id === null || row.exercicio_id === undefined
+      ? null
+      : Number(row.exercicio_id);
 
   return {
     id: `forum-${row.id}`,
     title,
-    body: resolveMuralTopicBody(row.topic_body, title, weightKg),
+    body: resolveMuralTopicBody(row.topic_body, title, weightKg, exercicioId),
     authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
     authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
@@ -31,7 +37,9 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
     isReiDasChamas: Boolean(row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas),
     isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
     weightKg,
-    series: Math.max(1, Number(row.series) || 1),
+    series,
+    exercicioId,
+    metricBadge: weightKg > 0 ? formatMuralMetricBadge(title, weightKg, series, exercicioId) : "",
     createdAt: row.registrado_em ?? new Date().toISOString(),
   };
 }
@@ -40,7 +48,7 @@ function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] 
   return mapCommunityMuralRowsToPosts(rows).map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: muralBodyForExercise(post.exerciseName, post.weight),
+    body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
@@ -49,6 +57,11 @@ function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] 
     isPilarCooperativo: post.isPilarCooperativo ?? false,
     weightKg: post.weight,
     series: post.series,
+    exercicioId: post.exercicioId ?? null,
+    metricBadge:
+      post.weight > 0
+        ? formatMuralMetricBadge(post.exerciseName, post.weight, post.series, post.exercicioId)
+        : "",
     createdAt: post.createdAt,
   }));
 }
@@ -102,7 +115,7 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
   return posts.map((post) => ({
     id: post.id.replace(/^mural-/, "forum-"),
     title: post.exerciseName,
-    body: muralBodyForExercise(post.exerciseName, post.weight),
+    body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
     authorLineage: post.lineageName ?? "Linhagem Meccafit",
@@ -111,6 +124,11 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
     isPilarCooperativo: post.isPilarCooperativo ?? false,
     weightKg: post.weight,
     series: post.series,
+    exercicioId: post.exercicioId ?? null,
+    metricBadge:
+      post.weight > 0
+        ? formatMuralMetricBadge(post.exerciseName, post.weight, post.series, post.exercicioId)
+        : "",
     createdAt: post.createdAt,
   }));
 }

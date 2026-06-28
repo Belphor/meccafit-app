@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
@@ -15,7 +15,7 @@ import {
   bindStreamToVideo,
   captureVideoFrameDataUrl,
   formatCameraError,
-  requestFrontCameraStream,
+  requestAnyCameraStream,
   stopMediaStream,
 } from "@/lib/camera-capture";
 
@@ -51,6 +51,7 @@ export function EvolucaoSelfiePanel({
   onClose?: () => void;
 } = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [captureUrl, setCaptureUrl] = useState<string | null>(null);
@@ -61,7 +62,7 @@ export function EvolucaoSelfiePanel({
 
     async function startCamera() {
       try {
-        const stream = await requestFrontCameraStream();
+        const stream = await requestAnyCameraStream();
 
         if (!mounted) {
           stopMediaStream(stream);
@@ -90,27 +91,50 @@ export function EvolucaoSelfiePanel({
     };
   }, []);
 
+  const applyCapturedDataUrl = useCallback(
+    (dataUrl: string) => {
+      const snapshot = document.createElement("canvas");
+      const snapshotImage = new window.Image();
+      snapshotImage.onload = () => {
+        snapshot.width = snapshotImage.width;
+        snapshot.height = snapshotImage.height;
+        const snapshotCtx = snapshot.getContext("2d");
+        if (!snapshotCtx) return;
+        snapshotCtx.drawImage(snapshotImage, 0, 0);
+        applyCinemaFrame(snapshotCtx, snapshot.width, snapshot.height);
+        const framedUrl = snapshot.toDataURL("image/png");
+        setCaptureUrl(framedUrl);
+        onCapture?.(framedUrl);
+      };
+      snapshotImage.src = dataUrl;
+    },
+    [onCapture],
+  );
+
   const captureSelfie = useCallback(() => {
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
-
     const dataUrl = captureVideoFrameDataUrl(video, { mirror: true });
-    const snapshot = document.createElement("canvas");
-    snapshot.width = video.videoWidth;
-    snapshot.height = video.videoHeight;
-    const snapshotCtx = snapshot.getContext("2d");
-    if (!snapshotCtx) return;
+    applyCapturedDataUrl(dataUrl);
+  }, [applyCapturedDataUrl]);
 
-    const snapshotImage = new window.Image();
-    snapshotImage.onload = () => {
-      snapshotCtx.drawImage(snapshotImage, 0, 0);
-      applyCinemaFrame(snapshotCtx, snapshot.width, snapshot.height);
-      const framedUrl = snapshot.toDataURL("image/png");
-      setCaptureUrl(framedUrl);
-      onCapture?.(framedUrl);
-    };
-    snapshotImage.src = dataUrl;
-  }, [onCapture]);
+  const handlePhotoFile = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          applyCapturedDataUrl(reader.result);
+          setCameraError(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    },
+    [applyCapturedDataUrl],
+  );
 
   const downloadSelfie = useCallback(() => {
     if (!captureUrl) return;
@@ -135,7 +159,7 @@ export function EvolucaoSelfiePanel({
             Selfie FENYXIA
           </h2>
           <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-            Vinheta cinema · Solar Gold
+            Vinheta cinema · registro visual
           </p>
         </div>
         {onClose ? (
@@ -186,28 +210,52 @@ export function EvolucaoSelfiePanel({
           </p>
         ) : null}
         {cameraError ? (
-          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-white/50">
-            {cameraError}
-          </p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
+            <p className="text-sm text-white/60">{cameraError}</p>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`${DASHBOARD_ACTION_BUTTON} px-4 py-2 text-xs`}
+            >
+              Tirar ou escolher foto
+            </button>
+          </div>
         ) : null}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="sr-only"
+        aria-hidden
+        onChange={handlePhotoFile}
+      />
+
+      <div className="mt-4 grid grid-cols-1 gap-2 xs:grid-cols-3">
         <button
           type="button"
           disabled={!isCameraReady}
           onClick={captureSelfie}
           className={`${DASHBOARD_ACTION_BUTTON} justify-center`}
         >
-          Capturar selfie
+          Capturar
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center`}
+        >
+          Câmera ou galeria
         </button>
         <button
           type="button"
           disabled={!captureUrl}
           onClick={downloadSelfie}
-          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40 xs:col-span-1`}
         >
-          Salvar no dispositivo
+          Salvar no aparelho
         </button>
       </div>
 

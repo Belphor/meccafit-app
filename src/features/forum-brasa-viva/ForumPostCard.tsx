@@ -85,7 +85,7 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
         {topic.body}
       </p>
 
-      {topic.weightKg > 0 ? (
+      {topic.metricBadge ? (
         <p className="mt-3 min-w-0">
           <span
             className={
@@ -94,8 +94,7 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
                 : DASHBOARD_META_CHIP
             }
           >
-            {topic.weightKg.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kg ·{" "}
-            {topic.series} {topic.series === 1 ? "série" : "séries"}
+            {topic.metricBadge}
           </span>
         </p>
       ) : null}

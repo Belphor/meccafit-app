@@ -37,6 +37,7 @@ import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
 import { focusComunidadeMural } from "@/lib/comunidade-mural-focus";
 import {
   COMUNIDADE_MURAL_FOCUS_EVENT,
+  MURAL_REFRESH_EVENT,
   type ComunidadeMuralFocusDetail,
 } from "@/lib/dashboard-tab-navigation";
 
@@ -144,8 +145,16 @@ export function ComunidadePageClient({
       focusComunidadeMural(detail ?? {});
     };
 
+    const refreshMural = () => {
+      setRefreshToken((value) => value + 1);
+    };
+
     window.addEventListener(COMUNIDADE_MURAL_FOCUS_EVENT, focusMural);
-    return () => window.removeEventListener(COMUNIDADE_MURAL_FOCUS_EVENT, focusMural);
+    window.addEventListener(MURAL_REFRESH_EVENT, refreshMural);
+    return () => {
+      window.removeEventListener(COMUNIDADE_MURAL_FOCUS_EVENT, focusMural);
+      window.removeEventListener(MURAL_REFRESH_EVENT, refreshMural);
+    };
   }, []);
 
   const meta = arena?.meta ?? EMPTY_META;

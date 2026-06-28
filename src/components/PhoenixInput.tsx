@@ -26,6 +26,7 @@ import {
   parseRepValue,
   resolveMetricKind,
   resolveTreinoPersistPayload,
+  contributesToSessionVtcKg,
   splitDurationSeconds,
 } from "@/lib/training-metric";
 import { useTouchPrimaryDevice } from "@/hooks/useTouchPrimaryDevice";
@@ -35,7 +36,12 @@ const INPUT_FEEDBACK_MS = 2400;
 export interface PhoenixInputProps {
   userId: string | null | undefined;
   isExerciseActive?: boolean;
+  /** @deprecated Use isPrRegistered */
   isSeriesComplete?: boolean;
+  /** PR já registrado nesta semana ou nesta sessão */
+  isPrRegistered?: boolean;
+  /** Todas as séries prescritas foram concluídas */
+  allSetsComplete?: boolean;
   exercicioId?: number | string | null;
   exercicioNome?: string;
   initialWeight?: number;
@@ -70,6 +76,8 @@ function PhoenixInput({
   fieldIdPrefix = "",
   isExerciseActive = false,
   isSeriesComplete = false,
+  isPrRegistered: isPrRegisteredProp,
+  allSetsComplete = false,
   onWeightSaved,
   onVolumeCommitted,
   onSuperacao,
@@ -77,6 +85,7 @@ function PhoenixInput({
 }: PhoenixInputProps) {
   const isTouchPrimary = useTouchPrimaryDevice();
   const registerOnBlur = !isTouchPrimary;
+  const isPrRegistered = isPrRegisteredProp ?? isSeriesComplete;
   const numericExerciseId =
     typeof exercicioId === "number"
       ? exercicioId
@@ -155,7 +164,7 @@ function PhoenixInput({
 
   const persistTopWeight = useCallback(
     async (topMetric: number) => {
-      if (isSeriesComplete || savingRef.current) return false;
+      if (isPrRegistered || !allSetsComplete || savingRef.current) return false;
 
       const uid = String(userId || "").trim();
       if (!uid || uid.length < 20) {
@@ -193,8 +202,14 @@ function PhoenixInput({
 
         sessionTopWeightRef.current = Math.max(sessionTopWeightRef.current, topMetric);
         onWeightSaved?.(topMetric);
-        onVolumeCommitted?.(topMetric);
-        onPersistSuccess?.({ vtcGenerated: Number(data.vtc_gerado ?? 0) });
+        if (contributesToSessionVtcKg(metricKind)) {
+          onVolumeCommitted?.(topMetric);
+        }
+        onPersistSuccess?.({
+          vtcGenerated: contributesToSessionVtcKg(metricKind)
+            ? Number(data.vtc_gerado ?? 0)
+            : 0,
+        });
 
         if (data?.status === "SUPERAÇÃO") {
           onSuperacao?.({
@@ -221,7 +236,8 @@ function PhoenixInput({
       metricKind,
       numericExerciseId,
       prescribedSeries,
-      isSeriesComplete,
+      isPrRegistered,
+      allSetsComplete,
       onPersistSuccess,
       onSuperacao,
       onVolumeCommitted,
@@ -231,7 +247,7 @@ function PhoenixInput({
 
   const commitTopWeight = useCallback(
     async (topMetric: number) => {
-      if (!isExerciseActive || isSeriesComplete || isSaving || savingRef.current) return;
+      if (!isExerciseActive || isPrRegistered || !allSetsComplete || isSaving || savingRef.current) return;
 
       if (isRepMode) {
         if (!isValidRepValue(topMetric)) {
@@ -250,7 +266,7 @@ function PhoenixInput({
 
       setError(null);
 
-      if (isSeriesComplete) return;
+      if (isPrRegistered) return;
 
       const isNewPeak = topMetric > sessionTopWeightRef.current;
       if (isNewPeak) {
@@ -266,7 +282,7 @@ function PhoenixInput({
         setWeight(isRepMode ? String(Math.round(topMetric)) : String(topMetric));
       }
     },
-    [isDurationMode, isExerciseActive, isRepMode, isSeriesComplete, isSaving, persistTopWeight, pulseInput],
+    [allSetsComplete, isDurationMode, isExerciseActive, isPrRegistered, isRepMode, isSaving, persistTopWeight, pulseInput],
   );
 
   const commitFromScalarField = useCallback(
@@ -309,29 +325,33 @@ function PhoenixInput({
   };
 
   const disabled = !userId || userId === "undefined";
-  const inputLocked = disabled || isSeriesComplete;
-  const useBrasaoBorder = (isExerciseActive || isFocused || inputPulse) && !isSeriesComplete;
+  const awaitingSets = !allSetsComplete && !isPrRegistered;
+  const inputLocked = disabled || !isExerciseActive || isPrRegistered || awaitingSets;
+  const useBrasaoBorder =
+    (isExerciseActive || isFocused || inputPulse) && !isPrRegistered && allSetsComplete;
   const fieldTone = error ? PHOENIX_INPUT_SURFACE.fieldError : "";
   const inputClass = [PHOENIX_INPUT_SURFACE.field, useBrasaoBorder ? PHOENIX_INPUT_SURFACE.fieldBrasao : "", fieldTone]
     .filter(Boolean)
     .join(" ");
   const registerButtonClass = isExerciseActive ? PHOENIX_REGISTER_CARGA_ACTIVE : PHOENIX_REGISTER_CARGA_IDLE;
-  const metaClass = isSeriesComplete ? PHOENIX_INPUT_META_COMPLETE : PHOENIX_INPUT_SURFACE.meta;
+  const metaClass = isPrRegistered ? PHOENIX_INPUT_META_COMPLETE : PHOENIX_INPUT_SURFACE.meta;
 
-  const fieldLabel = isDurationMode ? "Tempo Máximo" : isRepMode ? "Repetição Máxima" : "Carga Máxima";
-  const hintText = isSeriesComplete
+  const fieldLabel = isDurationMode ? "Tempo máximo" : isRepMode ? "Repetição máxima" : "Carga máxima";
+  const hintText = isPrRegistered
     ? hintCompleteText ?? PHOENIX_INPUT_HINT_COMPLETE
-    : isTouchPrimary && isExerciseActive
-      ? isDurationMode
-        ? "Informe o tempo e toque em Registrar tempo"
-        : isRepMode
-          ? "Informe as repetições e toque em Registrar"
-          : "Informe a carga e toque em Registrar carga"
-      : isDurationMode
-        ? "Informe o tempo máximo da série (minutos e segundos)"
-        : isRepMode
-          ? "Informe a repetição máxima da sessão"
-          : "Informe a carga máxima da sessão em kg";
+    : awaitingSets
+      ? "Conclua todas as séries antes de registrar o recorde"
+      : isTouchPrimary && isExerciseActive
+        ? isDurationMode
+          ? "Informe o tempo e toque em Registrar"
+          : isRepMode
+            ? "Informe as repetições e toque em Registrar"
+            : "Informe a carga e toque em Registrar"
+        : isDurationMode
+          ? "Informe o tempo máximo após concluir as séries"
+          : isRepMode
+            ? "Informe a repetição máxima após concluir as séries"
+            : "Informe a carga máxima em kg após concluir as séries";
   const registerLabel = isDurationMode ? "Registrar tempo" : isRepMode ? "Registrar repetições" : "Registrar carga";
 
   return (
@@ -355,8 +375,8 @@ function PhoenixInput({
                 onFocus={() => setIsFocused(true)}
                 onBlur={handleDurationBlur}
                 placeholder="0"
-                disabled={inputLocked || !isExerciseActive}
-                readOnly={isSeriesComplete || !isExerciseActive}
+                disabled={inputLocked}
+                readOnly={inputLocked}
                 className={`${inputClass} w-20 text-center`}
                 aria-label="Minutos"
               />
@@ -373,8 +393,8 @@ function PhoenixInput({
                 onFocus={() => setIsFocused(true)}
                 onBlur={handleDurationBlur}
                 placeholder="00"
-                disabled={inputLocked || !isExerciseActive}
-                readOnly={isSeriesComplete || !isExerciseActive}
+                disabled={inputLocked}
+                readOnly={inputLocked}
                 className={`${inputClass} w-20 text-center`}
                 aria-label="Segundos"
               />
@@ -395,8 +415,8 @@ function PhoenixInput({
                 handleFieldBlur(event);
               }}
               placeholder={isRepMode ? "00" : "00.0"}
-              disabled={inputLocked || !isExerciseActive}
-              readOnly={isSeriesComplete || !isExerciseActive}
+              disabled={inputLocked}
+              readOnly={inputLocked}
               className={inputClass}
               aria-describedby={`${fieldIdPrefix}phoenix-hint`}
             />
@@ -408,7 +428,7 @@ function PhoenixInput({
         {hintText}
       </p>
 
-      {!isSeriesComplete && isTouchPrimary && isExerciseActive ? (
+      {!isPrRegistered && allSetsComplete && isTouchPrimary && isExerciseActive ? (
         <button
           type="button"
           data-exercise-interactive="true"

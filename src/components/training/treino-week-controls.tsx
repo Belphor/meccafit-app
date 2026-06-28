@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  buildForjadorScheduleMap,
   buildScheduleMap,
-  DEFAULT_WEEKLY_SCHEDULE,
   formatScheduleDayLabel,
   parsePlanilhaDayRows,
   resolveCalendarWeekdayIndex,
@@ -34,6 +34,7 @@ type ExecutionTone = "complete" | "today" | "default";
 export type TreinoWeekControlsProps = {
   userId: string;
   initialSchedule?: PlanilhaDayRow[];
+  useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
   isTreinoSwitching: boolean;
   hasForjadorPlan: boolean;
@@ -42,7 +43,10 @@ export type TreinoWeekControlsProps = {
   onTrainingDayPick: (day: WeekdayIndex) => void;
 };
 
-function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[]) {
+function resolveInitialSchedule(initialSchedule?: PlanilhaDayRow[], useForjadorSchedule = false) {
+  if (useForjadorSchedule) {
+    return buildForjadorScheduleMap(initialSchedule ?? []);
+  }
   return buildScheduleMap(initialSchedule ?? []);
 }
 
@@ -96,6 +100,7 @@ function resolveDayButtonClass(isSelected: boolean, isLocked: boolean, isToday: 
 export function TreinoWeekControls({
   userId,
   initialSchedule,
+  useForjadorSchedule = false,
   activeTrainingDay,
   isTreinoSwitching,
   hasForjadorPlan,
@@ -103,12 +108,17 @@ export function TreinoWeekControls({
   weekLockedDays,
   onTrainingDayPick,
 }: TreinoWeekControlsProps) {
-  const bootSchedule = useMemo(() => resolveInitialSchedule(initialSchedule), [initialSchedule]);
+  const bootSchedule = useMemo(
+    () => resolveInitialSchedule(initialSchedule, useForjadorSchedule),
+    [initialSchedule, useForjadorSchedule],
+  );
   const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
   const lockedDaySet = useMemo(() => new Set(weekLockedDays), [weekLockedDays]);
 
   const [schedule, setSchedule] = useState(bootSchedule);
-  const [loadingIndication, setLoadingIndication] = useState(!initialSchedule?.length);
+  const [loadingIndication, setLoadingIndication] = useState(
+    !useForjadorSchedule && !initialSchedule?.length,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const activeDayMuscles = schedule[activeTrainingDay];
@@ -131,25 +141,33 @@ export function TreinoWeekControls({
 
       if (queryError) {
         setError(queryError.message);
-        setSchedule(DEFAULT_WEEKLY_SCHEDULE);
+        setSchedule(buildScheduleMap([]));
         return;
       }
 
       const rows: PlanilhaDayRow[] = parsePlanilhaDayRows(data);
-      setSchedule(buildScheduleMap(rows));
+      setSchedule(
+        useForjadorSchedule ? buildForjadorScheduleMap(rows) : buildScheduleMap(rows),
+      );
     } catch {
-      setError("Falha ao carregar planilha do forjador.");
-      setSchedule(DEFAULT_WEEKLY_SCHEDULE);
+      setError("Falha ao carregar rotina do personal.");
+      setSchedule(useForjadorSchedule ? buildForjadorScheduleMap([]) : buildScheduleMap([]));
     } finally {
       setLoadingIndication(false);
     }
-  }, [userId]);
+  }, [userId, useForjadorSchedule]);
 
   useEffect(() => {
-    if (!initialSchedule?.length) {
-      void loadSchedule();
+    if (useForjadorSchedule) {
+      setSchedule(bootSchedule);
+      if (initialSchedule?.length) {
+        setLoadingIndication(false);
+      }
+      return;
     }
-  }, [initialSchedule?.length, loadSchedule]);
+
+    void loadSchedule();
+  }, [bootSchedule, initialSchedule?.length, loadSchedule, useForjadorSchedule]);
 
   return (
     <div className={`treino-execution treino-execution--${executionTone}`}>

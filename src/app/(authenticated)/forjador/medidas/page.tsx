@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
-import {
-  mapServerScientificSnapshot,
-  MedidasPageClient,
-} from "@/app/(authenticated)/forjador/medidas/MedidasPageClient";
+import { MedidasPageClient } from "@/app/(authenticated)/forjador/medidas/MedidasPageClient";
 import { loadBondedAthletes } from "@/lib/forja-athletes.server";
 import type { ForjaDashboardPayload } from "@/lib/forja-dashboard";
 import { resolveMedidasAthletes } from "@/lib/medidas-access";
 import { isForjadorPanelRole, isForjadorSovereign } from "@/lib/internal-routes";
-import type { ScientificMetricsEntry } from "@/lib/scientific-metrics-types";
+import {
+  mapServerScientificSnapshot,
+  type ScientificMetricsEntry,
+} from "@/lib/scientific-metrics-types";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function loadActiveScientificSnapshots(

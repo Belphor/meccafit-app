@@ -1,3 +1,8 @@
+import type {
+  PrescriptionProgressionId,
+  PrescriptionRepValue,
+} from "@/lib/prescription-progression";
+
 export type ExerciseMetricKind = "load_kg" | "rep_max" | "duration_sec";
 
 export interface Exercise {
@@ -6,6 +11,10 @@ export interface Exercise {
   metricKind: ExerciseMetricKind;
   targetSets: number;
   targetReps: number;
+  /** Repetições por série definidas pelo forjador (ex.: 12, 10, FALHA). */
+  repsPerSet?: PrescriptionRepValue[];
+  /** Alternativas de progressão sem carga. */
+  progressionAlternatives?: PrescriptionProgressionId[];
   /** Prescrição em segundos (isométricos). */
   targetDurationSec?: number;
   /** PR da sessão — kg, rep ou seg conforme `metricKind`. */
@@ -44,6 +53,7 @@ export interface ClientProfile {
 export type MuralPost = {
   id: string;
   exerciseName: string;
+  exercicioId?: number | null;
   weight: number;
   series: number;
   createdAt: string;

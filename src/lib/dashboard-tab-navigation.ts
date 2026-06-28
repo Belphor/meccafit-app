@@ -10,6 +10,14 @@ export const DASHBOARD_TAB_CHANGE_EVENT = "meccafit:dashboard-tab-change";
 /** Foca o mural da comunidade após SUPERAÇÃO (scroll + destaque). */
 export const COMUNIDADE_MURAL_FOCUS_EVENT = "meccafit:focus-comunidade-mural";
 
+/** Recarrega o mural após nova superação ou ao abrir a aba Comunidade. */
+export const MURAL_REFRESH_EVENT = "meccafit:mural-refresh";
+
+export function publishMuralRefresh(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(MURAL_REFRESH_EVENT));
+}
+
 export type ComunidadeMuralFocusDetail = {
   exerciseName?: string;
 };

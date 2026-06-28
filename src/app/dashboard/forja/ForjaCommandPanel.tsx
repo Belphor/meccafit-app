@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState, type ChangeEvent, type FormEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   FORJA_COMMAND_INNER,
   FORJA_EMPTY_STATE,
@@ -12,6 +12,8 @@ import {
   FORJA_PRIMARY_BUTTON,
   FORJA_SECTION_CHIP,
   FORJA_SECTION_TITLE,
+  FORJA_TAB_ACTIVE,
+  FORJA_TAB_IDLE,
 } from "@/lib/forja-config";
 import { FORJA_COPY } from "@/lib/forja-copy";
 import {
@@ -19,10 +21,17 @@ import {
   type ForjaBondedAthlete,
   type ForjaPrescriptionDraft,
 } from "@/lib/forja-dashboard";
-import { syncForjaPersonalPrescription } from "@/lib/forja-prescription-sync";
+import { syncForjaPersonalPrescription, fetchPlanilhaMusclesForDay } from "@/lib/forja-prescription-sync";
+import { fetchForjadorTreinoConfigClient } from "@/lib/forjador-prescriptions";
 import { resolveForjaChipClass, resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
 import { PHASE_TIER_LABELS } from "@/lib/dashboard-config";
-import { MUSCLE_GROUP_LABELS, TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
+import {
+  formatRepsPerSet,
+  normalizeRepsPerSetDraft,
+  PRESCRIPTION_PROGRESSION_OPTIONS,
+  type PrescriptionProgressionId,
+} from "@/lib/prescription-progression";
+import { MUSCLE_GROUP_LABELS, MAX_PLANILHA_GRUPOS_POR_DIA, TRAINING_MUSCLE_GROUPS, WEEKDAY_LABELS, type TrainingMuscleGroup, type WeekdayIndex } from "@/lib/training-week";
 
 type ForjaCommandPanelProps = {
   athlete: ForjaBondedAthlete | null;
@@ -40,20 +49,143 @@ function formatBondDate(iso: string): string {
   });
 }
 
+function resizeRepsPerSeries(current: string[], seriesCount: number): string[] {
+  const safeSeries = Number.isFinite(seriesCount) && seriesCount >= 1 ? seriesCount : 1;
+  const next = current.slice(0, safeSeries);
+  while (next.length < safeSeries) {
+    next.push(next[next.length - 1] ?? "12");
+  }
+  return next;
+}
+
+const PLANILHA_DAYS: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
+
 function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   const [prescription, setPrescription] = useState<ForjaPrescriptionDraft>(EMPTY_PRESCRIPTION_DRAFT);
   const [phase, setPhase] = useState<CommandPhase>("idle");
   const [commandMessage, setCommandMessage] = useState<string | null>(null);
 
+  const seriesCount = useMemo(() => {
+    const parsed = Number.parseInt(prescription.series.trim() || "3", 10);
+    return Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 20) : 3;
+  }, [prescription.series]);
+
+  const repRows = useMemo(
+    () => resizeRepsPerSeries(prescription.repeticoesPorSerie, seriesCount),
+    [prescription.repeticoesPorSerie, seriesCount],
+  );
+
+  useEffect(() => {
+    if (!athlete) {
+      setPrescription(EMPTY_PRESCRIPTION_DRAFT);
+      return;
+    }
+
+    void fetchForjadorTreinoConfigClient(athlete.clientId).then((config) => {
+      setPrescription({
+        ...EMPTY_PRESCRIPTION_DRAFT,
+        descansoPadraoSeg: String(config.descansoPadraoSeg),
+        cardioMetaMinutos: String(config.cardioMetaMinutos),
+      });
+    });
+  }, [athlete?.clientId]);
+
+  useEffect(() => {
+    if (!athlete) return;
+
+    void fetchPlanilhaMusclesForDay(athlete.clientId, prescription.diaSemana).then((muscles) => {
+      setPrescription((current) => {
+        if (current.diaSemana !== prescription.diaSemana) return current;
+        return { ...current, musculosDoDia: muscles.length > 0 ? muscles : current.musculosDoDia };
+      });
+    });
+  }, [athlete?.clientId, prescription.diaSemana]);
+
+  const toggleDayMuscle = useCallback((muscle: TrainingMuscleGroup) => {
+    setPrescription((current) => {
+      const selected = new Set(current.musculosDoDia);
+      if (selected.has(muscle)) {
+        selected.delete(muscle);
+      } else {
+        if (selected.size >= MAX_PLANILHA_GRUPOS_POR_DIA) return current;
+        selected.add(muscle);
+      }
+      return { ...current, musculosDoDia: [...selected] };
+    });
+    setPhase("idle");
+    setCommandMessage(null);
+  }, []);
+
   const handleFieldChange = useCallback(
     (field: keyof ForjaPrescriptionDraft) =>
       (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setPrescription((current) => ({ ...current, [field]: event.target.value }));
+        const value = event.target.value;
+        setPrescription((current) => {
+          if (field === "series") {
+            const nextSeries = Number.parseInt(value.trim() || "3", 10);
+            return {
+              ...current,
+              series: value,
+              repeticoesPorSerie: resizeRepsPerSeries(current.repeticoesPorSerie, nextSeries),
+            };
+          }
+          if (field === "diaSemana") {
+            const day = Number.parseInt(value, 10);
+            if (!Number.isFinite(day) || day < 1 || day > 6) return current;
+            return { ...current, diaSemana: day as WeekdayIndex, musculosDoDia: [] };
+          }
+          if (field === "grupoMuscular") {
+            const grupo = value as TrainingMuscleGroup;
+            const musculosDoDia = current.musculosDoDia.includes(grupo)
+              ? current.musculosDoDia
+              : current.musculosDoDia.length < MAX_PLANILHA_GRUPOS_POR_DIA
+                ? [...current.musculosDoDia, grupo]
+                : current.musculosDoDia;
+            return { ...current, grupoMuscular: value, musculosDoDia };
+          }
+          return { ...current, [field]: value };
+        });
         setPhase("idle");
         setCommandMessage(null);
       },
     [],
   );
+
+  const handleRepPerSetChange = useCallback((index: number, rawValue: string) => {
+    setPrescription((current) => {
+      const next = resizeRepsPerSeries(current.repeticoesPorSerie, seriesCount);
+      next[index] = rawValue;
+      return { ...current, repeticoesPorSerie: next };
+    });
+    setPhase("idle");
+    setCommandMessage(null);
+  }, [seriesCount]);
+
+  const toggleFailureForSet = useCallback((index: number) => {
+    setPrescription((current) => {
+      const next = resizeRepsPerSeries(current.repeticoesPorSerie, seriesCount);
+      next[index] = next[index]?.toUpperCase() === "FALHA" ? "12" : "FALHA";
+      return { ...current, repeticoesPorSerie: next };
+    });
+    setPhase("idle");
+    setCommandMessage(null);
+  }, [seriesCount]);
+
+  const toggleProgression = useCallback((id: PrescriptionProgressionId) => {
+    setPrescription((current) => {
+      const selected = new Set(current.progressaoAlternativas);
+      if (selected.has(id)) selected.delete(id);
+      else selected.add(id);
+      return {
+        ...current,
+        progressaoAlternativas: PRESCRIPTION_PROGRESSION_OPTIONS.map((item) => item.id).filter((item) =>
+          selected.has(item),
+        ),
+      };
+    });
+    setPhase("idle");
+    setCommandMessage(null);
+  }, []);
 
   const handlePrescribeSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -71,23 +203,29 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
         return;
       }
 
+      const repsSummary = formatRepsPerSet(
+        normalizeRepsPerSetDraft(prescription.repeticoesPorSerie, seriesCount),
+      );
+
       setPhase("success");
       setCommandMessage(
         FORJA_COPY.prescription.success(
           athlete.displayName,
+          WEEKDAY_LABELS[prescription.diaSemana],
           prescription.series || "3",
-          prescription.repeticoes,
-          prescription.peso,
+          repsSummary,
           prescription.exercicio.trim(),
         ),
       );
       setPrescription((current) => ({
         ...EMPTY_PRESCRIPTION_DRAFT,
+        diaSemana: current.diaSemana,
+        musculosDoDia: current.musculosDoDia,
         grupoMuscular: current.grupoMuscular,
         descansoPadraoSeg: current.descansoPadraoSeg,
       }));
     },
-    [athlete, prescription],
+    [athlete, prescription, seriesCount],
   );
 
   if (!athlete) {
@@ -149,6 +287,50 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
+            <label htmlFor="forja-dia-semana" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.trainingDay}
+            </label>
+            <select
+              id="forja-dia-semana"
+              value={prescription.diaSemana}
+              onChange={handleFieldChange("diaSemana")}
+              className={FORJA_INPUT}
+              disabled={isSyncing}
+            >
+              {PLANILHA_DAYS.map((day) => (
+                <option key={day} value={day}>
+                  {WEEKDAY_LABELS[day]}
+                </option>
+              ))}
+            </select>
+            <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.trainingDayHint}</p>
+          </div>
+
+          <div className="sm:col-span-2">
+            <p className={FORJA_LABEL}>{FORJA_COPY.prescription.dayMuscles}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {TRAINING_MUSCLE_GROUPS.map((group) => {
+                const selected = prescription.musculosDoDia.includes(group);
+                return (
+                  <button
+                    key={group}
+                    type="button"
+                    disabled={isSyncing}
+                    onClick={() => toggleDayMuscle(group)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                      selected ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    {MUSCLE_GROUP_LABELS[group]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.dayMusclesHint}</p>
+          </div>
+
+          <div className="sm:col-span-2">
             <label htmlFor="forja-exercicio" className={FORJA_LABEL}>
               {FORJA_COPY.prescription.exercise}
             </label>
@@ -183,41 +365,27 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
             </select>
           </div>
 
-          <div>
-            <label htmlFor="forja-peso" className={FORJA_LABEL}>
-              {FORJA_COPY.prescription.weight}
-            </label>
-            <input
-              id="forja-peso"
-              type="number"
-              inputMode="decimal"
-              min={1}
-              max={9999.99}
-              step={0.5}
-              value={prescription.peso}
-              onChange={handleFieldChange("peso")}
-              placeholder="60"
-              className={FORJA_INPUT}
-              disabled={isSyncing}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="forja-repeticoes" className={FORJA_LABEL}>
-              {FORJA_COPY.prescription.reps}
-            </label>
-            <input
-              id="forja-repeticoes"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={100}
-              value={prescription.repeticoes}
-              onChange={handleFieldChange("repeticoes")}
-              placeholder="12"
-              className={FORJA_INPUT}
-              disabled={isSyncing}
-            />
+          <div className="sm:col-span-2">
+            <p className={FORJA_LABEL}>{FORJA_COPY.prescription.progression}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PRESCRIPTION_PROGRESSION_OPTIONS.map((option) => {
+                const selected = prescription.progressaoAlternativas.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={isSyncing}
+                    onClick={() => toggleProgression(option.id)}
+                    className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                      selected ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -236,6 +404,46 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               className={FORJA_INPUT}
               disabled={isSyncing}
             />
+          </div>
+
+          <div className="sm:col-span-2">
+            <p className={FORJA_LABEL}>{FORJA_COPY.prescription.repsPerSet}</p>
+            <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {repRows.map((value, index) => {
+                const isFailure = value.trim().toUpperCase() === "FALHA";
+                return (
+                  <div
+                    key={`serie-${index + 1}`}
+                    className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-3"
+                  >
+                    <p className="text-xs font-medium text-zinc-500">Série {index + 1}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={isFailure ? "" : value}
+                        onChange={(event) => handleRepPerSetChange(index, event.target.value)}
+                        placeholder={isFailure ? "FALHA" : "12"}
+                        className={`${FORJA_INPUT} min-h-10 flex-1`}
+                        disabled={isSyncing || isFailure}
+                        aria-label={`Repetições série ${index + 1}`}
+                      />
+                      <button
+                        type="button"
+                        disabled={isSyncing}
+                        onClick={() => toggleFailureForSet(index)}
+                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                          isFailure ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
+                        }`}
+                        aria-pressed={isFailure}
+                      >
+                        {FORJA_COPY.prescription.repsFailure}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -273,6 +481,25 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
               disabled={isSyncing}
             />
             <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.restHint}</p>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label htmlFor="forja-cardio-meta" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.cardioMeta}
+            </label>
+            <input
+              id="forja-cardio-meta"
+              type="number"
+              inputMode="numeric"
+              min={5}
+              max={180}
+              value={prescription.cardioMetaMinutos}
+              onChange={handleFieldChange("cardioMetaMinutos")}
+              placeholder="30"
+              className={FORJA_INPUT}
+              disabled={isSyncing}
+            />
+            <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.cardioHint}</p>
           </div>
         </div>
 

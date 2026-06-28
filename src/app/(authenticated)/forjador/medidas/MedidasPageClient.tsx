@@ -9,7 +9,7 @@ import { syncLatestScientificMetricsToNucleus } from "@/lib/forja-scientific-met
 import { canOperatorAccessMedidasAthlete } from "@/lib/medidas-access";
 import { FORJA_COPY } from "@/lib/forja-copy";
 import {
-  parseScientificFromServerRow,
+  mergeScientificEntries,
   type ScientificMetricsEntry,
 } from "@/lib/scientific-metrics-types";
 import {
@@ -63,14 +63,18 @@ function ScientificMetricsWorkspace({
       }
 
       const local = await listScientificMetricsHistory(athlete.clientId);
+      const merged = mergeScientificEntries(
+        initialSnapshot ? [...local, initialSnapshot] : local,
+      );
 
-      if (initialSnapshot && !local.some((row) => row.id === initialSnapshot.id)) {
-        await appendScientificMetricsEntry(initialSnapshot);
-        local.unshift(initialSnapshot);
+      if (isForjadorVipIndexedDbAvailable()) {
+        for (const entry of merged) {
+          await appendScientificMetricsEntry(entry);
+        }
       }
 
       if (cancelled) return;
-      setEntries(local);
+      setEntries(merged);
       setHydrated(true);
     }
 
@@ -93,7 +97,7 @@ function ScientificMetricsWorkspace({
         if (isForjadorVipIndexedDbAvailable()) {
           await appendScientificMetricsEntry(entry);
         }
-        setEntries((current) => [entry, ...current]);
+        setEntries((current) => mergeScientificEntries([entry, ...current]));
         setFeedback({ kind: "ok", message: "Medição guardada localmente." });
       } catch {
         setFeedback({ kind: "error", message: "Falha ao guardar medição." });
@@ -116,7 +120,9 @@ function ScientificMetricsWorkspace({
     setSyncing(true);
     setFeedback(null);
 
-    const result = await syncLatestScientificMetricsToNucleus(athlete, latest);
+    const result = await syncLatestScientificMetricsToNucleus(athlete, latest, {
+      isSovereign,
+    });
     setSyncing(false);
 
     if (!result.ok) {
@@ -133,7 +139,9 @@ function ScientificMetricsWorkspace({
       await appendScientificMetricsEntry(synced);
     }
 
-    setEntries((current) => current.map((row) => (row.id === synced.id ? synced : row)));
+    setEntries((current) =>
+      mergeScientificEntries(current.map((row) => (row.id === synced.id ? synced : row))),
+    );
     setFeedback({ kind: "ok", message: `Medição publicada para ${athlete.displayName}.` });
   }, [athlete, canAccess, entries]);
 
@@ -202,24 +210,4 @@ export function MedidasPageClient({ payload, initialSnapshotByClient }: MedidasP
       }
     </ForjadorVipWorkspace>
   );
-}
-
-export function mapServerScientificSnapshot(row: {
-  client_id: string;
-  forger_id: string;
-  peso_kg: number;
-  altura_cm: number;
-  perimetros: unknown;
-  medido_em: string;
-  atualizado_em: string;
-}): ScientificMetricsEntry {
-  const parsed = parseScientificFromServerRow(row);
-  return {
-    id: `server-${row.client_id}-${row.medido_em}`,
-    clientId: row.client_id,
-    forgerId: row.forger_id,
-    savedAt: row.atualizado_em,
-    syncedAt: row.atualizado_em,
-    ...parsed,
-  };
 }

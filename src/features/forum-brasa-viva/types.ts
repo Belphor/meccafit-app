@@ -10,6 +10,8 @@ export type ForumBrasaVivaTopic = {
   isPilarCooperativo: boolean;
   weightKg: number;
   series: number;
+  exercicioId?: number | null;
+  metricBadge: string;
   createdAt: string;
 };
 
@@ -29,6 +31,7 @@ export type ForumBrasaVivaRpcRow = {
   detem_cinturao_duelo?: boolean;
   is_pilar_fogo_cosmico?: boolean;
   author_phase_tier?: number;
+  exercicio_id?: number | null;
   peso: number;
   series: number;
   registrado_em: string;
