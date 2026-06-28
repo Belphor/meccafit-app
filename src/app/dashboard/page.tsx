@@ -6,7 +6,6 @@ import {
   PLAN_SESSIONS_DEFAULT,
   type AthletePlanConfig,
 } from "@/components/evolution/plan-config-form";
-import type { SovereignMuscleId } from "@/components/evolution/human-body-constants";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import {
   parsePlanilhaDayRows,
@@ -71,29 +70,21 @@ async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
 
   const { data } = await supabase
     .from("planos_atletas")
-    .select("total_treinos_mensais_planejados, grupos_obrigatorios")
+    .select("total_treinos_mensais_planejados")
     .eq("atleta_id", userId)
     .maybeSingle();
 
   if (!data) {
     return {
       totalTreinosMensaisPlanejados: PLAN_SESSIONS_DEFAULT,
-      gruposObrigatorios: [],
     };
   }
-
-  const grupos = Array.isArray(data.grupos_obrigatorios)
-    ? (data.grupos_obrigatorios
-        .map((item) => String(item).trim().toUpperCase())
-        .filter(Boolean) as SovereignMuscleId[])
-    : [];
 
   return {
     totalTreinosMensaisPlanejados:
       typeof data.total_treinos_mensais_planejados === "number"
         ? data.total_treinos_mensais_planejados
         : PLAN_SESSIONS_DEFAULT,
-    gruposObrigatorios: grupos,
   };
 }
 

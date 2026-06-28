@@ -4,53 +4,27 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
-  MUSCLE_LABELS,
-  type SovereignMuscleId,
-} from "@/components/evolution/human-body-constants";
-import {
   DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
   DASHBOARD_TAP_TARGET,
-  MAGMA_SPECTRUM,
+  FENIX_PUREZA_CLIENT_EXPLANATION,
 } from "@/lib/dashboard-config";
 import { supabase } from "@/lib/supabase";
 import type { TablesInsert } from "@/types/database.types";
-
-/** Ordem 2×3 da matriz · chaves soberanas persistidas no Postgres */
-const PLAN_MATRIX_MUSCLES: readonly SovereignMuscleId[] = [
-  "PEITO",
-  "COSTAS",
-  "PERNAS",
-  "OMBROS",
-  "BRACOS",
-  "ABDOMEN",
-] as const;
-
-/** Rótulos HUD · acentuação PT-BR sem alterar enum soberano */
-const PLAN_MATRIX_HUD_CODE: Record<SovereignMuscleId, string> = {
-  PEITO: "PEITO",
-  COSTAS: "COSTAS",
-  PERNAS: "PERNAS",
-  OMBROS: "OMBROS",
-  BRACOS: "BRAÇOS",
-  ABDOMEN: "ABDÔMEN",
-};
 
 export const PLAN_SESSIONS_MIN = 4;
 export const PLAN_SESSIONS_MAX = 28;
 export const PLAN_SESSIONS_DEFAULT = 16;
 
-const SYNC_SUCCESS_MESSAGE = "Diretrizes sincronizadas com o núcleo MIDAS.";
+const SYNC_SUCCESS_MESSAGE = "Meta de treino sincronizada com o núcleo MIDAS.";
 
 export type AthletePlanConfig = {
   totalTreinosMensaisPlanejados: number;
-  gruposObrigatorios: SovereignMuscleId[];
 };
 
 export type PlanConfigFormState = {
   totalTreinosMensaisPlanejados: number;
-  gruposObrigatorios: SovereignMuscleId[];
 };
 
 type PlanConfigFormProps = {
@@ -64,24 +38,8 @@ function clampSessions(value: number): number {
   return Math.min(PLAN_SESSIONS_MAX, Math.max(PLAN_SESSIONS_MIN, Math.round(value)));
 }
 
-function normalizeGruposObrigatorios(values: string[] | null | undefined): SovereignMuscleId[] {
-  if (!Array.isArray(values)) return [];
-
-  const allowed = new Set<string>(PLAN_MATRIX_MUSCLES);
-  const seen = new Set<SovereignMuscleId>();
-
-  for (const raw of values) {
-    const id = String(raw ?? "")
-      .trim()
-      .toUpperCase()
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "") as SovereignMuscleId;
-
-    if (!allowed.has(id) || seen.has(id)) continue;
-    seen.add(id);
-  }
-
-  return PLAN_MATRIX_MUSCLES.filter((muscle) => seen.has(muscle));
+function monthlySessionsToDaysPerWeek(monthlySessions: number): number {
+  return Math.min(7, Math.max(1, Math.round((monthlySessions * 7) / 30)));
 }
 
 function buildPlanState(initialPlan?: AthletePlanConfig): PlanConfigFormState {
@@ -89,14 +47,11 @@ function buildPlanState(initialPlan?: AthletePlanConfig): PlanConfigFormState {
     totalTreinosMensaisPlanejados: clampSessions(
       initialPlan?.totalTreinosMensaisPlanejados ?? PLAN_SESSIONS_DEFAULT,
     ),
-    gruposObrigatorios: normalizeGruposObrigatorios(initialPlan?.gruposObrigatorios),
   };
 }
 
 function planStatesEqual(a: PlanConfigFormState, b: PlanConfigFormState): boolean {
-  if (a.totalTreinosMensaisPlanejados !== b.totalTreinosMensaisPlanejados) return false;
-  if (a.gruposObrigatorios.length !== b.gruposObrigatorios.length) return false;
-  return a.gruposObrigatorios.every((muscle, index) => muscle === b.gruposObrigatorios[index]);
+  return a.totalTreinosMensaisPlanejados === b.totalTreinosMensaisPlanejados;
 }
 
 type PlanSessionsSliderProps = {
@@ -129,51 +84,15 @@ function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderPro
           aria-valuemin={PLAN_SESSIONS_MIN}
           aria-valuemax={PLAN_SESSIONS_MAX}
           aria-valuenow={value}
-          aria-label="Treinos mensais planeados"
+          aria-label="Dias de treino na janela mensal"
         />
       </div>
       <div className="flex justify-between font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-600">
         <span>{PLAN_SESSIONS_MIN}</span>
-        <span className="text-cyan-500/70">janela mensal</span>
+        <span className="text-cyan-500/70">janela rolante · 30 dias</span>
         <span>{PLAN_SESSIONS_MAX}</span>
       </div>
     </div>
-  );
-}
-
-type MuscleMatrixToggleProps = {
-  muscle: SovereignMuscleId;
-  selected: boolean;
-  disabled: boolean;
-  onToggle: (muscle: SovereignMuscleId) => void;
-};
-
-function MuscleMatrixToggle({ muscle, selected, disabled, onToggle }: MuscleMatrixToggleProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onToggle(muscle)}
-      aria-pressed={selected}
-      aria-label={`${MUSCLE_LABELS[muscle]} · ${selected ? "selecionado" : "não selecionado"}`}
-      className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full flex-col gap-1.5 rounded-xl border px-3 py-3 text-center transition-[border-color,box-shadow,opacity,background-color,transform] duration-200 disabled:opacity-50 ${selected
-        ? "border-emerald-400/70 bg-emerald-950/30 shadow-[0_0_16px_rgba(16,185,129,0.38),inset_0_0_12px_rgba(16,185,129,0.12)]"
-        : "border-orange-500/10 bg-black/40 opacity-50 saturate-0 hover:border-orange-500/20 hover:opacity-65"
-        }`}
-    >
-      <span
-        className={`font-mono text-[9px] uppercase tracking-[0.18em] ${selected ? "text-emerald-300/90" : "text-neutral-600"
-          }`}
-      >
-        {PLAN_MATRIX_HUD_CODE[muscle]}
-      </span>
-      <span
-        className={`text-sm font-bold uppercase tracking-[0.12em] ${selected ? "text-emerald-50" : "text-neutral-500"
-          }`}
-      >
-        {MUSCLE_LABELS[muscle]}
-      </span>
-    </button>
   );
 }
 
@@ -198,7 +117,10 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
     [draft, syncedBaseline],
   );
 
-  const selectedSet = useMemo(() => new Set(draft.gruposObrigatorios), [draft.gruposObrigatorios]);
+  const daysPerWeekHint = useMemo(
+    () => monthlySessionsToDaysPerWeek(draft.totalTreinosMensaisPlanejados),
+    [draft.totalTreinosMensaisPlanejados],
+  );
 
   const clearTransientFeedback = useCallback(() => {
     setPhase("idle");
@@ -211,23 +133,6 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
         ...prev,
         totalTreinosMensaisPlanejados: clampSessions(value),
       }));
-      clearTransientFeedback();
-    },
-    [clearTransientFeedback],
-  );
-
-  const toggleMuscle = useCallback(
-    (muscle: SovereignMuscleId) => {
-      setDraft((prev) => {
-        const next = new Set(prev.gruposObrigatorios);
-        if (next.has(muscle)) next.delete(muscle);
-        else next.add(muscle);
-
-        return {
-          ...prev,
-          gruposObrigatorios: PLAN_MATRIX_MUSCLES.filter((item) => next.has(item)),
-        };
-      });
       clearTransientFeedback();
     },
     [clearTransientFeedback],
@@ -250,20 +155,33 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
         return;
       }
 
+      const targetDaysPerWeek = monthlySessionsToDaysPerWeek(draft.totalTreinosMensaisPlanejados);
+
       const row: TablesInsert<"planos_atletas"> = {
         atleta_id: sessionUserId,
         total_treinos_mensais_planejados: draft.totalTreinosMensaisPlanejados,
-        grupos_obrigatorios: draft.gruposObrigatorios,
+        grupos_obrigatorios: [],
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("planos_atletas").upsert(row, {
+      const { error: planError } = await supabase.from("planos_atletas").upsert(row, {
         onConflict: "atleta_id",
       });
 
-      if (error) {
+      if (planError) {
         setPhase("error");
-        setFeedback(error.message);
+        setFeedback(planError.message);
+        return;
+      }
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ target_days_per_week: targetDaysPerWeek })
+        .eq("id", sessionUserId);
+
+      if (profileError) {
+        setPhase("error");
+        setFeedback(profileError.message);
         return;
       }
 
@@ -272,7 +190,7 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
       setFeedback(SYNC_SUCCESS_MESSAGE);
     } catch {
       setPhase("error");
-      setFeedback("Falha de rede ao sincronizar o plano.");
+      setFeedback("Falha de rede ao sincronizar a meta de treino.");
     }
   }, [draft, userId]);
 
@@ -285,19 +203,19 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="plan-config-title"
     >
-      <DashboardPanelHeader chip="Plano mensal" meta="Perfil" />
+      <DashboardPanelHeader chip="Meta de treino" meta="Perfil" />
 
       <header className="mt-4 border-b border-orange-500/10 pb-5 sm:pb-6">
         <h2 id="plan-config-title" className={DASHBOARD_SECTION_TITLE}>
-          Diretrizes do Plano Mensal
+          Quantos dias vais treinar
         </h2>
         <p className="mt-2 max-w-prose text-[10px] uppercase leading-relaxed tracking-[0.18em] text-neutral-600">
-          Define a meta de sessões e os grupos musculares obrigatórios. Alimenta o índice de
-          ignição na aba Evolução. Alterações ficam locais até sincronizar.
+          Define a meta de consistência para os próximos 30 dias. Alimenta o Índice de Ignição na
+          aba Evolução e na Comunidade. Alterações ficam locais até sincronizar.
         </p>
       </header>
 
-      <div className={`mt-6 space-y-8 ${DASHBOARD_INNER_FRAME}`}>
+      <div className={`mt-6 space-y-6 ${DASHBOARD_INNER_FRAME}`}>
         <section aria-labelledby="plan-sessions-label" className="space-y-1">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
@@ -305,10 +223,10 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
                 id="plan-sessions-label"
                 className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/85"
               >
-                Treinos mensais planeados
+                Dias de treino · janela de 30 dias
               </p>
               <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-                {PLAN_SESSIONS_MIN}–{PLAN_SESSIONS_MAX} sessões · janela rolante 30 dias
+                ≈ {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana
               </p>
             </div>
             <div
@@ -327,52 +245,16 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
           />
         </section>
 
-        <section aria-labelledby="plan-muscle-matrix-label">
-          <p
-            id="plan-muscle-matrix-label"
-            className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/85"
-          >
-            Matriz muscular · grupos obrigatórios
-          </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-            Toque para alternar · multi-seleção · alvos ≥ 44px
-          </p>
-
-          <div
-            className="mt-4 grid grid-cols-2 gap-3 sm:gap-4"
-            role="group"
-            aria-label="Grupos musculares obrigatórios"
-          >
-            {PLAN_MATRIX_MUSCLES.map((muscle) => (
-              <MuscleMatrixToggle
-                key={muscle}
-                muscle={muscle}
-                selected={selectedSet.has(muscle)}
-                disabled={isSyncing}
-                onToggle={toggleMuscle}
-              />
-            ))}
-          </div>
-
-          <p
-            className="mt-4 font-mono text-[10px] uppercase tracking-[0.16em] text-neutral-500"
-            aria-live="polite"
-          >
-            Selecionados:{" "}
-            <span className="font-bold" style={{ color: MAGMA_SPECTRUM.solarGold }}>
-              {draft.gruposObrigatorios.length}
-            </span>{" "}
-            / {PLAN_MATRIX_MUSCLES.length}
-          </p>
-        </section>
+        <p className="text-xs leading-relaxed text-amber-50/70">{FENIX_PUREZA_CLIENT_EXPLANATION}</p>
       </div>
 
       <footer className="mt-6 flex flex-col gap-3 border-t border-orange-500/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           {feedback ? (
             <p
-              className={`text-[11px] leading-relaxed ${phase === "error" ? "text-red-400/90" : "text-emerald-300/90"
-                }`}
+              className={`text-[11px] leading-relaxed ${
+                phase === "error" ? "text-red-400/90" : "text-emerald-300/90"
+              }`}
               role={phase === "error" ? "alert" : "status"}
             >
               {feedback}
@@ -403,7 +285,7 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
               Sincronizando…
             </span>
           ) : (
-            "Sincronizar Diretrizes"
+            "Sincronizar meta"
           )}
         </button>
       </footer>
