@@ -1,3 +1,5 @@
+import { isAccountSuspended } from "@/lib/account-access-status";
+import { LINHAGEM_PADRAO } from "@/lib/client-lore-copy";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
@@ -10,6 +12,8 @@ import {
   enrichProfileRowWithThermalGravity,
   fetchThermalGravityMetrics,
 } from "@/lib/thermal-gravity-server";
+import { parseLinhagemInactivitySync, parseThermalGravitySettlement, type LinhagemInactivitySyncResult, type ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
+import { syncLinhagemPresence } from "@/lib/linhagem-inactivity-server";
 import {
   getActiveSupabaseSession,
   supabase,
@@ -120,11 +124,13 @@ function resolveBirthPhase(age: number): string {
 
 export function mapProfileRowToClientProfile(row: DashboardProfileRow): ClientProfile {
   const age = computeAgeFromBirthDate(row.data_nascimento);
+  const isCliente = row.role === "cliente";
+  const suspended = isAccountSuspended(row.status_altar);
 
   return {
     name: row.full_name?.trim() || "Membro da Linhagem",
-    lineage: row.nome_linhagem?.trim() || "Linhagem Meccafit",
-    status: row.status_altar?.trim() || "Ativo",
+    lineage: row.nome_linhagem?.trim() || LINHAGEM_PADRAO,
+    status: suspended ? "Suspenso" : isCliente ? "Ativo" : row.status_altar?.trim() || "Ativo",
     birth: resolveBirthPhase(age),
     age,
     role: row.role,
@@ -269,7 +275,7 @@ export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPo
     createdAt: row.registrado_em ?? new Date().toISOString(),
     athleteId: row.author_id ? String(row.author_id) : undefined,
     athleteName: row.atleta_nome?.trim() || "Membro da Linhagem",
-    lineageName: row.nome_linhagem?.trim() || "Linhagem Meccafit",
+    lineageName: row.nome_linhagem?.trim() || LINHAGEM_PADRAO,
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
     isReiDasChamas: Boolean(
       row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas,
@@ -406,6 +412,8 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
     historico: HistoricoTreinoRow[];
     trainingTrack: TrainingTrackState;
     hasPersonalBond: boolean;
+    linhagemInactivity: LinhagemInactivitySyncResult | null;
+    thermalSettlement: ThermalGravitySettlementResult | null;
   }>
 > {
   const query = subgroupParam ? `?subgrupo=${encodeURIComponent(subgroupParam)}` : "";
@@ -444,6 +452,8 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
     historico?: HistoricoTreinoRow[];
     trainingTrack?: TrainingTrackState;
     hasPersonalBond?: boolean;
+    linhagemInactivity?: LinhagemInactivitySyncResult | null;
+    thermalSettlement?: ThermalGravitySettlementResult | null;
   };
 
   const trainingTrack = parseTrainingTrackFromBundle(payload.trainingTrack);
@@ -459,6 +469,8 @@ async function fetchDashboardBundleFromApi(subgroupParam: string | null): Promis
       historico: payload.historico ?? [],
       trainingTrack,
       hasPersonalBond,
+      linhagemInactivity: payload.linhagemInactivity ?? null,
+      thermalSettlement: payload.thermalSettlement ?? null,
     },
     error: null,
   };
@@ -474,6 +486,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
     historico: HistoricoTreinoRow[];
     trainingTrack: TrainingTrackState;
     hasPersonalBond: boolean;
+    linhagemInactivity: LinhagemInactivitySyncResult | null;
+    thermalSettlement: ThermalGravitySettlementResult | null;
   }>
 > {
   const session = await getActiveSupabaseSession();
@@ -507,7 +521,9 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       profile?: DashboardProfileRow | null;
       historico?: HistoricoTreinoRow[] | null;
       mural?: CommunityMuralRow[] | null;
-      thermal_gravity?: { vtc_30d?: number; session_vtc_today?: number } | null;
+      thermal_gravity?: { vtc_month?: number; vtc_30d?: number; vtc_20d?: number; session_vtc_today?: number } | null;
+      linhagem_inactivity?: unknown;
+      thermal_gravity_settlement?: unknown;
     };
 
     if (bundle.profile) {
@@ -516,9 +532,18 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       let enrichedProfileRow: Record<string, unknown> = baseProfileRow;
 
       const inlineThermal = bundle.thermal_gravity;
-      if (inlineThermal && (inlineThermal.vtc_30d !== undefined || inlineThermal.session_vtc_today !== undefined)) {
+      if (
+        inlineThermal &&
+        (inlineThermal.vtc_month !== undefined ||
+          inlineThermal.vtc_20d !== undefined ||
+          inlineThermal.vtc_30d !== undefined ||
+          inlineThermal.session_vtc_today !== undefined)
+      ) {
         enrichedProfileRow = enrichProfileRowWithThermalGravity(baseProfileRow, {
-          vtc_30d: Number(inlineThermal.vtc_30d ?? 0),
+          vtc_month: Number(
+            inlineThermal.vtc_month ?? inlineThermal.vtc_20d ?? inlineThermal.vtc_30d ?? 0,
+          ),
+          vtc_30d: Number(inlineThermal.vtc_30d ?? inlineThermal.vtc_month ?? 0),
           session_vtc_today: Number(inlineThermal.session_vtc_today ?? 0),
           available: true,
         });
@@ -531,9 +556,32 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
         }
       }
 
+      const linhagemInactivity = parseLinhagemInactivitySync(bundle.linhagem_inactivity);
+      const thermalSettlement = parseThermalGravitySettlement(bundle.thermal_gravity_settlement);
+
+      if (thermalSettlement) {
+        enrichedProfileRow = {
+          ...enrichedProfileRow,
+          phase_tier: thermalSettlement.phase_tier,
+        };
+      }
+      if (linhagemInactivity) {
+        enrichedProfileRow = {
+          ...enrichedProfileRow,
+          phase_tier: linhagemInactivity.phase_tier,
+        };
+      }
+
       return {
         data: {
-          profile: mapProfileRowToClientProfile(bundle.profile),
+          profile: mapProfileRowToClientProfile({
+            ...(bundle.profile as DashboardProfileRow),
+            phase_tier:
+              linhagemInactivity?.phase_tier ??
+              thermalSettlement?.phase_tier ??
+              bundle.profile?.phase_tier ??
+              1,
+          }),
           profileRow: enrichedProfileRow,
           subgroup: applyHistoricoToSubgroup(baseSubgroup, historico),
           muralPosts: mapCommunityMuralRowsToPosts(bundle.mural ?? []),
@@ -541,6 +589,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
           historico,
           trainingTrack,
           hasPersonalBond,
+          linhagemInactivity,
+          thermalSettlement,
         },
         error: null,
       };
@@ -581,6 +631,27 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
     // RPC thermal gravity indisponível
   }
 
+  let linhagemInactivity: LinhagemInactivitySyncResult | null = null;
+  let thermalSettlement: ThermalGravitySettlementResult | null = null;
+  try {
+    const { data } = await supabase.rpc("argos_settle_thermal_gravity_monthly");
+    thermalSettlement = parseThermalGravitySettlement(data);
+  } catch {
+    // RPC indisponível antes da migration
+  }
+
+  try {
+    linhagemInactivity = await syncLinhagemPresence(supabase);
+  } catch {
+    // RPC indisponível antes da migration
+  }
+
+  if (profileRowResult.data) {
+    const row = profileRowResult.data as DashboardProfileRow;
+    if (thermalSettlement) row.phase_tier = thermalSettlement.phase_tier;
+    if (linhagemInactivity) row.phase_tier = linhagemInactivity.phase_tier;
+  }
+
   return {
     data: {
       profile: mapProfileRowToClientProfile(profileRowResult.data as DashboardProfileRow),
@@ -591,6 +662,8 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
       historico,
       trainingTrack,
       hasPersonalBond,
+      linhagemInactivity,
+      thermalSettlement,
     },
     error: null,
   };
@@ -604,6 +677,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
     muralPosts: MuralPost[];
     trainingTrack: TrainingTrackState;
     hasPersonalBond: boolean;
+    linhagemInactivity: LinhagemInactivitySyncResult | null;
+    thermalSettlement: ThermalGravitySettlementResult | null;
   }>
 > {
   const session = await getActiveSupabaseSession();
@@ -629,6 +704,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
         muralPosts: cached.muralPosts,
         trainingTrack: cached.trainingTrack ?? DEFAULT_TRAINING_TRACK,
         hasPersonalBond: cached.hasPersonalBond ?? Boolean(cached.trainingTrack?.bond),
+        linhagemInactivity: null,
+        thermalSettlement: null,
       },
       error: null,
     };
@@ -663,6 +740,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
       muralPosts: resolved.data.muralPosts,
       trainingTrack: resolved.data.trainingTrack,
       hasPersonalBond: resolved.data.hasPersonalBond,
+      linhagemInactivity: resolved.data.linhagemInactivity ?? null,
+      thermalSettlement: resolved.data.thermalSettlement ?? null,
     },
     error: null,
   };

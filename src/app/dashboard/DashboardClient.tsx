@@ -15,9 +15,15 @@ import { AppShell } from "@/components/navigation/app-shell";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
+import { DueloConviteHost } from "@/components/comunidade/duelo-convite-host";
+import { LinhagemTransmutationHost } from "@/components/evolution/LinhagemTransmutationHost";
+import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import VideoModal from "@/components/VideoModal";
-import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
+import {
+  FENIX_QA_ANIMATION_EVENT,
+  type FenixQaAnimationDetail,
+} from "@/lib/qa-animation-events";
 import {
   DEFAULT_FORJADOR_TREINO_CONFIG,
   fetchForjadorPrescriptionsClient,
@@ -52,6 +58,14 @@ import {
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { parseThermalGravityState } from "@/lib/thermal-gravity";
 import {
+  buildLinhagemInactivityDegradationMessage,
+  type LinhagemInactivitySyncResult,
+  type ThermalGravitySettlementResult,
+} from "@/lib/linhagem-inactivity";
+import { rekindleLinhagemAfterInactivity } from "@/lib/linhagem-inactivity-server";
+import { supabase } from "@/lib/supabase";
+import { PortalToast } from "@/components/portal/PortalToast";
+import {
   BIOLOGICAL_BALANCE_MIN_AGE,
   DASHBOARD_HERO_TITLE,
   DASHBOARD_PORTAL_PADDING,
@@ -73,7 +87,10 @@ import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { invalidateComunidadeCache } from "@/lib/comunidade-cache";
-import { supabase } from "@/lib/supabase";
+import {
+  useLocalProfileAvatar,
+  useResolvedProfileName,
+} from "@/hooks/useLocalProfileMedia";
 import type { MuscleCalorRow } from "@/components/evolution/human-body-constants";
 import {
   DEFAULT_TRAINING_TRACK,
@@ -97,12 +114,12 @@ const EvolutionAbaPanel = dynamic(
   { loading: () => <DashboardLoading message="Carregando evolução..." /> },
 );
 
-const PlanConfigForm = dynamic(
+const ProfileEvolutionKnowledge = dynamic(
   () =>
-    import("@/components/evolution/plan-config-form").then((module) => ({
-      default: module.PlanConfigForm,
+    import("@/components/profile/ProfileEvolutionKnowledge").then((module) => ({
+      default: module.ProfileEvolutionKnowledge,
     })),
-  { loading: () => <DashboardLoading message="Carregando perfil..." /> },
+  { loading: () => <DashboardLoading message="Carregando referência..." /> },
 );
 
 const PersonalTreinoWorkspace = dynamic(
@@ -110,7 +127,7 @@ const PersonalTreinoWorkspace = dynamic(
     import("@/components/dashboard/PersonalTreinoWorkspace").then((module) => ({
       default: module.PersonalTreinoWorkspace,
     })),
-  { loading: () => <DashboardLoading message="Abrindo via Personal..." /> },
+  { loading: () => <DashboardLoading message="Abrindo via Forjador..." /> },
 );
 
 const DietaPanel = dynamic(
@@ -172,6 +189,8 @@ export function DashboardClient({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [profileRow, setProfileRow] = useState<Record<string, unknown> | null>(null);
+  const localProfilePhotoUrl = useLocalProfileAvatar(userId);
+  const resolvedProfileName = useResolvedProfileName(userId, profile?.name ?? null);
   const [subgroup, setSubgroup] = useState<MuscleSubgroup>(catalogSubgroup);
   const [activeTrainingDay, setActiveTrainingDay] = useState<WeekdayIndex>(() =>
     resolveCalendarWeekdayIndex(),
@@ -199,6 +218,10 @@ export function DashboardClient({
     readAltarDailyCardioPercent(userId),
   );
   const [liveSessionVtcKg, setLiveSessionVtcKg] = useState(0);
+  const [inactivityToast, setInactivityToast] = useState<string | null>(null);
+  const [thermalSettlement, setThermalSettlement] =
+    useState<ThermalGravitySettlementResult | null>(null);
+  const inactivityPendingRef = useRef<LinhagemInactivitySyncResult | null>(null);
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
   const subgroupRef = useRef(subgroup);
   const tabBootstrappedRef = useRef(false);
@@ -224,6 +247,18 @@ export function DashboardClient({
   useEffect(() => {
     activeTrainingDayRef.current = activeTrainingDay;
   }, [activeTrainingDay]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<FenixQaAnimationDetail>).detail;
+      if (detail?.kind !== "superacao") return;
+      setShowSuperacaoFlash(true);
+      window.setTimeout(() => setShowSuperacaoFlash(false), 8000);
+    };
+
+    window.addEventListener(FENIX_QA_ANIMATION_EVENT, handler);
+    return () => window.removeEventListener(FENIX_QA_ANIMATION_EVENT, handler);
+  }, []);
 
   const refreshTreinoData = useCallback(async () => {
     const [rows, schedule, config] = await Promise.all([
@@ -413,6 +448,17 @@ export function DashboardClient({
       setMuralPosts(bundle.data.muralPosts);
       setTrainingTrack(bundle.data.trainingTrack);
       setHasPersonalBond(bundle.data.hasPersonalBond);
+      setThermalSettlement(bundle.data.thermalSettlement ?? null);
+
+      const inactivity = bundle.data.linhagemInactivity;
+      inactivityPendingRef.current =
+        inactivity?.pending_rekindle ? inactivity : null;
+
+      if (inactivity?.degraded) {
+        const message = buildLinhagemInactivityDegradationMessage(inactivity);
+        if (message) setInactivityToast(message);
+      }
+
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
         setLiveSessionVtcKg(thermal.session_vtc_today);
@@ -577,6 +623,19 @@ export function DashboardClient({
           Math.round((current + liveIncrement) * 100) / 100,
         );
       }
+
+      if (inactivityPendingRef.current?.pending_rekindle) {
+        const result = await rekindleLinhagemAfterInactivity(supabase);
+        if (result?.rekindled) {
+          inactivityPendingRef.current = null;
+          setProfileRow((row) =>
+            row ? { ...row, phase_tier: result.phase_tier } : row,
+          );
+          setInactivityToast(
+            "Braseiro reacendido — sua linhagem voltou ao patamar anterior. Continue o ritual.",
+          );
+        }
+      }
     },
     [],
   );
@@ -670,6 +729,13 @@ export function DashboardClient({
     <PhoenixPhaseEngine userId={userId} profileRow={profileRow} liveSessionVtcKg={liveSessionVtcKg}>
       {(phase) => (
         <AppShell>
+          <PortalToast
+            message={inactivityToast ?? ""}
+            variant="info"
+            visible={Boolean(inactivityToast)}
+            onDismiss={() => setInactivityToast(null)}
+            autoDismissMs={12000}
+          />
           <main className={DASHBOARD_SHELL}>
             <div
               className="pointer-events-none absolute inset-0"
@@ -677,6 +743,8 @@ export function DashboardClient({
               aria-hidden="true"
             />
             <SuperacaoOverlay visible={showSuperacaoFlash} />
+            <LinhagemTransmutationHost userId={userId} />
+            <DueloConviteHost userId={userId} />
 
             <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col">
               <DashboardBrandHeader
@@ -744,9 +812,13 @@ export function DashboardClient({
                         userId={userId}
                         initialCalorRows={initialEvolutionCalor}
                         initialIgnicao={initialEvolutionIgnicao}
-                        profileName={profile.name}
+                        initialAthletePlan={initialAthletePlan}
+                        profileName={resolvedProfileName}
                         variant="dashboard"
                         hasPersonalBond={hasPersonalBond}
+                        profilePhotoUrl={localProfilePhotoUrl}
+                        conqueredPhaseTier={phase.phaseTier}
+                        thermalSettlement={thermalSettlement}
                       />
                     </div>
                   ) : null}
@@ -755,7 +827,8 @@ export function DashboardClient({
                     <div className={dashboardTabPanelClass(activeTab === "comunidade")}>
                       <ComunidadePageClient
                         userId={userId}
-                        profileName={profile.name}
+                        profileName={resolvedProfileName}
+                        profilePhotoUrl={localProfilePhotoUrl}
                         phase={phase}
                         muralFocusToken={muralFocusToken}
                         muralFocusExerciseName={muralFocusExerciseName}
@@ -765,7 +838,13 @@ export function DashboardClient({
 
                   {visitedTabs.has("perfil") ? (
                     <div className={dashboardTabPanelClass(activeTab === "perfil")}>
-                      <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} />
+                      <ProfileEvolutionKnowledge
+                        userId={userId}
+                        profileName={resolvedProfileName}
+                        profilePhotoUrl={localProfilePhotoUrl}
+                        initialCalorRows={initialEvolutionCalor}
+                        initialIgnicao={initialEvolutionIgnicao}
+                      />
                     </div>
                   ) : null}
                 </div>

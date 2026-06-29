@@ -16,7 +16,11 @@ const DB_NAME = "fenyxia_local_db";
 const DB_VERSION = 2;
 const STORE_AVATAR = "premium_avatar";
 const STORE_SELFIES = "selfies_ciclo";
-const AVATAR_KEY = "current";
+const LEGACY_AVATAR_KEY = "current";
+
+export type EvolutionAvatarUpdatedDetail = {
+  userId: string;
+};
 const MAX_CYCLE_SELFIES = 3;
 
 /** Slots fixos do ciclo mensal · apenas native_path no IndexedDB */
@@ -128,21 +132,44 @@ async function withStore<T>(
   }
 }
 
-function notifyAvatarUpdated(): void {
+function avatarStorageKey(userId: string): string {
+  const trimmed = userId.trim();
+  return trimmed.length > 0 ? trimmed : LEGACY_AVATAR_KEY;
+}
+
+function notifyAvatarUpdated(userId: string): void {
   if (!isBrowser()) return;
   try {
-    window.dispatchEvent(new CustomEvent(EVOLUTION_AVATAR_UPDATED_EVENT));
+    window.dispatchEvent(
+      new CustomEvent<EvolutionAvatarUpdatedDetail>(EVOLUTION_AVATAR_UPDATED_EVENT, {
+        detail: { userId },
+      }),
+    );
   } catch {
     /* fallback silencioso */
   }
 }
 
-async function readAvatarRecord(): Promise<AvatarPathRecord | null> {
+async function readAvatarRecord(userId: string): Promise<AvatarPathRecord | null> {
   try {
-    const raw = await withStore<unknown>(STORE_AVATAR, "readonly", (store) =>
-      store.get(AVATAR_KEY),
-    );
-    return isAvatarPathRecord(raw) ? raw : null;
+    const key = avatarStorageKey(userId);
+    const raw = await withStore<unknown>(STORE_AVATAR, "readonly", (store) => store.get(key));
+    if (isAvatarPathRecord(raw)) return raw;
+
+    if (key !== LEGACY_AVATAR_KEY) {
+      const legacy = await withStore<unknown>(STORE_AVATAR, "readonly", (store) =>
+        store.get(LEGACY_AVATAR_KEY),
+      );
+      if (isAvatarPathRecord(legacy)) {
+        await withStore<IDBValidKey>(STORE_AVATAR, "readwrite", (store) => store.put(legacy, key));
+        await withStore<undefined>(STORE_AVATAR, "readwrite", (store) =>
+          store.delete(LEGACY_AVATAR_KEY),
+        );
+        return legacy;
+      }
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -195,13 +222,14 @@ async function trimCycleSelfiesToLimit(): Promise<void> {
 
 /**
  * Grava avatar no disco do dispositivo e persiste apenas o native_path no IndexedDB.
+ * Cada conta (userId) tem arquivo e chave próprios.
  */
-export async function saveLocalAvatar(file: File): Promise<void> {
-  if (!isBrowser() || !isFile(file)) return;
+export async function saveLocalAvatar(userId: string, file: File): Promise<void> {
+  if (!isBrowser() || !isFile(file) || !userId.trim()) return;
 
   try {
-    const relativePath = buildAvatarRelativePath(file);
-    const previous = await readAvatarRecord();
+    const relativePath = buildAvatarRelativePath(userId, file);
+    const previous = await readAvatarRecord(userId);
 
     const written = await writeAppFile(relativePath, file);
     if (!written) return;
@@ -212,14 +240,14 @@ export async function saveLocalAvatar(file: File): Promise<void> {
     };
 
     await withStore<IDBValidKey>(STORE_AVATAR, "readwrite", (store) =>
-      store.put(record, AVATAR_KEY),
+      store.put(record, avatarStorageKey(userId)),
     );
 
     if (previous && previous.native_path !== written.native_path) {
       await deleteAppFile(previous.native_path);
     }
 
-    notifyAvatarUpdated();
+    notifyAvatarUpdated(userId);
   } catch {
     /* modo anónimo / quota / policy blocked */
   }
@@ -229,11 +257,11 @@ export async function saveLocalAvatar(file: File): Promise<void> {
  * Retorna URL pronta para `src` do React (Capacitor convertFileSrc, file:// ou blob OPFS).
  * Null → UI usa placeholder SVG.
  */
-export async function getLocalAvatarPath(): Promise<string | null> {
-  if (!isBrowser()) return null;
+export async function getLocalAvatarPath(userId: string): Promise<string | null> {
+  if (!isBrowser() || !userId.trim()) return null;
 
   try {
-    const record = await readAvatarRecord();
+    const record = await readAvatarRecord(userId);
     if (!record) return null;
     return await resolveAppFileSrc(record.native_path);
   } catch {
@@ -304,18 +332,18 @@ export async function getCycleSelfiePaths(): Promise<string[]> {
   }
 }
 
-export async function deleteLocalAvatar(): Promise<void> {
-  if (!isBrowser()) return;
+export async function deleteLocalAvatar(userId: string): Promise<void> {
+  if (!isBrowser() || !userId.trim()) return;
 
   try {
-    const record = await readAvatarRecord();
+    const record = await readAvatarRecord(userId);
     if (record) {
       await deleteAppFile(record.native_path);
     }
     await withStore<undefined>(STORE_AVATAR, "readwrite", (store) =>
-      store.delete(AVATAR_KEY),
+      store.delete(avatarStorageKey(userId)),
     );
-    notifyAvatarUpdated();
+    notifyAvatarUpdated(userId);
   } catch {
     /* silencioso */
   }
@@ -340,8 +368,8 @@ export async function deleteCycleSelfie(id: string): Promise<void> {
   }
 }
 
-export function notifyEvolutionAvatarUpdated(): void {
-  notifyAvatarUpdated();
+export function notifyEvolutionAvatarUpdated(userId: string): void {
+  notifyAvatarUpdated(userId);
 }
 
 export async function dataUrlToFile(dataUrl: string, fileName = "avatar.webp"): Promise<File | null> {
@@ -357,15 +385,18 @@ export async function dataUrlToFile(dataUrl: string, fileName = "avatar.webp"): 
   }
 }
 
-export async function persistEvolutionAvatarFromDataUrl(dataUrl: string): Promise<void> {
+export async function persistEvolutionAvatarFromDataUrl(
+  userId: string,
+  dataUrl: string,
+): Promise<void> {
   const file = await dataUrlToFile(dataUrl, "avatar.webp");
   if (!file) return;
-  await saveLocalAvatar(file);
+  await saveLocalAvatar(userId, file);
 }
 
-/** @deprecated Use getLocalAvatarPath */
-export async function getLocalAvatar(): Promise<Blob | null> {
-  const src = await getLocalAvatarPath();
+/** @deprecated Use getLocalAvatarPath(userId) */
+export async function getLocalAvatar(userId: string): Promise<Blob | null> {
+  const src = await getLocalAvatarPath(userId);
   if (!src) return null;
 
   try {
@@ -398,33 +429,36 @@ export async function getCycleSelfies(): Promise<CycleSelfieRecord[]> {
   );
 }
 
-/** @deprecated Preferir getLocalAvatarPath */
-export async function readEvolutionAvatarDataUrl(): Promise<string | null> {
-  return getLocalAvatarPath();
+/** @deprecated Preferir getLocalAvatarPath(userId) */
+export async function readEvolutionAvatarDataUrl(userId: string): Promise<string | null> {
+  return getLocalAvatarPath(userId);
 }
 
-/** @deprecated Use saveLocalAvatar */
-export async function persistEvolutionAvatar(record: { dataUrl: string }): Promise<void> {
-  await persistEvolutionAvatarFromDataUrl(record.dataUrl);
+/** @deprecated Use saveLocalAvatar(userId, file) */
+export async function persistEvolutionAvatar(
+  userId: string,
+  record: { dataUrl: string },
+): Promise<void> {
+  await persistEvolutionAvatarFromDataUrl(userId, record.dataUrl);
 }
 
-/** @deprecated Use getLocalAvatarPath */
-export async function readEvolutionAvatar(): Promise<{ dataUrl: string } | null> {
-  const dataUrl = await getLocalAvatarPath();
+/** @deprecated Use getLocalAvatarPath(userId) */
+export async function readEvolutionAvatar(userId: string): Promise<{ dataUrl: string } | null> {
+  const dataUrl = await getLocalAvatarPath(userId);
   return dataUrl ? { dataUrl } : null;
 }
 
 /** @deprecated Binários não devem trafegar como Blob na API pública */
-export async function saveLocalAvatarFromBlob(blob: Blob): Promise<void> {
+export async function saveLocalAvatarFromBlob(userId: string, blob: Blob): Promise<void> {
   if (!isBrowser()) return;
   const type = blob.type || "image/webp";
   const file = new File([blob], `avatar.${type.includes("png") ? "png" : "webp"}`, { type });
-  await saveLocalAvatar(file);
+  await saveLocalAvatar(userId, file);
 }
 
-/** @deprecated Use saveLocalAvatar(file) */
-export async function saveLocalAvatarLegacy(blob: Blob): Promise<void> {
-  await saveLocalAvatarFromBlob(blob);
+/** @deprecated Use saveLocalAvatar(userId, file) */
+export async function saveLocalAvatarLegacy(userId: string, blob: Blob): Promise<void> {
+  await saveLocalAvatarFromBlob(userId, blob);
 }
 
 /** @deprecated */

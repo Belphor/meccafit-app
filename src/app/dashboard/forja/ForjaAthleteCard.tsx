@@ -12,6 +12,7 @@ import {
 } from "@/lib/forja-config";
 import { FORJA_COPY } from "@/lib/forja-copy";
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { resolveAccountAccessDisplay } from "@/lib/account-access-status";
 import { resolveForjaAthleteCardRing, resolveForjaChipClass, resolveForjaThermalStyle } from "@/lib/forja-phase-styles";
 
 type ForjaAthleteCardProps = {
@@ -108,10 +109,10 @@ function ForjaAthleteCardComponent({
                 : "border-slate-800/80 bg-slate-950/40 text-slate-400"
             }`}
           >
-            Personal · {athlete.forgerName}
+            Forjador · {athlete.forgerName}
           </span>
         ) : !isVip ? (
-          <span className="text-zinc-600">Sem personal</span>
+          <span className="text-zinc-600">Sem Forjador</span>
         ) : null}
 
         {vtcLabel ? (
@@ -133,9 +134,20 @@ function ForjaAthleteCardComponent({
         <p className="mt-2 text-[10px] text-slate-500">Plano da academia</p>
       ) : null}
 
-      {athlete.statusAltar && athlete.statusAltar.toLowerCase() !== "ativo" ? (
-        <p className="mt-2 text-[10px] font-medium text-red-400/90">{athlete.statusAltar}</p>
-      ) : null}
+      {(() => {
+        const access = resolveAccountAccessDisplay(athlete.statusAltar);
+        if (access.tone === "suspended") {
+          return (
+            <p className="mt-2 text-[10px] font-medium text-red-400/90">{access.label}</p>
+          );
+        }
+        if (access.tone === "active") {
+          return (
+            <p className="mt-2 text-[10px] font-medium text-emerald-400/80">{access.label}</p>
+          );
+        }
+        return null;
+      })()}
     </button>
   );
 }

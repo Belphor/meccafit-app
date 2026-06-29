@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isAccountSuspended } from "@/lib/account-access-status";
 import { createMiddlewareClient } from "@/lib/supabase-middleware";
 
 const PROTECTED_PREFIXES = [
@@ -29,15 +30,6 @@ function isForjaRoute(pathname: string): boolean {
     pathname === "/forjador" ||
     pathname.startsWith("/forjador/")
   );
-}
-
-function isAccountSuspended(statusAltar: string | null | undefined): boolean {
-  const normalized = String(statusAltar ?? "ativo")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "");
-  return normalized === "suspenso";
 }
 
 export async function middleware(request: NextRequest) {

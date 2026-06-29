@@ -15,10 +15,10 @@ DECLARE
   v_metas bigint := 0;
   v_planos bigint := 0;
 BEGIN
-  DELETE FROM public.duelos_supergrupos;
+  DELETE FROM public.duelos_supergrupos WHERE true;
   GET DIAGNOSTICS v_duelos = ROW_COUNT;
 
-  DELETE FROM public.historico_cargas;
+  DELETE FROM public.historico_cargas WHERE true;
   GET DIAGNOSTICS v_cargas = ROW_COUNT;
 
   IF to_regclass('public.comunidade_titulos') IS NOT NULL THEN

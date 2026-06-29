@@ -78,7 +78,7 @@ export async function syncBodyMetricsToNucleus(
     return {
       ok: false,
       code: "VALIDATION",
-      message: "Vínculo VIP activo obrigatório para publicar medidas.",
+      message: "Vínculo VIP ativo obrigatório para publicar medidas.",
     };
   }
 

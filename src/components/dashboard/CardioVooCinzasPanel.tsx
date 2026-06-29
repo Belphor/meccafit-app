@@ -57,9 +57,9 @@ function resolveCardioVisualContext(status: CardioSessionStatus): CardioVisualCo
 function resolveStatusLabel(status: CardioSessionStatus, band: keyof typeof THERMAL_LABELS) {
   if (status === "idle") return "Pronto para decolar";
   if (status === "running") return THERMAL_LABELS[band];
-  if (status === "check_in") return "Check-In Térmico requerido";
-  if (status === "stasis") return "Fogo em Estase";
-  return "Voo concluído — altar sincronizado";
+  if (status === "check_in") return "Check-in térmico requerido";
+  if (status === "stasis") return "Fogo em estase";
+  return "Voo concluído. Altar sincronizado.";
 }
 
 export function CardioVooCinzasPanel({
@@ -87,7 +87,7 @@ export function CardioVooCinzasPanel({
 
   const primaryAction =
     session.status === "check_in"
-      ? { label: "Check-In Térmico", handler: handleThermalCheckIn }
+      ? { label: "Check-in térmico", handler: handleThermalCheckIn }
       : session.status === "stasis"
         ? { label: "Reativar fogo", handler: handleReactivate }
         : null;
@@ -136,21 +136,20 @@ export function CardioVooCinzasPanel({
       <BrasaVivaCard
         as="section"
         variant={brasaoVariant}
-        className={`mb-4 ${shellClass} ${
-          visualContext === "elite" ? `brasao-light-border cardio-voo-elite ${CARDIO_VOO_PANEL_ELITE}` : ""
-        }`}
+        className={`mb-4 ${shellClass} ${visualContext === "elite" ? `brasao-light-border cardio-voo-elite ${CARDIO_VOO_PANEL_ELITE}` : ""
+          }`}
         aria-labelledby="voo-cinzas-title"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className={chipClass}>Altar energético · Cardio</p>
+            <p className={chipClass}>Altar energético. Cardio</p>
             <h2 id="voo-cinzas-title" className={titleClass}>
               Voo de Cinzas
             </h2>
             <p className={statusTextClass}>{statusLabel}</p>
             {hasForjadorPlan ? (
               <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-amber-500/55">
-                Meta do forjador · {resolvedGoalMinutes} min
+                Meta do forjador: {resolvedGoalMinutes} min
               </p>
             ) : null}
           </div>
@@ -163,7 +162,7 @@ export function CardioVooCinzasPanel({
                 onClick={() => setHermeticFocus(true)}
                 className="inline-flex min-h-11 items-center rounded-full border border-amber-400/30 bg-amber-950/40 px-4 py-2.5 text-[10px] uppercase tracking-[0.14em] text-amber-100 transition hover:border-amber-300/45 hover:bg-amber-900/50"
               >
-                Foco Hermético
+                Foco hermético
               </button>
             ) : null}
           </div>
@@ -186,13 +185,12 @@ export function CardioVooCinzasPanel({
             </p>
           </div>
           <p
-            className={`text-[10px] uppercase tracking-[0.18em] ${
-              visualContext === "elite"
+            className={`text-[10px] uppercase tracking-[0.18em] ${visualContext === "elite"
                 ? "text-[#FFD700]/85"
                 : visualContext === "live"
                   ? "text-amber-200/85"
                   : "text-amber-400/60"
-            }`}
+              }`}
           >
             {THERMAL_LABELS[band]}
           </p>
@@ -227,13 +225,13 @@ export function CardioVooCinzasPanel({
 
         {session.status === "completed" ? (
           <p className="mt-3 text-center text-[10px] uppercase tracking-[0.16em] text-[#FFD700]/90">
-            Incandescência · Altar diário sincronizado
+            Incandescência. Altar diário sincronizado
           </p>
         ) : null}
 
         {session.status === "running" ? (
           <p className="mt-3 text-center text-[10px] text-neutral-500">
-            Check-in a cada 10 min · pausas não apagam o progresso
+            Check-in a cada 10 min. Pausas não apagam o progresso.
           </p>
         ) : null}
       </BrasaVivaCard>

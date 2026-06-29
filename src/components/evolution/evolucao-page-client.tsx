@@ -3,42 +3,39 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
-import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
-  CALOR_LEVEL_LABELS,
-  MUSCLE_LABELS,
-  PURITY_PENALTY_THRESHOLD,
   calorRowsToCongelamento,
   calorRowsToNiveisTermicos,
-  formatCalorMembroMetric,
   resolveNivelTermicoGlobal,
-  SOVEREIGN_MUSCLES,
   type EvolutionCalorPayload,
   type MuscleCalorLevel,
   type MuscleCalorRow,
   type SovereignMuscleId,
 } from "@/components/evolution/human-body-constants";
-import { EvolutionBodySkeleton } from "@/components/evolution/evolution-body-skeleton";
-import { HumanBodySvg } from "@/components/evolution/human-body-svg";
-import { PremiumAvatar } from "@/components/evolution/premium-avatar";
+import { EvolutionChamaAcumuladaCard } from "@/components/evolution/EvolutionChamaAcumuladaCard";
+import { EvolutionConsistenciaSection } from "@/components/evolution/EvolutionConsistenciaSection";
+import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
+import { FenixQaFloatingTrigger } from "@/components/qa/FenixQaFloatingTrigger";
 import { dataUrlToFile, saveCycleSelfie } from "@/services/local-storage";
 import {
-  DASHBOARD_INNER_FRAME,
   DASHBOARD_PANEL_FRAME,
-  DASHBOARD_SECTION_TITLE,
-  FENIX_PUREZA_CLIENT_EXPLANATION,
-  MAGMA_SPECTRUM,
-  MAPA_TERMICO_CLIENT_EXPLANATION,
+  DASHBOARD_TAP_TARGET,
+  EVOLUTION_ACTION_BUTTON,
+  EVOLUTION_HINT,
 } from "@/lib/dashboard-config";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
+import { useThermalGravityClientState } from "@/lib/use-thermal-gravity-client";
+import type { ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
 import {
   EVOLUTION_CALOR_REFRESH_EVENT,
   type EvolutionCalorRefreshDetail,
 } from "@/lib/evolution-events";
 import { supabase } from "@/lib/supabase";
-import { EvolutionVipInsights } from "@/components/evolution/evolution-vip-insights";
+import { EvolutionLevelsTable } from "@/components/evolution/EvolutionLevelsTable";
 import { SelfieComparison } from "@/components/evolution/selfie-comparison";
+import type { PhaseTier } from "@/lib/dashboard-config";
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
 
 const EvolucaoSelfiePanel = dynamic(
   () =>
@@ -53,11 +50,14 @@ type EvolucaoPageClientProps = {
   initialPayload?: EvolutionCalorPayload;
   initialCalorRows?: MuscleCalorRow[];
   initialIgnicao?: number;
+  initialAthletePlan?: AthletePlanConfig;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
   variant?: "page" | "dashboard";
-  /** Cliente com vínculo VIP (personal) — mostra medidas e rotina na aba Evolução. */
   hasPersonalBond?: boolean;
+  /** Tier conquistado no perfil — prioridade sobre o payload RPC antes da migration. */
+  conqueredPhaseTier?: PhaseTier;
+  thermalSettlement?: ThermalGravitySettlementResult | null;
 };
 
 async function assertAuthenticatedScope(expectedUserId: string): Promise<boolean> {
@@ -83,10 +83,13 @@ export function EvolucaoPageClient({
   initialPayload,
   initialCalorRows,
   initialIgnicao,
+  initialAthletePlan,
   profileName,
   profilePhotoUrl,
   variant = "page",
   hasPersonalBond = false,
+  conqueredPhaseTier,
+  thermalSettlement = null,
 }: EvolucaoPageClientProps) {
   const resolvedInitial = useMemo<EvolutionCalorPayload | undefined>(() => {
     if (initialPayload) return initialPayload;
@@ -99,22 +102,54 @@ export function EvolucaoPageClient({
     return undefined;
   }, [initialCalorRows, initialIgnicao, initialPayload]);
 
-  const [calorRows, setCalorRows] = useState<MuscleCalorRow[]>(
-    resolvedInitial?.calorRows ?? [],
-  );
+  const [calorRows, setCalorRows] = useState<MuscleCalorRow[]>(resolvedInitial?.calorRows ?? []);
   const [indiceIgnicao, setIndiceIgnicao] = useState(resolvedInitial?.indice_ignicao ?? 0);
+  const [vtc30dKg, setVtc30dKg] = useState(resolvedInitial?.vtc_30d_kg ?? 0);
+  const [vtcMonthKg, setVtcMonthKg] = useState(resolvedInitial?.vtc_month_kg ?? 0);
+  const [metaVtcMensalKg, setMetaVtcMensalKg] = useState(
+    resolvedInitial?.meta_vtc_mensal_kg ?? 5000,
+  );
+  const [phaseTier, setPhaseTier] = useState<PhaseTier>(
+    conqueredPhaseTier ??
+      (Math.min(5, Math.max(1, Math.round(resolvedInitial?.phase_tier ?? 1))) as PhaseTier),
+  );
   const [nivelTermicoGlobal, setNivelTermicoGlobal] = useState<MuscleCalorLevel | null>(null);
   const [loading, setLoading] = useState(!resolvedInitial);
   const [activeMuscle, setActiveMuscle] = useState<SovereignMuscleId>("PEITO");
   const [performanceMode, setPerformanceMode] = useState(false);
   const [showSelfie, setShowSelfie] = useState(false);
+  const [espelhoExpanded, setEspelhoExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [scopeError, setScopeError] = useState<string | null>(null);
+  const [evolutionReady, setEvolutionReady] = useState(
+    Boolean(resolvedInitial?.phase_tier != null && Number.isFinite(resolvedInitial.phase_tier)),
+  );
 
   const computedNivelGlobal = useMemo(
     () => resolveNivelTermicoGlobal(indiceIgnicao, calorRows),
     [indiceIgnicao, calorRows],
   );
+
+  const { state: thermalState } = useThermalGravityClientState(
+    conqueredPhaseTier ?? phaseTier,
+    vtcMonthKg,
+    0,
+    vtc30dKg,
+  );
+
+  const thermalStateWithSettlement = useMemo(() => {
+    if (!thermalSettlement?.settled_month_label) return thermalState;
+    return {
+      ...thermalState,
+      settled_month_label: thermalSettlement.settled_month_label,
+    };
+  }, [thermalSettlement?.settled_month_label, thermalState]);
+
+  useEffect(() => {
+    if (conqueredPhaseTier != null) {
+      setPhaseTier(conqueredPhaseTier);
+    }
+  }, [conqueredPhaseTier]);
 
   const niveisTermicos = useMemo(() => calorRowsToNiveisTermicos(calorRows), [calorRows]);
   const congelamentoPorMembro = useMemo(
@@ -137,6 +172,15 @@ export function EvolucaoPageClient({
   const applyPayload = useCallback((payload: EvolutionCalorPayload) => {
     setCalorRows(payload.calorRows);
     setIndiceIgnicao(payload.indice_ignicao);
+    setVtc30dKg(payload.vtc_30d_kg ?? 0);
+    setVtcMonthKg(payload.vtc_month_kg ?? 0);
+    setMetaVtcMensalKg(payload.meta_vtc_mensal_kg ?? 5000);
+    if (payload.phase_tier != null && Number.isFinite(payload.phase_tier)) {
+      setPhaseTier(
+        Math.min(5, Math.max(1, Math.round(payload.phase_tier))) as PhaseTier,
+      );
+      setEvolutionReady(true);
+    }
     setNivelTermicoGlobal(resolveNivelTermicoGlobal(payload.indice_ignicao, payload.calorRows));
   }, []);
 
@@ -174,9 +218,7 @@ export function EvolucaoPageClient({
           if (!cancelled) setScopeError("Sessão inválida. Faça login novamente.");
           return;
         }
-        if (!resolvedInitial) {
-          setLoading(true);
-        }
+        if (!resolvedInitial) setLoading(true);
         const payload = await fetchCalorPayload(userId);
         if (!cancelled) applyPayload(payload);
       } catch (error) {
@@ -207,206 +249,109 @@ export function EvolucaoPageClient({
   const handleSelfieCaptured = useCallback(async (dataUrl: string) => {
     const cycleId = `cycle-${new Date().toISOString().slice(0, 7)}-${Date.now()}`;
     const file = await dataUrlToFile(dataUrl, `selfie-${cycleId}.webp`);
-    if (file) {
-      await saveCycleSelfie(cycleId, file);
-    }
+    if (file) await saveCycleSelfie(cycleId, file);
     setShowSelfie(false);
+    setEspelhoExpanded(true);
   }, []);
 
-  const activeRow = calorRows.find((row) => row.membro_principal === activeMuscle);
-  const activeCalorMetric = activeRow ? formatCalorMembroMetric(activeRow) : null;
   const Wrapper = variant === "page" ? "div" : "main";
 
   return (
-    <Wrapper>
+    <Wrapper className="space-y-5">
+      <FenixQaFloatingTrigger tab="evolucao" />
+
+      {/* 1. Consistência: meta + ritmo + mapa corporal (ligados) */}
+      <EvolutionConsistenciaSection
+        userId={userId}
+        initialAthletePlan={initialAthletePlan}
+        loading={loading}
+        refreshing={refreshing}
+        indiceIgnicao={indiceIgnicao}
+        metaVtcMensalKg={metaVtcMensalKg}
+        vtc30dKg={vtc30dKg}
+        nivelTermicoGlobal={nivelTermicoGlobal}
+        computedNivelGlobal={computedNivelGlobal}
+        calorRows={calorRows}
+        niveisTermicos={niveisTermicos}
+        congelamentoPorMembro={congelamentoPorMembro}
+        performanceMode={performanceMode}
+        activeMuscle={activeMuscle}
+        onMuscleSelect={setActiveMuscle}
+        onRefreshMap={() => void refreshCalor()}
+        scopeError={scopeError}
+      />
+
+      {/* 2. Chama acumulada — fase da linhagem */}
       <BrasaVivaCard
         as="section"
         variant="treino"
         className={DASHBOARD_PANEL_FRAME}
-        aria-labelledby="evolucao-aba-title"
+        aria-labelledby="evolucao-linhagem-title"
       >
-        <DashboardPanelHeader chip="Evolução" meta="Mapa muscular · Índice de Ignição" />
+        <DashboardPanelHeader chip="Linhagem" meta={`${VTC_DISPLAY_NAME} acumulado · 30 dias`} />
+        <EvolutionChamaAcumuladaCard
+          userId={userId}
+          loading={loading}
+          dataReady={evolutionReady}
+          indiceIgnicao={indiceIgnicao}
+          calorRows={calorRows}
+          phaseTier={conqueredPhaseTier ?? phaseTier}
+          vtc30dKg={vtc30dKg}
+          thermalState={thermalStateWithSettlement}
+          monthBoundaryDegraded={thermalSettlement?.degraded === true}
+          profileName={profileName}
+          profilePhotoUrl={profilePhotoUrl}
+        />
+      </BrasaVivaCard>
 
-        <div className="mt-4 flex flex-col gap-4 border-b border-orange-500/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 text-center sm:text-left">
-            <h2 id="evolucao-aba-title" className={DASHBOARD_SECTION_TITLE}>
-              Mapa Térmico
-            </h2>
-            <DashboardClientInfoBlock className="mt-3 text-left">
-              {MAPA_TERMICO_CLIENT_EXPLANATION}
-            </DashboardClientInfoBlock>
-          </div>
+      {showSelfie ? (
+        <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
+          <EvolucaoSelfiePanel
+            onCapture={handleSelfieCaptured}
+            onClose={() => setShowSelfie(false)}
+          />
+        </BrasaVivaCard>
+      ) : null}
 
-          {loading ? (
-            <div
-              className="mx-auto h-20 w-20 shrink-0 animate-pulse rounded-full bg-cyan-900/20 ring-4 ring-cyan-500/10 sm:mx-0 sm:h-24 sm:w-24"
-              aria-hidden
-            />
-          ) : calorRows.length > 0 ? (
-            <PremiumAvatar
-              indiceIgnicao={indiceIgnicao}
-              calorRows={calorRows}
-              nivelTermicoGlobal={nivelTermicoGlobal ?? computedNivelGlobal}
-              profileName={profileName}
-              profilePhotoUrl={profilePhotoUrl}
-              className="mx-auto shrink-0 sm:mx-0"
-            />
-          ) : null}
-        </div>
+      {/* 4. Espelho visual — comparativo opcional */}
+      <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
+        <DashboardPanelHeader chip="Espelho visual" meta="Comparação de ciclo" />
 
-        <div className={`mt-6 ${DASHBOARD_INNER_FRAME} p-4`}>
-          {loading ? (
-            <EvolutionBodySkeleton />
-          ) : calorRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-center">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-                Evolução muscular ainda não sincronizada
-              </p>
+        <div className="mt-3 px-4 sm:px-5">
+          <p className={EVOLUTION_HINT}>
+            Compare selfies do dia 1 e do dia 30 para ver sua evolução física no ciclo.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setEspelhoExpanded((open) => !open)}
+            className={`${DASHBOARD_TAP_TARGET} mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-neutral-950/50 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-400/35`}
+            aria-expanded={espelhoExpanded}
+            aria-controls="evolucao-espelho-panel"
+          >
+            {espelhoExpanded ? "Recolher comparação" : "Abrir comparação de ciclo"}
+          </button>
+
+          {espelhoExpanded ? (
+            <div id="evolucao-espelho-panel" className="mt-4 space-y-3">
               <button
                 type="button"
-                disabled={refreshing}
-                onClick={() => void refreshCalor()}
-                className="mt-4 rounded-full border border-orange-500/15 bg-neutral-950/60 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200/85 disabled:opacity-50"
+                onClick={() => setShowSelfie((open) => !open)}
+                className={`${EVOLUTION_ACTION_BUTTON} w-full border-cyan-500/20 text-cyan-100`}
               >
-                {refreshing ? "Sincronizando…" : "Sincronizar evolução"}
+                {showSelfie ? "Fechar captura de selfie" : "Capturar selfie de ciclo"}
               </button>
+              <SelfieComparison />
             </div>
-          ) : (
-            <>
-              <HumanBodySvg
-                niveis_termicos={niveisTermicos}
-                indice_ignicao={indiceIgnicao}
-                performanceMode={performanceMode}
-                congelamento_por_membro={congelamentoPorMembro}
-                calorRows={calorRows}
-                activeMuscle={activeMuscle}
-                onMuscleSelect={setActiveMuscle}
-              />
-
-              {activeRow && activeCalorMetric ? (
-                <div className="mt-4 rounded-lg border border-cyan-500/15 bg-black/35 p-4">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/80">
-                    Detalhe · {MUSCLE_LABELS[activeRow.membro_principal]}
-                  </p>
-                  <p className="mt-2 text-lg font-bold text-amber-50">
-                    {CALOR_LEVEL_LABELS[activeRow.nivel_calculado]}
-                  </p>
-                  <p className="mt-1 font-mono text-[11px] text-neutral-400">
-                    {activeCalorMetric.label} ·{" "}
-                    <span className="text-amber-200/85">{activeCalorMetric.value}</span>
-                  </p>
-                  <p className="mt-0.5 font-mono text-[10px] text-neutral-600">
-                    {activeCalorMetric.hint}
-                  </p>
-                  {hasPersonalBond ? (
-                    <EvolutionVipInsights
-                      userId={userId}
-                      activeMuscle={activeMuscle}
-                      calorRows={calorRows}
-                      enabled={hasPersonalBond}
-                      variant="inline"
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-
-        {scopeError ? (
-          <p className="mt-3 text-[11px] text-red-400/90" role="alert">
-            {scopeError}
-          </p>
-        ) : null}
-
-        {!loading && calorRows.length > 0 && hasPersonalBond ? (
-          <div className="mt-6">
-            <EvolutionVipInsights
-              userId={userId}
-              enabled={hasPersonalBond}
-              variant="full"
-            />
-          </div>
-        ) : null}
-
-        {!loading && calorRows.length > 0 ? (
-          <>
-            <DashboardClientInfoBlock className="mt-4" label="Índice de Ignição">
-              {FENIX_PUREZA_CLIENT_EXPLANATION}
-            </DashboardClientInfoBlock>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-500">
-                  Índice de Ignição ·{" "}
-                  <span style={{ color: MAGMA_SPECTRUM.solarGold }}>
-                    {Math.round(indiceIgnicao)}%
-                  </span>
-                </p>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-                  Intensidade geral · {CALOR_LEVEL_LABELS[nivelTermicoGlobal ?? computedNivelGlobal]}
-                </p>
-                {indiceIgnicao < PURITY_PENALTY_THRESHOLD ? (
-                  <p className="text-[9px] uppercase tracking-[0.14em] text-amber-500/70">
-                    Índice abaixo de {PURITY_PENALTY_THRESHOLD}% — mapa com cores mais suaves
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex flex-col gap-2 xs:flex-row xs:flex-wrap">
-                <button
-                  type="button"
-                  disabled={refreshing}
-                  onClick={() => void refreshCalor()}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-orange-500/15 bg-neutral-950/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/85 disabled:opacity-50 xs:w-auto"
-                >
-                  {refreshing ? "Sincronizando…" : "Atualizar mapa"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowSelfie((open) => !open)}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-cyan-500/15 bg-neutral-950/60 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-200/75 xs:w-auto"
-                >
-                  {showSelfie ? "Fechar selfie" : "Selfie de ciclo"}
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-              {SOVEREIGN_MUSCLES.map((id) => {
-                const row = calorRows.find((item) => item.membro_principal === id);
-                const isActive = activeMuscle === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setActiveMuscle(id)}
-                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] ${
-                      isActive
-                        ? "border-amber-500/35 bg-amber-950/35 text-amber-100"
-                        : "border-orange-500/10 bg-black/30 text-neutral-500"
-                    }`}
-                  >
-                    {MUSCLE_LABELS[id]}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : null}
-
-        {showSelfie ? (
-          <div className="mt-6">
-            <EvolucaoSelfiePanel
-              onCapture={handleSelfieCaptured}
-              onClose={() => setShowSelfie(false)}
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-8 border-t border-orange-500/10 pt-6">
-          <SelfieComparison />
+          ) : null}
         </div>
       </BrasaVivaCard>
+
+      <EvolutionLevelsTable />
+
+      <p className={`px-1 text-center ${EVOLUTION_HINT}`}>
+        Dúvidas sobre {VTC_DISPLAY_NAME}? Consulte a referência e o suporte na aba Perfil.
+      </p>
     </Wrapper>
   );
 }

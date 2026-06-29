@@ -28,7 +28,7 @@ import {
   patchFeedEntryVtcAfterAdjust,
   type ForjaMonitorSegment,
 } from "@/lib/forja-monitor-utils";
-import { FORJADOR_WORKSPACE_NAV } from "@/lib/forjador-vip-nav";
+import { resolveForjadorWorkspaceNav } from "@/lib/forjador-vip-nav";
 import { fetchForjaMonitorAthletes } from "@/lib/forja-sovereign-actions";
 import type { ForjaFraudSignal } from "@/lib/forja-sovereign-actions";
 
@@ -162,7 +162,7 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
         </header>
 
         <nav aria-label="Navegação forjador" className="mt-4 flex flex-wrap gap-2">
-          {FORJADOR_WORKSPACE_NAV.map((item) => {
+          {resolveForjadorWorkspaceNav(payload.operator.isSovereign).map((item) => {
             const isActive = item.href === "/forjador/monitoramento";
             return (
               <Link

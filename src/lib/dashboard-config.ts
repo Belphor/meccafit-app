@@ -135,24 +135,27 @@ export const EXERCISE_SERIES_SUPERACAO =
 export const EXERCISE_CARD_SELECTABLE =
   "cursor-pointer rounded-[1.75rem] outline-none transition-[opacity,box-shadow,border-color] duration-200 focus-visible:ring-2 focus-visible:ring-amber-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black";
 
-/** VTC — Volume Total de Carga (soma das cargas máximas da sessão) */
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
+
+/** Volume de Carga Máxima (VTC) unificado */
 export const VTC_LABEL = "VTC";
-export const VTC_FULL_NAME = "Volume Total de Carga Máxima";
-export const VTC_FORMULA = "Soma das cargas máximas (kg)";
-export const VTC_FORMULA_SHORT = "Σ kg máx";
-export const VTC_SESSION_EXPLANATION = "Soma das cargas máximas registradas na sessão.";
+export const VTC_FULL_NAME = VTC_DISPLAY_NAME;
+export const VTC_FORMULA = "Carga máxima validada por exercício em kg";
+export const VTC_FORMULA_SHORT = "kg máx";
+export const VTC_SESSION_EXPLANATION =
+  `Soma do ${VTC_DISPLAY_NAME} de cada exercício concluído hoje. Registramos só o pico de cada movimento, sem multiplicar repetições ou séries.`;
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  "A Chama registra o VTC do dia da planilha que você está executando — soma das cargas máximas (kg) validadas na sessão civil de hoje. Cada dia da planilha (Seg–Sáb) tem sua própria chama; à meia-noite (horário de São Paulo) ela zera e recomeça. Grupos mistos no mesmo dia alimentam uma única chama.";
+  `Chama do Altar soma o ${VTC_DISPLAY_NAME} do dia em quilogramas. Cada exercício concluído contribui com sua carga máxima. Mesma unidade da Chama Acumulada, Brasas Musculares e termômetro da Comunidade.`;
 
-/** Planilha do forjador — painel Treino do dia */
+/** Rotina do dia — painel Treino */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Exercícios prescritos para o dia escolhido. Conclua as séries de cada movimento e só então registre carga, repetição ou tempo máximo. Cada registro vale uma vez por semana neste dia.";
+  "Exercícios prescritos para o dia escolhido. Conclua todas as séries de cada movimento antes de registrar carga, repetição ou tempo máximo. Cada registro vale uma vez por semana neste dia.";
 
 /** Execução — painel de escolha do dia */
 export const TREINO_EXECUTION_CLIENT_EXPLANATION =
-  "Selecione qual dia da planilha semanal você vai executar hoje. O forjador define os grupos de cada dia — você só indica em qual dia está treinando. Dias concluídos nesta semana aparecem com ✓.";
+  "Escolha qual dia da planilha semanal você vai executar hoje. Seu forjador define os grupos de cada dia. Dias concluídos nesta semana aparecem com ✓.";
 
 export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
   "Travado até o próximo treino deste dia";
@@ -273,27 +276,31 @@ export const CARDIO_VOO_EXPLANATION_TEXT =
 
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =
-  "Cardio consciente do dia. O forjador define sua meta em minutos — acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso; ao bater a meta, o altar energético sincroniza.";
+  "Cardio consciente do dia. Seu forjador define a meta em minutos. Acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso. Ao bater a meta, o altar energético sincroniza.";
 
-/** Mapa Térmico (Evolução) — texto orientativo para o cliente */
+/** Brasas Musculares (Evolução) — VTC por grupo */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "Cada grupo muscular muda de cor conforme o estímulo acumulado nos últimos 14 dias — de Cinzas até Fogo Cósmico. Toque no corpo para ver o detalhe do músculo selecionado. Grupos que não estão na sua planilha aparecem sem estímulo ativo.";
+  "Brasas Musculares somam o Volume de Carga Máxima(VTC) por grupo muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
 
-/** Índice de Ignição (Evolução) — consistência de treino */
+/** Ritmo da Fênix (Evolução) — consistência de VTC */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "O Índice de Ignição mede sua consistência nos últimos 30 dias: quantos dias você treinou ou fez cardio em relação à meta do plano. É diferente do estímulo de cada músculo no mapa. Abaixo de 50%, as cores ficam mais apagadas.";
+  "Ritmo da Fênix mede quanto do seu Volume de Carga Máxima(VTC) meta mensal você já acumulou, em percentual. A meta padrão segue o limiar Faísca da academia. Abaixo de 50%, as cores do mapa ficam mais suaves.";
+
+/** Ascensão (Superação) — celebração de recorde no treino */
+export const ASCENSAO_CLIENT_EXPLANATION =
+  `Ascensão celebra quando você supera seu recorde pessoal de ${VTC_DISPLAY_NAME} naquele exercício. É um momento visual. Não altera fase, mapa nem Ritmo da Fênix.`;
 
 /** Nutrição VIP — plano alimentar de longo prazo */
 export const DIETA_CLIENT_EXPLANATION =
-  "Plano alimentar definido pelo seu personal. Mostra metas diárias, refeições sugeridas e observações — válido por semanas ou meses.";
+  "Plano alimentar definido pelo seu Forjador. Mostra metas diárias, refeições sugeridas e observações, válido por semanas ou meses.";
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
-  "Espelho visual do ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e luz. Com Dia 1 e Dia 30 gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo — nada vai para a nuvem.";
+  "Espelho visual do ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e luz. Com o dia 1 e o dia 30 gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo, nada vai para a nuvem.";
 
 /** Comunidade — arena cooperativa */
 export const COMUNIDADE_CLIENT_EXPLANATION =
-  "Três formas de se destacar: contribua no termómetro coletivo da academia, suba no ranking mensal para ser Rei das Chamas, ou dispute duelos pelo cinturão.";
+  "Três formas de se destacar: contribua no termômetro coletivo da academia, suba no ranking mensal para ser Rei das Chamas ou dispute duelos pelo cinturão.";
 
 export const VTC_METRIC_FRAME =
   "relative overflow-hidden rounded-2xl border border-orange-500/12 bg-black/35 px-4 py-3 backdrop-blur-sm";
@@ -344,6 +351,15 @@ export const DASHBOARD_META_CHIP = `${BRASAO_LIGHT_CAPSULE} text-amber-200/85`;
 /** Título de seção — uppercase estático */
 export const DASHBOARD_SECTION_TITLE =
   "font-serif text-[clamp(1.25rem,5vw,1.875rem)] font-semibold uppercase tracking-[0.08em] text-amber-100 drop-shadow-[0_0_10px_rgba(251,191,36,0.15)] sm:text-3xl";
+
+/** Evolução — hierarquia tipográfica unificada */
+export const EVOLUTION_SECTION_SUBTITLE = "mt-1 text-sm leading-relaxed text-neutral-400";
+export const EVOLUTION_FIELD_LABEL = "text-xs font-medium text-neutral-400";
+export const EVOLUTION_FIELD_VALUE = "text-sm font-semibold text-amber-50";
+export const EVOLUTION_STAT_VALUE = "font-mono text-lg font-bold tabular-nums text-amber-100";
+export const EVOLUTION_HINT = "text-xs leading-relaxed text-neutral-500";
+export const EVOLUTION_ACTION_BUTTON =
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-orange-500/20 bg-neutral-950/70 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:border-amber-500/35 disabled:opacity-50";
 
 /** Subtítulo de aba */
 export const DASHBOARD_TAB_LABEL =
@@ -458,8 +474,19 @@ export type PhaseLayoutCode =
   | "LABAREDA"
   | "FOGO_COSMICO";
 
-/** PLUTUS/HERMES — rolling 30-day maintenance volume (kg VTC). */
+export const LINHAGEM_INACTIVITY_DAYS = 30;
+
+/** @deprecated Gravidade térmica mensal removida — regressão só por inatividade. */
+export const THERMAL_GRAVITY_MONTH_GRACE_DAYS = 3;
+
+/** @deprecated Regra anterior (20d / 50%). */
+export const THERMAL_GRAVITY_WINDOW_DAYS = 20;
+/** @deprecated Regra anterior (20d / 50%). */
+export const THERMAL_GRAVITY_MAINTENANCE_RATIO = 0.5;
+
+/** @deprecated Substituído por 50% do patamar da fase em 20 dias. Mantido só para scripts legados. */
 export const PHASE_2_MAINTENANCE_VTC_30D = 4000.0;
+/** @deprecated Substituído por 50% do patamar da fase em 20 dias. Mantido só para scripts legados. */
 export const PHASE_3_MAINTENANCE_VTC_30D = 16000.0;
 
 /** IRIS/AIGIS — single-session baseline to clear degraded layout (kg VTC). */
@@ -487,9 +514,9 @@ export const PHASE_TRANSMUTATION_FADE_MS = 2_000;
 export const PHASE_TRANSMUTATION_SKIP_AFTER_MS = 6_000;
 
 export const PHASE_TRANSMUTATION_COPY =
-  "「A LINHAGEM EVOLUIU · SEU BRASEIRO REIVINDICOU A PRÓXIMA ERA」";
+  "「A LINHAGEM EVOLUIU · NOVA CAMADA NA CHAMA ACUMULADA」";
 
-export const PHASE_TRANSMUTATION_SUBLINE = "Nova era desbloqueada";
+export const PHASE_TRANSMUTATION_SUBLINE = "Nova fase da linhagem";
 
 /** IRIS · olho da Fênix — tokens partilhados com CSS */
 export const PHASE_TRANSMUTATION_IRIS = {
@@ -506,6 +533,9 @@ export const PHASE_TRANSMUTATION_IRIS = {
 } as const;
 
 export const PHASE_TIER_STORAGE_PREFIX = "meccafit:phase-tier-ack:";
+
+/** Chama Acumulada · celebração de nova fase na aba Evolução (localStorage). */
+export const EVOLUTION_LINHAGEM_TIER_STORAGE_PREFIX = "meccafit:evolution-linhagem-tier:";
 
 /** Default cosmetic tokens — overridden only by server custom_preferences */
 export const DEFAULT_COSMETIC_THEME = {

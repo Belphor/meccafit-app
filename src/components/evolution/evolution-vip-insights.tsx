@@ -8,7 +8,6 @@ import {
 } from "@/lib/training-week";
 import { resolveBrasiliaTrainingWeekdayIndex } from "@/lib/brasilia-time";
 import {
-  CALOR_LEVEL_LABELS,
   formatCalorMembroMetric,
   MUSCLE_LABELS,
   type MuscleCalorRow,
@@ -22,6 +21,14 @@ import {
   SCIENTIFIC_SKINFOLD_LABELS,
   sumScientificSkinfolds,
 } from "@/lib/scientific-metrics-types";
+import {
+  ACOMPANHAMENTO_BRASAS_SUBTITLE,
+  ACOMPANHAMENTO_LOADING,
+  ACOMPANHAMENTO_MEDIDAS_EMPTY,
+  ACOMPANHAMENTO_MEDIDAS_TITLE,
+} from "@/lib/client-lore-copy";
+import { formatThermalLevelWithContext } from "@/lib/fenix-evolution-glossary";
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
 import { VIP_MEDIDAS_UPDATE_EVENT, type VipMedidasUpdateDetail } from "@/lib/vip-medidas-events";
 import { supabase } from "@/lib/supabase";
 
@@ -158,16 +165,14 @@ export function EvolutionVipInsights({
         </p>
 
         {loading ? (
-          <p className="text-xs text-neutral-500">Carregando dados do personal…</p>
+          <p className="text-xs text-neutral-500">{ACOMPANHAMENTO_LOADING}</p>
         ) : (
           <>
             {activeCalorRow && activeCalorMetric ? (
               <div className="rounded-lg border border-cyan-500/15 bg-black/30 p-3 text-xs">
-                <p className="text-neutral-500">
-                  Estímulo acumulado nos últimos 14 dias — independente do Índice de Ignição.
-                </p>
+                <p className="text-neutral-500">{ACOMPANHAMENTO_BRASAS_SUBTITLE}</p>
                 <p className="mt-2 text-sm font-semibold text-amber-50">
-                  {CALOR_LEVEL_LABELS[activeCalorRow.nivel_calculado]}
+                  {formatThermalLevelWithContext(activeCalorRow.nivel_calculado, "muscle")}
                   {activeCalorRow.is_frozen ? " · Fora da rotina" : ""}
                 </p>
                 <p className="mt-1 text-neutral-400">
@@ -175,6 +180,13 @@ export function EvolutionVipInsights({
                   <span className="text-amber-200/85">{activeCalorMetric.value}</span>
                 </p>
                 <p className="mt-0.5 text-neutral-600">{activeCalorMetric.hint}</p>
+                {!activeCalorRow.is_frozen &&
+                (activeCalorRow.metrica_bruta == null || activeCalorRow.metrica_bruta <= 0) ? (
+                  <p className="mt-2 text-[11px] text-amber-200/75">
+                    Nenhum registro deste grupo nos últimos 14 dias. Conclua treinos com carga para
+                    acumular {VTC_DISPLAY_NAME} nas Brasas Musculares.
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
@@ -195,11 +207,11 @@ export function EvolutionVipInsights({
   return (
     <div className={wrapperClass}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-300/80">
-        Medidas do personal
+        {ACOMPANHAMENTO_MEDIDAS_TITLE}
       </p>
 
       {loading ? (
-        <p className="text-xs text-neutral-500">Carregando dados do personal…</p>
+        <p className="text-xs text-neutral-500">{ACOMPANHAMENTO_LOADING}</p>
       ) : measures ? (
         <>
           <div className="grid grid-cols-2 gap-2 rounded-lg border border-neutral-800/80 bg-black/30 p-3 text-xs sm:grid-cols-3 lg:grid-cols-5">
@@ -253,10 +265,7 @@ export function EvolutionVipInsights({
           ) : null}
         </>
       ) : (
-        <p className="text-xs text-neutral-500">
-          Ainda não há medidas publicadas pelo seu personal. Elas aparecem aqui quando forem
-          sincronizadas na aba Medidas.
-        </p>
+        <p className="text-xs text-neutral-500">{ACOMPANHAMENTO_MEDIDAS_EMPTY}</p>
       )}
     </div>
   );

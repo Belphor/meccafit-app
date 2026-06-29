@@ -1,26 +1,41 @@
 import {
-  PHASE_2_MAINTENANCE_VTC_30D,
-  PHASE_3_MAINTENANCE_VTC_30D,
+  resolvePhaseVtcThresholds,
+  type AcademiaConfig,
+} from "@/lib/academia-config";
+import {
   PHASE_LAYOUT_RESTORATION_SESSION_KG,
+  PHASE_TIER_LABELS,
   type PhaseLayoutCode,
   type PhaseTier,
 } from "@/lib/dashboard-config";
 import { resolvePhaseTier } from "@/lib/custom-preferences";
+import { resolveMonthContextSp } from "@/lib/meta-sync-calendar";
 
 export type ThermalGravityMetrics = {
-  vtc_30d: number;
+  vtc_month?: number;
+  vtc_30d?: number;
   session_vtc_today: number;
 };
 
 export type ThermalGravityState = {
   phase_reached: PhaseLayoutCode;
   active_phase_layout: PhaseLayoutCode;
+  effective_tier: PhaseTier;
+  vtc_month: number;
   vtc_30d: number;
   session_vtc_today: number;
-  maintenance_required_kg: number | null;
+  month_label: string;
+  day_of_month: number;
+  days_in_month: number;
+  days_remaining: number;
+  monthly_goal_kg: number | null;
+  next_tier: PhaseTier | null;
+  leveled_up_this_month: boolean;
   is_degraded: boolean;
   restoration_active: boolean;
   restoration_session_baseline_kg: number | null;
+  /** Mês civil avaliado na última virada (quando houve regressão). */
+  settled_month_label?: string | null;
 };
 
 const PHASE_TIER_TO_LAYOUT: Record<PhaseTier, PhaseLayoutCode> = {
@@ -41,16 +56,38 @@ function sanitizeKg(value: unknown): number {
   return Math.round(parsed * 100) / 100;
 }
 
-function maintenanceThresholdForPhase(phaseReached: PhaseLayoutCode): number | null {
-  if (phaseReached === "FAISCA") return PHASE_2_MAINTENANCE_VTC_30D;
-  if (phaseReached === "LABAREDA") return PHASE_3_MAINTENANCE_VTC_30D;
-  return null;
+export function resolveLevelThresholdKg(
+  tier: PhaseTier,
+  config?: Partial<AcademiaConfig> | null,
+): number {
+  const t = resolvePhaseVtcThresholds(config);
+  switch (tier) {
+    case 5:
+      return t.fogoCosmico;
+    case 4:
+      return t.labareda;
+    case 3:
+      return t.brasa;
+    case 2:
+      return t.faisca;
+    default:
+      return 0;
+  }
 }
 
-function degradedLayoutForPhase(phaseReached: PhaseLayoutCode): PhaseLayoutCode | null {
-  if (phaseReached === "LABAREDA") return "FAISCA";
-  if (phaseReached === "FAISCA") return "CINZAS";
-  return null;
+/** Meta do mês: patamar VTC da próxima fase (subir de nível até a virada do mês). */
+export function resolveMonthlyLevelUpGoalKg(
+  conqueredTier: PhaseTier,
+  config?: Partial<AcademiaConfig> | null,
+): { goalKg: number | null; nextTier: PhaseTier | null } {
+  if (conqueredTier <= 1) {
+    return { goalKg: resolveLevelThresholdKg(2, config), nextTier: 2 };
+  }
+  if (conqueredTier >= 5) {
+    return { goalKg: resolveLevelThresholdKg(5, config), nextTier: null };
+  }
+  const nextTier = (conqueredTier + 1) as PhaseTier;
+  return { goalKg: resolveLevelThresholdKg(nextTier, config), nextTier };
 }
 
 function restorationBaselineForPhase(phaseReached: PhaseLayoutCode): number | null {
@@ -58,43 +95,50 @@ function restorationBaselineForPhase(phaseReached: PhaseLayoutCode): number | nu
   return baseline > 0 ? baseline : null;
 }
 
-/** IRIS/GROWTH — evaluates layout override without mutating cumulative VTC. */
+/**
+ * Gravidade Térmica · mês civil (Brasília).
+ * A regressão acontece na virada do mês (servidor). O card mostra o ritmo do mês atual.
+ */
 export function evaluateThermalGravity(
   phaseTier: unknown,
   metrics: ThermalGravityMetrics,
+  config?: Partial<AcademiaConfig> | null,
 ): ThermalGravityState {
-  const phase_reached = phaseTierToLayoutCode(phaseTier);
-  const vtc_30d = sanitizeKg(metrics.vtc_30d);
+  const conqueredTier = resolvePhaseTier(phaseTier);
+  const phase_reached = phaseTierToLayoutCode(conqueredTier);
+  const vtc_month = sanitizeKg(metrics.vtc_month ?? 0);
+  const vtc_30d = sanitizeKg(metrics.vtc_30d ?? metrics.vtc_month ?? 0);
   const session_vtc_today = sanitizeKg(metrics.session_vtc_today);
-  const maintenance_required_kg = maintenanceThresholdForPhase(phase_reached);
+  const monthCtx = resolveMonthContextSp();
+
+  const { goalKg: monthly_goal_kg, nextTier: next_tier } = resolveMonthlyLevelUpGoalKg(
+    conqueredTier,
+    config,
+  );
+
+  const leveled_up_this_month =
+    monthly_goal_kg !== null &&
+    monthly_goal_kg > 0 &&
+    (vtc_month >= monthly_goal_kg || vtc_30d >= monthly_goal_kg);
+
   const restoration_session_baseline_kg = restorationBaselineForPhase(phase_reached);
-
-  const degradedTarget = degradedLayoutForPhase(phase_reached);
-  let active_phase_layout = phase_reached;
-  let is_degraded = false;
-
-  if (degradedTarget !== null && maintenance_required_kg !== null && vtc_30d < maintenance_required_kg) {
-    active_phase_layout = degradedTarget;
-    is_degraded = true;
-  }
-
-  const restoration_active =
-    is_degraded &&
-    restoration_session_baseline_kg !== null &&
-    session_vtc_today >= restoration_session_baseline_kg;
-
-  if (restoration_active) {
-    active_phase_layout = phase_reached;
-  }
 
   return {
     phase_reached,
-    active_phase_layout,
+    active_phase_layout: phase_reached,
+    effective_tier: conqueredTier,
+    vtc_month,
     vtc_30d,
     session_vtc_today,
-    maintenance_required_kg,
-    is_degraded,
-    restoration_active,
+    month_label: monthCtx.monthLabel,
+    day_of_month: monthCtx.dayOfMonth,
+    days_in_month: monthCtx.daysInMonth,
+    days_remaining: monthCtx.daysRemaining,
+    monthly_goal_kg,
+    next_tier,
+    leveled_up_this_month,
+    is_degraded: false,
+    restoration_active: false,
     restoration_session_baseline_kg,
   };
 }
@@ -105,24 +149,47 @@ export function parseThermalGravityState(raw: unknown): ThermalGravityState | nu
 
   const phase_reached = row.phase_reached;
   const active_phase_layout = row.active_phase_layout;
-  if (typeof phase_reached !== "string" || typeof active_phase_layout !== "string") return null;
+  if (typeof phase_reached === "string" && typeof active_phase_layout === "string") {
+    const monthCtx = resolveMonthContextSp();
+    return {
+      phase_reached: phase_reached as PhaseLayoutCode,
+      active_phase_layout: active_phase_layout as PhaseLayoutCode,
+      effective_tier:
+        typeof row.effective_tier === "number"
+          ? (Math.min(5, Math.max(1, Math.round(row.effective_tier))) as PhaseTier)
+          : 1,
+      vtc_month: sanitizeKg(row.vtc_month ?? row.vtc_20d ?? row.vtc_30d),
+      vtc_30d: sanitizeKg(row.vtc_30d ?? row.vtc_month ?? row.vtc_20d),
+      session_vtc_today: sanitizeKg(row.session_vtc_today),
+      month_label: typeof row.month_label === "string" ? row.month_label : monthCtx.monthLabel,
+      day_of_month: typeof row.day_of_month === "number" ? row.day_of_month : monthCtx.dayOfMonth,
+      days_in_month: typeof row.days_in_month === "number" ? row.days_in_month : monthCtx.daysInMonth,
+      days_remaining:
+        typeof row.days_remaining === "number" ? row.days_remaining : monthCtx.daysRemaining,
+      monthly_goal_kg:
+        row.monthly_goal_kg === null || row.monthly_goal_kg === undefined
+          ? null
+          : sanitizeKg(row.monthly_goal_kg),
+      next_tier:
+        typeof row.next_tier === "number"
+          ? (Math.min(5, Math.max(1, Math.round(row.next_tier))) as PhaseTier)
+          : null,
+      leveled_up_this_month: row.leveled_up_this_month === true,
+      is_degraded: row.is_degraded === true,
+      restoration_active: row.restoration_active === true,
+      restoration_session_baseline_kg:
+        row.restoration_session_baseline_kg === null
+          ? null
+          : sanitizeKg(row.restoration_session_baseline_kg),
+      settled_month_label:
+        typeof row.settled_month_label === "string" ? row.settled_month_label : null,
+    };
+  }
 
-  return {
-    phase_reached: phase_reached as PhaseLayoutCode,
-    active_phase_layout: active_phase_layout as PhaseLayoutCode,
-    vtc_30d: sanitizeKg(row.vtc_30d),
-    session_vtc_today: sanitizeKg(row.session_vtc_today),
-    maintenance_required_kg:
-      row.maintenance_required_kg === null
-        ? null
-        : sanitizeKg(row.maintenance_required_kg),
-    is_degraded: row.is_degraded === true,
-    restoration_active: row.restoration_active === true,
-    restoration_session_baseline_kg:
-      row.restoration_session_baseline_kg === null
-        ? null
-        : sanitizeKg(row.restoration_session_baseline_kg),
-  };
+  const vtc_month = sanitizeKg(row.vtc_month ?? row.vtc_20d ?? row.vtc_30d);
+  const vtc_30d = sanitizeKg(row.vtc_30d ?? vtc_month);
+  const session_vtc_today = sanitizeKg(row.session_vtc_today);
+  return evaluateThermalGravity(1, { vtc_month, vtc_30d, session_vtc_today });
 }
 
 export function thermalGravityToProfileFields(state: ThermalGravityState): Record<string, unknown> {
@@ -131,4 +198,29 @@ export function thermalGravityToProfileFields(state: ThermalGravityState): Recor
     active_phase_layout: state.active_phase_layout,
     thermal_gravity: state,
   };
+}
+
+export function resolveMonthlyLevelUpProgressPercent(state: ThermalGravityState): number | null {
+  if (state.monthly_goal_kg === null || state.monthly_goal_kg <= 0) return null;
+  const progress = Math.max(state.vtc_month, state.vtc_30d);
+  return Math.min(150, Math.round((progress / state.monthly_goal_kg) * 100));
+}
+
+export function formatMonthlyGoalLabel(state: ThermalGravityState): string {
+  if (state.leveled_up_this_month) {
+    return state.next_tier
+      ? `Prova de ${state.month_label} cumprida. Patamar de ${PHASE_TIER_LABELS[state.next_tier]} atingido.`
+      : `Prova de ${state.month_label} cumprida. Fogo Cósmico renovado.`;
+  }
+  if (state.next_tier) {
+    return `Alcance ${PHASE_TIER_LABELS[state.next_tier]} antes da virada do mês.`;
+  }
+  return `Renove ${PHASE_TIER_LABELS[5]} antes da virada do mês.`;
+}
+
+export function formatThermalGravityShortHint(state: ThermalGravityState): string {
+  if (state.leveled_up_this_month) {
+    return "Sua fase está protegida neste ciclo.";
+  }
+  return "Suba de fase até a virada do mês ou a linhagem desce um nível.";
 }

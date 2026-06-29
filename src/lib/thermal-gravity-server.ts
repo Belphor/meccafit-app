@@ -7,6 +7,7 @@ import {
 } from "@/lib/thermal-gravity";
 
 export type ThermalGravityMetricsRow = {
+  vtc_month: number;
   vtc_30d: number;
   session_vtc_today: number;
   available: boolean;
@@ -16,17 +17,19 @@ export async function fetchThermalGravityMetrics(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<ThermalGravityMetricsRow> {
-  const [vtc30Result, sessionResult] = await Promise.all([
+  const [vtcMonthResult, vtc30dResult, sessionResult] = await Promise.all([
+    supabase.rpc("argos_compute_vtc_month_sp", { p_user_id: userId }),
     supabase.rpc("argos_compute_vtc_30d", { p_user_id: userId }),
     supabase.rpc("argos_compute_session_vtc_today", { p_user_id: userId }),
   ]);
 
-  if (vtc30Result.error || sessionResult.error) {
-    return { vtc_30d: 0, session_vtc_today: 0, available: false };
+  if (vtcMonthResult.error || vtc30dResult.error || sessionResult.error) {
+    return { vtc_month: 0, vtc_30d: 0, session_vtc_today: 0, available: false };
   }
 
   return {
-    vtc_30d: Number(vtc30Result.data ?? 0),
+    vtc_month: Number(vtcMonthResult.data ?? 0),
+    vtc_30d: Number(vtc30dResult.data ?? 0),
     session_vtc_today: Number(sessionResult.data ?? 0),
     available: true,
   };

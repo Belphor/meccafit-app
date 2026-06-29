@@ -70,13 +70,14 @@ async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
 
   const { data } = await supabase
     .from("planos_atletas")
-    .select("total_treinos_mensais_planejados")
+    .select("total_treinos_mensais_planejados, meta_sync_mes")
     .eq("atleta_id", userId)
     .maybeSingle();
 
   if (!data) {
     return {
       totalTreinosMensaisPlanejados: PLAN_SESSIONS_DEFAULT,
+      metaSyncMes: null,
     };
   }
 
@@ -85,6 +86,7 @@ async function fetchAthletePlan(userId: string): Promise<AthletePlanConfig> {
       typeof data.total_treinos_mensais_planejados === "number"
         ? data.total_treinos_mensais_planejados
         : PLAN_SESSIONS_DEFAULT,
+    metaSyncMes: data.meta_sync_mes ?? null,
   };
 }
 

@@ -29,8 +29,8 @@ function resolveNome(
   userId: string,
   rankings: RankingsThoth | null,
 ): string {
-  if (!atletaId) return "—";
-  if (atletaId === userId) return "Tu";
+  if (!atletaId) return "Vago";
+  if (atletaId === userId) return "Você";
   const hit = rankings?.vtc_global.find((row) => row.atleta_id === atletaId);
   return hit?.atleta_nome ?? `${atletaId.slice(0, 8)}…`;
 }
@@ -57,7 +57,7 @@ function TituloCard({
   if (empty) {
     return (
       <li className="flex min-h-[4.5rem] items-center justify-center rounded-xl border border-dashed border-violet-500/20 px-3 py-3 text-center text-[10px] text-neutral-600">
-        {label} · vago
+        {label} vago
       </li>
     );
   }
@@ -86,18 +86,18 @@ function IrisLegend() {
   const items = [
     {
       color: IRIS_BORDER_CINTURAO,
-      label: "Rosa · Cinturão",
-      detail: "Ganhaste um duelo e manténs o título até perderes",
+      label: "Rosa: Cinturão",
+      detail: "Você ganhou um duelo e mantém o título até perder",
     },
     {
       color: IRIS_BORDER_REI_CHAMAS,
-      label: "Violeta · Rei das Chamas",
-      detail: "Foste #1 no ranking mensal da faixa (superiores ou pernas)",
+      label: "Violeta: Rei das Chamas",
+      detail: "Você ficou em 1º no ranking mensal da faixa (superiores ou pernas)",
     },
     {
       color: IRIS_BORDER_PILAR_COOP,
-      label: "Dourado · Pilar",
-      detail: "Estiveste entre os 3 que mais ajudaram o termómetro no mês",
+      label: "Dourado: Pilar",
+      detail: "Você esteve entre os 3 que mais ajudaram o termômetro no mês",
     },
   ];
 
@@ -116,7 +116,7 @@ function IrisLegend() {
             />
             <span className="min-w-0 break-words text-pretty leading-relaxed">
               <span className="font-medium text-neutral-300">{item.label}</span>
-              <span className="text-neutral-500"> · {item.detail}</span>
+              <span className="text-neutral-500">. {item.detail}</span>
             </span>
           </li>
         ))}
@@ -147,8 +147,8 @@ export function ComunidadeTitulosPanel({
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
           Os <span className="font-medium text-neutral-300">Reis</span> vêm do ranking mensal
           fechado. Os <span className="font-medium text-neutral-300">Pilares</span> vêm do
-          termómetro. O <span className="font-medium text-neutral-300">cinturão</span> é só por
-          duelo — vês os campeões na arena acima.
+          termômetro. O <span className="font-medium text-neutral-300">cinturão</span> é só por
+          duelo. Veja os campeões na arena acima.
         </p>
       </header>
 
@@ -161,18 +161,18 @@ export function ComunidadeTitulosPanel({
               Reis das Chamas
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
-              Vencedores do último fecho mensal — um por faixa (superiores e pernas).
+              Vencedores do último fechamento mensal, um por faixa (superiores e pernas).
             </p>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <TituloCard
-                label="Rei · Superiores"
+                label="Rei Superiores"
                 nome={resolveNome(reisChamas.SUPERIORES, userId, rankings)}
                 borderColor={IRIS_BORDER_REI_CHAMAS}
                 flags={{ isReiDasChamas: Boolean(reisChamas.SUPERIORES) }}
                 empty={!reisChamas.SUPERIORES}
               />
               <TituloCard
-                label="Rei · Inferiores"
+                label="Rei Inferiores"
                 nome={resolveNome(reisChamas.INFERIORES, userId, rankings)}
                 borderColor={IRIS_BORDER_REI_CHAMAS}
                 flags={{ isReiDasChamas: Boolean(reisChamas.INFERIORES) }}

@@ -17,6 +17,7 @@ import {
 } from "@/lib/forja-config";
 import { FORJA_COPY } from "@/lib/forja-copy";
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
+import { resolveAccountAccessDisplay } from "@/lib/account-access-status";
 import {
   patchAthleteVtcAfterAdjust,
   resolveFraudSignalMessage,
@@ -425,7 +426,7 @@ function ForjaAntiFraudPanelComponent({
           <p className={FORJA_SECTION_CHIP}>{FORJA_COPY.monitor.tribunal}</p>
           <p className={`${FORJA_META} mt-2`}>
             {athlete.displayName}
-            {athlete.statusAltar ? ` · ${athlete.statusAltar}` : ""}
+            {` · ${resolveAccountAccessDisplay(athlete.statusAltar).label}`}
           </p>
           <p className={`${FORJA_META} mt-1 text-zinc-500`}>{FORJA_COPY.monitor.tribunalHint}</p>
           <p className={`${FORJA_META} mt-2 rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-zinc-500`}>

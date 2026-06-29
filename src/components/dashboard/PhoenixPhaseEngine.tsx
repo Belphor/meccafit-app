@@ -1,27 +1,22 @@
 "use client";
 
 /**
- * Motor visual de fases Fênix (Thermal Gravity + transmutação).
- * NÃO é a Anima FENYXIA (concierge IA) — essa será implementada no fim do projeto.
+ * Motor visual de fases Fênix.
+ * Transmutação da linhagem fica em LinhagemTransmutationHost.
  */
 
 import {
   memo,
-  useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { PhaseTransmutation } from "@/components/dashboard/PhaseTransmutation";
-import { ThermalGravityRestorationFlash } from "@/components/dashboard/ThermalGravityRestorationFlash";
 import {
   PHASE_ONE_MIN_SESSIONS,
   PHASE_ONE_MIN_VTC_KG,
   PHASE_TIER_LABELS,
-  PHASE_TIER_STORAGE_PREFIX,
   type PhaseLayoutCode,
   type PhaseTier,
 } from "@/lib/dashboard-config";
@@ -57,32 +52,12 @@ export type PhoenixPhaseRuntimeContext = {
   activePhaseLayout: PhaseLayoutCode | null;
   isThermallyDegraded: boolean;
   isThermalRestorationActive: boolean;
-  /** Fórum / UI degradada — inactivo térmico sem restauração na sessão. */
+  /** @deprecated Regressão por inatividade — fórum não bloqueia mais por VTC. */
   isForumInactive: boolean;
-  vtc30d: number;
+  vtcMonth: number;
   sessionVtcToday: number;
   isHydrated: boolean;
 };
-
-function readAcknowledgedTier(userId: string): PhaseTier | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(`${PHASE_TIER_STORAGE_PREFIX}${userId}`);
-    if (!raw) return null;
-    return resolvePhaseTier(Number(raw));
-  } catch {
-    return null;
-  }
-}
-
-function writeAcknowledgedTier(userId: string, tier: PhaseTier): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(`${PHASE_TIER_STORAGE_PREFIX}${userId}`, String(tier));
-  } catch {
-    // quota / private mode
-  }
-}
 
 function extractPhasePayload(profileRow: Record<string, unknown> | null | undefined): BundlePhasePayload {
   const phaseTier = resolvePhaseTier(profileRow?.phase_tier);
@@ -95,7 +70,6 @@ function extractPhasePayload(profileRow: Record<string, unknown> | null | undefi
 }
 
 export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
-  userId,
   profileRow,
   liveSessionVtcKg = 0,
   children,
@@ -106,11 +80,6 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
     () => cosmeticPreferencesToCssVars(payload.custom_preferences),
     [payload.custom_preferences],
   );
-
-  const [showTransmutation, setShowTransmutation] = useState(false);
-  const [showRestorationFlash, setShowRestorationFlash] = useState(false);
-  const transmutationEvaluatedRef = useRef<number | null>(null);
-  const restorationActiveRef = useRef(false);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -124,15 +93,17 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
   );
 
   const thermalGravity = useMemo<ThermalGravityState | null>(() => {
-    if (!hasPhaseSignal || !serverThermal) return null;
+    if (!hasPhaseSignal) return null;
 
     const session_vtc_today = Math.max(
-      serverThermal.session_vtc_today,
+      serverThermal?.session_vtc_today ?? 0,
       Math.max(0, liveSessionVtcKg),
     );
+    const vtc_month = serverThermal?.vtc_month ?? 0;
 
     return evaluateThermalGravity(payload.phase_tier, {
-      vtc_30d: serverThermal.vtc_30d,
+      vtc_month: serverThermal?.vtc_month ?? 0,
+      vtc_30d: serverThermal?.vtc_30d ?? 0,
       session_vtc_today,
     });
   }, [hasPhaseSignal, liveSessionVtcKg, payload.phase_tier, serverThermal]);
@@ -143,10 +114,7 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
     return payload.phase_tier > 1;
   }, [payload.phase_progress, payload.phase_tier]);
 
-  const isThermallyDegraded = thermalGravity?.is_degraded === true;
-  const isThermalRestorationActive = thermalGravity?.restoration_active === true;
   const activePhaseLayout = thermalGravity?.active_phase_layout ?? null;
-  const isForumInactive = isThermallyDegraded && !isThermalRestorationActive;
 
   const runtimeContext = useMemo<PhoenixPhaseRuntimeContext>(
     () => ({
@@ -157,68 +125,17 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
       phaseOneComplete,
       thermalGravity,
       activePhaseLayout,
-      isThermallyDegraded,
-      isThermalRestorationActive,
-      isForumInactive,
-      vtc30d: thermalGravity?.vtc_30d ?? 0,
+      isThermallyDegraded: false,
+      isThermalRestorationActive: false,
+      isForumInactive: false,
+      vtcMonth: thermalGravity?.vtc_month ?? 0,
       sessionVtcToday: thermalGravity?.session_vtc_today ?? Math.max(0, liveSessionVtcKg),
       isHydrated,
     }),
-    [
-      activePhaseLayout,
-      isForumInactive,
-      isHydrated,
-      isThermalRestorationActive,
-      isThermallyDegraded,
-      liveSessionVtcKg,
-      payload,
-      phaseOneComplete,
-      thermalGravity,
-    ],
+    [activePhaseLayout, isHydrated, liveSessionVtcKg, payload, phaseOneComplete, thermalGravity],
   );
 
-  useEffect(() => {
-    if (!hasPhaseSignal) return;
-    if (transmutationEvaluatedRef.current === payload.phase_tier) return;
-    transmutationEvaluatedRef.current = payload.phase_tier;
-
-    const acknowledged = readAcknowledgedTier(userId);
-
-    if (acknowledged === null) {
-      if (payload.phase_tier > 1) {
-        setShowTransmutation(true);
-      } else {
-        writeAcknowledgedTier(userId, payload.phase_tier);
-      }
-      return;
-    }
-
-    if (payload.phase_tier > acknowledged) {
-      setShowTransmutation(true);
-    } else if (payload.phase_tier <= acknowledged) {
-      writeAcknowledgedTier(userId, payload.phase_tier);
-    }
-  }, [hasPhaseSignal, userId, payload.phase_tier]);
-
-  useEffect(() => {
-    const restorationNow = thermalGravity?.restoration_active === true;
-    if (restorationNow && !restorationActiveRef.current) {
-      setShowRestorationFlash(true);
-    }
-    restorationActiveRef.current = restorationNow;
-  }, [thermalGravity?.restoration_active]);
-
-  const handleTransmutationDismiss = useCallback(() => {
-    writeAcknowledgedTier(userId, payload.phase_tier);
-    setShowTransmutation(false);
-  }, [userId, payload.phase_tier]);
-
-  const handleRestorationFlashComplete = useCallback(() => {
-    setShowRestorationFlash(false);
-  }, []);
-
   const shellStyle = useMemo(() => cssVars as CSSProperties, [cssVars]);
-  const layoutBlocked = isForumInactive;
 
   return (
     <div
@@ -227,35 +144,9 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
       data-phase-label={PHASE_TIER_LABELS[payload.phase_tier]}
       data-phase-reached={thermalGravity?.phase_reached}
       data-active-phase-layout={activePhaseLayout ?? undefined}
-      data-thermal-degraded={layoutBlocked ? "true" : undefined}
-      data-thermal-restoration={isThermalRestorationActive ? "true" : undefined}
-      className={[
-        "meccafit-cosmetic-shell relative min-h-dvh w-full",
-        layoutBlocked ? "meccafit-thermal-layout-blocked" : "",
-        isThermalRestorationActive ? "meccafit-thermal-restoration-active" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className="meccafit-cosmetic-shell relative min-h-dvh w-full"
       style={shellStyle}
     >
-      {showTransmutation ? (
-        <PhaseTransmutation phaseTier={payload.phase_tier} onDismiss={handleTransmutationDismiss} />
-      ) : null}
-
-      {showRestorationFlash ? (
-        <ThermalGravityRestorationFlash
-          active={showRestorationFlash}
-          onComplete={handleRestorationFlashComplete}
-        />
-      ) : null}
-
-      {layoutBlocked ? (
-        <div
-          className="meccafit-thermal-gravity-veil pointer-events-none fixed inset-0 z-[7]"
-          aria-hidden
-        />
-      ) : null}
-
       {children(runtimeContext)}
 
       {payload.phase_tier === 1 && payload.phase_progress ? (
@@ -271,25 +162,6 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
             {payload.phase_progress.sessions}/{PHASE_ONE_MIN_SESSIONS} sessões ·{" "}
             {payload.phase_progress.vtc_cumulative.toLocaleString("pt-BR")}/
             {PHASE_ONE_MIN_VTC_KG.toLocaleString("pt-BR")} kg VTC
-          </p>
-        </aside>
-      ) : null}
-
-      {layoutBlocked && thermalGravity ? (
-        <aside
-          className="pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-[8] max-w-[min(18rem,88vw)] rounded-xl border border-orange-500/12 bg-black/75 px-3 py-2 backdrop-blur-sm"
-          aria-label="Manutenção térmica ARGOS"
-        >
-          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-orange-500/85">
-            Gravidade térmica · {thermalGravity.active_phase_layout}
-          </p>
-          <p className="mt-1 text-[10px] leading-snug text-neutral-400">
-            {thermalGravity.vtc_30d.toLocaleString("pt-BR")}/
-            {(thermalGravity.maintenance_required_kg ?? 0).toLocaleString("pt-BR")} kg · 30 dias
-          </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-neutral-600">
-            Sessão {thermalGravity.restoration_session_baseline_kg?.toLocaleString("pt-BR")} kg
-            restaura o braseiro
           </p>
         </aside>
       ) : null}

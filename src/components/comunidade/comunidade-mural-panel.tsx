@@ -14,7 +14,7 @@ import { ForumBrasaVivaView } from "@/features/forum-brasa-viva/ForumBrasaVivaVi
 type ComunidadeMuralPanelProps = {
   userId: string;
   refreshKey: string | number;
-  phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtc30d">;
+  phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtcMonth">;
 };
 
 export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMuralPanelProps) {

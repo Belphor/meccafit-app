@@ -400,9 +400,10 @@ export async function deleteAppFile(nativePath: string): Promise<void> {
   await deleteViaOpfs(`${OPFS_SCHEME}${nativePath}`);
 }
 
-/** Caminho relativo padronizado para avatar premium. */
-export function buildAvatarRelativePath(file: File): string {
-  return toRelativePath(["premium_avatar", `current.${inferExtension(file)}`]);
+/** Caminho relativo padronizado para avatar premium (isolado por conta). */
+export function buildAvatarRelativePath(userId: string, file: File): string {
+  const safeUserId = userId.trim().replace(/[^\w-]/g, "_") || "anonymous";
+  return toRelativePath(["premium_avatar", `${safeUserId}.${inferExtension(file)}`]);
 }
 
 /** Caminho relativo padronizado para selfie de ciclo. */

@@ -26,7 +26,7 @@ export type ForumBrasaVivaViewProps = {
   refreshKey?: string | number;
   phase: Pick<
     PhoenixPhaseRuntimeContext,
-    "isForumInactive" | "isHydrated" | "vtc30d"
+    "isForumInactive" | "isHydrated" | "vtcMonth"
   >;
 };
 
@@ -98,7 +98,7 @@ export function ForumBrasaVivaView({
     <>
       {!embedMode ? (
         <>
-          <DashboardPanelHeader chip="Fórum Brasa-Viva" meta="Comunidade Meccafit" />
+          <DashboardPanelHeader chip="Fórum Brasa-Viva" meta="Comunidade Fenyxia" />
 
           <h2 id="forum-brasa-viva-title" className={`${DASHBOARD_SECTION_TITLE} mt-4`}>
             Fórum Brasa-Viva
@@ -108,16 +108,6 @@ export function ForumBrasaVivaView({
             Forjadores soberanos observam, mas não competem neste fórum.
           </p>
         </>
-      ) : null}
-
-      {phase.isHydrated && phase.isForumInactive ? (
-        <p
-          className="mt-3 break-words rounded-xl border border-neutral-600/25 bg-neutral-950/50 px-3 py-2 text-pretty text-[10px] uppercase tracking-[0.1em] text-neutral-500 xs:tracking-[0.12em]"
-          role="status"
-        >
-          Gravidade térmica · layout em cinzas ({phase.vtc30d.toLocaleString("pt-BR")} kg / 30d).
-          Reengaje no altar para acender o flash de reativação.
-        </p>
       ) : null}
 
       {loading ? (

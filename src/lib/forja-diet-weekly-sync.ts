@@ -63,7 +63,7 @@ export async function syncWeeklyDietToNucleus(
     return {
       ok: false,
       code: "VALIDATION",
-      message: "Vínculo VIP activo obrigatório para publicar dieta semanal.",
+      message: "Vínculo VIP ativo obrigatório para publicar dieta semanal.",
     };
   }
 

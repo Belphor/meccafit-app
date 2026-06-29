@@ -8,19 +8,27 @@ import {
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
   DASHBOARD_TAP_TARGET,
-  FENIX_PUREZA_CLIENT_EXPLANATION,
+  EVOLUTION_HINT,
+  EVOLUTION_SECTION_SUBTITLE,
 } from "@/lib/dashboard-config";
-import { supabase } from "@/lib/supabase";
-import type { TablesInsert } from "@/types/database.types";
+import { clientSyncPlanoMeta } from "@/lib/academia-actions";
+import {
+  buildMetaSyncLockedMessagePt,
+  buildMonthLengthHintPt,
+  formatMonthLabelPt,
+  isMetaSyncedForCurrentMonth,
+  resolveCurrentMonthKeySp,
+  resolveDaysUntilCycleResetSp,
+} from "@/lib/meta-sync-calendar";
+import { LoreEm } from "@/lib/lore-emphasis";
 
 export const PLAN_SESSIONS_MIN = 4;
 export const PLAN_SESSIONS_MAX = 28;
 export const PLAN_SESSIONS_DEFAULT = 16;
 
-const SYNC_SUCCESS_MESSAGE = "Meta de treino sincronizada com o núcleo MIDAS.";
-
 export type AthletePlanConfig = {
   totalTreinosMensaisPlanejados: number;
+  metaSyncMes?: string | null;
 };
 
 export type PlanConfigFormState = {
@@ -30,6 +38,8 @@ export type PlanConfigFormState = {
 type PlanConfigFormProps = {
   userId: string;
   initialPlan?: AthletePlanConfig;
+  /** Dentro do card de Consistência — sem wrapper BrasaVivaCard */
+  embedded?: boolean;
 };
 
 type SyncPhase = "idle" | "syncing" | "success" | "error";
@@ -84,23 +94,24 @@ function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderPro
           aria-valuemin={PLAN_SESSIONS_MIN}
           aria-valuemax={PLAN_SESSIONS_MAX}
           aria-valuenow={value}
-          aria-label="Dias de treino na janela mensal"
+          aria-label="Dias de treino planejados no mês"
         />
       </div>
-      <div className="flex justify-between font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-600">
+      <div className="flex justify-between text-xs text-neutral-500">
         <span>{PLAN_SESSIONS_MIN}</span>
-        <span className="text-cyan-500/70">janela rolante · 30 dias</span>
+        <span>mín · máx</span>
         <span>{PLAN_SESSIONS_MAX}</span>
       </div>
     </div>
   );
 }
 
-export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
+export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanConfigFormProps) {
   const [syncedBaseline, setSyncedBaseline] = useState<PlanConfigFormState>(() =>
     buildPlanState(initialPlan),
   );
   const [draft, setDraft] = useState<PlanConfigFormState>(() => buildPlanState(initialPlan));
+  const [metaSyncMes, setMetaSyncMes] = useState<string | null>(initialPlan?.metaSyncMes ?? null);
   const [phase, setPhase] = useState<SyncPhase>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -108,9 +119,16 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
     const hydrated = buildPlanState(initialPlan);
     setSyncedBaseline(hydrated);
     setDraft(hydrated);
+    setMetaSyncMes(initialPlan?.metaSyncMes ?? null);
     setPhase("idle");
     setFeedback(null);
   }, [initialPlan]);
+
+  const syncedThisMonth = isMetaSyncedForCurrentMonth(metaSyncMes);
+  const currentMonthLabel = formatMonthLabelPt();
+  const syncLocked = syncedThisMonth;
+  const cycleResetMessage = buildMetaSyncLockedMessagePt();
+  const monthLengthHint = buildMonthLengthHintPt();
 
   const hasLocalChanges = useMemo(
     () => !planStatesEqual(draft, syncedBaseline),
@@ -143,138 +161,118 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
     setFeedback(null);
 
     try {
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
+      const result = await clientSyncPlanoMeta(draft.totalTreinosMensaisPlanejados);
 
-      const sessionUserId = session?.user?.id?.trim();
-      if (sessionError || !sessionUserId || sessionUserId !== userId.trim()) {
+      if (!result.ok) {
         setPhase("error");
-        setFeedback("Sessão inválida. Faça login novamente.");
+        setFeedback(result.message);
         return;
       }
 
-      const targetDaysPerWeek = monthlySessionsToDaysPerWeek(draft.totalTreinosMensaisPlanejados);
-
-      const row: TablesInsert<"planos_atletas"> = {
-        atleta_id: sessionUserId,
-        total_treinos_mensais_planejados: draft.totalTreinosMensaisPlanejados,
-        grupos_obrigatorios: [],
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error: planError } = await supabase.from("planos_atletas").upsert(row, {
-        onConflict: "atleta_id",
-      });
-
-      if (planError) {
-        setPhase("error");
-        setFeedback(planError.message);
-        return;
-      }
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ target_days_per_week: targetDaysPerWeek })
-        .eq("id", sessionUserId);
-
-      if (profileError) {
-        setPhase("error");
-        setFeedback(profileError.message);
-        return;
-      }
-
+      const mes = String(result.data.meta_sync_mes ?? resolveCurrentMonthKeySp());
+      setMetaSyncMes(mes);
       setSyncedBaseline(draft);
       setPhase("success");
-      setFeedback(SYNC_SUCCESS_MESSAGE);
+      setFeedback(`Meta sincronizada para ${formatMonthLabelPt(mes.slice(0, 7))}.`);
     } catch {
       setPhase("error");
       setFeedback("Falha de rede ao sincronizar a meta de treino.");
     }
-  }, [draft, userId]);
+  }, [draft]);
 
   const isSyncing = phase === "syncing";
 
-  return (
-    <BrasaVivaCard
-      as="section"
-      variant="treino"
-      className={DASHBOARD_PANEL_FRAME}
-      aria-labelledby="plan-config-title"
-    >
-      <DashboardPanelHeader chip="Meta de treino" meta="Perfil" />
+  const content = (
+    <>
+      {!embedded ? (
+        <DashboardPanelHeader chip="Meta de treino" meta="Evolução · consistência" />
+      ) : null}
 
-      <header className="mt-4 border-b border-orange-500/10 pb-5 sm:pb-6">
+      <header className={`${embedded ? "mt-4" : "mt-4 border-b border-orange-500/10 pb-5 sm:pb-6"}`}>
         <h2 id="plan-config-title" className={DASHBOARD_SECTION_TITLE}>
-          Quantos dias vais treinar
+          {embedded ? "Defina sua meta de treino" : "Quantos dias você vai treinar"}
         </h2>
-        <p className="mt-2 max-w-prose text-[10px] uppercase leading-relaxed tracking-[0.18em] text-neutral-600">
-          Define a meta de consistência para os próximos 30 dias. Alimenta o Índice de Ignição na
-          aba Evolução e na Comunidade. Alterações ficam locais até sincronizar.
+        <p className={`mt-2 max-w-prose ${EVOLUTION_SECTION_SUBTITLE}`}>
+          {embedded ? (
+            <>
+              Comece por aqui. Quantos dias você pretende treinar nos próximos 30 dias. Esse número
+              alimenta o <LoreEm>Ritmo da Fênix</LoreEm> logo abaixo.
+            </>
+          ) : (
+            <>
+              Defina quantos dias você pretende treinar nos próximos 30 dias. Isso alimenta o{" "}
+              <LoreEm>Ritmo da Fênix</LoreEm> e o mapa corporal abaixo. Sincronize uma vez por mês
+              civil ({currentMonthLabel}, horário de Brasília).
+            </>
+          )}
         </p>
+        <p className={`mt-2 ${EVOLUTION_HINT}`}>{monthLengthHint}</p>
+        {!syncedThisMonth ? (
+          <p className="mt-3 rounded-lg border border-amber-500/25 bg-amber-950/25 px-3 py-2.5 text-sm leading-relaxed text-amber-100">
+            Você ainda não sincronizou a meta de {currentMonthLabel}. Ajuste o valor e toque em Sincronizar meta.
+          </p>
+        ) : (
+          <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2.5 text-sm leading-relaxed text-emerald-100">
+            Meta sincronizada para {currentMonthLabel}. {cycleResetMessage}
+          </p>
+        )}
       </header>
 
-      <div className={`mt-6 space-y-6 ${DASHBOARD_INNER_FRAME}`}>
-        <section aria-labelledby="plan-sessions-label" className="space-y-1">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p
-                id="plan-sessions-label"
-                className="font-mono text-[10px] uppercase tracking-[0.2em] text-cyan-400/85"
-              >
-                Dias de treino · janela de 30 dias
-              </p>
-              <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-                ≈ {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana
-              </p>
-            </div>
-            <div
-              className="rounded-lg border border-cyan-500/25 bg-black/55 px-4 py-2 font-mono text-2xl font-bold tabular-nums text-amber-50 shadow-[0_0_10px_rgba(34,211,238,0.12)]"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {draft.totalTreinosMensaisPlanejados}
-            </div>
-          </div>
+      <div className={`${embedded ? "mt-5" : "mt-6"} space-y-6 ${DASHBOARD_INNER_FRAME}`}>
+        <section aria-labelledby="plan-sessions-label" className="space-y-3">
+          <p id="plan-sessions-label" className="text-sm leading-relaxed text-neutral-300">
+            Dias de treino planejados: {draft.totalTreinosMensaisPlanejados}
+            <span className="text-neutral-500">
+              {" "}
+              · ≈ {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana
+            </span>
+          </p>
 
           <PlanSessionsSlider
             value={draft.totalTreinosMensaisPlanejados}
-            disabled={isSyncing}
+            disabled={isSyncing || syncLocked}
             onChange={handleSessionsChange}
           />
         </section>
 
-        <p className="text-xs leading-relaxed text-amber-50/70">{FENIX_PUREZA_CLIENT_EXPLANATION}</p>
+        {!embedded ? (
+          <p className="text-sm leading-relaxed text-neutral-400">
+            <LoreEm>Ritmo da Fênix</LoreEm> mede quanto do seu Volume de Carga Máxima(VTC) meta mensal
+            você já acumulou, em percentual. A meta padrão segue o limiar Faísca da academia. Abaixo de
+            50%, as cores do mapa ficam mais suaves.
+          </p>
+        ) : null}
       </div>
 
-      <footer className="mt-6 flex flex-col gap-3 border-t border-orange-500/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <footer
+        className={`flex flex-col gap-3 ${embedded ? "mt-5 px-4 pb-5 sm:px-5" : "mt-6 border-t border-orange-500/10 pt-5"} sm:flex-row sm:items-center sm:justify-between`}
+      >
         <div className="min-w-0 flex-1">
           {feedback ? (
             <p
-              className={`text-[11px] leading-relaxed ${
-                phase === "error" ? "text-red-400/90" : "text-emerald-300/90"
-              }`}
+              className={`text-sm leading-relaxed ${phase === "error" ? "text-red-400" : "text-emerald-300"
+                }`}
               role={phase === "error" ? "alert" : "status"}
             >
               {feedback}
             </p>
           ) : hasLocalChanges ? (
-            <p className="text-[10px] uppercase tracking-[0.16em] text-amber-400/80">
-              Alterações locais · aguardando sincronização
+            <p className="text-sm text-amber-200">Alterações aguardando sincronização</p>
+          ) : syncLocked ? (
+            <p className={EVOLUTION_HINT}>
+              Próxima sincronização em {resolveDaysUntilCycleResetSp()}{" "}
+              {resolveDaysUntilCycleResetSp() === 1 ? "dia" : "dias"} · {cycleResetMessage}
             </p>
           ) : (
-            <p className="text-[10px] uppercase tracking-[0.16em] text-neutral-600">
-              Uma única gravação por sincronização
-            </p>
+            <p className={EVOLUTION_HINT}>Uma sincronização por mês civil (horário de Brasília)</p>
           )}
         </div>
 
         <button
           type="button"
-          disabled={isSyncing}
+          disabled={isSyncing || syncLocked}
           onClick={() => void handleSync()}
-          className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full shrink-0 rounded-full border border-emerald-500/30 bg-neutral-950/75 px-6 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-100 transition-[opacity,box-shadow,transform] duration-200 hover:shadow-[0_0_16px_rgba(16,185,129,0.28)] active:scale-[0.98] disabled:opacity-60 sm:min-w-[13rem] sm:w-auto`}
+          className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full shrink-0 rounded-full border border-emerald-500/30 bg-neutral-950/75 px-6 py-2.5 text-xs font-semibold text-emerald-100 transition hover:shadow-[0_0_16px_rgba(16,185,129,0.28)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[13rem] sm:w-auto`}
         >
           {isSyncing ? (
             <span className="inline-flex items-center gap-2">
@@ -284,11 +282,32 @@ export function PlanConfigForm({ userId, initialPlan }: PlanConfigFormProps) {
               />
               Sincronizando…
             </span>
+          ) : syncLocked ? (
+            "Meta bloqueada neste mês"
           ) : (
             "Sincronizar meta"
           )}
         </button>
       </footer>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="px-4 pt-1 sm:px-5" aria-labelledby="plan-config-title">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <BrasaVivaCard
+      as="section"
+      variant="treino"
+      className={DASHBOARD_PANEL_FRAME}
+      aria-labelledby="plan-config-title"
+    >
+      {content}
     </BrasaVivaCard>
   );
 }

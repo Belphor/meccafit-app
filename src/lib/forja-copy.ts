@@ -11,7 +11,7 @@ export function resolveForjaRoleLabel(role: string): string {
 }
 
 export function resolveForjaPanelTitle(operator: ForjaOperatorProfile): string {
-  return operator.isSovereign ? "Central da Forja" : "Painel do Personal";
+  return operator.isSovereign ? "Central da Forja" : "Painel do Forjador";
 }
 
 export function resolveForjaPanelSubtitle(operator: ForjaOperatorProfile, athleteCount: number): string {
@@ -164,9 +164,9 @@ export const FORJA_COPY = {
     vtcFeedPageLabel: (page: number, total: number, count: number) =>
       `Página ${page} de ${total} · ${count} cliente${count === 1 ? "" : "s"}`,
     vtcAlertCritical: "Urgente",
-    vtcPhaseTableTitle: "Tabela de fases e volume (VTC 30 dias)",
+    vtcPhaseTableTitle: "Chama Acumulada da Linhagem · volume mensal (kg / 30d)",
     vtcPhaseTableHint:
-      "A fase do cliente depende do total de kg treinados nos últimos 30 dias. Use como referência ao ajustar volume.",
+      "A fase do cliente depende do Volume de Carga Máxima(VTC) acumulado nos últimos 30 dias. Diferente das Brasas Musculares, VTC por grupo em 14 dias, e da Chama do Altar, VTC de hoje.",
     vtcPhaseColPhase: "Fase",
     vtcPhaseColName: "Nome",
     vtcPhaseColVolume: "Volume 30 dias",
@@ -174,15 +174,16 @@ export const FORJA_COPY = {
     vtcFeedEmpty: "Nenhum cliente encontrado.",
     vtcColClient: "Cliente",
     vtcColType: "Tipo",
-    vtcColForjador: "Personal",
+    vtcColForjador: "Forjador",
     vtcColToday: "Hoje",
     vtcColAvg7d: "Média 7 dias",
     vtcCol30d: "Últimos 30 dias",
     vtcColPhase: "Fase",
+    vtcColAccess: "Acesso",
     vtcColPhaseHint: "Alinhada ao volume dos últimos 30 dias",
     vtcSpike: "Alerta",
     vtcOwnClient: "Seu cliente",
-    vtcOtherClient: "Outro personal",
+    vtcOtherClient: "Outro Forjador",
     globalAlerts: "Alertas gerais",
     globalEmpty: "Nenhum alerta no momento.",
     refresh: "Atualizar",

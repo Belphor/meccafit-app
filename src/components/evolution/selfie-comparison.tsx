@@ -48,9 +48,8 @@ const DAY_LABELS: Record<CycleSelfieDay, string> = {
 function HudSelfiePlaceholder({ label, animate }: { label: string; animate?: boolean }) {
   return (
     <div
-      className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-[#050508] ${
-        animate ? "animate-pulse" : ""
-      }`}
+      className={`relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-[#050508] ${animate ? "animate-pulse" : ""
+        }`}
       aria-hidden
     >
       <svg
@@ -272,7 +271,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
             Comparação de Ciclo
           </h3>
           <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-neutral-600">
-            PLUTUS · binário local · zero upload na nuvem
+            Zero upload na nuvem
           </p>
         </div>
         <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-neutral-500">
@@ -329,9 +328,8 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
             {/* Divisor central arrastável */}
             <button
               type="button"
-              className={`absolute top-0 z-20 flex h-full w-11 -translate-x-1/2 cursor-ew-resize touch-none flex-col items-center justify-center border-0 bg-transparent p-0 outline-none ${
-                isDragging ? "scale-105" : ""
-              }`}
+              className={`absolute top-0 z-20 flex h-full w-11 -translate-x-1/2 cursor-ew-resize touch-none flex-col items-center justify-center border-0 bg-transparent p-0 outline-none ${isDragging ? "scale-105" : ""
+                }`}
               style={{ left: `${sliderPercent}%` }}
               aria-label="Arrastar divisor de comparação"
               aria-valuemin={0}
@@ -406,9 +404,8 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
 
       {feedback ? (
         <p
-          className={`text-[10px] ${
-            storageStatus === "blocked" ? "text-amber-400/85" : "text-emerald-300/80"
-          }`}
+          className={`text-[10px] ${storageStatus === "blocked" ? "text-amber-400/85" : "text-emerald-300/80"
+            }`}
           role="status"
         >
           {feedback}

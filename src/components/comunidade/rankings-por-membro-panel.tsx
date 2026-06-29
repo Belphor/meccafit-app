@@ -146,18 +146,18 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
       <header className={COMUNIDADE_HEADER}>
         <p className={`${COMUNIDADE_EYEBROW} text-violet-300/85`}>Ranking mensal</p>
         <h3 className={`${COMUNIDADE_HEADING} text-violet-50/95`}>
-          Top 10 · quem lidera em {mesLabel}
+          Top 10: quem lidera em {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Contamos o teu <span className="font-medium text-neutral-300">melhor peso do dia</span> em
-          cada exercício e somamos tudo no mês — essa pontuação chama-se{" "}
+          Contamos seu <span className="font-medium text-neutral-300">melhor peso do dia</span> em
+          cada exercício e somamos tudo no mês. Essa pontuação chama-se{" "}
           <span className="font-medium text-neutral-300">VTC</span>.
         </p>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
           Nas abas <span className="font-medium text-neutral-300">Superiores</span> e{" "}
-          <span className="font-medium text-neutral-300">Pernas</span>, quem fechar o mês em 1.º
+          <span className="font-medium text-neutral-300">Pernas</span>, quem fechar o mês em 1º
           lugar torna-se <span className="font-medium text-neutral-300">Rei das Chamas</span> no mês
-          seguinte. As restantes abas servem só para veres o detalhe por músculo.
+          seguinte. As outras abas servem para ver o detalhe por músculo.
         </p>
       </header>
 
@@ -180,8 +180,8 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
               {label}
               {rei ? (
                 <>
-                  <span className="hidden sm:inline"> · define Rei</span>
-                  <span className="sm:hidden"> · Rei</span>
+                  <span className="hidden sm:inline"> (define Rei)</span>
+                  <span className="sm:hidden"> (Rei)</span>
                 </>
               ) : null}
             </button>
@@ -193,7 +193,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
         <div className="mt-4 h-40 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
       ) : activeList.length === 0 ? (
         <div className="mt-4">
-          <EmptyState message="Ainda não há dados neste mês. Regista treinos com peso para entrares na classificação." />
+          <EmptyState message="Ainda não há dados neste mês. Registre treinos com peso para entrar na classificação." />
         </div>
       ) : (
         <ul className={`mt-4 ${COMUNIDADE_LIST_SCROLL}`}>

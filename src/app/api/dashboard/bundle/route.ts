@@ -16,6 +16,7 @@ import {
   fetchThermalGravityMetrics,
   type ThermalGravityMetricsRow,
 } from "@/lib/thermal-gravity-server";
+import { parseLinhagemInactivitySync, parseThermalGravitySettlement } from "@/lib/linhagem-inactivity";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Enums } from "@/types/database.types";
 import type { TrainingTrackState } from "@/lib/training-track";
@@ -62,9 +63,14 @@ function parseBundleThermal(raw: unknown): ThermalGravityMetricsRow | null {
   if (!raw || typeof raw !== "object") return null;
   const row = raw as Record<string, unknown>;
   return {
-    vtc_30d: Number(row.vtc_30d ?? 0),
+    vtc_month: Number(row.vtc_month ?? row.vtc_20d ?? row.vtc_30d ?? 0),
+    vtc_30d: Number(row.vtc_30d ?? row.vtc_month ?? row.vtc_20d ?? 0),
     session_vtc_today: Number(row.session_vtc_today ?? 0),
-    available: row.vtc_30d !== undefined || row.session_vtc_today !== undefined,
+    available:
+      row.vtc_month !== undefined ||
+      row.vtc_30d !== undefined ||
+      row.vtc_20d !== undefined ||
+      row.session_vtc_today !== undefined,
   };
 }
 
@@ -90,7 +96,9 @@ async function fetchBundleViaRpc(
     profile?: DashboardProfileRow | null;
     historico?: HistoricoTreinoRow[] | null;
     mural?: CommunityMuralRow[] | null;
-    thermal_gravity?: { vtc_30d?: number; session_vtc_today?: number } | null;
+    thermal_gravity?: { vtc_month?: number; vtc_30d?: number; vtc_20d?: number; session_vtc_today?: number } | null;
+    linhagem_inactivity?: unknown;
+    thermal_gravity_settlement?: unknown;
   };
 
   if (!bundle.profile) {
@@ -104,6 +112,8 @@ async function fetchBundleViaRpc(
     historico: bundle.historico ?? [],
     muralPosts: mapCommunityMuralRowsToPosts(bundle.mural ?? []),
     thermalMetrics: parseBundleThermal(bundle.thermal_gravity),
+    linhagemInactivity: parseLinhagemInactivitySync(bundle.linhagem_inactivity),
+    thermalSettlement: parseThermalGravitySettlement(bundle.thermal_gravity_settlement),
   };
 }
 
@@ -112,7 +122,7 @@ async function fetchBundleViaParallel(
   userId: string,
   musculo: Enums<"subgrupo_muscular">,
 ) {
-  const [profileRes, historicoRes, muralRes, phaseRes] = await Promise.all([
+  const [profileRes, historicoRes, muralRes, phaseRes, inactivityRes, thermalSettleRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -130,6 +140,8 @@ async function fetchBundleViaParallel(
       .order("registrado_em", { ascending: false }),
     supabase.rpc("argos_fetch_mural_comunidade", { p_limit: MURAL_BUNDLE_LIMIT }),
     supabase.rpc("argos_advance_phase_if_eligible", { p_user_id: userId }),
+    supabase.rpc("argos_sync_linhagem_presence"),
+    supabase.rpc("argos_settle_thermal_gravity_monthly"),
   ]);
 
   if (profileRes.error || !profileRes.data) {
@@ -142,9 +154,16 @@ async function fetchBundleViaParallel(
   const phasePayload = phaseRes.data as
     | { phase_tier?: number; phase_one_progress?: unknown }
     | null;
+  const inactivity = parseLinhagemInactivitySync(inactivityRes.data);
+  const thermalSettlement = parseThermalGravitySettlement(thermalSettleRes.data);
   const profileRow: DashboardProfileRow = {
     ...(profileRes.data as DashboardProfileRow),
-    phase_tier: phasePayload?.phase_tier ?? profileRes.data.phase_tier ?? 1,
+    phase_tier:
+      inactivity?.phase_tier ??
+      thermalSettlement?.phase_tier ??
+      phasePayload?.phase_tier ??
+      profileRes.data.phase_tier ??
+      1,
     phase_progress: phasePayload?.phase_one_progress ?? null,
   };
 
@@ -155,6 +174,8 @@ async function fetchBundleViaParallel(
     historico: historicoRes.data ?? [],
     muralPosts: mapCommunityMuralRowsToPosts((muralRes.data ?? []) as CommunityMuralRow[]),
     thermalMetrics: null as ThermalGravityMetricsRow | null,
+    linhagemInactivity: inactivity,
+    thermalSettlement,
   };
 }
 
@@ -208,11 +229,17 @@ export async function GET(request: Request) {
       ? inlineThermal
       : await fetchThermalGravityMetrics(supabase, userId);
   const enrichedProfileRow = enrichProfileRowWithThermalGravity(rawProfileRow, thermalMetrics);
+  const linhagemInactivity =
+    "linhagemInactivity" in bundleResult ? bundleResult.linhagemInactivity : null;
+  const thermalSettlement =
+    "thermalSettlement" in bundleResult ? bundleResult.thermalSettlement : null;
 
   const body = {
     profile: bundleResult.profile,
     profileRow: enrichedProfileRow,
     thermal_gravity: enrichedProfileRow.thermal_gravity,
+    linhagemInactivity,
+    thermalSettlement,
     subgroup: applyHistoricoToSubgroup(baseSubgroup, bundleResult.historico),
     muralPosts: bundleResult.muralPosts,
     historico: bundleResult.historico,

@@ -84,7 +84,7 @@ export function BraseiroPanel({
       overlay={chamaTier >= 1 ? <div className="chama-altar-ambient" aria-hidden /> : undefined}
       aria-labelledby="braseiro-title"
     >
-      <DashboardPanelHeader chip="Braseiro" meta="Energético" />
+      <DashboardPanelHeader chip="Braseiro" meta="Chama do Altar · kg hoje" />
 
       <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
         <h2 id="braseiro-title" className={DASHBOARD_SECTION_TITLE}>

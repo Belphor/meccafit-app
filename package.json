@@ -43,6 +43,11 @@
     "seed:comunidade-demo": "node scripts/seed-comunidade-demo.mjs",
     "seed:ranking-top10": "node scripts/seed-ranking-top10.mjs",
     "seed:comunidade-full": "npm run seed:test-users && npm run seed:ranking-top10 && npm run seed:comunidade-demo",
+    "test:comunidade-titles": "node scripts/set-test-comunidade-titles.mjs",
+    "simulate:thermal-restoration": "node scripts/simulate-thermal-restoration.mjs setup --user=cliente_principal",
+    "simulate:thermal-restoration:restore": "node scripts/simulate-thermal-restoration.mjs restore --user=cliente_principal",
+    "simulate:thermal-restoration:status": "node scripts/simulate-thermal-restoration.mjs status --user=cliente_principal",
+    "simulate:thermal-restoration:reset": "node scripts/simulate-thermal-restoration.mjs reset --user=cliente_principal",
     "argos:scale:200": "node scripts/argos/load-test-auth.mjs --vus 200 --duration 45 --ramp 15 --latency-budget 650 --app-url https://meccafit-app.vercel.app",
     "test:reset-and-seed": "node scripts/reset-test-training.mjs --catalog-only && node scripts/seed-test-training.mjs",
     "argos:load:5k": "node scripts/argos/load-test.mjs --vus 5000 --duration 30 --ramp 10"

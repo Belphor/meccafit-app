@@ -150,7 +150,7 @@ export function TreinoWeekControls({
         useForjadorSchedule ? buildForjadorScheduleMap(rows) : buildScheduleMap(rows),
       );
     } catch {
-      setError("Falha ao carregar rotina do personal.");
+      setError("Não foi possível carregar a rotina de treino.");
       setSchedule(useForjadorSchedule ? buildForjadorScheduleMap([]) : buildScheduleMap([]));
     } finally {
       setLoadingIndication(false);
@@ -192,7 +192,7 @@ export function TreinoWeekControls({
         </p>
         {hasForjadorPlan ? (
           <p className={`${TREINO_EXECUTION_META} text-emerald-500/45`}>
-            Descanso {forjadorConfig.descansoPadraoSeg}s · cardio {forjadorConfig.cardioMetaMinutos} min
+            Descanso {forjadorConfig.descansoPadraoSeg}s, cardio {forjadorConfig.cardioMetaMinutos} min
           </p>
         ) : null}
       </div>
@@ -201,7 +201,7 @@ export function TreinoWeekControls({
         <div className="mb-2.5 flex items-center justify-between gap-2 sm:mb-3">
           <p className={TREINO_DAY_PICKER_LABEL}>Escolha o dia</p>
           <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-emerald-500/40 sm:text-[8px] sm:tracking-[0.12em]">
-            {loadingIndication ? "Sincronizando…" : "Seg · Sáb"}
+            {loadingIndication ? "Sincronizando…" : "Seg a Sáb"}
           </p>
         </div>
 
@@ -221,7 +221,7 @@ export function TreinoWeekControls({
                 disabled={disabled}
                 aria-pressed={isSelected}
                 aria-label={`Treino de ${WEEKDAY_LABELS[day]}: ${dayLabel}${
-                  isLocked ? " — semana concluída" : ""
+                  isLocked ? ", semana concluída" : ""
                 }`}
                 onClick={(event) => {
                   event.preventDefault();

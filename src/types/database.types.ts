@@ -24,6 +24,10 @@ export type Database = {
           phase_setup_at: string;
           custom_preferences: Json;
           target_days_per_week: number;
+          linhagem_last_seen_at: string | null;
+          thermal_gravity_settled_month: string | null;
+          linhagem_inactivity_pending: boolean;
+          linhagem_inactivity_restore_tier: number | null;
         };
         Insert: {
           id: string;
@@ -39,6 +43,10 @@ export type Database = {
           phase_setup_at?: string;
           custom_preferences?: Json;
           target_days_per_week?: number;
+          linhagem_last_seen_at?: string | null;
+          thermal_gravity_settled_month?: string | null;
+          linhagem_inactivity_pending?: boolean;
+          linhagem_inactivity_restore_tier?: number | null;
         };
         Update: {
           id?: string;
@@ -54,6 +62,7 @@ export type Database = {
           phase_setup_at?: string;
           custom_preferences?: Json;
           target_days_per_week?: number;
+          linhagem_last_seen_at?: string | null;
         };
         Relationships: [
           {
@@ -235,6 +244,7 @@ export type Database = {
           is_rei_chamas_superiores: boolean;
           is_rei_chamas_inferiores: boolean;
           is_pilar_cooperativo: boolean;
+          meta_sync_mes: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -249,6 +259,7 @@ export type Database = {
           is_rei_chamas_superiores?: boolean;
           is_rei_chamas_inferiores?: boolean;
           is_pilar_cooperativo?: boolean;
+          meta_sync_mes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -263,6 +274,7 @@ export type Database = {
           is_rei_chamas_superiores?: boolean;
           is_rei_chamas_inferiores?: boolean;
           is_pilar_cooperativo?: boolean;
+          meta_sync_mes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1048,6 +1060,30 @@ export type Database = {
         };
         Returns: Json;
       };
+      argos_compute_vtc_20d: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      argos_compute_vtc_month_sp: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: number;
+      };
+      argos_sync_linhagem_presence: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      argos_settle_thermal_gravity_monthly: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      argos_rekindle_linhagem_inactivity: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
       argos_compute_vtc_30d: {
         Args: {
           p_user_id: string;
@@ -1112,6 +1148,25 @@ export type Database = {
         Args: { p_skip_side_effects?: boolean };
         Returns: Json;
       };
+      list_clientes_duelo: {
+        Args: { p_search?: string | null; p_offset?: number; p_limit?: number };
+        Returns: Json;
+      };
+      get_duelo_convite_pendente: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      client_responder_duelo: {
+        Args: { p_duelo_id: string; p_aceitar: boolean };
+        Returns: Json;
+      };
+      client_criar_duelo: {
+        Args: {
+          p_desafiado_id: string;
+          p_tipo: Database["public"]["Enums"]["tipo_confronto_duelo"];
+        };
+        Returns: Json;
+      };
       get_rankings_por_membro: {
         Args: Record<PropertyKey, never>;
         Returns: Json;
@@ -1131,6 +1186,26 @@ export type Database = {
         };
         Returns: undefined;
       };
+      argos_get_academia_config: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      argos_sovereign_update_academia_config: {
+        Args: { p_patch: Json };
+        Returns: Json;
+      };
+      argos_sovereign_set_meta_coletiva_alvo: {
+        Args: { p_alvo_kg: number; p_mes?: string | null };
+        Returns: Json;
+      };
+      client_sync_plano_meta: {
+        Args: { p_total_treinos: number };
+        Returns: Json;
+      };
+      client_submit_feedback: {
+        Args: { p_categoria: string; p_mensagem: string };
+        Returns: Json;
+      };
     };
     Enums: {
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
@@ -1139,7 +1214,7 @@ export type Database = {
       grupo_muscular_evolucao: "PEITO" | "COSTAS" | "PERNAS" | "OMBROS" | "BRACOS" | "ABDOMEN";
       membro_principal_soberano: "PEITO" | "BRACOS" | "ABDOMEN" | "PERNAS" | "COSTAS" | "OMBROS";
       tipo_confronto_duelo: "SUPERIORES" | "INFERIORES";
-      status_duelo_supergrupo: "EM_ANDAMENTO" | "FINALIZADO" | "CANCELADO";
+      status_duelo_supergrupo: "EM_ANDAMENTO" | "FINALIZADO" | "CANCELADO" | "AGUARDANDO_ACEITE";
     };
     CompositeTypes: Record<string, never>;
   };

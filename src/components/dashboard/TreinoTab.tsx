@@ -24,6 +24,7 @@ import {
 } from "@/lib/forjador-prescriptions";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { composeDayTreinoSubgroup, subgroupIdToTrainingMuscle } from "@/lib/treino-subgroup";
+import { TREINO_EMPTY_NO_DAY, TREINO_EMPTY_NO_EXERCISES } from "@/lib/client-lore-copy";
 import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-track";
 import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 import { buildForjadorScheduleMap, buildScheduleMap } from "@/lib/training-week";
@@ -130,7 +131,7 @@ export function TreinoTab({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="subgrupo-monumental-title"
     >
-      <DashboardPanelHeader chip="Treino" meta="Rotina do personal" metaVariant="chip" />
+      <DashboardPanelHeader chip="Treino" meta="Rotina de treino" metaVariant="chip" />
 
       <CardioVooCinzasPanel
         userId={userId}
@@ -187,9 +188,7 @@ export function TreinoTab({
           {subgroup.exercises.length === 0 ? (
             <li className={`${DASHBOARD_INNER_FRAME} p-6 text-center`}>
               <p className="text-sm text-amber-100/85">
-                {dayMuscles.length === 0
-                  ? "Seu personal ainda não definiu o treino deste dia. Quando publicar a rotina da semana, os exercícios aparecem aqui."
-                  : "Seu personal ainda não prescreveu exercícios para os grupos deste dia."}
+                {dayMuscles.length === 0 ? TREINO_EMPTY_NO_DAY : TREINO_EMPTY_NO_EXERCISES}
               </p>
             </li>
           ) : (

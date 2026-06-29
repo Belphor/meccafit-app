@@ -273,7 +273,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           <p className={`${FORJA_META} mt-2`}>Linhagem · {athlete.lineageName}</p>
         ) : null}
         {athlete.forgerName ? (
-          <p className={`${FORJA_META} mt-1`}>Personal · {athlete.forgerName}</p>
+          <p className={`${FORJA_META} mt-1`}>Forjador · {athlete.forgerName}</p>
         ) : null}
       </header>
 

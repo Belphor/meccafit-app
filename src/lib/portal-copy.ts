@@ -1,3 +1,5 @@
+import { CONTA_SUSPENSA } from "@/lib/client-lore-copy";
+
 /** Textos fixos do portal — fonte única para evitar corrupção de encoding nos TSX. */
 export const PORTAL_COPY = {
   leaveYesterday: "DEIXE O ONTEM PARA TRÁS.",
@@ -20,7 +22,7 @@ export const PORTAL_COPY = {
   loginRoleUnauthorized:
     "Este altar não reconhece o seu papel de acesso. Utilize o portal correto da sua linhagem.",
   loginDbError: "Falha ao validar o login no banco de dados. Tente novamente.",
-  loginSubtitle: "Pronto para queimar os velhos hábitos?",
+  loginAccountSuspended: CONTA_SUSPENSA,  loginSubtitle: "Pronto para queimar os velhos hábitos?",
   onboardingTitle: "Primeiro Acesso Fenyxia",
   onboardingSubtitle: "Chave QR incandescente detectada. Forje sua identidade no altar.",
   onboardingInviteBanner:

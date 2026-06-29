@@ -159,7 +159,7 @@ export function EvolucaoSelfiePanel({
             Selfie FENYXIA
           </h2>
           <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-neutral-600">
-            Vinheta cinema · registro visual
+            Registro visual do ciclo mensal
           </p>
         </div>
         {onClose ? (

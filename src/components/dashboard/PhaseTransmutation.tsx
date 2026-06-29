@@ -18,6 +18,9 @@ import {
 type PhaseTransmutationProps = {
   phaseTier: PhaseTier;
   onDismiss: () => void;
+  subline?: string;
+  copy?: string;
+  ariaLabel?: string;
 };
 
 type TransmutationAct = "pulse" | "reveal" | "hold" | "fade";
@@ -331,6 +334,9 @@ function PhoenixEyeStage({ act, phaseTier }: { act: TransmutationAct; phaseTier:
 export const PhaseTransmutation = memo(function PhaseTransmutation({
   phaseTier,
   onDismiss,
+  subline = PHASE_TRANSMUTATION_SUBLINE,
+  copy = PHASE_TRANSMUTATION_COPY,
+  ariaLabel = "Transmutação da linhagem",
 }: PhaseTransmutationProps) {
   const [act, setAct] = useState<TransmutationAct>("pulse");
   const [canSkip, setCanSkip] = useState(false);
@@ -366,7 +372,7 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
       className={`phase-transmutation-screen fixed inset-0 z-[120] min-h-dvh w-full bg-black px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] ${act === "fade" ? "phase-transmutation-fading" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-label="Transmutação de fase"
+      aria-label={ariaLabel}
       data-act={act}
       data-tier={phaseTier}
       style={phaseIrisCssVars(phaseTier)}
@@ -391,10 +397,10 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
           {tierLabel}
         </p>
         <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/75">
-          {PHASE_TRANSMUTATION_SUBLINE}
+          {subline}
         </p>
         <p className="phase-transmutation-copy mt-2 max-w-2xl text-center font-serif text-[clamp(0.62rem,2.2vw,0.82rem)] font-semibold uppercase leading-relaxed tracking-[0.2em] text-amber-100/90 sm:tracking-[0.26em]">
-          {PHASE_TRANSMUTATION_COPY}
+          {copy}
         </p>
       </div>
 

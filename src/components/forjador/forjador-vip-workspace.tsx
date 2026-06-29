@@ -19,7 +19,7 @@ import {
 import { resolveForjaRoleLabel } from "@/lib/forja-copy";
 import { filterVipAthletes } from "@/lib/forja-athlete-lists";
 import type { ForjaBondedAthlete, ForjaDashboardPayload } from "@/lib/forja-dashboard";
-import { FORJADOR_WORKSPACE_NAV, type ForjadorNavRoute } from "@/lib/forjador-vip-nav";
+import { resolveForjadorWorkspaceNav, type ForjadorNavRoute } from "@/lib/forjador-vip-nav";
 
 type ForjadorVipWorkspaceProps = {
   payload: ForjaDashboardPayload;
@@ -86,7 +86,7 @@ export function ForjadorVipWorkspace({
         </header>
 
         <nav aria-label="Navegação forjador" className="mt-4 flex flex-wrap gap-2">
-          {FORJADOR_WORKSPACE_NAV.map((item) => {
+          {resolveForjadorWorkspaceNav(payload.operator.isSovereign).map((item) => {
             const isActive = item.href === activeRoute;
             return (
               <Link

@@ -20,7 +20,7 @@ export async function syncLatestScientificMetricsToNucleus(
     return {
       ok: false,
       code: "VALIDATION",
-      message: "Vínculo VIP activo obrigatório para publicar antropometria.",
+      message: "Vínculo VIP ativo obrigatório para publicar antropometria.",
     };
   }
 

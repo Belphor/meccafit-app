@@ -35,6 +35,7 @@ import {
 } from "@/lib/comunidade-evolution";
 import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
 import { focusComunidadeMural } from "@/lib/comunidade-mural-focus";
+import { DUelo_ARENA_REFRESH_EVENT } from "@/lib/duelo-events";
 import {
   COMUNIDADE_MURAL_FOCUS_EVENT,
   MURAL_REFRESH_EVENT,
@@ -45,7 +46,7 @@ type ComunidadePageClientProps = {
   userId: string;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
-  phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtc30d">;
+  phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtcMonth">;
   muralFocusToken?: number;
   muralFocusExerciseName?: string;
 };
@@ -157,6 +158,15 @@ export function ComunidadePageClient({
     };
   }, []);
 
+  useEffect(() => {
+    const refreshArena = () => {
+      void loadAll({ background: true, refresh: true });
+    };
+
+    window.addEventListener(DUelo_ARENA_REFRESH_EVENT, refreshArena);
+    return () => window.removeEventListener(DUelo_ARENA_REFRESH_EVENT, refreshArena);
+  }, [loadAll]);
+
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];
   const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
@@ -187,7 +197,7 @@ export function ComunidadePageClient({
             disabled={arenaLoading || evolutionLoading || isRefreshing}
             className="min-h-11 w-full shrink-0 rounded-full border border-orange-500/25 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90 disabled:opacity-50 sm:w-auto sm:min-w-[7.5rem]"
           >
-            {isRefreshing ? "A actualizar…" : "Actualizar"}
+            {isRefreshing ? "Atualizando…" : "Atualizar"}
           </button>
         </div>
 
@@ -217,7 +227,7 @@ export function ComunidadePageClient({
         ) : null}
 
         <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}>
-          <p className={COMUNIDADE_SECTION_LABEL}>Arena · termómetro colectivo e duelos</p>
+          <p className={COMUNIDADE_SECTION_LABEL}>Arena: termômetro coletivo e duelos</p>
           <div className="grid grid-cols-1 gap-3 xs:gap-4 lg:grid-cols-2 lg:items-start">
             <MetaColetivaTermometro
               meta={meta}
@@ -233,6 +243,7 @@ export function ComunidadePageClient({
               rankings={rankings}
               userId={userId}
               loading={arenaLoading && !arena}
+              onDueloCreated={() => void loadAll({ background: true, refresh: true })}
             />
           </div>
         </div>

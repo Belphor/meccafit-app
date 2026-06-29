@@ -1,6 +1,6 @@
 /**
  * Write path · historico_cargas (MIDAS)
- * Grava um facto biomecânico por exercício concluído — alimenta VTC/VRA na janela 14d.
+ * Grava carga_maxima (VTC em kg) por exercício — alimenta Brasas, Chama Acumulada e termômetro.
  */
 
 import { supabase } from "@/lib/supabase";

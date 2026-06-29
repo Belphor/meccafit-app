@@ -30,6 +30,27 @@ export type ComunidadeDueloAtivo = {
   inicio_em: string;
 };
 
+export type DueloClienteOption = {
+  id: string;
+  nome: string;
+  is_vip?: boolean;
+};
+
+export type DueloConvitePendente = {
+  id: string;
+  tipo_confronto: ComunidadeDueloAtivo["tipo_confronto"];
+  atleta_desafiante_id: string;
+  desafiante_nome: string;
+  created_at: string;
+};
+
+export type DueloClientesPage = {
+  clientes: DueloClienteOption[];
+  total: number;
+  offset: number;
+  limit: number;
+};
+
 export type ComunidadeAtletaRef = {
   atleta_id: string;
 };
@@ -385,4 +406,183 @@ export function resolveCampeaoCinturaoPorTipo(
   tipo: ComunidadeDueloAtivo["tipo_confronto"],
 ): string | null {
   return campeoes[tipo] ?? null;
+}
+
+function parseRpcError(row: Record<string, unknown> | null | undefined): string | null {
+  if (!row?.error) return null;
+  return String(row.message ?? row.error);
+}
+
+export async function fetchClientesDuelo(options?: {
+  search?: string;
+  offset?: number;
+  limit?: number;
+}): Promise<{
+  data: DueloClientesPage;
+  error: string | null;
+}> {
+  const { data, error } = await supabase.rpc("list_clientes_duelo", {
+    p_search: options?.search?.trim() || null,
+    p_offset: options?.offset ?? 0,
+    p_limit: options?.limit ?? 12,
+  });
+
+  if (error) {
+    if (error.code === "PGRST202") {
+      return {
+        data: { clientes: [], total: 0, offset: 0, limit: 12 },
+        error: "Lista de clientes para duelo ainda não aplicada no servidor.",
+      };
+    }
+    return {
+      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      error: error.message,
+    };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return {
+      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      error: "Resposta inválida da lista de clientes.",
+    };
+  }
+
+  const row = data as Record<string, unknown>;
+  const rpcError = parseRpcError(row);
+  if (rpcError) {
+    return {
+      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      error: rpcError,
+    };
+  }
+
+  const clientes = Array.isArray(row.clientes) ? row.clientes : [];
+  const parsed: DueloClienteOption[] = clientes.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const entry = item as Record<string, unknown>;
+    const id = typeof entry.id === "string" ? entry.id : null;
+    if (!id) return [];
+    return [
+      {
+        id,
+        nome: String(entry.nome ?? "Membro da Linhagem"),
+        is_vip: Boolean(entry.is_vip),
+      },
+    ];
+  });
+
+  return {
+    data: {
+      clientes: parsed,
+      total: Number(row.total ?? parsed.length),
+      offset: Number(row.offset ?? options?.offset ?? 0),
+      limit: Number(row.limit ?? options?.limit ?? 12),
+    },
+    error: null,
+  };
+}
+
+export async function criarDuelo(
+  desafiadoId: string,
+  tipo: ComunidadeDueloAtivo["tipo_confronto"],
+): Promise<{
+  data: { duelo_id: string; status?: string } | null;
+  error: string | null;
+}> {
+  const { data, error } = await supabase.rpc("client_criar_duelo", {
+    p_desafiado_id: desafiadoId,
+    p_tipo: tipo,
+  });
+
+  if (error) {
+    if (error.code === "PGRST202") {
+      return { data: null, error: "Criação de duelo ainda não aplicada no servidor." };
+    }
+    return { data: null, error: error.message };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { data: null, error: "Resposta inválida ao criar duelo." };
+  }
+
+  const row = data as Record<string, unknown>;
+  const rpcError = parseRpcError(row);
+  if (rpcError) return { data: null, error: rpcError };
+
+  const dueloId = typeof row.duelo_id === "string" ? row.duelo_id : null;
+  const status = typeof row.status === "string" ? row.status : undefined;
+  if (!row.ok || !dueloId) {
+    return { data: null, error: "Não foi possível criar o duelo." };
+  }
+
+  return { data: { duelo_id: dueloId, status }, error: null };
+}
+
+export async function fetchDueloConvitePendente(): Promise<{
+  data: DueloConvitePendente | null;
+  error: string | null;
+}> {
+  const { data, error } = await supabase.rpc("get_duelo_convite_pendente");
+
+  if (error) {
+    if (error.code === "PGRST202") {
+      return { data: null, error: null };
+    }
+    return { data: null, error: error.message };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { data: null, error: "Resposta inválida do convite." };
+  }
+
+  const row = data as Record<string, unknown>;
+  const rpcError = parseRpcError(row);
+  if (rpcError) return { data: null, error: rpcError };
+
+  const convite = row.convite;
+  if (!convite || typeof convite !== "object") {
+    return { data: null, error: null };
+  }
+
+  const entry = convite as Record<string, unknown>;
+  const id = typeof entry.id === "string" ? entry.id : null;
+  if (!id) return { data: null, error: null };
+
+  return {
+    data: {
+      id,
+      tipo_confronto: entry.tipo_confronto as DueloConvitePendente["tipo_confronto"],
+      atleta_desafiante_id: String(entry.atleta_desafiante_id ?? ""),
+      desafiante_nome: String(entry.desafiante_nome ?? "Atleta"),
+      created_at: String(entry.created_at ?? ""),
+    },
+    error: null,
+  };
+}
+
+export async function responderDuelo(
+  dueloId: string,
+  aceitar: boolean,
+): Promise<{ ok: boolean; error: string | null }> {
+  const { data, error } = await supabase.rpc("client_responder_duelo", {
+    p_duelo_id: dueloId,
+    p_aceitar: aceitar,
+  });
+
+  if (error) {
+    if (error.code === "PGRST202") {
+      return { ok: false, error: "Resposta de duelo ainda não aplicada no servidor." };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { ok: false, error: "Resposta inválida ao responder duelo." };
+  }
+
+  const row = data as Record<string, unknown>;
+  const rpcError = parseRpcError(row);
+  if (rpcError) return { ok: false, error: rpcError };
+
+  return { ok: Boolean(row.ok), error: null };
 }

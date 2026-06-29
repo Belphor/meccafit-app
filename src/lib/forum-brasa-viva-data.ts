@@ -1,4 +1,5 @@
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
+import { LINHAGEM_PADRAO } from "@/lib/client-lore-copy";
 import { mapCommunityMuralRowsToPosts, type CommunityMuralRow } from "@/lib/dashboard-data";
 import { muralBodyForExercise, resolveMuralTopicBody } from "@/lib/mural-copy";
 import { formatMuralMetricBadge } from "@/lib/mural-metric";
@@ -32,7 +33,7 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
     body: resolveMuralTopicBody(row.topic_body, title, weightKg, exercicioId),
     authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
-    authorLineage: row.author_lineage?.trim() || "Linhagem Meccafit",
+    authorLineage: row.author_lineage?.trim() || LINHAGEM_PADRAO,
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
     isReiDasChamas: Boolean(row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas),
     isPilarCooperativo: Boolean(row.is_pilar_cooperativo ?? row.is_pilar_fogo_cosmico),
@@ -51,7 +52,7 @@ function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] 
     body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
-    authorLineage: post.lineageName ?? "Linhagem Meccafit",
+    authorLineage: post.lineageName ?? LINHAGEM_PADRAO,
     temCinturaoDuelo: post.temCinturaoDuelo ?? false,
     isReiDasChamas: post.isReiDasChamas ?? false,
     isPilarCooperativo: post.isPilarCooperativo ?? false,
@@ -118,7 +119,7 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
     body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
-    authorLineage: post.lineageName ?? "Linhagem Meccafit",
+    authorLineage: post.lineageName ?? LINHAGEM_PADRAO,
     temCinturaoDuelo: post.temCinturaoDuelo ?? false,
     isReiDasChamas: post.isReiDasChamas ?? false,
     isPilarCooperativo: post.isPilarCooperativo ?? false,

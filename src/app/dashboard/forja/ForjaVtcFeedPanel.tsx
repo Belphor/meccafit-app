@@ -22,6 +22,7 @@ import {
   phaseTierLabel,
   resolveEffectivePhaseTier,
 } from "@/lib/phase-vtc";
+import { resolveAccountAccessDisplay } from "@/lib/account-access-status";
 import { resolveFeedAlertLabel } from "@/lib/forja-monitor-utils";
 
 const PAGE_SIZE = 10;
@@ -59,6 +60,16 @@ function resolveRowAlertClass(
   if (severity === "warn") return "bg-amber-950/20 ring-1 ring-inset ring-amber-900/35";
   if (isSelected) return "bg-zinc-800/40";
   return "";
+}
+
+function resolveAccessBadgeClass(tone: ReturnType<typeof resolveAccountAccessDisplay>["tone"]): string {
+  if (tone === "suspended") {
+    return "inline-flex rounded-md border border-red-900/50 bg-red-950/40 px-2 py-0.5 text-[10px] font-semibold text-red-200/95";
+  }
+  if (tone === "active") {
+    return "inline-flex rounded-md border border-emerald-900/45 bg-emerald-950/35 px-2 py-0.5 text-[10px] font-semibold text-emerald-200/90";
+  }
+  return "inline-flex rounded-md border border-zinc-800 bg-zinc-900/50 px-2 py-0.5 text-[10px] font-medium text-zinc-400";
 }
 
 function ForjaVtcFeedPanelComponent({
@@ -175,6 +186,7 @@ function ForjaVtcFeedPanelComponent({
                     <th className="px-2 py-2 font-semibold text-right">{FORJA_COPY.monitor.vtcColAvg7d}</th>
                     <th className="px-2 py-2 font-semibold text-right">{FORJA_COPY.monitor.vtcCol30d}</th>
                     <th className="px-2 py-2 font-semibold">{FORJA_COPY.monitor.vtcColPhase}</th>
+                    <th className="px-2 py-2 font-semibold">{FORJA_COPY.monitor.vtcColAccess}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,6 +203,7 @@ function ForjaVtcFeedPanelComponent({
                       mismatch,
                       spike: entry.alertSpike,
                     });
+                    const accessDisplay = resolveAccountAccessDisplay(entry.statusAltar);
 
                     return (
                       <tr
@@ -246,7 +259,7 @@ function ForjaVtcFeedPanelComponent({
                         <td className="px-2 py-2.5 text-zinc-300">
                           {entry.forgerName && entry.forgerName !== "—"
                             ? entry.forgerName
-                            : "Sem personal"}
+                            : "Sem Forjador"}
                         </td>
                         <td className="px-2 py-2.5 text-right tabular-nums font-medium text-zinc-100">
                           {formatVtc(entry.vtcToday)}
@@ -269,6 +282,11 @@ function ForjaVtcFeedPanelComponent({
                               Registrada: {phaseTierLabel(entry.phaseTier as 1 | 2 | 3 | 4 | 5)}
                             </p>
                           ) : null}
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <span className={resolveAccessBadgeClass(accessDisplay.tone)}>
+                            {accessDisplay.label}
+                          </span>
                         </td>
                       </tr>
                     );

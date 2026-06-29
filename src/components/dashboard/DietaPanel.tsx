@@ -19,6 +19,11 @@ import {
   type DietBlueprint,
   type DietMeal,
 } from "@/lib/diet-data";
+import {
+  DIETA_FORJADOR_NOTES,
+  DIETA_FORJADOR_PLAN,
+  DIETA_VIP_WAITING,
+} from "@/lib/client-lore-copy";
 import { VIP_CLIENT_LABEL } from "@/lib/vip-client";
 
 type DietaPanelProps = {
@@ -111,7 +116,7 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
 
         {blueprint.forgerName ? (
           <p className="mt-3 text-xs text-amber-200/75">
-            Plano do personal <span className="text-amber-100">{blueprint.forgerName}</span>
+            {DIETA_FORJADOR_PLAN(blueprint.forgerName)}
           </p>
         ) : null}
 
@@ -151,7 +156,7 @@ function DietBlueprintView({ blueprint }: { blueprint: DietBlueprint }) {
       {blueprint.observacoes ? (
         <div className={`${BRASA_PANEL} rounded-2xl border px-4 py-3`}>
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500/90">
-            Observações do personal
+            {DIETA_FORJADOR_NOTES}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-amber-100/85">{blueprint.observacoes}</p>
         </div>
@@ -228,10 +233,7 @@ export function DietaPanel({ userId }: DietaPanelProps) {
       ) : (
         <div className={`${DASHBOARD_INNER_FRAME} mt-4 p-5 text-center`}>
           <h2 className={DASHBOARD_SECTION_TITLE}>Plano alimentar</h2>
-          <p className="mt-3 text-sm leading-relaxed text-amber-100/85">
-            Seu vínculo VIP está ativo. O personal ainda não publicou o plano alimentar — quando
-            enviar, aparece aqui com metas, refeições e observações.
-          </p>
+          <p className="mt-3 text-sm leading-relaxed text-amber-100/85">{DIETA_VIP_WAITING}</p>
         </div>
       )}
     </BrasaVivaCard>

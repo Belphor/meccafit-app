@@ -1,5 +1,6 @@
 "use client";
 
+import { DueloChallengePanel } from "@/components/comunidade/duelo-challenge-panel";
 import {
   COMUNIDADE_BODY_TEXT,
   COMUNIDADE_CHIP,
@@ -25,15 +26,16 @@ type DuelosArenaPanelProps = {
   rankings?: RankingsThoth | null;
   userId: string;
   loading?: boolean;
+  onDueloCreated?: () => void;
 };
 
 function labelTipo(tipo: ComunidadeDueloAtivo["tipo_confronto"]): string {
-  return tipo === "SUPERIORES" ? "Superiores · 3 dias" : "Inferiores · 2 dias";
+  return tipo === "SUPERIORES" ? "Superiores (3 dias)" : "Inferiores (2 dias)";
 }
 
 function formatFim(iso: string): string {
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "Indefinido";
   return d.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "short",
@@ -48,7 +50,7 @@ function resolveNome(
   rankings: RankingsThoth | null | undefined,
 ): string | null {
   if (!atletaId) return null;
-  if (atletaId === userId) return "Tu";
+  if (atletaId === userId) return "Você";
   const hit = rankings?.vtc_global.find((row) => row.atleta_id === atletaId);
   return hit?.atleta_nome ?? "Campeão da faixa";
 }
@@ -68,7 +70,7 @@ function CampeaoCinturaoCard({
   if (!campeaoId) {
     return (
       <p className={`${COMUNIDADE_INNER_CARD} flex min-h-[3.75rem] items-center justify-center border-dashed border-[#FF007F]/20 px-3 py-3 text-center text-[11px] leading-relaxed text-neutral-500`}>
-        Cinturão {label} · vago
+        Cinturão {label} vago
       </p>
     );
   }
@@ -80,10 +82,10 @@ function CampeaoCinturaoCard({
       <PlutusAvatar temCinturaoDuelo size="sm" name={nome ?? label} />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-[0.08em] text-[#FF007F] xs:tracking-[0.12em]">
-          Cinturão · {label}
+          Cinturão {label}
         </p>
         <p className="break-words text-pretty text-[12px] font-medium leading-snug text-neutral-200">
-          {campeaoId === userId ? "És tu — defende o trono" : nome}
+          {campeaoId === userId ? "Você detém o cinturão" : nome}
         </p>
       </div>
     </div>
@@ -97,6 +99,7 @@ export function DuelosArenaPanel({
   rankings,
   userId,
   loading = false,
+  onDueloCreated,
 }: DuelosArenaPanelProps) {
   const superioresId =
     campeoesCinturao.SUPERIORES ?? (campeaoCinturaoId && !campeoesCinturao.INFERIORES ? campeaoCinturaoId : null);
@@ -108,13 +111,14 @@ export function DuelosArenaPanel({
       aria-label="Arena de duelos de supergrupos"
     >
       <header className={COMUNIDADE_HEADER}>
-        <p className={`${COMUNIDADE_EYEBROW} text-fuchsia-300/85`}>Duelos · Cinturões</p>
+        <p className={`${COMUNIDADE_EYEBROW} text-fuchsia-300/85`}>Duelos e cinturões</p>
         <h3 className={`${COMUNIDADE_HEADING} text-fuchsia-50/95`}>
-          Desafia alguém pelo cinturão
+          Desafie alguém pelo cinturão
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Duelo rápido 1 contra 1: quem somar mais pontos (peso × repetições) na faixa ganha. O
-          cinturão fica contigo até outra pessoa vencer-te num duelo — não expira no fim do mês.
+          Duelo rápido um contra um: quem somar mais pontos (peso vezes repetições) na faixa ganha.
+          O cinturão fica com você até outra pessoa vencer em um novo duelo. Não expira no fim do
+          mês.
         </p>
       </header>
 
@@ -132,6 +136,8 @@ export function DuelosArenaPanel({
           rankings={rankings}
         />
       </div>
+
+      <DueloChallengePanel userId={userId} onDueloCreated={onDueloCreated} />
 
       <div className="mt-4 space-y-3">
         {loading ? (
@@ -166,7 +172,7 @@ export function DuelosArenaPanel({
                     {labelTipo(duelo.tipo_confronto)}
                   </span>
                   <time className="min-w-0 break-words text-[9px] uppercase tracking-[0.08em] text-neutral-500 xs:tracking-[0.1em]">
-                    Fim · {formatFim(duelo.fim_em)}
+                    Fim: {formatFim(duelo.fim_em)}
                   </time>
                 </div>
 

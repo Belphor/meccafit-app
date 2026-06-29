@@ -8,6 +8,7 @@ import {
   COMUNIDADE_PANEL,
 } from "@/components/comunidade/comunidade-layout";
 import { formatTonelagemKg, type ComunidadeMeta } from "@/lib/comunidade-data";
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
 
 type MetaColetivaTermometroProps = {
   meta: ComunidadeMeta;
@@ -31,7 +32,7 @@ export function MetaColetivaTermometro({
         <div className="min-w-0">
           <p className={`${COMUNIDADE_EYEBROW} text-amber-300/80`}>Termómetro coletivo</p>
           <h3 className={`${COMUNIDADE_HEADING} text-amber-50/95`}>
-            Quanto a linhagem levantou este mês
+            Quanto a academia levantou este mês
           </h3>
         </div>
         {mesReferencia ? (
@@ -60,16 +61,17 @@ export function MetaColetivaTermometro({
 
         <div className="mt-3 flex min-w-0 flex-col gap-1 xs:flex-row xs:flex-wrap xs:items-baseline xs:justify-between xs:gap-2">
           <p className="break-words font-mono text-sm font-bold tabular-nums text-amber-200 xs:text-base sm:text-lg">
-            {loading ? "—" : formatTonelagemKg(meta.tonelagem_atual_acumulada)}
+            {loading ? "…" : formatTonelagemKg(meta.tonelagem_atual_acumulada)}
           </p>
           <p className="break-words text-[10px] uppercase tracking-[0.08em] text-neutral-500 xs:text-[11px] xs:tracking-[0.1em]">
-            Meta · {loading ? "—" : formatTonelagemKg(meta.tonelagem_alvo_kg)}
+            Meta: {loading ? "…" : formatTonelagemKg(meta.tonelagem_alvo_kg)}
           </p>
         </div>
 
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Cada treino com peso soma para a meta comum da academia. Quanto mais treinamos, mais a
-          barra enche. No fim do mês, os três atletas que mais contribuíram tornam-se{" "}
+          Cada {VTC_DISPLAY_NAME} registrado soma para a meta comum da academia. É a mesma unidade
+          da Evolução e do treino. Quanto mais a linhagem treina, mais a barra enche. No fim do mês,
+          os três atletas que mais contribuíram tornam-se{" "}
           <span className="font-medium text-neutral-300">Pilares cooperativos</span>.
         </p>
       </div>

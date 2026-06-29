@@ -3,6 +3,13 @@
  * viewBox 400×600 · silhueta atlética unissex premium
  */
 
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
+import {
+  BRASAS_FROZEN_HINT,
+  BRASAS_FROZEN_LABEL,
+  BRASAS_MUSCULAR_HINT,
+} from "@/lib/client-lore-copy";
+
 export const SOVEREIGN_MUSCLES = [
   "PEITO",
   "OMBROS",
@@ -89,11 +96,16 @@ export type MuscleCalorRow = {
 export type EvolutionCalorPayload = {
   calorRows: MuscleCalorRow[];
   indice_ignicao: number;
+  vtc_30d_kg?: number;
+  vtc_month_kg?: number;
+  vtc_20d_kg?: number;
+  meta_vtc_mensal_kg?: number;
+  phase_tier?: number;
+  natural_phase_tier?: number;
 };
 
 export const PURITY_PENALTY_THRESHOLD = 50;
 
-/** Normaliza índice de ignição (MIDAS `ignition_index` ou legado `indice_ignicao`). */
 export function parseIgnitionIndex(source: Record<string, unknown>): number {
   const raw = source.ignition_index ?? source.indice_ignicao;
   if (typeof raw === "number" && Number.isFinite(raw)) {
@@ -106,6 +118,15 @@ export function parseIgnitionIndex(source: Record<string, unknown>): number {
     }
   }
   return 0;
+}
+
+function parseOptionalNumber(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
 }
 
 export const MUSCLE_LABELS: Record<SovereignMuscleId, string> = {
@@ -204,29 +225,29 @@ export type CalorMembroMetric = {
   hint: string;
 };
 
+export function phaseTierToThermalLevel(tier: number): MuscleCalorLevel {
+  if (tier >= 5) return "FOGO CÓSMICO";
+  if (tier >= 4) return "LABAREDA";
+  if (tier >= 3) return "BRASA";
+  if (tier >= 2) return "FAISCA";
+  return "CINZAS";
+}
+
 export function formatCalorMembroMetric(row: MuscleCalorRow): CalorMembroMetric {
   const score = formatMetricaBruta(row.metrica_bruta);
 
   if (row.is_frozen) {
     return {
-      label: "Sem estímulo",
-      value: "Fora da rotina",
-      hint: "Este grupo não está na planilha activa do personal",
-    };
-  }
-
-  if (row.membro_principal === "ABDOMEN") {
-    return {
-      label: "Estímulo acumulado",
-      value: `${score} rep`,
-      hint: "Últimos 14 dias · séries × repetições validadas",
+      label: VTC_DISPLAY_NAME,
+      value: BRASAS_FROZEN_LABEL,
+      hint: BRASAS_FROZEN_HINT,
     };
   }
 
   return {
-    label: "Estímulo acumulado",
-    value: `${score} pts`,
-    hint: "Últimos 14 dias · volume máximo registrado no grupo",
+    label: `${VTC_DISPLAY_NAME} do grupo`,
+    value: `${score} kg`,
+    hint: BRASAS_MUSCULAR_HINT,
   };
 }
 
@@ -260,11 +281,17 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
 
   if (source.error === "unauthorized" || source.code === 401) {
     throw new Error(
-      typeof source.message === "string" ? source.message : "Sessão inválida — faça login novamente.",
+      typeof source.message === "string" ? source.message : "Sessão inválida. Faça login novamente.",
     );
   }
 
   const indice_ignicao = parseIgnitionIndex(source);
+  const vtc_30d_kg = parseOptionalNumber(source.vtc_30d_kg);
+  const vtc_month_kg = parseOptionalNumber(source.vtc_month_kg);
+  const vtc_20d_kg = parseOptionalNumber(source.vtc_20d_kg);
+  const meta_vtc_mensal_kg = parseOptionalNumber(source.meta_vtc_mensal_kg);
+  const phase_tier = parseOptionalNumber(source.phase_tier);
+  const natural_phase_tier = parseOptionalNumber(source.natural_phase_tier);
 
   const musclesRaw = source.muscles;
   const muscles =
@@ -278,9 +305,7 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
     const metrica_bruta =
       typeof record.metric_raw === "number" && Number.isFinite(record.metric_raw)
         ? record.metric_raw
-        : sovereign === "ABDOMEN"
-          ? Number(record.vra ?? 0)
-          : Number(record.vtc ?? 0);
+        : Number(record.vtc ?? record.vra ?? 0);
 
     return {
       membro_principal: sovereign,
@@ -290,7 +315,16 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
     };
   });
 
-  return { calorRows, indice_ignicao };
+  return {
+    calorRows,
+    indice_ignicao,
+    vtc_30d_kg,
+    vtc_month_kg,
+    vtc_20d_kg,
+    meta_vtc_mensal_kg,
+    phase_tier,
+    natural_phase_tier,
+  };
 }
 
 function parseGroupRecord(raw: unknown): MuscleCalorGroupRecord {
@@ -309,6 +343,12 @@ export function parseEvolutionCalorJson(data: unknown): EvolutionCalorPayload {
   const source = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
 
   const indice_ignicao = parseIgnitionIndex(source);
+  const vtc_30d_kg = parseOptionalNumber(source.vtc_30d_kg);
+  const vtc_month_kg = parseOptionalNumber(source.vtc_month_kg);
+  const vtc_20d_kg = parseOptionalNumber(source.vtc_20d_kg);
+  const meta_vtc_mensal_kg = parseOptionalNumber(source.meta_vtc_mensal_kg);
+  const phase_tier = parseOptionalNumber(source.phase_tier);
+  const natural_phase_tier = parseOptionalNumber(source.natural_phase_tier);
 
   const calorRows: MuscleCalorRow[] = CALOR_JSON_KEYS.map((key) => {
     const group = parseGroupRecord(source[key]);
@@ -320,7 +360,16 @@ export function parseEvolutionCalorJson(data: unknown): EvolutionCalorPayload {
     };
   });
 
-  return { calorRows, indice_ignicao };
+  return {
+    calorRows,
+    indice_ignicao,
+    vtc_30d_kg,
+    vtc_month_kg,
+    vtc_20d_kg,
+    meta_vtc_mensal_kg,
+    phase_tier,
+    natural_phase_tier,
+  };
 }
 
 export function normalizeMuscleCalorRows(
@@ -399,8 +448,13 @@ export function hasAnyFrozenMember(calorRows: MuscleCalorRow[]): boolean {
   return calorRows.some((row) => row.is_frozen);
 }
 
-export function buildCalorPayloadFingerprint(calorRows: MuscleCalorRow[], ignicao: number): string {
-  return `${ignicao}:${calorRows.map((r) => `${r.membro_principal}:${r.nivel_calculado}:${r.is_frozen}:${r.metrica_bruta ?? 0}`).join("|")}`;
+export function buildCalorPayloadFingerprint(
+  calorRows: MuscleCalorRow[],
+  ignicao: number,
+  phaseTier?: number,
+  vtc30dKg?: number,
+): string {
+  return `${ignicao}:${phaseTier ?? 0}:${vtc30dKg ?? 0}:${calorRows.map((r) => `${r.membro_principal}:${r.nivel_calculado}:${r.is_frozen}:${r.metrica_bruta ?? 0}`).join("|")}`;
 }
 
 export type HudMuscleGroup =

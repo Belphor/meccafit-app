@@ -21,6 +21,7 @@ import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { SacredPhoenixLogo, type PhoenixTone } from "@/components/SacredPhoenixLogo";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { fetchAuthenticatedProfile, mapAuthError } from "@/lib/portal-auth";
+import { resolveLoginBlockMessage } from "@/lib/account-access-status";
 import { validateInviteToken } from "@/app/actions/invite-onboarding";
 import { registerPrimeiroAcesso } from "@/app/actions/onboarding";
 import type { PrimeiroAcessoInput } from "@/lib/portal-onboarding";
@@ -131,6 +132,18 @@ export default function PortalDeBrasaPage() {
       cancelled = true;
     };
   }, [inviteToken]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("suspended") !== "1") return;
+
+    void supabase.auth.signOut().finally(() => {
+      showPortalToast(PORTAL_COPY.loginAccountSuspended);
+      window.history.replaceState({}, "", "/");
+    });
+  }, [showPortalToast]);
 
   const submitLabel = isLoading
     ? PORTAL_COPY.submitProcessing
@@ -282,6 +295,14 @@ export default function PortalDeBrasaPage() {
         await supabase.auth.signOut();
         resetLoginFeedback();
         showPortalToast(PORTAL_COPY.loginProfileMissing);
+        return;
+      }
+
+      const loginBlockMessage = resolveLoginBlockMessage(profile.status_altar);
+      if (profile.role === "cliente" && loginBlockMessage) {
+        await supabase.auth.signOut();
+        resetLoginFeedback();
+        showPortalToast(loginBlockMessage);
         return;
       }
 
