@@ -319,13 +319,15 @@ export function DashboardClient({
       inactivity: LinhagemInactivitySyncResult | null,
       profileRowData: Record<string, unknown> | null,
     ) => {
-      const settlementMessage = settlement ? buildThermalGravitySettlementMessage(settlement) : "";
-      if (settlementMessage) {
-        if (settlement.degraded) {
-          syncLinhagemTierAfterDemotion(userId, settlement.phase_tier);
+      if (settlement) {
+        const settlementMessage = buildThermalGravitySettlementMessage(settlement);
+        if (settlementMessage) {
+          if (settlement.degraded) {
+            syncLinhagemTierAfterDemotion(userId, settlement.phase_tier);
+          }
+          showPortalToast(settlementMessage, "info");
+          return;
         }
-        showPortalToast(settlementMessage, "info");
-        return;
       }
 
       if (inactivity?.pending_rekindle || inactivity?.degraded) {
