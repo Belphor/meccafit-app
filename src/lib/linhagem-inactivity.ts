@@ -5,6 +5,9 @@ import { formatMonthLabelPt } from "@/lib/meta-sync-calendar";
 /** Dias sem entrar no app antes da penalidade de inatividade. */
 export const LINHAGEM_INACTIVITY_DAYS = 30;
 
+/** Toast inicial ao retornar após 30+ dias (antes do aviso persistente). */
+export const LINHAGEM_INACTIVITY_RETURN_TOAST_MS = 8_000;
+
 const COUNT_WORDS_FEMININE: Record<number, string> = {
   1: "Uma",
   2: "Duas",
@@ -103,27 +106,111 @@ export function parseThermalGravitySettlement(raw: unknown): ThermalGravitySettl
   };
 }
 
-/** Toast ao retornar após 30+ dias sem entrar (inatividade — separada da Gravidade Térmica). */
-export function buildLinhagemInactivityDegradationMessage(
+function resolveInactivityRegression(result: LinhagemInactivitySyncResult): {
+  previousTier: PhaseTier;
+  phasesLost: number;
+  fromLabel: string;
+  toLabel: string;
+} | null {
+  const previousTier = result.previous_tier ?? result.restore_tier;
+  if (!previousTier) return null;
+
+  const phasesLost =
+    result.phases_lost > 0
+      ? result.phases_lost
+      : Math.max(0, previousTier - result.phase_tier);
+  if (phasesLost < 1) return null;
+
+  return {
+    previousTier,
+    phasesLost,
+    fromLabel: PHASE_TIER_LABELS[previousTier],
+    toLabel: PHASE_TIER_LABELS[result.phase_tier],
+  };
+}
+
+/** Toast de 8s ao retornar após 30+ dias — anuncia a degradação antes do aviso persistente. */
+export function buildLinhagemInactivityReturnMessage(
   result: LinhagemInactivitySyncResult,
 ): string {
-  if (!result.degraded || result.previous_tier === null || result.phases_lost < 1) {
+  const regression = resolveInactivityRegression(result);
+  if (!regression) return "";
+
+  const phasesWord = formatCountWordPt(regression.phasesLost, true).toLowerCase();
+  const phaseLabel = regression.phasesLost === 1 ? "fase" : "fases";
+  const absenceHint =
+    result.days_absent !== null && result.days_absent >= LINHAGEM_INACTIVITY_DAYS
+      ? "Você ficou mais de trinta dias longe do altar"
+      : "O altar permaneceu em silêncio por tempo demais";
+
+  return (
+    `${absenceHint}. A Chama regrediu ${phasesWord} ${phaseLabel}, ` +
+    `de ${regression.fromLabel} para ${regression.toLabel}. Essa perda é definitiva.`
+  );
+}
+
+/** Aviso persistente até concluir uma série no Treino. */
+export function buildLinhagemInactivityAlertMessage(
+  result: LinhagemInactivitySyncResult,
+): string {
+  if (!result.pending_rekindle) {
     return "";
   }
 
-  const phasesWord = formatCountWordPt(result.phases_lost, true).toLowerCase();
-  const phaseLabel = result.phases_lost === 1 ? "fase" : "fases";
-  const fromLabel = PHASE_TIER_LABELS[result.previous_tier];
-  const toLabel = PHASE_TIER_LABELS[result.phase_tier];
-  const absenceHint =
-    result.days_absent !== null && result.days_absent >= LINHAGEM_INACTIVITY_DAYS
-      ? `Você ficou mais de ${formatCountWordPt(1, true).toLowerCase()} mês longe do altar`
-      : "O altar ficou em silêncio por tempo demais";
+  const regression = resolveInactivityRegression(result);
+  if (!regression) return "";
+
+  const phasesWord = formatCountWordPt(regression.phasesLost, true).toLowerCase();
+  const phaseLabel = regression.phasesLost === 1 ? "fase" : "fases";
 
   return (
-    `${absenceHint} — a Chama regrediu ${phasesWord} ${phaseLabel}: de ${fromLabel} para ${toLabel}. ` +
-    `Conclua uma série de qualquer exercício no treino e sua linhagem volta a ${fromLabel}.`
+    `A chama da linhagem aguarda seu retorno ao treino. A regressão permanece: ` +
+    `${phasesWord} ${phaseLabel} perdida${regression.phasesLost === 1 ? "" : "s"}, ` +
+    `de ${regression.fromLabel} para ${regression.toLabel}. ` +
+    "Conclua qualquer série no Treino para reacender a chama e dispensar este aviso."
   );
+}
+
+/** @deprecated Use buildLinhagemInactivityAlertMessage */
+export const buildLinhagemInactivityDegradationMessage = buildLinhagemInactivityAlertMessage;
+
+export type LinhagemInactivityAckParams = {
+  phase_tier: PhaseTier;
+  previous_tier?: PhaseTier | null;
+  phases_lost?: number;
+};
+
+/** Toast após concluir uma série com aviso de inatividade pendente. */
+export function buildLinhagemInactivityAckMessage(
+  params: LinhagemInactivityAckParams | PhaseTier,
+): string {
+  const normalized: LinhagemInactivityAckParams =
+    typeof params === "number"
+      ? { phase_tier: resolvePhaseTier(params) }
+      : params;
+
+  const tier = resolvePhaseTier(normalized.phase_tier);
+  const currentLabel = PHASE_TIER_LABELS[tier];
+  const previousTier = normalized.previous_tier ?? null;
+  const phasesLost =
+    normalized.phases_lost && normalized.phases_lost > 0
+      ? normalized.phases_lost
+      : previousTier && previousTier > tier
+        ? previousTier - tier
+        : 0;
+
+  if (previousTier && previousTier > tier && phasesLost > 0) {
+    const fromLabel = PHASE_TIER_LABELS[previousTier];
+    const phasesWord = formatCountWordPt(phasesLost, true).toLowerCase();
+    const phaseLabel = phasesLost === 1 ? "fase" : "fases";
+    return (
+      `A chama foi reacendida no altar. Sua linhagem permanece em ${currentLabel}, ` +
+      `após a regressão de ${phasesWord} ${phaseLabel} por inatividade (${fromLabel} para ${currentLabel}). ` +
+      "Continue a forja a partir desta fase."
+    );
+  }
+
+  return `Ritual retomado. Continue a forja a partir de ${currentLabel}.`;
 }
 
 export function buildLinhagemRegressionTitle(phasesLost = 1): string {

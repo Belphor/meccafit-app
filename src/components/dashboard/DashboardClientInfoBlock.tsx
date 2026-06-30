@@ -19,9 +19,9 @@ export function DashboardClientInfoBlock({
   return (
     <div className={`${DASHBOARD_CLIENT_INFO_BLOCK} ${className}`.trim()} role="note">
       {label ? <p className={DASHBOARD_CLIENT_INFO_LABEL}>{label}</p> : null}
-      <p className={label ? `mt-2 ${DASHBOARD_CLIENT_INFO_TEXT}` : DASHBOARD_CLIENT_INFO_TEXT}>
+      <div className={label ? `mt-2 ${DASHBOARD_CLIENT_INFO_TEXT}` : DASHBOARD_CLIENT_INFO_TEXT}>
         {children}
-      </p>
+      </div>
     </div>
   );
 }

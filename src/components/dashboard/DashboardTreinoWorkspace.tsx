@@ -54,6 +54,7 @@ export type DashboardTreinoWorkspaceProps = {
   onSuperacaoMural: (exerciseName: string, payload: SuperacaoPayload) => void;
   onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
   onTrainingDayPick: (day: WeekdayIndex) => void;
+  onSetComplete?: (exerciseId: number) => void;
 };
 
 function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
@@ -147,6 +148,7 @@ export function DashboardTreinoWorkspace({
   onSuperacaoMural,
   onTrainingPersisted,
   onTrainingDayPick,
+  onSetComplete,
 }: DashboardTreinoWorkspaceProps) {
   const sessionScope = useMemo(
     () => ({
@@ -420,8 +422,10 @@ export function DashboardTreinoWorkspace({
       if (sessionHydratedRef.current) {
         persistAltarSession(total, lastSavedWeightRef.current);
       }
+
+      onSetComplete?.(exerciseId);
     },
-    [mergedSubgroup, onAltarMetricsChange, persistAltarSession],
+    [mergedSubgroup, onAltarMetricsChange, onSetComplete, persistAltarSession],
   );
 
   const handleExercisePersisted = useCallback(

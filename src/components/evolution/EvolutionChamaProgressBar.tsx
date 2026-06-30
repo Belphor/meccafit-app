@@ -11,13 +11,37 @@ import {
 } from "@/lib/dashboard-config";
 import { formatNextViradaDateShortPt } from "@/lib/academia-config";
 import { FENIX_EVOLUTION_SYSTEMS } from "@/lib/fenix-evolution-glossary";
-import { buildLinhagemRegressionTitle } from "@/lib/linhagem-inactivity";
 import {
-  formatMonthlyGoalLabel,
   formatThermalGravityShortHint,
   type ThermalGravityState,
 } from "@/lib/thermal-gravity";
 import { formatVtcKg } from "@/lib/vtc-labels";
+
+function PhaseName({ tier, className = "" }: { tier: PhaseTier; className?: string }) {
+  return (
+    <strong className={`font-bold text-amber-50 ${className}`.trim()}>
+      {PHASE_TIER_LABELS[tier]}
+    </strong>
+  );
+}
+
+function MonthlyGoalLabel({ state }: { state: ThermalGravityState }) {
+  if (state.leveled_up_this_month) {
+    return <>Gravidade Térmica de {state.month_label} cumprida.</>;
+  }
+  if (state.next_tier) {
+    return (
+      <>
+        Alcance <PhaseName tier={state.next_tier} /> antes da virada do mês.
+      </>
+    );
+  }
+  return (
+    <>
+      Renove <PhaseName tier={5} /> antes da virada do mês.
+    </>
+  );
+}
 
 type EvolutionChamaProgressBarProps = {
   progressPercent: number;
@@ -43,10 +67,8 @@ const TIER_FILL: Record<PhaseTier, string> = {
 
 function resolveTone(
   state: ThermalGravityState,
-  monthBoundaryDegraded: boolean,
   progressPct: number,
 ): ThermalGravityTone {
-  if (monthBoundaryDegraded) return "warn";
   if (state.leveled_up_this_month) return "ok";
   if (state.days_remaining <= 7 && progressPct < 70) return "risk";
   return "neutral";
@@ -54,16 +76,9 @@ function resolveTone(
 
 function resolveStatusChip(
   tone: ThermalGravityTone,
-  monthBoundaryDegraded: boolean,
   state: ThermalGravityState,
   progressPct: number,
 ): { label: string; className: string } | null {
-  if (monthBoundaryDegraded) {
-    return {
-      label: buildLinhagemRegressionTitle(1),
-      className: "border-orange-400/45 bg-orange-950/50 text-orange-100",
-    };
-  }
   if (state.leveled_up_this_month) {
     return {
       label: "Prova em dia",
@@ -123,11 +138,11 @@ export function EvolutionChamaProgressBar({
 
   const tone =
     showThermal && thermalState
-      ? resolveTone(thermalState, monthBoundaryDegraded, clampedPercent)
+      ? resolveTone(thermalState, clampedPercent)
       : "neutral";
   const statusChip =
     showThermal && thermalState
-      ? resolveStatusChip(tone, monthBoundaryDegraded, thermalState, clampedPercent)
+      ? resolveStatusChip(tone, thermalState, clampedPercent)
       : null;
   const barGradient = showThermal ? resolveBarGradient(tone) : TIER_FILL[nextTier ?? currentTier];
   const viradaDate = formatNextViradaDateShortPt();
@@ -140,20 +155,20 @@ export function EvolutionChamaProgressBar({
           <p className={EVOLUTION_FIELD_LABEL}>
             {showThermal ? "Prova mensal da linhagem" : "Progresso da fase"}
           </p>
-          <p className="mt-0.5 text-sm font-bold text-amber-50">
-            {PHASE_TIER_LABELS[currentTier]}
+          <p className="mt-0.5 text-sm text-amber-50">
+            <PhaseName tier={currentTier} />
             {!atMax && nextTier ? (
-              <span className="font-normal text-neutral-500">
-                {" "}
-                para {PHASE_TIER_LABELS[nextTier]}
-              </span>
+              <>
+                <span className="font-normal text-neutral-500"> para </span>
+                <PhaseName tier={nextTier} />
+              </>
             ) : null}
           </p>
         </div>
         <p className={`shrink-0 ${EVOLUTION_STAT_VALUE}`}>{Math.round(clampedPercent)}%</p>
       </div>
 
-      {showThermal && thermalState && !thermalState.leveled_up_this_month && !monthBoundaryDegraded ? (
+      {showThermal && thermalState && !thermalState.leveled_up_this_month ? (
         <div className="flex flex-wrap items-stretch gap-3 rounded-lg border border-orange-500/25 bg-black/35 px-3 py-2.5">
           <div className="flex min-w-[4.5rem] flex-col items-center justify-center text-center">
             <span className="text-2xl font-bold tabular-nums leading-none text-amber-50">
@@ -247,14 +262,19 @@ export function EvolutionChamaProgressBar({
         ) : null}
       </div>
 
-      {monthBoundaryDegraded && thermalState.settled_month_label ? (
-        <p className="mb-3 text-sm text-orange-50/95">
-          Em {thermalState.settled_month_label} a prova não foi cumprida. Reacenda neste mês.
+      {thermalState.leveled_up_this_month ? (
+        <p className="mb-3 text-sm text-emerald-50/95">
+          <MonthlyGoalLabel state={thermalState} />
         </p>
-      ) : thermalState.leveled_up_this_month ? (
-        <p className="mb-3 text-sm text-emerald-50/95">{formatMonthlyGoalLabel(thermalState)}</p>
+      ) : monthBoundaryDegraded && thermalState.settled_month_label ? (
+        <p className="mb-3 text-sm text-orange-50/95">
+          A Gravidade Térmica de {thermalState.settled_month_label} não foi cumprida. A linhagem
+          desceu uma fase. Reacenda o volume neste ciclo.
+        </p>
       ) : (
-        <p className="mb-3 text-xs text-neutral-400">{formatMonthlyGoalLabel(thermalState)}</p>
+        <p className="mb-3 text-xs text-neutral-400">
+          <MonthlyGoalLabel state={thermalState} />
+        </p>
       )}
 
       {content}

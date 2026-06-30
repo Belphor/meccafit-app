@@ -24,10 +24,10 @@ export const FENIX_QA_ANIMATIONS: ReadonlyArray<{
   {
     kind: "restoration-flash",
     label: "Flash de restauração térmica",
-    hint: "Brasas de retorno quando a fase térmica reativa na sessão (~1,4 s).",
+    hint: "Brasas douradas na tela quando a fase térmica reativa na sessão (cerca de 1,4 s).",
     tab: "treino",
     howTo:
-      "Fique na aba Treino. O flash cobre a tela com brasas douradas no centro. Use o botão abaixo ou simule degradação térmica + nova carga na sessão.",
+      "Fique na aba Treino e dispare pelo botão abaixo para ver o flash dourado de restauração térmica.",
   },
   {
     kind: "superacao",

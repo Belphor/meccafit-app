@@ -130,20 +130,23 @@ export function EvolucaoPageClient({
     [indiceIgnicao, calorRows],
   );
 
-  const { state: thermalState } = useThermalGravityClientState(
-    conqueredPhaseTier ?? phaseTier,
-    vtcMonthKg,
-    0,
-    vtc30dKg,
-  );
+  const { state: thermalState, monthBoundaryDegraded: qaMonthBoundaryDegraded, simulatedPhaseTier } =
+    useThermalGravityClientState(conqueredPhaseTier ?? phaseTier, vtcMonthKg, 0, vtc30dKg);
 
   const thermalStateWithSettlement = useMemo(() => {
+    if (thermalState.settled_month_label) return thermalState;
     if (!thermalSettlement?.settled_month_label) return thermalState;
     return {
       ...thermalState,
       settled_month_label: thermalSettlement.settled_month_label,
     };
   }, [thermalSettlement?.settled_month_label, thermalState]);
+
+  const monthBoundaryDegraded =
+    qaMonthBoundaryDegraded || thermalSettlement?.degraded === true;
+
+  const displayPhaseTier =
+    simulatedPhaseTier ?? conqueredPhaseTier ?? phaseTier;
 
   useEffect(() => {
     if (conqueredPhaseTier != null) {
@@ -295,10 +298,10 @@ export function EvolucaoPageClient({
           dataReady={evolutionReady}
           indiceIgnicao={indiceIgnicao}
           calorRows={calorRows}
-          phaseTier={conqueredPhaseTier ?? phaseTier}
+          phaseTier={displayPhaseTier}
           vtc30dKg={vtc30dKg}
           thermalState={thermalStateWithSettlement}
-          monthBoundaryDegraded={thermalSettlement?.degraded === true}
+          monthBoundaryDegraded={monthBoundaryDegraded}
           profileName={profileName}
           profilePhotoUrl={profilePhotoUrl}
         />

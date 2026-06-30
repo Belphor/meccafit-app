@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { isFenixQaLabEnabled } from "@/components/qa/FenixAnimationTestPanel";
 import type { PhaseTier } from "@/lib/dashboard-config";
-import { evaluateThermalGravity, phaseTierToLayoutCode, type ThermalGravityState } from "@/lib/thermal-gravity";
+import { evaluateThermalGravity, type ThermalGravityState } from "@/lib/thermal-gravity";
 import {
   readThermalGravityQaOverride,
   THERMAL_GRAVITY_QA_UPDATED_EVENT,
@@ -15,7 +15,14 @@ export function useThermalGravityClientState(
   vtcMonthKg: number,
   sessionVtcToday = 0,
   vtc30dKg = 0,
-): { state: ThermalGravityState; qaOverride: ThermalGravityQaOverride | null; qaLabEnabled: boolean } {
+): {
+  state: ThermalGravityState;
+  qaOverride: ThermalGravityQaOverride | null;
+  qaLabEnabled: boolean;
+  monthBoundaryDegraded: boolean;
+  monthAtRisk: boolean;
+  simulatedPhaseTier: PhaseTier | null;
+} {
   const [qaOverride, setQaOverride] = useState<ThermalGravityQaOverride | null>(null);
   const [qaLabEnabled, setQaLabEnabled] = useState(false);
 
@@ -37,7 +44,7 @@ export function useThermalGravityClientState(
   const state = useMemo(() => {
     const effectiveTier = qaOverride?.phase_tier ?? phaseTier;
     const vtc_month = qaOverride?.vtc_month ?? vtcMonthKg;
-    const vtc_30d = vtc30dKg;
+    const vtc_30d = qaOverride?.vtc_30d ?? vtc30dKg;
     const session_vtc_today = Math.max(qaOverride?.session_vtc_today ?? 0, sessionVtcToday);
     const evaluated = evaluateThermalGravity(effectiveTier, {
       vtc_month,
@@ -45,18 +52,42 @@ export function useThermalGravityClientState(
       session_vtc_today,
     });
 
-    if (qaOverride?.simulate_degraded_layout && !evaluated.restoration_active) {
-      const degradedTier = Math.max(1, effectiveTier - 1) as PhaseTier;
-      return {
-        ...evaluated,
-        effective_tier: degradedTier,
-        active_phase_layout: phaseTierToLayoutCode(degradedTier),
-        is_degraded: true,
+    let next: ThermalGravityState = evaluated;
+
+    if (qaOverride?.days_remaining !== undefined) {
+      next = {
+        ...next,
+        days_remaining: qaOverride.days_remaining,
       };
     }
 
-    return evaluated;
+    if (qaOverride?.settled_month_label) {
+      next = {
+        ...next,
+        settled_month_label: qaOverride.settled_month_label,
+      };
+    }
+
+    return next;
   }, [phaseTier, qaOverride, sessionVtcToday, vtc30dKg, vtcMonthKg]);
 
-  return { state, qaOverride, qaLabEnabled };
+  const monthBoundaryDegraded =
+    qaLabEnabled && qaOverride?.simulate_month_boundary_degraded === true;
+
+  const monthAtRisk =
+    qaLabEnabled && qaOverride?.simulate_month_at_risk === true;
+
+  const simulatedPhaseTier: PhaseTier | null =
+    monthBoundaryDegraded && qaOverride
+      ? (Math.max(1, qaOverride.phase_tier - 1) as PhaseTier)
+      : null;
+
+  return {
+    state,
+    qaOverride,
+    qaLabEnabled,
+    monthBoundaryDegraded,
+    monthAtRisk,
+    simulatedPhaseTier,
+  };
 }

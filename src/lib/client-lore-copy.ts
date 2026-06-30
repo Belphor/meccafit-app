@@ -47,9 +47,10 @@ export const DIETA_FORJADOR_NOTES = "Observações do Forjador";
 export const DIETA_VIP_WAITING =
   "Seu vínculo VIP está ativo. O Forjador ainda não publicou o plano alimentar. Quando publicar, ele aparece aqui.";
 
-/** Suporte */
-export const SUPORTE_INTRO = (company: string) =>
-  `Conte o que podemos melhorar ou reporte um problema. Sua mensagem fica registrada para a equipe ${company}.`;
+/** Fenyxia Suporte · canal único no Perfil */
+export const FENYXIA_SUPORTE_CHIP = "Fenyxia Suporte";
+export const FENYXIA_SUPORTE_META = "Canal oficial no Perfil";
+export const FENYXIA_SUPORTE_BADGE = "Canal oficial de suporte";
 
 /** Acesso suspenso */
 export const CONTA_SUSPENSA =

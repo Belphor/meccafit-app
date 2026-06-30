@@ -11,14 +11,13 @@ import {
   type FenixEvolutionSystemId,
 } from "@/lib/fenix-evolution-glossary";
 
-/** Ordem alinhada à aba Evolução: Ritmo → Brasas → Chama (+ Gravidade) → Altar → Ascensão. */
+/** Ordem alinhada à aba Evolução: Ritmo → Brasas → Chama (+ Gravidade) → Altar. Ascensão e Inatividade ficam no Perfil. */
 const SYSTEM_ORDER: FenixEvolutionSystemId[] = [
   "ritmo_fenix",
   "brasas_musculares",
   "chama_acumulada",
   "gravidade_termica",
   "chama_altar",
-  "ascensao",
 ];
 
 const SYSTEM_ACCENT: Record<FenixEvolutionSystemId, string> = {

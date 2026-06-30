@@ -64,6 +64,13 @@ export function evaluateLinhagemTierTransition(
     writeSessionLinhagemTier(userId, tier);
     if (acknowledged === null) {
       writeAcknowledgedLinhagemTier(userId, tier);
+      return "none";
+    }
+    if (tier > acknowledged) {
+      return "celebrate";
+    }
+    if (tier < acknowledged) {
+      writeAcknowledgedLinhagemTier(userId, tier);
     }
     return "none";
   }
@@ -84,4 +91,18 @@ export function evaluateLinhagemTierTransition(
   }
 
   return "none";
+}
+
+/** Sincroniza tier após rebaixamento para bloquear transmutação indevida. */
+export function syncLinhagemTierAfterDemotion(userId: string, tier: PhaseTier): void {
+  writeSessionLinhagemTier(userId, tier);
+  writeAcknowledgedLinhagemTier(userId, tier);
+}
+
+/** Transmutação só quando a fase sobe além do baseline já reconhecido na sessão. */
+export function canShowLinhagemTransmutation(userId: string, tier: PhaseTier): boolean {
+  const acknowledged = readAcknowledgedLinhagemTier(userId);
+  const sessionTier = readSessionLinhagemTier(userId);
+  const baseline = Math.max(acknowledged ?? 0, sessionTier ?? 0);
+  return tier > baseline;
 }

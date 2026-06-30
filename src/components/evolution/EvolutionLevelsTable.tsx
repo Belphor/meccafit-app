@@ -17,7 +17,6 @@ import {
   MUSCLE_LEVELS_TABLE_INTRO,
   PHASE_LEVELS_TABLE_INTRO,
   THERMAL_GRAVITY_LEVELS_INTRO,
-  LINHAGEM_INACTIVITY_LEVELS_INTRO,
 } from "@/lib/evolution-levels-reference";
 
 type EvolutionLevelsTableProps = {
@@ -56,7 +55,8 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
         <div className="min-w-0">
           <h3 className={DASHBOARD_SECTION_TITLE}>Réguas da Fênix</h3>
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
-            Referência na ordem da aba Evolução: Ritmo, Brasas Musculares e Chama Acumulada.
+            Referência na ordem da aba Evolução: Ritmo, Brasas Musculares e Chama Acumulada (com
+            Gravidade Térmica). Inatividade e Ascensão estão na aba Perfil.
           </p>
         </div>
         <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-amber-400/80">
@@ -169,15 +169,6 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
               </p>
             </div>
 
-            <div className="mt-3 rounded-lg border border-neutral-700/40 bg-black/20 px-3 py-3">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400">
-                Inatividade da Linhagem
-              </p>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-500">
-                {LINHAGEM_INACTIVITY_LEVELS_INTRO}
-              </p>
-            </div>
-
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[520px] border-collapse text-left text-sm">
                 <thead>
@@ -200,21 +191,6 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
                 </tbody>
               </table>
             </div>
-          </section>
-
-          <section
-            aria-labelledby="evolucao-ascensao-title"
-            className="rounded-xl border border-neutral-800/60 bg-neutral-950/40 px-3.5 py-3"
-          >
-            <p
-              id="evolucao-ascensao-title"
-              className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500"
-            >
-              {FENIX_EVOLUTION_SYSTEMS.ascensao.loreName}
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-neutral-500">
-              {FENIX_EVOLUTION_SYSTEMS.ascensao.explanation}
-            </p>
           </section>
         </div>
       ) : null}

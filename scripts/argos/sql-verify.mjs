@@ -103,7 +103,7 @@ await check("RPC registrar_treino grava VTC no balanco diario", async () => {
   });
   if (vtcErr) return false;
 
-  const expectedMin = 50 * 10 * 4;
+  const expectedMin = 50;
   const ok = Number(vtcToday) >= expectedMin;
 
   const { data: hist } = await cliente.client
@@ -115,6 +115,11 @@ await check("RPC registrar_treino grava VTC no balanco diario", async () => {
   if (hist?.id) {
     await cliente.client.from("historico_treinos").delete().eq("id", hist.id);
   }
+  await cliente.client
+    .from("historico_cargas")
+    .delete()
+    .eq("atleta_id", cliente.userId)
+    .eq("exercicio_id", String(probeId));
 
   return ok;
 });

@@ -10,6 +10,8 @@ type PortalToastProps = {
   visible: boolean;
   onDismiss: () => void;
   autoDismissMs?: number;
+  /** Quando true, o aviso permanece até dispensa explícita (ex.: inatividade pendente). */
+  persistent?: boolean;
 };
 
 const variantStyles: Record<PortalToastVariant, string> = {
@@ -26,13 +28,14 @@ export function PortalToast({
   visible,
   onDismiss,
   autoDismissMs = 5200,
+  persistent = false,
 }: PortalToastProps) {
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || persistent) return;
 
     const timer = window.setTimeout(onDismiss, autoDismissMs);
     return () => window.clearTimeout(timer);
-  }, [autoDismissMs, onDismiss, visible, message]);
+  }, [autoDismissMs, onDismiss, persistent, visible, message]);
 
   if (!visible || !message.trim()) {
     return null;

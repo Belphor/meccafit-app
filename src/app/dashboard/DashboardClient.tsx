@@ -56,15 +56,34 @@ import {
   refreshDaySubgroupHistorico,
 } from "@/lib/dashboard-data";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
-import { parseThermalGravityState } from "@/lib/thermal-gravity";
 import {
-  buildLinhagemInactivityDegradationMessage,
+  buildLinhagemInactivityAckMessage,
+  buildLinhagemInactivityAlertMessage,
+  buildLinhagemInactivityReturnMessage,
+  LINHAGEM_INACTIVITY_RETURN_TOAST_MS,
   type LinhagemInactivitySyncResult,
   type ThermalGravitySettlementResult,
 } from "@/lib/linhagem-inactivity";
+import {
+  buildThermalGravityMonthAtRiskMessage,
+  buildThermalGravitySettlementMessage,
+  evaluateThermalGravity,
+  parseThermalGravityState,
+  resolveMonthlyLevelUpProgressPercent,
+} from "@/lib/thermal-gravity";
+import {
+  LINHAGEM_INACTIVITY_QA_EVENT,
+  type LinhagemInactivityQaDetail,
+} from "@/lib/linhagem-inactivity-qa";
+import {
+  readThermalGravityQaOverride,
+  THERMAL_GRAVITY_QA_UPDATED_EVENT,
+} from "@/lib/thermal-gravity-qa";
+import { isFenixQaLabEnabled } from "@/components/qa/FenixAnimationTestPanel";
 import { rekindleLinhagemAfterInactivity } from "@/lib/linhagem-inactivity-server";
+import { syncLinhagemTierAfterDemotion } from "@/lib/linhagem-tier-tracker";
 import { supabase } from "@/lib/supabase";
-import { PortalToast } from "@/components/portal/PortalToast";
+import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
 import {
   BIOLOGICAL_BALANCE_MIN_AGE,
   DASHBOARD_HERO_TITLE,
@@ -72,6 +91,7 @@ import {
   DASHBOARD_SHELL,
   dashboardTabPanelClass,
   PLASMA_HERO_TITLE,
+  type PhaseTier,
 } from "@/lib/dashboard-config";
 import {
   readAltarDailyCardioPercent,
@@ -218,10 +238,160 @@ export function DashboardClient({
     readAltarDailyCardioPercent(userId),
   );
   const [liveSessionVtcKg, setLiveSessionVtcKg] = useState(0);
-  const [inactivityToast, setInactivityToast] = useState<string | null>(null);
+  const [portalToast, setPortalToast] = useState<{
+    message: string;
+    variant: PortalToastVariant;
+  } | null>(null);
+  const [inactivityAlert, setInactivityAlert] = useState<string | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
   const inactivityPendingRef = useRef<LinhagemInactivitySyncResult | null>(null);
+  const inactivityPendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const monthRiskToastShownRef = useRef(false);
+  const [portalToastDismissMs, setPortalToastDismissMs] = useState(12_000);
+
+  const showPortalToast = useCallback(
+    (message: string, variant: PortalToastVariant = "info", autoDismissMs = 12_000) => {
+      if (!message.trim()) return;
+      setPortalToastDismissMs(autoDismissMs);
+      setPortalToast({ message, variant });
+    },
+    [],
+  );
+
+  const showInactivityAlert = useCallback((inactivity: LinhagemInactivitySyncResult) => {
+    const message = buildLinhagemInactivityAlertMessage(inactivity);
+    if (message) {
+      setInactivityAlert(message);
+    }
+  }, []);
+
+  const handleLinhagemInactivitySync = useCallback(
+    (inactivity: LinhagemInactivitySyncResult) => {
+      if (inactivityPendingTimerRef.current) {
+        clearTimeout(inactivityPendingTimerRef.current);
+        inactivityPendingTimerRef.current = null;
+      }
+
+      if (inactivity.phase_tier) {
+        setProfileRow((row) => (row ? { ...row, phase_tier: inactivity.phase_tier } : row));
+      }
+
+      if (inactivity.degraded || inactivity.pending_rekindle) {
+        syncLinhagemTierAfterDemotion(userId, inactivity.phase_tier);
+      }
+
+      if (inactivity.degraded && inactivity.pending_rekindle) {
+        inactivityPendingRef.current = inactivity;
+        setInactivityAlert(null);
+
+        const returnMessage = buildLinhagemInactivityReturnMessage(inactivity);
+        if (returnMessage) {
+          showPortalToast(returnMessage, "info", LINHAGEM_INACTIVITY_RETURN_TOAST_MS);
+        }
+
+        inactivityPendingTimerRef.current = setTimeout(() => {
+          setPortalToast(null);
+          showInactivityAlert({
+            ...inactivity,
+            degraded: false,
+          });
+          inactivityPendingTimerRef.current = null;
+        }, LINHAGEM_INACTIVITY_RETURN_TOAST_MS);
+        return;
+      }
+
+      if (inactivity.pending_rekindle) {
+        inactivityPendingRef.current = inactivity;
+        showInactivityAlert(inactivity);
+        return;
+      }
+
+      inactivityPendingRef.current = null;
+      setInactivityAlert(null);
+    },
+    [showInactivityAlert, showPortalToast, userId],
+  );
+
+  const resolveDashboardAlerts = useCallback(
+    (
+      settlement: ThermalGravitySettlementResult | null,
+      inactivity: LinhagemInactivitySyncResult | null,
+      profileRowData: Record<string, unknown> | null,
+    ) => {
+      const settlementMessage = settlement ? buildThermalGravitySettlementMessage(settlement) : "";
+      if (settlementMessage) {
+        if (settlement.degraded) {
+          syncLinhagemTierAfterDemotion(userId, settlement.phase_tier);
+        }
+        showPortalToast(settlementMessage, "info");
+        return;
+      }
+
+      if (inactivity?.pending_rekindle || inactivity?.degraded) {
+        handleLinhagemInactivitySync(inactivity);
+        return;
+      }
+
+      if (monthRiskToastShownRef.current) return;
+
+      const phaseTier = Number(profileRowData?.phase_tier ?? 1);
+      const thermalRaw = profileRowData?.thermal_gravity;
+      const metrics = parseThermalGravityState(thermalRaw);
+      if (!metrics || phaseTier < 2) return;
+
+      const thermalState = evaluateThermalGravity(phaseTier, {
+        vtc_month: metrics.vtc_month,
+        vtc_30d: metrics.vtc_30d,
+        session_vtc_today: metrics.session_vtc_today,
+      });
+      const progressPct = resolveMonthlyLevelUpProgressPercent(thermalState) ?? 0;
+      const riskMessage = buildThermalGravityMonthAtRiskMessage(thermalState, progressPct);
+      if (riskMessage) {
+        monthRiskToastShownRef.current = true;
+        showPortalToast(riskMessage, "info");
+      }
+    },
+    [handleLinhagemInactivitySync, showPortalToast, userId],
+  );
+
+  const resolveQaThermalAlert = useCallback(() => {
+    if (!isFenixQaLabEnabled()) return;
+    const override = readThermalGravityQaOverride();
+    if (!override) return;
+
+    if (override.simulate_month_boundary_degraded) {
+      const degradedTier = Math.max(1, override.phase_tier - 1) as PhaseTier;
+      const settlement: ThermalGravitySettlementResult = {
+        degraded: true,
+        phase_tier: degradedTier,
+        previous_tier: override.phase_tier,
+        settled_month: null,
+        settled_month_label: override.settled_month_label ?? "o mês anterior",
+        first_settlement: false,
+      };
+      setProfileRow((row) => (row ? { ...row, phase_tier: degradedTier } : row));
+      syncLinhagemTierAfterDemotion(userId, degradedTier);
+      const message = buildThermalGravitySettlementMessage(settlement);
+      if (message) showPortalToast(message, "info");
+      return;
+    }
+
+    if (override.simulate_month_at_risk) {
+      const thermalState = evaluateThermalGravity(override.phase_tier, {
+        vtc_month: override.vtc_month,
+        vtc_30d: override.vtc_30d ?? override.vtc_month,
+        session_vtc_today: override.session_vtc_today,
+      });
+      const nextState =
+        override.days_remaining !== undefined
+          ? { ...thermalState, days_remaining: override.days_remaining }
+          : thermalState;
+      const progressPct = resolveMonthlyLevelUpProgressPercent(nextState) ?? 0;
+      const message = buildThermalGravityMonthAtRiskMessage(nextState, progressPct);
+      if (message) showPortalToast(message, "info");
+    }
+  }, [showPortalToast, userId]);
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
   const subgroupRef = useRef(subgroup);
   const tabBootstrappedRef = useRef(false);
@@ -259,6 +429,31 @@ export function DashboardClient({
     window.addEventListener(FENIX_QA_ANIMATION_EVENT, handler);
     return () => window.removeEventListener(FENIX_QA_ANIMATION_EVENT, handler);
   }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<LinhagemInactivityQaDetail>).detail;
+      if (!detail?.result) return;
+      handleLinhagemInactivitySync(detail.result);
+    };
+
+    window.addEventListener(LINHAGEM_INACTIVITY_QA_EVENT, handler);
+    return () => window.removeEventListener(LINHAGEM_INACTIVITY_QA_EVENT, handler);
+  }, [handleLinhagemInactivitySync]);
+
+  useEffect(() => {
+    return () => {
+      if (inactivityPendingTimerRef.current) {
+        clearTimeout(inactivityPendingTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = () => resolveQaThermalAlert();
+    window.addEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, handler);
+    return () => window.removeEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, handler);
+  }, [resolveQaThermalAlert]);
 
   const refreshTreinoData = useCallback(async () => {
     const [rows, schedule, config] = await Promise.all([
@@ -414,6 +609,7 @@ export function DashboardClient({
     let isMounted = true;
 
     async function loadDashboardData() {
+      monthRiskToastShownRef.current = false;
       const bundle = await loadDashboardTrainingBundle(subgroupParam);
       if (!isMounted) return;
 
@@ -454,10 +650,11 @@ export function DashboardClient({
       inactivityPendingRef.current =
         inactivity?.pending_rekindle ? inactivity : null;
 
-      if (inactivity?.degraded) {
-        const message = buildLinhagemInactivityDegradationMessage(inactivity);
-        if (message) setInactivityToast(message);
-      }
+      resolveDashboardAlerts(
+        bundle.data.thermalSettlement ?? null,
+        inactivity ?? null,
+        bundle.data.profileRow,
+      );
 
       const thermal = parseThermalGravityState(bundle.data.profileRow?.thermal_gravity);
       if (thermal) {
@@ -470,7 +667,7 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [loadKey, subgroupParam]);
+  }, [loadKey, resolveDashboardAlerts, subgroupParam]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -615,6 +812,47 @@ export function DashboardClient({
     }
   }, []);
 
+  const handleRekindleInactivity = useCallback(async () => {
+    if (!inactivityPendingRef.current?.pending_rekindle) return;
+
+    const pending = inactivityPendingRef.current;
+
+    if (isFenixQaLabEnabled()) {
+      inactivityPendingRef.current = null;
+      setInactivityAlert(null);
+      showPortalToast(
+        buildLinhagemInactivityAckMessage({
+          phase_tier: pending.phase_tier,
+          previous_tier: pending.restore_tier ?? pending.previous_tier,
+          phases_lost: pending.phases_lost,
+        }),
+        "success",
+      );
+      return;
+    }
+
+    const result = await rekindleLinhagemAfterInactivity(supabase);
+    if (!result?.rekindled) return;
+
+    inactivityPendingRef.current = null;
+    setInactivityAlert(null);
+    showPortalToast(
+      buildLinhagemInactivityAckMessage({
+        phase_tier: result.phase_tier as PhaseTier,
+        previous_tier: pending.restore_tier ?? pending.previous_tier,
+        phases_lost: pending.phases_lost,
+      }),
+      "success",
+    );
+  }, [showPortalToast]);
+
+  const handleSetComplete = useCallback(
+    (_exerciseId: number) => {
+      void handleRekindleInactivity();
+    },
+    [handleRekindleInactivity],
+  );
+
   const handleTrainingPersisted = useCallback(
     async (_exerciseId: number, detail?: { vtcGenerated: number }) => {
       const liveIncrement = detail?.vtcGenerated ?? 0;
@@ -622,19 +860,6 @@ export function DashboardClient({
         setLiveSessionVtcKg((current) =>
           Math.round((current + liveIncrement) * 100) / 100,
         );
-      }
-
-      if (inactivityPendingRef.current?.pending_rekindle) {
-        const result = await rekindleLinhagemAfterInactivity(supabase);
-        if (result?.rekindled) {
-          inactivityPendingRef.current = null;
-          setProfileRow((row) =>
-            row ? { ...row, phase_tier: result.phase_tier } : row,
-          );
-          setInactivityToast(
-            "Braseiro reacendido — sua linhagem voltou ao patamar anterior. Continue o ritual.",
-          );
-        }
       }
     },
     [],
@@ -701,6 +926,7 @@ export function DashboardClient({
     onTrainingDayPick: handleTrainingDayPick,
     onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) =>
       void handleTrainingPersisted(exerciseId, detail),
+    onSetComplete: handleSetComplete,
   } as const;
 
   if (!dataReady) {
@@ -730,11 +956,14 @@ export function DashboardClient({
       {(phase) => (
         <AppShell>
           <PortalToast
-            message={inactivityToast ?? ""}
-            variant="info"
-            visible={Boolean(inactivityToast)}
-            onDismiss={() => setInactivityToast(null)}
-            autoDismissMs={12000}
+            message={inactivityAlert ?? portalToast?.message ?? ""}
+            variant={inactivityAlert ? "info" : portalToast?.variant ?? "info"}
+            visible={Boolean(inactivityAlert || portalToast)}
+            persistent={Boolean(inactivityAlert)}
+            onDismiss={() => {
+              if (!inactivityAlert) setPortalToast(null);
+            }}
+            autoDismissMs={portalToastDismissMs}
           />
           <main className={DASHBOARD_SHELL}>
             <div

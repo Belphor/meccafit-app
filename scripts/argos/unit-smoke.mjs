@@ -12,6 +12,19 @@ import {
   evaluateUsageTolerance,
   summarizePlutusAlerts,
 } from "../lib/plutus-infra-alerts.mjs";
+import {
+  buildLinhagemInactivityAckMessage,
+  buildLinhagemInactivityAlertMessage,
+  buildLinhagemInactivityDegradationMessage,
+  buildLinhagemInactivityReturnMessage,
+  buildThermalGravityMonthAtRiskMessage,
+  buildThermalGravitySettlementMessage,
+  formatMonthlyGoalLabelMet,
+  isThermalGravityMonthAtRisk,
+  resolveCurrentMonthKeyBrasilia,
+  resolveThermalSettlementTierAfterMiss,
+  shouldCelebrateLinhagemTierTransition,
+} from "../lib/linhagem-thermal-alerts.mjs";
 
 let passed = 0;
 let failed = 0;
@@ -274,6 +287,128 @@ assert("PLUTUS summarize critical quando há critical", summarizePlutusAlerts([
   evaluateUsageTolerance({ id: "a", label: "A", used: 96, limit: 100, unit: "MB" }),
 ]).worst === "critical");
 assert("PLUTUS tolerance warn threshold", PLUTUS_TOLERANCE.warnPct === 80);
+
+const inactivityReturnMsg = buildLinhagemInactivityReturnMessage({
+  degraded: true,
+  phase_tier: 3,
+  previous_tier: 4,
+  phases_lost: 1,
+  days_absent: 35,
+  pending_rekindle: true,
+  restore_tier: 4,
+});
+assert(
+  "inatividade retorno anuncia degradação em 8s",
+  inactivityReturnMsg.includes("definitiva") &&
+    inactivityReturnMsg.includes("Labareda") &&
+    inactivityReturnMsg.includes("Brasa") &&
+    !inactivityReturnMsg.includes("dispensar"),
+);
+
+const inactivityPendingMsg = buildLinhagemInactivityAlertMessage({
+  degraded: false,
+  phase_tier: 3,
+  previous_tier: 4,
+  phases_lost: 1,
+  days_absent: null,
+  pending_rekindle: true,
+  restore_tier: 4,
+});
+assert(
+  "inatividade pendente permanece até série",
+  inactivityPendingMsg.includes("aguarda seu retorno") &&
+    inactivityPendingMsg.includes("reacender a chama") &&
+    inactivityPendingMsg.includes("Labareda") &&
+    !inactivityPendingMsg.includes("--"),
+);
+assert(
+  "inatividade ack confirma reacendimento sem restaurar fase",
+  buildLinhagemInactivityAckMessage({
+    phase_tier: 3,
+    previous_tier: 4,
+    phases_lost: 1,
+  }).includes("reacendida") &&
+    buildLinhagemInactivityAckMessage({
+      phase_tier: 3,
+      previous_tier: 4,
+      phases_lost: 1,
+    }).includes("permanece em Brasa") &&
+    !buildLinhagemInactivityAckMessage({
+      phase_tier: 3,
+      previous_tier: 4,
+      phases_lost: 1,
+    }).includes("restaur"),
+);
+assert(
+  "transmutação não dispara em rebaixamento",
+  !shouldCelebrateLinhagemTierTransition(4, 3, 4) &&
+    shouldCelebrateLinhagemTierTransition(3, 4, 3),
+);
+assert(
+  "transmutação só uma vez por nível",
+  !shouldCelebrateLinhagemTierTransition(3, 4, 4),
+);
+assert(
+  "virada do mês QA desce uma fase",
+  resolveThermalSettlementTierAfterMiss(false, 3) === 2,
+);
+
+const settlementMsg = buildThermalGravitySettlementMessage({
+  degraded: true,
+  phase_tier: 3,
+  previous_tier: 4,
+  settled_month: "2026-06",
+  settled_month_label: "junho de 2026",
+  first_settlement: false,
+});
+assert(
+  "virada do mês sem meta descreve regressão térmica",
+  settlementMsg.includes("Gravidade Térmica de junho de 2026") &&
+    settlementMsg.includes("Labareda") &&
+    settlementMsg.includes("Brasa") &&
+    !settlementMsg.includes("Prova de") &&
+    !settlementMsg.includes("--"),
+);
+
+const monthRiskState = {
+  leveled_up_this_month: false,
+  days_remaining: 5,
+  month_label: "junho de 2026",
+  next_tier: 4,
+};
+assert(
+  "fim do mês em risco detecta janela crítica",
+  isThermalGravityMonthAtRisk(monthRiskState, 40) === true,
+);
+const monthRiskMsg = buildThermalGravityMonthAtRiskMessage(monthRiskState, 40);
+assert(
+  "fim do mês em risco cita Gravidade Térmica",
+  monthRiskMsg.includes("5 dias") &&
+    monthRiskMsg.includes("Gravidade Térmica de junho de 2026") &&
+    monthRiskMsg.includes("abaixo da meta") &&
+    !monthRiskMsg.includes("Fogo Cósmico") &&
+    !monthRiskMsg.includes("--"),
+);
+
+assert(
+  "meta do mês cumprida usa Gravidade Térmica",
+  formatMonthlyGoalLabelMet({
+    leveled_up_this_month: true,
+    month_label: "junho de 2026",
+  }).includes("Gravidade Térmica de junho de 2026"),
+);
+
+assert(
+  "mês civil segue calendário de Brasília",
+  /^\d{4}-\d{2}$/.test(resolveCurrentMonthKeyBrasilia()),
+);
+
+assert(
+  "virada térmica rebaixa 1 fase da atual",
+  resolveThermalSettlementTierAfterMiss(false, 4) === 3 &&
+    resolveThermalSettlementTierAfterMiss(false, 1) === 1 &&
+    resolveThermalSettlementTierAfterMiss(true, 4) === 4,
+);
 
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

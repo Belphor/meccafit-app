@@ -82,8 +82,8 @@ function isAccessDeniedError(error) {
   );
 }
 
-function computeMeccaContributionKg(peso, repeticoes, series) {
-  const vtc = Number(peso) * Number(repeticoes) * Number(series);
+function computeMeccaContributionKg(peso) {
+  const vtc = Number(peso);
   return Math.min(Math.max(Math.floor(vtc), 1), 99999);
 }
 
@@ -344,7 +344,7 @@ await record("1.3 · registrar_treino_com_status + incremento Mecca", async () =
   const peso = 42.5;
   const repeticoes = 10;
   const series = 3;
-  const expectedMeccaDelta = computeMeccaContributionKg(peso, repeticoes, series);
+  const expectedMeccaDelta = computeMeccaContributionKg(peso);
 
   const meccaBefore = await fetchMeccaTotal(cliente.client);
 
@@ -512,7 +512,7 @@ await record("3.1 · Integridade Mecca sob concorrência (Promise.all)", async (
   const peso = 25;
   const repeticoes = 8;
   const series = 2;
-  const perCallMecca = computeMeccaContributionKg(peso, repeticoes, series);
+  const perCallMecca = computeMeccaContributionKg(peso);
   const expectedTotalDelta = perCallMecca * CONCURRENT_RPC_CALLS;
 
   const meccaBefore = await fetchMeccaTotal(cliente.client);

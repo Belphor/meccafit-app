@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PhaseTransmutation } from "@/components/dashboard/PhaseTransmutation";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import { resolveLinhagemTransmutationCopy } from "@/lib/fenix-evolution-glossary";
-import { writeAcknowledgedLinhagemTier } from "@/lib/linhagem-tier-tracker";
+import { canShowLinhagemTransmutation, writeAcknowledgedLinhagemTier } from "@/lib/linhagem-tier-tracker";
 import {
   LINHAGEM_TRANSMUTATION_EVENT,
   type LinhagemTransmutationDetail,
@@ -32,6 +32,7 @@ export function LinhagemTransmutationHost({ userId }: LinhagemTransmutationHostP
     const onLinhagem = (event: Event) => {
       const detail = (event as CustomEvent<LinhagemTransmutationDetail>).detail;
       if (!detail || detail.userId !== userId) return;
+      if (!canShowLinhagemTransmutation(userId, detail.tier)) return;
       setActiveTier(detail.tier);
     };
 

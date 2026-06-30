@@ -23,6 +23,18 @@ import {
   FENIX_QA_ANIMATIONS,
   type FenixQaAnimationKind,
 } from "@/lib/qa-animation-events";
+import {
+  applyLinhagemInactivityQaPreset,
+  LINHAGEM_INACTIVITY_QA_PRESETS,
+  describeLinhagemInactivityQaResult,
+} from "@/lib/linhagem-inactivity-qa";
+import {
+  applyThermalGravityQaPreset,
+  describeThermalGravityQaState,
+  readThermalGravityQaOverride,
+  THERMAL_GRAVITY_QA_PRESETS,
+  THERMAL_GRAVITY_QA_UPDATED_EVENT,
+} from "@/lib/thermal-gravity-qa";
 
 const QA_MODE_KEY = "meccafit:qa-lab";
 
@@ -72,9 +84,21 @@ export function FenixAnimationTestPanel({
   const [enabled, setEnabled] = useState(false);
   const [showRestorationPreview, setShowRestorationPreview] = useState(false);
   const [avatarPreviewTier, setAvatarPreviewTier] = useState<4 | 3>(4);
+  const [thermalQaSummary, setThermalQaSummary] = useState<string | null>(null);
+  const [inactivityQaSummary, setInactivityQaSummary] = useState<string | null>(null);
 
   useEffect(() => {
     setEnabled(readQaModeEnabled());
+  }, []);
+
+  useEffect(() => {
+    const refreshThermal = () => {
+      const override = readThermalGravityQaOverride();
+      setThermalQaSummary(override ? describeThermalGravityQaState(override) : null);
+    };
+    refreshThermal();
+    window.addEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, refreshThermal);
+    return () => window.removeEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, refreshThermal);
   }, []);
 
   const toggleLab = useCallback(() => {
@@ -83,6 +107,16 @@ export function FenixAnimationTestPanel({
       writeQaModeEnabled(next);
       return next;
     });
+  }, []);
+
+  const triggerThermalPreset = useCallback((presetId: string) => {
+    const override = applyThermalGravityQaPreset(presetId);
+    setThermalQaSummary(override ? describeThermalGravityQaState(override) : null);
+  }, []);
+
+  const triggerInactivityPreset = useCallback((presetId: string) => {
+    const result = applyLinhagemInactivityQaPreset(presetId);
+    if (result) setInactivityQaSummary(describeLinhagemInactivityQaResult(result));
   }, []);
 
   const trigger = useCallback((kind: FenixQaAnimationKind) => {
@@ -103,7 +137,7 @@ export function FenixAnimationTestPanel({
 
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
-      <DashboardPanelHeader chip="Laboratório QA" meta="Animações · títulos · testes" />
+      <DashboardPanelHeader chip="Laboratório QA" meta="Animações · sistemas · testes" />
 
       <ThermalGravityRestorationFlash
         active={showRestorationPreview}
@@ -177,6 +211,81 @@ export function FenixAnimationTestPanel({
                   </button>
                 </div>
               </div>
+            </section>
+
+            <section aria-labelledby="qa-thermal-title">
+              <p
+                id="qa-thermal-title"
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200/90"
+              >
+                Gravidade Térmica
+              </p>
+              <p className={`mt-2 ${EVOLUTION_HINT}`}>
+                Cenários fictícios para o card da aba Evolução. Não alteram sua fase real no servidor.
+                É um sistema diferente da inatividade de 30 dias.
+              </p>
+              {thermalQaSummary ? (
+                <p className="mt-2 rounded-lg border border-orange-500/20 bg-orange-950/20 px-3 py-2 text-[11px] text-amber-100/90">
+                  Ativo: {thermalQaSummary}
+                </p>
+              ) : null}
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {THERMAL_GRAVITY_QA_PRESETS.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => triggerThermalPreset(item.id)}
+                      className={`${DASHBOARD_TAP_TARGET} w-full rounded-xl border border-orange-500/15 bg-black/35 px-3 py-3 text-left hover:border-amber-500/30`}
+                    >
+                      <span className="text-sm font-medium text-amber-50">{item.label}</span>
+                      <span className="mt-1 block text-[11px] leading-relaxed text-neutral-500">
+                        {item.hint}
+                      </span>
+                      <span className="mt-2 block text-[10px] leading-relaxed text-amber-200/70">
+                        {item.howTo}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section aria-labelledby="qa-inactivity-title">
+              <p
+                id="qa-inactivity-title"
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200/90"
+              >
+                Inatividade da Linhagem
+              </p>
+              <p className={`mt-2 ${EVOLUTION_HINT}`}>
+                Cenários fictícios do aviso ao ficar 30 dias sem abrir o app. &quot;Volta após 30
+                dias&quot; anuncia a degradação por 8 segundos e depois ativa o aviso persistente até
+                concluir uma série no Treino.
+              </p>
+              {inactivityQaSummary ? (
+                <p className="mt-2 rounded-lg border border-sky-500/20 bg-sky-950/20 px-3 py-2 text-[11px] text-sky-100/90">
+                  Último disparo: {inactivityQaSummary}
+                </p>
+              ) : null}
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                {LINHAGEM_INACTIVITY_QA_PRESETS.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => triggerInactivityPreset(item.id)}
+                      className={`${DASHBOARD_TAP_TARGET} w-full rounded-xl border border-sky-500/15 bg-black/35 px-3 py-3 text-left hover:border-sky-400/30`}
+                    >
+                      <span className="text-sm font-medium text-amber-50">{item.label}</span>
+                      <span className="mt-1 block text-[11px] leading-relaxed text-neutral-500">
+                        {item.hint}
+                      </span>
+                      <span className="mt-2 block text-[10px] leading-relaxed text-amber-200/70">
+                        {item.howTo}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </section>
 
             <section aria-labelledby="qa-treino-title">

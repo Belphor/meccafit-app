@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import {
   evaluateLinhagemTierTransition,
+  canShowLinhagemTransmutation,
   writeAcknowledgedLinhagemTier,
 } from "@/lib/linhagem-tier-tracker";
 import { dispatchLinhagemTransmutation } from "@/lib/linhagem-transmutation-events";
@@ -37,10 +38,11 @@ export function EvolutionLinhagemLevelUp({
 
     const tier = Math.min(5, Math.max(1, Math.round(phaseTier))) as PhaseTier;
     const transition = evaluateLinhagemTierTransition(userId, tier, true);
+    if (transition !== "celebrate") return;
+    if (!canShowLinhagemTransmutation(userId, tier)) return;
+    if (tier <= (lastCelebratedRef.current ?? 0)) return;
 
-    if (transition === "celebrate" && tier > (lastCelebratedRef.current ?? 0)) {
-      triggerTransmutation(tier);
-    }
+    triggerTransmutation(tier);
   }, [dataReady, phaseTier, triggerTransmutation, userId]);
 
   return null;

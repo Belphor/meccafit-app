@@ -119,7 +119,7 @@ export const THERMAL_GRAVITY_LEVELS_INTRO =
   "Todo mês civil (horário de Brasília), suba de fase na Chama Acumulada com o VTC dos últimos 30 dias. Na virada do mês, se não passar, a linhagem desce uma fase.";
 
 export const LINHAGEM_INACTIVITY_LEVELS_INTRO =
-  "Função separada da Gravidade Térmica: se ficar 30 dias sem entrar no app, a linhagem regrede temporariamente. Ao voltar, você recebe um aviso — conclua uma série de qualquer exercício e sua fase anterior é restaurada.";
+  "Função separada da Gravidade Térmica. Se ficar 30 dias sem entrar no app, a linhagem desce uma fase de forma definitiva. Ao voltar, você recebe um aviso. Conclua uma série de qualquer exercício para dispensar o alerta e continue evoluindo a partir da fase atual.";
 
 export const THERMAL_LEVELS_UNIFIED_INTRO =
   "Todos os sistemas usam os mesmos cinco nomes térmicos: Cinzas, Faísca, Brasa, Labareda e Fogo Cósmico. O que muda é a janela de tempo e o recorte (corpo inteiro, músculo ou percentual).";

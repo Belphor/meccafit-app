@@ -9,7 +9,8 @@ import {
   type PhaseTier,
 } from "@/lib/dashboard-config";
 import { resolvePhaseTier } from "@/lib/custom-preferences";
-import { resolveMonthContextSp } from "@/lib/meta-sync-calendar";
+import { formatMonthLabelPt, resolveMonthContextSp } from "@/lib/meta-sync-calendar";
+import type { ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
 
 export type ThermalGravityMetrics = {
   vtc_month?: number;
@@ -208,9 +209,7 @@ export function resolveMonthlyLevelUpProgressPercent(state: ThermalGravityState)
 
 export function formatMonthlyGoalLabel(state: ThermalGravityState): string {
   if (state.leveled_up_this_month) {
-    return state.next_tier
-      ? `Prova de ${state.month_label} cumprida. Patamar de ${PHASE_TIER_LABELS[state.next_tier]} atingido.`
-      : `Prova de ${state.month_label} cumprida. Fogo Cósmico renovado.`;
+    return `Gravidade Térmica de ${state.month_label} cumprida.`;
   }
   if (state.next_tier) {
     return `Alcance ${PHASE_TIER_LABELS[state.next_tier]} antes da virada do mês.`;
@@ -223,4 +222,48 @@ export function formatThermalGravityShortHint(state: ThermalGravityState): strin
     return "Sua fase está protegida neste ciclo.";
   }
   return "Suba de fase até a virada do mês ou a linhagem desce um nível.";
+}
+
+export function isThermalGravityMonthAtRisk(
+  state: ThermalGravityState,
+  progressPercent: number,
+): boolean {
+  if (state.leveled_up_this_month) return false;
+  const pct = Math.min(100, Math.max(0, progressPercent));
+  return state.days_remaining <= 7 && pct < 70;
+}
+
+export function buildThermalGravityMonthAtRiskMessage(
+  state: ThermalGravityState,
+  progressPercent: number,
+): string {
+  if (!isThermalGravityMonthAtRisk(state, progressPercent)) return "";
+
+  const days = state.days_remaining;
+  const dayWord = days === 1 ? "dia" : "dias";
+
+  return (
+    `Faltam ${days} ${dayWord} para a virada do mês e a Gravidade Térmica de ${state.month_label} ` +
+    "ainda está abaixo da meta. Reacenda o volume antes da virada para proteger sua fase."
+  );
+}
+
+export function buildThermalGravitySettlementMessage(
+  settlement: ThermalGravitySettlementResult,
+): string {
+  if (!settlement.degraded || settlement.previous_tier === null || settlement.first_settlement) {
+    return "";
+  }
+
+  const fromLabel = PHASE_TIER_LABELS[settlement.previous_tier];
+  const toLabel = PHASE_TIER_LABELS[settlement.phase_tier];
+  const monthLabel =
+    settlement.settled_month_label ??
+    (settlement.settled_month ? formatMonthLabelPt(settlement.settled_month) : "o mês anterior");
+
+  return (
+    `A Gravidade Térmica de ${monthLabel} não foi cumprida. ` +
+    `A linhagem desceu de ${fromLabel} para ${toLabel}. ` +
+    "Reacenda o volume neste ciclo mensal."
+  );
 }

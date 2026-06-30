@@ -38,7 +38,7 @@ export const ThermalGravityRestorationFlash = memo(function ThermalGravityRestor
       }`}
       role="status"
       aria-live="assertive"
-      aria-label="Restauração térmica — fase reativada"
+      aria-label="Restauração térmica: fase reativada"
     >
       <div className="thermal-gravity-restoration-flash__core" />
       <div className="thermal-gravity-restoration-flash__ring" />
