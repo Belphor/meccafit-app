@@ -238,9 +238,9 @@ export function sumSessionAltarVtc(
   }, 0);
 }
 
-export const MURAL_BUNDLE_LIMIT = 24;
-export const MURAL_COMMUNITY_DEFAULT_LIMIT = 48;
-export const MURAL_COMMUNITY_MAX_LIMIT = 100;
+export const MURAL_BUNDLE_LIMIT = 10;
+export const MURAL_COMMUNITY_DEFAULT_LIMIT = 10;
+export const MURAL_COMMUNITY_MAX_LIMIT = 10;
 
 export type CommunityMuralRow = {
   id: number;

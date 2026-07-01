@@ -34,6 +34,7 @@ export type DueloClienteOption = {
   id: string;
   nome: string;
   is_vip?: boolean;
+  avatar_path?: string | null;
 };
 
 export type DueloConvitePendente = {
@@ -426,25 +427,25 @@ export async function fetchClientesDuelo(options?: {
   const { data, error } = await supabase.rpc("list_clientes_duelo", {
     p_search: options?.search?.trim() || null,
     p_offset: options?.offset ?? 0,
-    p_limit: options?.limit ?? 12,
+    p_limit: options?.limit ?? 10,
   });
 
   if (error) {
     if (error.code === "PGRST202") {
       return {
-        data: { clientes: [], total: 0, offset: 0, limit: 12 },
+        data: { clientes: [], total: 0, offset: 0, limit: 10 },
         error: "Lista de clientes para duelo ainda não aplicada no servidor.",
       };
     }
     return {
-      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      data: { clientes: [], total: 0, offset: 0, limit: 10 },
       error: error.message,
     };
   }
 
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return {
-      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      data: { clientes: [], total: 0, offset: 0, limit: 10 },
       error: "Resposta inválida da lista de clientes.",
     };
   }
@@ -453,7 +454,7 @@ export async function fetchClientesDuelo(options?: {
   const rpcError = parseRpcError(row);
   if (rpcError) {
     return {
-      data: { clientes: [], total: 0, offset: 0, limit: 12 },
+      data: { clientes: [], total: 0, offset: 0, limit: 10 },
       error: rpcError,
     };
   }
@@ -469,6 +470,7 @@ export async function fetchClientesDuelo(options?: {
         id,
         nome: String(entry.nome ?? "Membro da Linhagem"),
         is_vip: Boolean(entry.is_vip),
+        avatar_path: entry.avatar_path ? String(entry.avatar_path) : null,
       },
     ];
   });
@@ -478,7 +480,7 @@ export async function fetchClientesDuelo(options?: {
       clientes: parsed,
       total: Number(row.total ?? parsed.length),
       offset: Number(row.offset ?? options?.offset ?? 0),
-      limit: Number(row.limit ?? options?.limit ?? 12),
+      limit: Number(row.limit ?? options?.limit ?? 10),
     },
     error: null,
   };

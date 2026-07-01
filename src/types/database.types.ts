@@ -28,6 +28,7 @@ export type Database = {
           thermal_gravity_settled_month: string | null;
           linhagem_inactivity_pending: boolean;
           linhagem_inactivity_restore_tier: number | null;
+          comunidade_avatar_path: string | null;
         };
         Insert: {
           id: string;
@@ -47,6 +48,7 @@ export type Database = {
           thermal_gravity_settled_month?: string | null;
           linhagem_inactivity_pending?: boolean;
           linhagem_inactivity_restore_tier?: number | null;
+          comunidade_avatar_path?: string | null;
         };
         Update: {
           id?: string;
@@ -63,6 +65,7 @@ export type Database = {
           custom_preferences?: Json;
           target_days_per_week?: number;
           linhagem_last_seen_at?: string | null;
+          comunidade_avatar_path?: string | null;
         };
         Relationships: [
           {
@@ -1006,12 +1009,14 @@ export type Database = {
         Returns: {
           id: number;
           exercicio_nome: string;
+          exercicio_id: number | null;
           peso: number;
           series: number;
           registrado_em: string;
           atleta_nome: string;
           nome_linhagem: string;
           author_id: string;
+          author_avatar_path: string | null;
           tem_cinturao_duelo: boolean;
           is_rei_das_chamas: boolean;
           is_rei_chamas_superiores: boolean;
@@ -1030,15 +1035,23 @@ export type Database = {
           author_name: string;
           author_lineage: string;
           author_id: string;
+          author_avatar_path: string | null;
           tem_cinturao_duelo: boolean;
           is_rei_das_chamas: boolean;
           is_rei_chamas_superiores: boolean;
           is_rei_chamas_inferiores: boolean;
           is_pilar_cooperativo: boolean;
+          exercicio_id: number | null;
           peso: number;
           series: number;
           registrado_em: string;
         }[];
+      };
+      argos_set_comunidade_avatar_path: {
+        Args: {
+          p_path: string;
+        };
+        Returns: Json;
       };
       argos_consume_invite_for_user: {
         Args: {

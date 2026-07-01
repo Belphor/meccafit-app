@@ -13,12 +13,13 @@ import {
   COMUNIDADE_TAB_BUTTON,
   COMUNIDADE_TAB_LIST,
 } from "@/components/comunidade/comunidade-layout";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import type { RankingsThoth, RankingVtcEntry } from "@/lib/comunidade-data";
 
 type RankingsThothPanelProps = {
   rankings: RankingsThoth | null;
   userId: string;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
   loading?: boolean;
 };
 
@@ -58,7 +59,7 @@ function RankingRow({
   metricLabel: string;
   metricValue: number;
   isReiSlot?: boolean;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
 }) {
   const isSelf = entry.atleta_id === userId;
   const isPodium = entry.posicao <= 3;
@@ -85,7 +86,7 @@ function RankingRow({
       </span>
       <PlutusAvatar
         name={entry.atleta_nome}
-        photoUrl={resolvePhotoUrl?.(entry.atleta_id)}
+        photoUrl={resolvePhotoUrl?.(entry.atleta_id, entry.atleta_avatar_path)}
         temCinturaoDuelo={entry.temCinturaoDuelo}
         isReiDasChamas={entry.isReiDasChamas}
         isPilarCooperativo={entry.isPilarCooperativo}

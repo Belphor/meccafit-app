@@ -6,6 +6,8 @@ import {
   COMUNIDADE_CHIP,
   COMUNIDADE_INNER_CARD,
 } from "@/components/comunidade/comunidade-layout";
+import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import {
   criarDuelo,
   fetchClientesDuelo,
@@ -20,9 +22,14 @@ const PAGE_SIZE = 10;
 type DueloChallengePanelProps = {
   userId: string;
   onDueloCreated?: () => void;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
 };
 
-export function DueloChallengePanel({ userId, onDueloCreated }: DueloChallengePanelProps) {
+export function DueloChallengePanel({
+  userId,
+  onDueloCreated,
+  resolvePhotoUrl,
+}: DueloChallengePanelProps) {
   const [open, setOpen] = useState(false);
   const [clientes, setClientes] = useState<DueloClienteOption[]>([]);
   const [total, setTotal] = useState(0);
@@ -213,11 +220,16 @@ export function DueloChallengePanel({ userId, onDueloCreated }: DueloChallengePa
                           type="button"
                           onClick={() => setSelectedId(cliente.id)}
                           disabled={cliente.id === userId}
-                          className={`${DASHBOARD_TAP_TARGET} flex w-full items-center justify-between gap-3 px-3 py-3 text-left transition ${
+                          className={`${DASHBOARD_TAP_TARGET} flex w-full items-center gap-3 px-3 py-3 text-left transition ${
                             selected ? "bg-fuchsia-950/25 text-fuchsia-100" : "text-neutral-200 hover:bg-neutral-900/50"
                           } disabled:cursor-not-allowed disabled:opacity-40`}
                         >
-                          <span className="min-w-0 truncate text-sm font-medium">{cliente.nome}</span>
+                          <PlutusAvatar
+                            name={cliente.nome}
+                            photoUrl={resolvePhotoUrl?.(cliente.id, cliente.avatar_path)}
+                            size="sm"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">{cliente.nome}</span>
                           <span className="flex shrink-0 items-center gap-2">
                             {cliente.is_vip ? (
                               <span className={`${COMUNIDADE_CHIP} border-amber-500/25 text-amber-200/90`}>

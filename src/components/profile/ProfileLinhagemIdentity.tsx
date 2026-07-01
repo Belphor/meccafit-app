@@ -21,6 +21,7 @@ import {
   writeLocalProfileDisplayName,
 } from "@/lib/profile-display-name";
 import { saveLocalAvatar } from "@/services/local-storage";
+import { syncComunidadeAvatarFromFile } from "@/lib/comunidade-avatar";
 
 type ProfileLinhagemIdentityProps = {
   userId: string;
@@ -122,7 +123,14 @@ export function ProfileLinhagemIdentity({
       setPhotoFeedback(null);
       try {
         await saveLocalAvatar(userId, file);
-        setPhotoFeedback("Foto salva neste dispositivo para esta conta.");
+        const sync = await syncComunidadeAvatarFromFile(userId, file);
+        if (sync.error) {
+          setPhotoFeedback(
+            "Foto salva neste dispositivo. A miniatura da comunidade será sincronizada quando o servidor estiver atualizado.",
+          );
+          return;
+        }
+        setPhotoFeedback("Foto salva no dispositivo e miniatura enviada para a comunidade.");
       } catch {
         setPhotoFeedback("Não foi possível salvar a foto.");
       }
@@ -132,7 +140,7 @@ export function ProfileLinhagemIdentity({
 
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
-      <DashboardPanelHeader chip="Identidade" meta="Avatar · nome · foto local" />
+      <DashboardPanelHeader chip="Identidade" meta="Avatar · nome · miniatura comunidade" />
 
       <div className={`${DASHBOARD_INNER_FRAME} mt-4 flex flex-col items-center gap-5 p-4 sm:flex-row sm:items-start sm:p-5`}>
         <FenixEvolutionAvatar
@@ -147,8 +155,8 @@ export function ProfileLinhagemIdentity({
 
         <div className="w-full min-w-0 flex-1 space-y-4">
           <p className={EVOLUTION_HINT}>
-            Nome e foto ficam no seu dispositivo (cada conta tem a sua). O nome também é enviado ao
-            servidor para aparecer em duelos e rankings. O anel reflete a fase da Chama Acumulada.
+            Nome e foto ficam no seu dispositivo. O nome e uma miniatura vão ao servidor para duelos,
+            rankings e mural. O anel reflete a fase da Chama Acumulada.
           </p>
 
           <label className="block">

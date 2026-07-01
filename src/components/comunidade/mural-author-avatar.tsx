@@ -3,10 +3,13 @@
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import type { ComunidadeTitulos } from "@/lib/comunidade-data";
 
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
+
 type MuralAuthorAvatarProps = ComunidadeTitulos & {
   authorName?: string | null;
   authorId?: string;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  authorAvatarPath?: string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
   size?: "sm" | "md";
   className?: string;
 };
@@ -14,6 +17,7 @@ type MuralAuthorAvatarProps = ComunidadeTitulos & {
 export function MuralAuthorAvatar({
   authorName,
   authorId,
+  authorAvatarPath,
   resolvePhotoUrl,
   temCinturaoDuelo = false,
   isReiDasChamas = false,
@@ -24,7 +28,7 @@ export function MuralAuthorAvatar({
   return (
     <PlutusAvatar
       name={authorName}
-      photoUrl={authorId ? resolvePhotoUrl?.(authorId) : null}
+      photoUrl={authorId ? resolvePhotoUrl?.(authorId, authorAvatarPath) : null}
       temCinturaoDuelo={temCinturaoDuelo}
       isReiDasChamas={isReiDasChamas}
       isPilarCooperativo={isPilarCooperativo}

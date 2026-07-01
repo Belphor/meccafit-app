@@ -167,8 +167,8 @@ export const MIGRATION_PATCHES = [
     files: ["20260627150000_forja_prescricoes_abdomen_rpc.sql"],
   },
   {
-    id: "prescricao_progressao",
-    files: ["20260627160000_prescricao_progressao_alternativas.sql"],
+    id: "comunidade_avatar_photos",
+    files: ["20260701120000_comunidade_avatar_photos.sql"],
   },
 ];
 
@@ -638,7 +638,7 @@ async function probeClienteAuthMigrations() {
 async function probePerfZeroCostScaling(client) {
   const { data: bundle, error: bundleErr } = await client.rpc("fetch_dashboard_bundle", {
     p_musculo: "peito",
-    p_mural_limit: 24,
+    p_mural_limit: 10,
   });
 
   const { data: arenaFast, error: arenaErr } = await client.rpc("get_comunidade_arena_snapshot", {

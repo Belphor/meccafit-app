@@ -2,6 +2,7 @@
 
 import { MuralAuthorAvatar } from "@/components/comunidade/mural-author-avatar";
 import { COMUNIDADE_CHIP } from "@/components/comunidade/comunidade-layout";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import type { ForumBrasaVivaTopic } from "@/features/forum-brasa-viva/types";
 import { DASHBOARD_ITEM_NAME, DASHBOARD_META_CHIP } from "@/lib/dashboard-config";
 
@@ -9,7 +10,7 @@ type ForumPostCardProps = {
   topic: ForumBrasaVivaTopic;
   /** Estilo compacto para o mural embutido na Comunidade */
   variant?: "default" | "comunidade";
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
 };
 
 function formatPostedAt(iso: string): string {
@@ -43,6 +44,7 @@ export function ForumPostCard({
           <MuralAuthorAvatar
             authorName={topic.authorName}
             authorId={topic.authorId}
+            authorAvatarPath={topic.authorAvatarPath}
             resolvePhotoUrl={resolvePhotoUrl}
             temCinturaoDuelo={topic.temCinturaoDuelo}
             isReiDasChamas={topic.isReiDasChamas}

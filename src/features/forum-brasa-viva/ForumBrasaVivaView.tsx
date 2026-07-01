@@ -9,6 +9,7 @@ import { ForumPostCard } from "@/features/forum-brasa-viva/ForumPostCard";
 import { PhaseWrapper } from "@/features/forum-brasa-viva/PhaseWrapper";
 import type { ForumBrasaVivaTopic } from "@/features/forum-brasa-viva/types";
 import { emitClientTelemetry } from "@/lib/client-telemetry";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import { fetchForumBrasaVivaTopics } from "@/lib/forum-brasa-viva-data";
 import { MURAL_REFRESH_EVENT } from "@/lib/dashboard-tab-navigation";
 import {
@@ -24,7 +25,7 @@ export type ForumBrasaVivaViewProps = {
   embedMode?: boolean;
   /** Muda quando a página Comunidade actualiza — recarrega o mural */
   refreshKey?: string | number;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
   phase: Pick<
     PhoenixPhaseRuntimeContext,
     "isForumInactive" | "isHydrated" | "vtcMonth"

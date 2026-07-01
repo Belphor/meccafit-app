@@ -172,7 +172,7 @@ export function ComunidadePageClient({
   const pilares = arena?.pilares_cooperativos ?? [];
   const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
   const rankings = arena?.rankings_thoth ?? null;
-  const resolvePhotoUrl = useComunidadePhotoResolver(userId, profilePhotoUrl);
+  const resolvePhotoUrl = useComunidadePhotoResolver(userId, profilePhotoUrl, rankings);
 
   return (
     <BrasaVivaCard

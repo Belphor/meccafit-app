@@ -148,7 +148,11 @@ export function DuelosArenaPanel({
         />
       </div>
 
-      <DueloChallengePanel userId={userId} onDueloCreated={onDueloCreated} />
+      <DueloChallengePanel
+        userId={userId}
+        onDueloCreated={onDueloCreated}
+        resolvePhotoUrl={resolvePhotoUrl}
+      />
 
       <div className="mt-4 space-y-3">
         {loading ? (

@@ -1,20 +1,34 @@
 "use client";
 
-import { useCallback } from "react";
-import { resolveLocalComunidadePhotoUrl } from "@/lib/comunidade-avatar";
+import { useCallback, useMemo } from "react";
+import type { RankingsThoth } from "@/lib/comunidade-data";
+import {
+  collectAvatarPathsFromRankings,
+  resolveComunidadePhotoUrl,
+  type ComunidadePhotoResolver,
+} from "@/lib/comunidade-avatar";
 
-/** Resolve foto local apenas para o atleta logado (custo zero · sem Supabase Storage). */
 export function useComunidadePhotoResolver(
   userId: string,
   selfLocalPhotoUrl?: string | null,
-) {
+  rankings?: RankingsThoth | null,
+): ComunidadePhotoResolver {
+  const pathByAtletaId = useMemo(
+    () => collectAvatarPathsFromRankings(rankings),
+    [rankings],
+  );
+
   return useCallback(
-    (atletaId: string) =>
-      resolveLocalComunidadePhotoUrl({
+    (atletaId: string, serverPath?: string | null) =>
+      resolveComunidadePhotoUrl({
         atletaId,
         selfUserId: userId,
         selfLocalPhotoUrl,
+        serverPath,
+        pathByAtletaId,
       }),
-    [selfLocalPhotoUrl, userId],
+    [pathByAtletaId, selfLocalPhotoUrl, userId],
   );
 }
+
+export type { ComunidadePhotoResolver };

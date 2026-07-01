@@ -10,7 +10,8 @@ import type {
 import type { MuralPost } from "@/lib/mock-data";
 import { getActiveSupabaseSession, supabase } from "@/lib/supabase";
 
-export const FORUM_BRASA_VIVA_DEFAULT_LIMIT = 48;
+export const FORUM_BRASA_VIVA_DEFAULT_LIMIT = 10;
+export const COMUNIDADE_MURAL_MAX_LIMIT = 10;
 
 function normalizeWeight(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
@@ -82,7 +83,7 @@ export async function fetchForumBrasaVivaTopics(
     return { data: [], error: "Sessão expirada. Retorne ao Portal de Brasa." };
   }
 
-  const boundedLimit = Math.min(100, Math.max(1, limit));
+  const boundedLimit = Math.min(COMUNIDADE_MURAL_MAX_LIMIT, Math.max(1, limit));
 
   const { data, error } = await supabase.rpc("argos_fetch_forum_brasa_viva", {
     p_limit: boundedLimit,

@@ -9,13 +9,14 @@ import {
   COMUNIDADE_SCROLL_MT,
 } from "@/components/comunidade/comunidade-layout";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import { ForumBrasaVivaView } from "@/features/forum-brasa-viva/ForumBrasaVivaView";
 
 type ComunidadeMuralPanelProps = {
   userId: string;
   refreshKey: string | number;
   phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtcMonth">;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
 };
 
 export function ComunidadeMuralPanel({
@@ -59,8 +60,8 @@ export function ComunidadeMuralPanel({
             </span>
           </div>
           <p className={`relative mt-2 max-w-prose ${COMUNIDADE_BODY_TEXT} text-neutral-400`}>
-            Superações de hoje (horário de Brasília). Quando bates o teu recorde num exercício, a
-            conquista aparece aqui para motivar os restantes.
+            Até 10 ascensões de hoje (horário de Brasília). Quando bates o teu recorde num exercício,
+            a conquista pode aparecer aqui para motivar os restantes.
           </p>
         </header>
 
