@@ -24,6 +24,7 @@ export type ForumBrasaVivaViewProps = {
   embedMode?: boolean;
   /** Muda quando a página Comunidade actualiza — recarrega o mural */
   refreshKey?: string | number;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   phase: Pick<
     PhoenixPhaseRuntimeContext,
     "isForumInactive" | "isHydrated" | "vtcMonth"
@@ -34,6 +35,7 @@ export function ForumBrasaVivaView({
   userId,
   embedMode = false,
   refreshKey = 0,
+  resolvePhotoUrl,
   phase,
 }: ForumBrasaVivaViewProps) {
   const [topics, setTopics] = useState<ForumBrasaVivaTopic[]>([]);
@@ -148,7 +150,11 @@ export function ForumBrasaVivaView({
         >
           {topics.map((topic) => (
             <li key={topic.id}>
-              <ForumPostCard topic={topic} variant={embedMode ? "comunidade" : "default"} />
+              <ForumPostCard
+                topic={topic}
+                variant={embedMode ? "comunidade" : "default"}
+                resolvePhotoUrl={resolvePhotoUrl}
+              />
             </li>
           ))}
         </ul>

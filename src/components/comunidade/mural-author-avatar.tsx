@@ -5,12 +5,16 @@ import type { ComunidadeTitulos } from "@/lib/comunidade-data";
 
 type MuralAuthorAvatarProps = ComunidadeTitulos & {
   authorName?: string | null;
+  authorId?: string;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   size?: "sm" | "md";
   className?: string;
 };
 
 export function MuralAuthorAvatar({
   authorName,
+  authorId,
+  resolvePhotoUrl,
   temCinturaoDuelo = false,
   isReiDasChamas = false,
   isPilarCooperativo = false,
@@ -20,6 +24,7 @@ export function MuralAuthorAvatar({
   return (
     <PlutusAvatar
       name={authorName}
+      photoUrl={authorId ? resolvePhotoUrl?.(authorId) : null}
       temCinturaoDuelo={temCinturaoDuelo}
       isReiDasChamas={isReiDasChamas}
       isPilarCooperativo={isPilarCooperativo}

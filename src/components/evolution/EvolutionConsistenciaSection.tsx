@@ -32,6 +32,10 @@ type EvolutionConsistenciaSectionProps = {
   onMuscleSelect: (muscle: SovereignMuscleId) => void;
   onRefreshMap: () => void;
   scopeError: string | null;
+  phaseSetupAt?: string | null;
+  ritmoGraceActive?: boolean;
+  ritmoGraceDaysRemaining?: number;
+  purityPenaltyActive?: boolean;
 };
 
 export function EvolutionConsistenciaSection({
@@ -52,6 +56,10 @@ export function EvolutionConsistenciaSection({
   onMuscleSelect,
   onRefreshMap,
   scopeError,
+  phaseSetupAt,
+  ritmoGraceActive,
+  ritmoGraceDaysRemaining,
+  purityPenaltyActive = false,
 }: EvolutionConsistenciaSectionProps) {
   return (
     <BrasaVivaCard
@@ -76,6 +84,9 @@ export function EvolutionConsistenciaSection({
         vtc30dKg={vtc30dKg}
         nivelTermicoGlobal={nivelTermicoGlobal}
         computedNivelGlobal={computedNivelGlobal}
+        phaseSetupAt={phaseSetupAt}
+        ritmoGraceActive={ritmoGraceActive}
+        ritmoGraceDaysRemaining={ritmoGraceDaysRemaining}
         loading={loading}
       />
 
@@ -91,6 +102,7 @@ export function EvolutionConsistenciaSection({
         onMuscleSelect={onMuscleSelect}
         onRefresh={onRefreshMap}
         scopeError={scopeError}
+        purityPenaltyActive={purityPenaltyActive}
       />
     </BrasaVivaCard>
   );

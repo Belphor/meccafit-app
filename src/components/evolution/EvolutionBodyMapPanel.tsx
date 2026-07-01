@@ -6,7 +6,6 @@ import { HumanBodySvg } from "@/components/evolution/human-body-svg";
 import {
   MUSCLE_LABELS,
   SOVEREIGN_MUSCLES,
-  PURITY_PENALTY_THRESHOLD,
   formatCalorMembroMetric,
   type MuscleCalorRow,
   type NiveisTermicos,
@@ -37,6 +36,7 @@ type EvolutionBodyMapPanelProps = {
   onMuscleSelect: (muscle: SovereignMuscleId) => void;
   onRefresh: () => void;
   scopeError: string | null;
+  purityPenaltyActive?: boolean;
 };
 
 export function EvolutionBodyMapPanel({
@@ -51,11 +51,12 @@ export function EvolutionBodyMapPanel({
   onMuscleSelect,
   onRefresh,
   scopeError,
+  purityPenaltyActive = false,
 }: EvolutionBodyMapPanelProps) {
   const activeRow = calorRows.find((row) => row.membro_principal === activeMuscle);
   const activeCalorMetric = activeRow ? formatCalorMembroMetric(activeRow) : null;
   const hasMapData = !loading && calorRows.length > 0;
-  const ritmoBaixo = indiceIgnicao < PURITY_PENALTY_THRESHOLD;
+  const ritmoBaixo = purityPenaltyActive;
 
   return (
     <div className="px-4 pb-5 pt-1 sm:px-5">
@@ -114,6 +115,7 @@ export function EvolutionBodyMapPanel({
               calorRows={calorRows}
               activeMuscle={activeMuscle}
               onMuscleSelect={onMuscleSelect}
+              purityPenaltyActive={purityPenaltyActive}
             />
 
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">

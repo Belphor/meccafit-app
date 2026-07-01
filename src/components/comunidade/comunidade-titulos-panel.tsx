@@ -21,6 +21,7 @@ type ComunidadeTitulosPanelProps = {
   pilares: { atleta_id: string }[];
   rankings: RankingsThoth | null;
   userId: string;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   loading?: boolean;
 };
 
@@ -38,19 +39,23 @@ function resolveNome(
 function TituloCard({
   label,
   nome,
+  atletaId,
   borderColor,
   flags,
+  resolvePhotoUrl,
   pulse = false,
   empty = false,
 }: {
   label: string;
   nome: string;
+  atletaId?: string | null;
   borderColor: string;
   flags?: {
     temCinturaoDuelo?: boolean;
     isReiDasChamas?: boolean;
     isPilarCooperativo?: boolean;
   };
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   pulse?: boolean;
   empty?: boolean;
 }) {
@@ -68,7 +73,12 @@ function TituloCard({
         pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
       }`}
     >
-      <PlutusAvatar name={nome} size="md" {...flags} />
+      <PlutusAvatar
+        name={nome}
+        photoUrl={atletaId ? resolvePhotoUrl?.(atletaId) : null}
+        size="md"
+        {...flags}
+      />
       <div className="min-w-0 flex-1">
         <p
           className="break-words text-[9px] font-bold uppercase tracking-[0.12em] xs:tracking-[0.16em]"
@@ -130,6 +140,7 @@ export function ComunidadeTitulosPanel({
   pilares,
   rankings,
   userId,
+  resolvePhotoUrl,
   loading = false,
 }: ComunidadeTitulosPanelProps) {
   const pilaresSlots = [0, 1, 2].map((index) => pilares[index] ?? null);
@@ -166,16 +177,20 @@ export function ComunidadeTitulosPanel({
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <TituloCard
                 label="Rei Superiores"
+                atletaId={reisChamas.SUPERIORES}
                 nome={resolveNome(reisChamas.SUPERIORES, userId, rankings)}
                 borderColor={IRIS_BORDER_REI_CHAMAS}
                 flags={{ isReiDasChamas: Boolean(reisChamas.SUPERIORES) }}
+                resolvePhotoUrl={resolvePhotoUrl}
                 empty={!reisChamas.SUPERIORES}
               />
               <TituloCard
                 label="Rei Inferiores"
+                atletaId={reisChamas.INFERIORES}
                 nome={resolveNome(reisChamas.INFERIORES, userId, rankings)}
                 borderColor={IRIS_BORDER_REI_CHAMAS}
                 flags={{ isReiDasChamas: Boolean(reisChamas.INFERIORES) }}
+                resolvePhotoUrl={resolvePhotoUrl}
                 empty={!reisChamas.INFERIORES}
               />
             </ul>
@@ -194,9 +209,11 @@ export function ComunidadeTitulosPanel({
                   <TituloCard
                     key={pilar.atleta_id}
                     label={`Pilar ${index + 1}`}
+                    atletaId={pilar.atleta_id}
                     nome={resolveNome(pilar.atleta_id, userId, rankings)}
                     borderColor={IRIS_BORDER_PILAR_COOP}
                     flags={{ isPilarCooperativo: true }}
+                    resolvePhotoUrl={resolvePhotoUrl}
                     pulse
                   />
                 ) : (

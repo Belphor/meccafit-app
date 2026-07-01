@@ -25,6 +25,7 @@ type DuelosArenaPanelProps = {
   campeaoCinturaoId?: string | null;
   rankings?: RankingsThoth | null;
   userId: string;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   loading?: boolean;
   onDueloCreated?: () => void;
 };
@@ -60,11 +61,13 @@ function CampeaoCinturaoCard({
   campeaoId,
   userId,
   rankings,
+  resolvePhotoUrl,
 }: {
   tipo: ComunidadeDueloAtivo["tipo_confronto"];
   campeaoId: string | null;
   userId: string;
   rankings?: RankingsThoth | null;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
 }) {
   const label = tipo === "SUPERIORES" ? "Superiores" : "Inferiores";
   if (!campeaoId) {
@@ -79,7 +82,12 @@ function CampeaoCinturaoCard({
 
   return (
     <div className={`${COMUNIDADE_INNER_CARD} flex min-h-[3.75rem] min-w-0 items-center gap-3 border-[#FF007F]/25 bg-[#FF007F]/5 p-3`}>
-      <PlutusAvatar temCinturaoDuelo size="sm" name={nome ?? label} />
+      <PlutusAvatar
+        temCinturaoDuelo
+        size="sm"
+        name={nome ?? label}
+        photoUrl={campeaoId ? resolvePhotoUrl?.(campeaoId) : null}
+      />
       <div className="min-w-0 flex-1">
         <p className="text-[10px] uppercase tracking-[0.08em] text-[#FF007F] xs:tracking-[0.12em]">
           Cinturão {label}
@@ -98,6 +106,7 @@ export function DuelosArenaPanel({
   campeaoCinturaoId,
   rankings,
   userId,
+  resolvePhotoUrl,
   loading = false,
   onDueloCreated,
 }: DuelosArenaPanelProps) {
@@ -128,12 +137,14 @@ export function DuelosArenaPanel({
           campeaoId={superioresId}
           userId={userId}
           rankings={rankings}
+          resolvePhotoUrl={resolvePhotoUrl}
         />
         <CampeaoCinturaoCard
           tipo="INFERIORES"
           campeaoId={inferioresId}
           userId={userId}
           rankings={rankings}
+          resolvePhotoUrl={resolvePhotoUrl}
         />
       </div>
 
@@ -181,6 +192,7 @@ export function DuelosArenaPanel({
                     <PlutusAvatar
                       size="sm"
                       name={nomeDesafiante ?? "?"}
+                      photoUrl={resolvePhotoUrl?.(duelo.atleta_desafiante_id)}
                       temCinturaoDuelo={duelo.atleta_desafiante_id === campeaoTipoId}
                     />
                     <p className="w-full break-words text-pretty text-[10px] font-medium text-neutral-300">
@@ -194,6 +206,7 @@ export function DuelosArenaPanel({
                     <PlutusAvatar
                       size="sm"
                       name={nomeDesafiado ?? "?"}
+                      photoUrl={resolvePhotoUrl?.(duelo.atleta_desafiado_id)}
                       temCinturaoDuelo={duelo.atleta_desafiado_id === campeaoTipoId}
                     />
                     <p className="w-full break-words text-pretty text-[10px] font-medium text-neutral-300">

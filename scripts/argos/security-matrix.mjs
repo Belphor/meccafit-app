@@ -171,14 +171,7 @@ async function runMatrix() {
     error ? pass(`cliente:escalate:${i}`) : fail(`cliente:escalate:${i}`, "escalada permitida");
   }
 
-  const phaseEscalationPayloads = [{ phase_tier: 5 }, { phase_tier: 4 }];
-  for (let i = 0; i < phaseEscalationPayloads.length; i += 1) {
-    const { error } = await cliente.client
-      .from("profiles")
-      .update(phaseEscalationPayloads[i])
-      .eq("id", cliente.userId);
-    error ? pass(`cliente:phase_escalate:${i}`) : fail(`cliente:phase_escalate:${i}`, "phase_tier edit ok");
-  }
+  await assertPhaseEscalationBlocked("cliente", cliente);
 
   async function assertPhaseEscalationBlocked(label, session) {
     const { data: profile } = await session.client

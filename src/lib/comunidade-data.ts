@@ -69,6 +69,7 @@ export type RankingVtcEntry = ComunidadeTitulos & {
   posicao: number;
   atleta_id: string;
   atleta_nome: string;
+  atleta_avatar_path?: string | null;
   vtc_total: number;
   vtc_grupo: number;
 };
@@ -156,6 +157,7 @@ function parseVtcEntry(raw: unknown): RankingVtcEntry | null {
     posicao: Number(row.posicao ?? 0),
     atleta_id: String(row.atleta_id ?? ""),
     atleta_nome: String(row.atleta_nome ?? "Membro"),
+    atleta_avatar_path: row.atleta_avatar_path ? String(row.atleta_avatar_path) : null,
     vtc_total: Number(row.vtc_total ?? 0),
     vtc_grupo: Number(row.vtc_grupo ?? 0),
     ...titulos,

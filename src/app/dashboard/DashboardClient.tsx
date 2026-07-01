@@ -60,6 +60,7 @@ import {
   buildLinhagemInactivityAckMessage,
   buildLinhagemInactivityAlertMessage,
   buildLinhagemInactivityReturnMessage,
+  isLinhagemInactivityTreinoDegraded,
   LINHAGEM_INACTIVITY_RETURN_TOAST_MS,
   type LinhagemInactivitySyncResult,
   type ThermalGravitySettlementResult,
@@ -243,6 +244,8 @@ export function DashboardClient({
     variant: PortalToastVariant;
   } | null>(null);
   const [inactivityAlert, setInactivityAlert] = useState<string | null>(null);
+  const [linhagemInactivityPending, setLinhagemInactivityPending] =
+    useState<LinhagemInactivitySyncResult | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
   const inactivityPendingRef = useRef<LinhagemInactivitySyncResult | null>(null);
@@ -266,6 +269,17 @@ export function DashboardClient({
     }
   }, []);
 
+  const syncLinhagemInactivityPendingState = useCallback(
+    (inactivity: LinhagemInactivitySyncResult | null) => {
+      if (inactivity && isLinhagemInactivityTreinoDegraded(inactivity)) {
+        setLinhagemInactivityPending(inactivity);
+        return;
+      }
+      setLinhagemInactivityPending(null);
+    },
+    [],
+  );
+
   const handleLinhagemInactivitySync = useCallback(
     (inactivity: LinhagemInactivitySyncResult) => {
       if (inactivityPendingTimerRef.current) {
@@ -283,6 +297,7 @@ export function DashboardClient({
 
       if (inactivity.degraded && inactivity.pending_rekindle) {
         inactivityPendingRef.current = inactivity;
+        syncLinhagemInactivityPendingState(inactivity);
         setInactivityAlert(null);
 
         const returnMessage = buildLinhagemInactivityReturnMessage(inactivity);
@@ -303,14 +318,16 @@ export function DashboardClient({
 
       if (inactivity.pending_rekindle) {
         inactivityPendingRef.current = inactivity;
+        syncLinhagemInactivityPendingState(inactivity);
         showInactivityAlert(inactivity);
         return;
       }
 
       inactivityPendingRef.current = null;
+      syncLinhagemInactivityPendingState(null);
       setInactivityAlert(null);
     },
-    [showInactivityAlert, showPortalToast, userId],
+    [showInactivityAlert, showPortalToast, syncLinhagemInactivityPendingState, userId],
   );
 
   const resolveDashboardAlerts = useCallback(
@@ -651,6 +668,7 @@ export function DashboardClient({
       const inactivity = bundle.data.linhagemInactivity;
       inactivityPendingRef.current =
         inactivity?.pending_rekindle ? inactivity : null;
+      syncLinhagemInactivityPendingState(inactivity ?? null);
 
       resolveDashboardAlerts(
         bundle.data.thermalSettlement ?? null,
@@ -669,7 +687,7 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [loadKey, resolveDashboardAlerts, subgroupParam]);
+  }, [loadKey, resolveDashboardAlerts, subgroupParam, syncLinhagemInactivityPendingState]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -821,6 +839,7 @@ export function DashboardClient({
 
     if (isFenixQaLabEnabled()) {
       inactivityPendingRef.current = null;
+      syncLinhagemInactivityPendingState(null);
       setInactivityAlert(null);
       showPortalToast(
         buildLinhagemInactivityAckMessage({
@@ -837,6 +856,7 @@ export function DashboardClient({
     if (!result?.rekindled) return;
 
     inactivityPendingRef.current = null;
+    syncLinhagemInactivityPendingState(null);
     setInactivityAlert(null);
     showPortalToast(
       buildLinhagemInactivityAckMessage({
@@ -846,7 +866,12 @@ export function DashboardClient({
       }),
       "success",
     );
-  }, [showPortalToast]);
+  }, [showPortalToast, syncLinhagemInactivityPendingState]);
+
+  const linhagemInactivityDegradationMessage = useMemo(() => {
+    if (!linhagemInactivityPending) return null;
+    return buildLinhagemInactivityAlertMessage(linhagemInactivityPending) || null;
+  }, [linhagemInactivityPending]);
 
   const handleSetComplete = useCallback(
     (_exerciseId: number) => {
@@ -929,6 +954,7 @@ export function DashboardClient({
     onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) =>
       void handleTrainingPersisted(exerciseId, detail),
     onSetComplete: handleSetComplete,
+    linhagemInactivityDegradationMessage,
   } as const;
 
   if (!dataReady) {
@@ -1050,6 +1076,11 @@ export function DashboardClient({
                         profilePhotoUrl={localProfilePhotoUrl}
                         conqueredPhaseTier={phase.phaseTier}
                         thermalSettlement={thermalSettlement}
+                        phaseSetupAt={
+                          typeof profileRow?.phase_setup_at === "string"
+                            ? profileRow.phase_setup_at
+                            : null
+                        }
                       />
                     </div>
                   ) : null}

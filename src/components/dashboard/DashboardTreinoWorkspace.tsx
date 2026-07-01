@@ -28,6 +28,7 @@ import {
 import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import type { TrainingTrackState } from "@/lib/training-track";
 import type { ForjadorPrescriptionRow, ForjadorTreinoConfig } from "@/lib/forjador-prescriptions";
+import { TreinoLinhagemInactivityDegradation } from "@/components/dashboard/TreinoLinhagemInactivityDegradation";
 
 export type SuperacaoPayload = {
   weight: number;
@@ -55,6 +56,7 @@ export type DashboardTreinoWorkspaceProps = {
   onTrainingPersisted: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
   onTrainingDayPick: (day: WeekdayIndex) => void;
   onSetComplete?: (exerciseId: number) => void;
+  linhagemInactivityDegradationMessage?: string | null;
 };
 
 function resolveDefaultActiveExerciseId(subgroup: MuscleSubgroup) {
@@ -149,7 +151,9 @@ export function DashboardTreinoWorkspace({
   onTrainingPersisted,
   onTrainingDayPick,
   onSetComplete,
+  linhagemInactivityDegradationMessage = null,
 }: DashboardTreinoWorkspaceProps) {
+  const linhagemInactivityDegraded = Boolean(linhagemInactivityDegradationMessage?.trim());
   const sessionScope = useMemo(
     () => ({
       userId: authUserId,
@@ -444,9 +448,13 @@ export function DashboardTreinoWorkspace({
 
   return (
     <div className={DASHBOARD_TAB_CONTENT}>
-      <div className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-        <div className="order-1 min-w-0 lg:order-1">
-          <TreinoTab
+      <TreinoLinhagemInactivityDegradation
+        active={linhagemInactivityDegraded}
+        message={linhagemInactivityDegradationMessage ?? ""}
+      >
+        <div className="flex flex-col gap-4 sm:gap-6 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <div className="order-1 min-w-0 lg:order-1">
+            <TreinoTab
             subgroup={mergedSubgroup}
             initialWeekSchedule={initialWeekSchedule}
             useForjadorSchedule={useForjadorSchedule}
@@ -473,17 +481,18 @@ export function DashboardTreinoWorkspace({
           />
         </div>
 
-        <BraseiroPanel
-          className="order-2 lg:order-2"
-          profile={profile}
-          isIncubating={isIncubating}
-          formattedVtcTotal={formattedVtcTotal}
-          vtcTotal={finalVtcTotal}
-          hasBiologicalBalance={hasBiologicalBalance}
-          biologicalMultiplier={BIOLOGICAL_BALANCE_MULTIPLIER}
-          isChamaReativa={isChamaReativa}
-        />
-      </div>
+          <BraseiroPanel
+            className="order-2 lg:order-2"
+            profile={profile}
+            isIncubating={isIncubating}
+            formattedVtcTotal={formattedVtcTotal}
+            vtcTotal={finalVtcTotal}
+            hasBiologicalBalance={hasBiologicalBalance}
+            biologicalMultiplier={BIOLOGICAL_BALANCE_MULTIPLIER}
+            isChamaReativa={isChamaReativa}
+          />
+        </div>
+      </TreinoLinhagemInactivityDegradation>
     </div>
   );
 }

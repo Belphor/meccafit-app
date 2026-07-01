@@ -130,7 +130,7 @@ export function EvolutionChamaProgressBar({
   thermalState = null,
   monthBoundaryDegraded = false,
 }: EvolutionChamaProgressBarProps) {
-  const showThermal = currentTier >= 2 && thermalState !== null;
+  const showThermal = thermalState !== null;
   const clampedPercent = Math.min(100, Math.max(0, progressPercent));
   const fillWidth = clampedPercent > 0 && clampedPercent < 3 ? "3%" : `${clampedPercent}%`;
   const accent = EVOLUTION_TIER_RING_COLORS[nextTier ?? currentTier];

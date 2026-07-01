@@ -58,6 +58,8 @@ export type HumanBodySvgProps = {
   activeMuscle?: SovereignMuscleId | null;
   className?: string;
   onMuscleSelect?: (muscleId: SovereignMuscleId) => void;
+  /** Quando omitido, usa indice_ignicao abaixo de 50% (legado). */
+  purityPenaltyActive?: boolean;
 };
 
 type ThermalPaint = {
@@ -340,6 +342,7 @@ type HudPanelProps = {
   onMuscleEnter: (group: HudMuscleGroup, anchor: HoverAnchor) => void;
   onMuscleLeave: () => void;
   onMuscleSelect?: (muscleId: SovereignMuscleId) => void;
+  purityPenaltyActive?: boolean;
 };
 
 function HudPanel({
@@ -355,6 +358,7 @@ function HudPanel({
   onMuscleEnter,
   onMuscleLeave,
   onMuscleSelect,
+  purityPenaltyActive,
 }: HudPanelProps) {
   const slots = useMemo(() => buildPanelSlots(facing), [facing]);
   const silhouette = HUMAN_BODY_VECTORS.silhouette[facing];
@@ -362,7 +366,8 @@ function HudPanel({
   const lineArt = HUMAN_BODY_VECTORS.lineArt[facing];
   const hudArcs = HUMAN_BODY_VECTORS.hudArcs[facing];
   const spine = HUMAN_BODY_VECTORS.spine[facing];
-  const purityDegraded = indice_ignicao < PURITY_PENALTY_THRESHOLD;
+  const purityDegraded =
+    purityPenaltyActive ?? indice_ignicao < PURITY_PENALTY_THRESHOLD;
   const purityFilterClass = purityDegraded ? "filter saturate-30 contrast-125" : "";
 
   const handlePointer = (event: MouseEvent<SVGPathElement>, group: HudMuscleGroup) => {
@@ -591,6 +596,7 @@ export function HumanBodySvg({
   activeMuscle,
   className = "",
   onMuscleSelect,
+  purityPenaltyActive,
 }: HumanBodySvgProps) {
   const [hoveredGroup, setHoveredGroup] = useState<HudMuscleGroup | null>(null);
   const [tooltipAnchor, setTooltipAnchor] = useState<HoverAnchor | null>(null);
@@ -649,6 +655,7 @@ export function HumanBodySvg({
         onMuscleEnter={handleMuscleEnter}
         onMuscleLeave={handleMuscleLeave}
         onMuscleSelect={onMuscleSelect}
+        purityPenaltyActive={purityPenaltyActive}
       />
 
       <HudPanel
@@ -664,6 +671,7 @@ export function HumanBodySvg({
         onMuscleEnter={handleMuscleEnter}
         onMuscleLeave={handleMuscleLeave}
         onMuscleSelect={onMuscleSelect}
+        purityPenaltyActive={purityPenaltyActive}
       />
 
       {performanceMode ? (
@@ -677,6 +685,7 @@ export function HumanBodySvg({
           muscleId={HUD_GROUP_TO_SOVEREIGN[hoveredGroup]}
           row={hoveredRow}
           indiceIgnicao={indice_ignicao}
+          purityPenaltyActive={purityPenaltyActive}
           anchor={tooltipAnchor}
           visible
         />

@@ -97,8 +97,8 @@ export function ComunidadeEvolutionStatus({
         <p className={`${COMUNIDADE_EYEBROW} text-amber-200/80`}>Seu perfil na comunidade</p>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
           Aqui você vê o músculo em que mais carregou no ranking mensal e os títulos que já
-          conquistou na arena. O anel colorido no avatar indica cinturão, Rei das Chamas ou Pilar
-          cooperativo.
+          conquistou na arena. A sua foto (salva no Perfil) aparece aqui e em todo lugar onde você
+          consta na comunidade — só neste dispositivo, sem custo na nuvem.
         </p>
       </header>
 

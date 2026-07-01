@@ -217,3 +217,10 @@ export function buildLinhagemRegressionTitle(phasesLost = 1): string {
   const word = formatCountWordPt(phasesLost, true);
   return phasesLost === 1 ? `Linhagem regrediu ${word} fase` : `Linhagem regrediu ${word} fases`;
 }
+
+/** Degradação visual ativa na aba Treino enquanto o aviso aguarda dispensa. */
+export function isLinhagemInactivityTreinoDegraded(
+  result: LinhagemInactivitySyncResult | null | undefined,
+): boolean {
+  return result?.pending_rekindle === true;
+}

@@ -41,6 +41,7 @@ type FenixEvolutionAvatarProps = {
   className?: string;
   /** Destaque de celebração ao subir de fase na Chama Acumulada */
   tierLevelUpActive?: boolean;
+  purityPenaltyActive?: boolean;
 };
 
 const FLASH_ANIMATION = "animate-[flash_1.4s_ease-in-out]";
@@ -67,6 +68,7 @@ export function FenixEvolutionAvatar({
   profilePhotoUrl,
   className = "",
   tierLevelUpActive = false,
+  purityPenaltyActive,
 }: FenixEvolutionAvatarProps) {
   const [photoSrc, setPhotoSrc] = useState<string | null>(null);
   const [flashActive, setFlashActive] = useState(false);
@@ -79,7 +81,8 @@ export function FenixEvolutionAvatar({
   const ringGlow = resolveEvolutionRingGlow(tier);
 
   const isFrozen = useMemo(() => calorRows.some((row) => row.is_frozen), [calorRows]);
-  const purityDegraded = indiceIgnicao < PURITY_PENALTY_THRESHOLD;
+  const purityDegraded =
+    purityPenaltyActive ?? indiceIgnicao < PURITY_PENALTY_THRESHOLD;
   const initials = resolveProfileInitials(profileName);
   const hasCosmicPulse = tier >= 5;
 

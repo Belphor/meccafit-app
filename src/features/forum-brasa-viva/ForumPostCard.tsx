@@ -9,6 +9,7 @@ type ForumPostCardProps = {
   topic: ForumBrasaVivaTopic;
   /** Estilo compacto para o mural embutido na Comunidade */
   variant?: "default" | "comunidade";
+  resolvePhotoUrl?: (atletaId: string) => string | null;
 };
 
 function formatPostedAt(iso: string): string {
@@ -22,7 +23,11 @@ function formatPostedAt(iso: string): string {
   });
 }
 
-export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps) {
+export function ForumPostCard({
+  topic,
+  variant = "default",
+  resolvePhotoUrl,
+}: ForumPostCardProps) {
   const isComunidade = variant === "comunidade";
 
   return (
@@ -37,6 +42,8 @@ export function ForumPostCard({ topic, variant = "default" }: ForumPostCardProps
         <div className="flex min-w-0 flex-1 items-start gap-2.5 xs:gap-3">
           <MuralAuthorAvatar
             authorName={topic.authorName}
+            authorId={topic.authorId}
+            resolvePhotoUrl={resolvePhotoUrl}
             temCinturaoDuelo={topic.temCinturaoDuelo}
             isReiDasChamas={topic.isReiDasChamas}
             isPilarCooperativo={topic.isPilarCooperativo}

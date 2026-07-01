@@ -259,8 +259,8 @@ export function FenixAnimationTestPanel({
               </p>
               <p className={`mt-2 ${EVOLUTION_HINT}`}>
                 Cenários fictícios do aviso ao ficar 30 dias sem abrir o app. &quot;Volta após 30
-                dias&quot; anuncia a degradação por 8 segundos e depois ativa o aviso persistente até
-                concluir uma série no Treino.
+                dias&quot; anuncia a degradação por 8 segundos, ativa o aviso persistente e a
+                degradação visual na aba Treino até concluir uma série.
               </p>
               {inactivityQaSummary ? (
                 <p className="mt-2 rounded-lg border border-sky-500/20 bg-sky-950/20 px-3 py-2 text-[11px] text-sky-100/90">

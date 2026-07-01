@@ -102,6 +102,8 @@ export type EvolutionCalorPayload = {
   meta_vtc_mensal_kg?: number;
   phase_tier?: number;
   natural_phase_tier?: number;
+  ritmo_grace_active?: boolean;
+  ritmo_grace_days_remaining?: number;
 };
 
 export const PURITY_PENALTY_THRESHOLD = 50;
@@ -292,6 +294,8 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
   const meta_vtc_mensal_kg = parseOptionalNumber(source.meta_vtc_mensal_kg);
   const phase_tier = parseOptionalNumber(source.phase_tier);
   const natural_phase_tier = parseOptionalNumber(source.natural_phase_tier);
+  const ritmo_grace_active = source.ritmo_grace_active === true;
+  const ritmo_grace_days_remaining = parseOptionalNumber(source.ritmo_grace_days_remaining);
 
   const musclesRaw = source.muscles;
   const muscles =
@@ -324,6 +328,8 @@ export function parseMidasEvolutionJson(data: unknown): EvolutionCalorPayload {
     meta_vtc_mensal_kg,
     phase_tier,
     natural_phase_tier,
+    ritmo_grace_active,
+    ritmo_grace_days_remaining,
   };
 }
 
@@ -349,6 +355,8 @@ export function parseEvolutionCalorJson(data: unknown): EvolutionCalorPayload {
   const meta_vtc_mensal_kg = parseOptionalNumber(source.meta_vtc_mensal_kg);
   const phase_tier = parseOptionalNumber(source.phase_tier);
   const natural_phase_tier = parseOptionalNumber(source.natural_phase_tier);
+  const ritmo_grace_active = source.ritmo_grace_active === true;
+  const ritmo_grace_days_remaining = parseOptionalNumber(source.ritmo_grace_days_remaining);
 
   const calorRows: MuscleCalorRow[] = CALOR_JSON_KEYS.map((key) => {
     const group = parseGroupRecord(source[key]);
@@ -369,6 +377,8 @@ export function parseEvolutionCalorJson(data: unknown): EvolutionCalorPayload {
     meta_vtc_mensal_kg,
     phase_tier,
     natural_phase_tier,
+    ritmo_grace_active,
+    ritmo_grace_days_remaining,
   };
 }
 

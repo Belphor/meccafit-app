@@ -23,9 +23,9 @@ export const LINHAGEM_INACTIVITY_QA_PRESETS: ReadonlyArray<LinhagemInactivityQaP
   {
     id: "return-after-30d",
     label: "Volta após 30 dias",
-    hint: "Anuncia a degradação por 8 segundos e depois ativa o aviso persistente. Labareda cai para Brasa.",
+    hint: "Anuncia a degradação por 8 segundos, ativa o aviso persistente e a degradação visual na aba Treino. Labareda cai para Brasa.",
     howTo:
-      "Dispare em qualquer aba. Após 8 segundos o aviso pendente permanece até concluir uma série no Treino.",
+      "Dispare em qualquer aba. A aba Treino fica em cinzas até concluir uma série e dispensar o aviso.",
     result: {
       degraded: true,
       phase_tier: 3,
@@ -39,7 +39,7 @@ export const LINHAGEM_INACTIVITY_QA_PRESETS: ReadonlyArray<LinhagemInactivityQaP
   {
     id: "pending-alert-only",
     label: "Aviso pendente de dispensa",
-    hint: "Simula quem já foi rebaixado e ainda não concluiu uma série.",
+    hint: "Simula quem já foi rebaixado e ainda não concluiu uma série. Degradação visual imediata na aba Treino.",
     howTo:
       "Dispara direto o aviso persistente. Conclua uma série no Treino para reacender a chama.",
     result: {
@@ -71,7 +71,7 @@ export function applyLinhagemInactivityQaPreset(presetId: string): LinhagemInact
 export function describeLinhagemInactivityQaResult(result: LinhagemInactivitySyncResult): string {
   if (result.pending_rekindle) {
     const current = PHASE_TIER_LABELS[result.phase_tier];
-    return `Aviso persistente em ${current}. Conclua uma série no Treino para reacender a chama.`;
+    return `Degradação ativa na aba Treino (${current}). Aviso persistente até concluir uma série.`;
   }
   const message = buildLinhagemInactivityAlertMessage(result);
   if (message) return message.slice(0, 140) + (message.length > 140 ? "…" : "");

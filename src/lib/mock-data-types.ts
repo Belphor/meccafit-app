@@ -58,6 +58,7 @@ export type MuralPost = {
   series: number;
   createdAt: string;
   athleteId?: string;
+  athleteAvatarPath?: string | null;
   athleteName?: string;
   lineageName?: string;
   temCinturaoDuelo?: boolean;

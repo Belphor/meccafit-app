@@ -177,6 +177,17 @@ export const ALL_MIGRATION_FILES = [
 ];
 
 const PROBE_EXERCISE_ID = 88001;
+const SEED_PASSWORD = "senha123";
+const LOGIN_PROBE_RETRIES = 3;
+
+function loadTestUsers() {
+  try {
+    const raw = readFileSync(resolve(process.cwd(), "scripts/argos/test-users.json"), "utf8");
+    return JSON.parse(raw).users ?? {};
+  } catch {
+    return {};
+  }
+}
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -190,6 +201,44 @@ function loadEnv() {
     env[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
   }
   return env;
+}
+
+function createAnonClient() {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim()?.replace(/\/$/, "");
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function signInClientePrincipal(client) {
+  const registry = loadTestUsers();
+  const email = registry.cliente_principal?.email ?? "cliente@meccafit.com";
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= LOGIN_PROBE_RETRIES; attempt += 1) {
+    const { error } = await client.auth.signInWithPassword({
+      email,
+      password: SEED_PASSWORD,
+    });
+    if (!error) {
+      return { email, error: null };
+    }
+    lastErr = error;
+    if (attempt < LOGIN_PROBE_RETRIES) {
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 400 * attempt));
+    }
+  }
+
+  return { email, error: lastErr };
 }
 
 function assertMidasEvolutionJson(payload) {
@@ -328,9 +377,8 @@ export async function runMigrationProbes(admin, options = {}) {
     probes.push(await probeMidasGrowth(admin, probeUserId));
     probes.push(await probePlanilhasForjador(admin, probeUserId));
     probes.push(await probeComunidadeArena(admin, probeUserId));
-    probes.push(await probeComunidadeSnapshotAuth(admin, probeUserId));
+    probes.push(...(await probeClienteAuthMigrations()));
     probes.push(await probeCardioSessaoDiaria(admin));
-    probes.push(await probePerfZeroCostScaling(admin, probeUserId));
     probes.push(await probeForjaSovereignWorkspace(admin));
     probes.push(await probeForjaGlobalVtcMonitoring(admin));
     probes.push(await probeDietBlueprints(admin));
@@ -395,18 +443,22 @@ export async function runMigrationProbes(admin, options = {}) {
   }
 
   const failed = probes.filter((p) => !p.ok);
+  const authFailures = failed.filter((p) => p.detail?.startsWith("login probe:"));
   const filesToApply = [
     ...new Set(
-      failed.flatMap((probe) => {
-        const patch = MIGRATION_PATCHES.find((p) => p.id === probe.id);
-        return patch?.files ?? [];
-      }),
+      failed
+        .filter((p) => !p.detail?.startsWith("login probe:"))
+        .flatMap((probe) => {
+          const patch = MIGRATION_PATCHES.find((p) => p.id === probe.id);
+          return patch?.files ?? [];
+        }),
     ),
   ];
 
   return {
     probes,
     failed,
+    authFailures,
     allOk: failed.length === 0,
     filesToApply,
     probeUserId,
@@ -558,36 +610,32 @@ async function probeCardioSessaoDiaria(admin) {
   return { id: "cardio_sessao_diaria", ok: true, detail: "tabela OK · sync multi-dispositivo" };
 }
 
-async function probePerfZeroCostScaling(admin, userId) {
-  const env = loadEnv();
-  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey =
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-
-  if (!url || !anonKey) {
-    return { id: "perf_zero_cost_scaling", ok: true, detail: "skip · anon key ausente" };
+async function probeClienteAuthMigrations() {
+  const client = createAnonClient();
+  if (!client) {
+    return [
+      { id: "comunidade_snapshot_volatile", ok: true, detail: "skip · anon key ausente" },
+      { id: "perf_zero_cost_scaling", ok: true, detail: "skip · anon key ausente" },
+    ];
   }
 
-  const { data: userRow } = await admin.auth.admin.getUserById(userId);
-  const email = userRow?.user?.email;
-  if (!email) {
-    return { id: "perf_zero_cost_scaling", ok: false, detail: "email do probe ausente" };
+  const login = await signInClientePrincipal(client);
+  if (login.error) {
+    const detail = `login probe: ${login.error.message} (${login.email})`;
+    return [
+      { id: "comunidade_snapshot_volatile", ok: false, detail },
+      { id: "perf_zero_cost_scaling", ok: false, detail },
+    ];
   }
 
-  const client = createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const snapshotProbe = await probeComunidadeSnapshotAuth(client);
+  const perfProbe = await probePerfZeroCostScaling(client);
+  await client.auth.signOut();
 
-  const { error: loginErr } = await client.auth.signInWithPassword({
-    email,
-    password: "senha123",
-  });
+  return [snapshotProbe, perfProbe];
+}
 
-  if (loginErr) {
-    return { id: "perf_zero_cost_scaling", ok: false, detail: `login probe: ${loginErr.message}` };
-  }
-
+async function probePerfZeroCostScaling(client) {
   const { data: bundle, error: bundleErr } = await client.rpc("fetch_dashboard_bundle", {
     p_musculo: "peito",
     p_mural_limit: 24,
@@ -596,8 +644,6 @@ async function probePerfZeroCostScaling(admin, userId) {
   const { data: arenaFast, error: arenaErr } = await client.rpc("get_comunidade_arena_snapshot", {
     p_skip_side_effects: true,
   });
-
-  await client.auth.signOut();
 
   if (bundleErr?.code === "PGRST202") {
     return {
@@ -1040,64 +1086,8 @@ async function probeComunidadeArena(admin, userId) {
   };
 }
 
-async function probeComunidadeSnapshotAuth(admin, userId) {
-  const env = loadEnv();
-  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const anonKey =
-    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
-    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
-
-  if (!url || !anonKey) {
-    return {
-      id: "comunidade_snapshot_volatile",
-      ok: true,
-      detail: "skip · anon key ausente",
-    };
-  }
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profile?.id) {
-    return {
-      id: "comunidade_snapshot_volatile",
-      ok: false,
-      detail: "sem perfil probe",
-    };
-  }
-
-  const { data: userRow } = await admin.auth.admin.getUserById(userId);
-  const email = userRow?.user?.email;
-  if (!email) {
-    return {
-      id: "comunidade_snapshot_volatile",
-      ok: false,
-      detail: "email do probe ausente",
-    };
-  }
-
-  const client = createClient(url, anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { error: loginErr } = await client.auth.signInWithPassword({
-    email,
-    password: "senha123",
-  });
-
-  if (loginErr) {
-    return {
-      id: "comunidade_snapshot_volatile",
-      ok: false,
-      detail: `login probe: ${loginErr.message}`,
-    };
-  }
-
+async function probeComunidadeSnapshotAuth(client) {
   const { data, error } = await client.rpc("get_comunidade_arena_snapshot");
-  await client.auth.signOut();
 
   if (error) {
     const readOnly = error.message?.includes("read-only transaction");
@@ -1179,6 +1169,13 @@ function printReport(result) {
     console.log(`Todas as ${result.probes.length} probes OK.`);
   } else {
     console.log(`${result.failed.length} probe(s) pendente(s).`);
+    if (result.authFailures?.length > 0) {
+      console.log("\nFalha de autenticação (não indica migration pendente):");
+      for (const probe of result.authFailures) {
+        console.log(`  ${probe.id} — ${probe.detail}`);
+      }
+      console.log("  Dica: node scripts/seed-test-users.mjs");
+    }
     if (result.filesToApply.length > 0) {
       console.log("\nMigrations sugeridas:");
       for (const file of result.filesToApply) {

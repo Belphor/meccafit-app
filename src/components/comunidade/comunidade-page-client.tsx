@@ -41,6 +41,7 @@ import {
   MURAL_REFRESH_EVENT,
   type ComunidadeMuralFocusDetail,
 } from "@/lib/dashboard-tab-navigation";
+import { useComunidadePhotoResolver } from "@/hooks/useComunidadePhotoResolver";
 
 type ComunidadePageClientProps = {
   userId: string;
@@ -171,6 +172,7 @@ export function ComunidadePageClient({
   const pilares = arena?.pilares_cooperativos ?? [];
   const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
   const rankings = arena?.rankings_thoth ?? null;
+  const resolvePhotoUrl = useComunidadePhotoResolver(userId, profilePhotoUrl);
 
   return (
     <BrasaVivaCard
@@ -242,6 +244,7 @@ export function ComunidadePageClient({
               campeaoCinturaoId={arena?.campeao_cinturao_id ?? null}
               rankings={rankings}
               userId={userId}
+              resolvePhotoUrl={resolvePhotoUrl}
               loading={arenaLoading && !arena}
               onDueloCreated={() => void loadAll({ background: true, refresh: true })}
             />
@@ -254,15 +257,26 @@ export function ComunidadePageClient({
             pilares={pilares}
             rankings={rankings}
             userId={userId}
+            resolvePhotoUrl={resolvePhotoUrl}
             loading={arenaLoading && !arena}
           />
         </div>
 
         <div id="comunidade-rankings" className={COMUNIDADE_SCROLL_MT}>
-          <RankingsThothPanel rankings={rankings} userId={userId} loading={arenaLoading && !arena} />
+          <RankingsThothPanel
+            rankings={rankings}
+            userId={userId}
+            resolvePhotoUrl={resolvePhotoUrl}
+            loading={arenaLoading && !arena}
+          />
         </div>
 
-        <ComunidadeMuralPanel userId={userId} refreshKey={refreshToken} phase={phase} />
+        <ComunidadeMuralPanel
+          userId={userId}
+          refreshKey={refreshToken}
+          phase={phase}
+          resolvePhotoUrl={resolvePhotoUrl}
+        />
       </div>
     </BrasaVivaCard>
   );

@@ -20,6 +20,7 @@ type MuscleTooltipProps = {
   muscleId: SovereignMuscleId;
   row: MuscleCalorRow;
   indiceIgnicao: number;
+  purityPenaltyActive?: boolean;
   anchor: { x: number; y: number } | null;
   visible: boolean;
 };
@@ -54,12 +55,13 @@ export function MuscleTooltip({
   muscleId,
   row,
   indiceIgnicao,
+  purityPenaltyActive,
   anchor,
   visible,
 }: MuscleTooltipProps) {
   if (!visible || typeof document === "undefined") return null;
 
-  const purityLow = indiceIgnicao < PURITY_PENALTY_THRESHOLD;
+  const purityLow = purityPenaltyActive ?? indiceIgnicao < PURITY_PENALTY_THRESHOLD;
   const calorMetric = formatCalorMembroMetric(row);
 
   return createPortal(

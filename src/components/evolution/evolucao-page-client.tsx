@@ -25,6 +25,7 @@ import {
   EVOLUTION_HINT,
 } from "@/lib/dashboard-config";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
+import { isRitmoPurityPenaltyActive } from "@/lib/ritmo-grace-period";
 import { useThermalGravityClientState } from "@/lib/use-thermal-gravity-client";
 import type { ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
 import {
@@ -58,6 +59,7 @@ type EvolucaoPageClientProps = {
   /** Tier conquistado no perfil — prioridade sobre o payload RPC antes da migration. */
   conqueredPhaseTier?: PhaseTier;
   thermalSettlement?: ThermalGravitySettlementResult | null;
+  phaseSetupAt?: string | null;
 };
 
 async function assertAuthenticatedScope(expectedUserId: string): Promise<boolean> {
@@ -90,6 +92,7 @@ export function EvolucaoPageClient({
   hasPersonalBond = false,
   conqueredPhaseTier,
   thermalSettlement = null,
+  phaseSetupAt = null,
 }: EvolucaoPageClientProps) {
   const resolvedInitial = useMemo<EvolutionCalorPayload | undefined>(() => {
     if (initialPayload) return initialPayload;
@@ -123,6 +126,17 @@ export function EvolucaoPageClient({
   const [scopeError, setScopeError] = useState<string | null>(null);
   const [evolutionReady, setEvolutionReady] = useState(
     Boolean(resolvedInitial?.phase_tier != null && Number.isFinite(resolvedInitial.phase_tier)),
+  );
+  const [ritmoGraceActive, setRitmoGraceActive] = useState(
+    resolvedInitial?.ritmo_grace_active === true,
+  );
+  const [ritmoGraceDaysRemaining, setRitmoGraceDaysRemaining] = useState(
+    resolvedInitial?.ritmo_grace_days_remaining ?? 0,
+  );
+
+  const purityPenaltyActive = useMemo(
+    () => isRitmoPurityPenaltyActive(indiceIgnicao, phaseSetupAt, ritmoGraceActive),
+    [indiceIgnicao, phaseSetupAt, ritmoGraceActive],
   );
 
   const computedNivelGlobal = useMemo(
@@ -184,6 +198,8 @@ export function EvolucaoPageClient({
       );
       setEvolutionReady(true);
     }
+    setRitmoGraceActive(payload.ritmo_grace_active === true);
+    setRitmoGraceDaysRemaining(payload.ritmo_grace_days_remaining ?? 0);
     setNivelTermicoGlobal(resolveNivelTermicoGlobal(payload.indice_ignicao, payload.calorRows));
   }, []);
 
@@ -282,6 +298,10 @@ export function EvolucaoPageClient({
         onMuscleSelect={setActiveMuscle}
         onRefreshMap={() => void refreshCalor()}
         scopeError={scopeError}
+        phaseSetupAt={phaseSetupAt}
+        ritmoGraceActive={ritmoGraceActive}
+        ritmoGraceDaysRemaining={ritmoGraceDaysRemaining}
+        purityPenaltyActive={purityPenaltyActive}
       />
 
       {/* 2. Chama acumulada — fase da linhagem */}
@@ -304,6 +324,7 @@ export function EvolucaoPageClient({
           monthBoundaryDegraded={monthBoundaryDegraded}
           profileName={profileName}
           profilePhotoUrl={profilePhotoUrl}
+          purityPenaltyActive={purityPenaltyActive}
         />
       </BrasaVivaCard>
 

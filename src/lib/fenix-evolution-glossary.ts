@@ -76,7 +76,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "%",
     period: "Últimos 30 dias",
     explanation:
-      `Percentual do ${VTC_DISPLAY_NAME} meta mensal que você já acumulou. Abaixo de 50 por cento, as cores do mapa ficam mais suaves.`,
+      `Mostra quanto do seu ${VTC_DISPLAY_NAME} dos últimos 30 dias já atingiu a meta mensal. Nos primeiros 20 dias da linhagem, o mapa mantém cores vivas. Depois, Ritmo abaixo de 50 por cento deixa o mapa mais suave.`,
     chip: `Ritmo da Fênix · meta ${VTC_DISPLAY_NAME}`,
   },
   gravidade_termica: {
@@ -367,7 +367,7 @@ export function buildMuscleCeilingSummary(muscleId: SovereignMuscleId): string {
   return `Faísca até ${c.faisca} kg, Brasa até ${c.brasa} kg, Labareda até ${c.labareda} kg de ${VTC_DISPLAY_NAME}`;
 }
 
-export const PURITY_PENALTY_EXPLANATION = `Ritmo da Fênix abaixo de ${PURITY_PENALTY_THRESHOLD} por cento. Cores do mapa mais suaves.`;
+export const PURITY_PENALTY_EXPLANATION = `Ritmo da Fênix abaixo de ${PURITY_PENALTY_THRESHOLD} por cento, após os 20 dias de acolhimento. O mapa corporal fica com cores mais suaves.`;
 
 /** Camadas do anel do avatar da Evolução (tons âmbar e ouro, sem lilás) */
 export const EVOLUTION_TIER_RING_LEGEND = [

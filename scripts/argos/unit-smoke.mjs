@@ -20,6 +20,7 @@ import {
   buildThermalGravityMonthAtRiskMessage,
   buildThermalGravitySettlementMessage,
   formatMonthlyGoalLabelMet,
+  isLinhagemInactivityTreinoDegraded,
   isThermalGravityMonthAtRisk,
   resolveCurrentMonthKeyBrasilia,
   resolveThermalSettlementTierAfterMiss,
@@ -320,6 +321,11 @@ assert(
     inactivityPendingMsg.includes("reacender a chama") &&
     inactivityPendingMsg.includes("Labareda") &&
     !inactivityPendingMsg.includes("--"),
+);
+assert(
+  "degradação treino ativa com pending_rekindle",
+  isLinhagemInactivityTreinoDegraded({ pending_rekindle: true, phase_tier: 3 }) &&
+    !isLinhagemInactivityTreinoDegraded({ pending_rekindle: false, phase_tier: 3 }),
 );
 assert(
   "inatividade ack confirma reacendimento sem restaurar fase",

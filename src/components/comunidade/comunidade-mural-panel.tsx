@@ -15,9 +15,15 @@ type ComunidadeMuralPanelProps = {
   userId: string;
   refreshKey: string | number;
   phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtcMonth">;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
 };
 
-export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMuralPanelProps) {
+export function ComunidadeMuralPanel({
+  userId,
+  refreshKey,
+  phase,
+  resolvePhotoUrl,
+}: ComunidadeMuralPanelProps) {
   return (
     <section
       id="comunidade-mural"
@@ -64,6 +70,7 @@ export function ComunidadeMuralPanel({ userId, refreshKey, phase }: ComunidadeMu
             embedMode
             phase={phase}
             refreshKey={refreshKey}
+            resolvePhotoUrl={resolvePhotoUrl}
           />
         </div>
       </div>

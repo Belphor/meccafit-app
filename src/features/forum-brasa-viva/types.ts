@@ -5,6 +5,7 @@ export type ForumBrasaVivaTopic = {
   authorId: string;
   authorName: string;
   authorLineage: string;
+  authorAvatarPath?: string | null;
   temCinturaoDuelo: boolean;
   isReiDasChamas: boolean;
   isPilarCooperativo: boolean;
@@ -22,6 +23,7 @@ export type ForumBrasaVivaRpcRow = {
   author_name: string;
   author_lineage: string;
   author_id?: string;
+  author_avatar_path?: string | null;
   tem_cinturao_duelo?: boolean;
   is_rei_das_chamas?: boolean;
   is_rei_chamas_superiores?: boolean;

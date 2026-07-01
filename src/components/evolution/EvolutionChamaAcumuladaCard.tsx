@@ -36,6 +36,7 @@ type EvolutionChamaAcumuladaCardProps = {
   monthBoundaryDegraded?: boolean;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
+  purityPenaltyActive?: boolean;
 };
 
 export function EvolutionChamaAcumuladaCard({
@@ -50,6 +51,7 @@ export function EvolutionChamaAcumuladaCard({
   monthBoundaryDegraded = false,
   profileName,
   profilePhotoUrl,
+  purityPenaltyActive = false,
 }: EvolutionChamaAcumuladaCardProps) {
   const system = FENIX_EVOLUTION_SYSTEMS.chama_acumulada;
   const activeTier = Math.min(5, Math.max(1, Math.round(phaseTier))) as PhaseTier;
@@ -58,7 +60,7 @@ export function EvolutionChamaAcumuladaCard({
   const progressKg = Math.max(vtc30dKg, thermalState.vtc_month, thermalState.vtc_30d);
   const thermalProgressPct = resolveMonthlyLevelUpProgressPercent(thermalState);
   const progressPercent =
-    activeTier >= 2 && thermalProgressPct !== null ? thermalProgressPct : phaseProgress.progressPercent;
+    thermalProgressPct !== null ? thermalProgressPct : phaseProgress.progressPercent;
   const ceilingKg = phaseProgress.ceilingKg ?? thermalState.monthly_goal_kg;
   const remainingKg =
     ceilingKg !== null ? Math.max(0, ceilingKg - progressKg) : phaseProgress.remainingKg;
@@ -119,6 +121,7 @@ export function EvolutionChamaAcumuladaCard({
               vtc30dKg={vtc30dKg}
               profileName={profileName}
               profilePhotoUrl={profilePhotoUrl}
+              purityPenaltyActive={purityPenaltyActive}
               className="mx-auto lg:mx-0"
             />
           )}

@@ -18,6 +18,7 @@ import type { RankingsThoth, RankingVtcEntry } from "@/lib/comunidade-data";
 type RankingsThothPanelProps = {
   rankings: RankingsThoth | null;
   userId: string;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
   loading?: boolean;
 };
 
@@ -50,12 +51,14 @@ function RankingRow({
   metricLabel,
   metricValue,
   isReiSlot = false,
+  resolvePhotoUrl,
 }: {
   entry: RankingVtcEntry;
   userId: string;
   metricLabel: string;
   metricValue: number;
   isReiSlot?: boolean;
+  resolvePhotoUrl?: (atletaId: string) => string | null;
 }) {
   const isSelf = entry.atleta_id === userId;
   const isPodium = entry.posicao <= 3;
@@ -82,6 +85,7 @@ function RankingRow({
       </span>
       <PlutusAvatar
         name={entry.atleta_nome}
+        photoUrl={resolvePhotoUrl?.(entry.atleta_id)}
         temCinturaoDuelo={entry.temCinturaoDuelo}
         isReiDasChamas={entry.isReiDasChamas}
         isPilarCooperativo={entry.isPilarCooperativo}
@@ -121,7 +125,12 @@ function resolveActiveList(rankings: RankingsThoth | null, activeTab: TabKey): R
   return rankings.vtc_por_membro[activeTab] ?? [];
 }
 
-export function RankingsThothPanel({ rankings, userId, loading = false }: RankingsThothPanelProps) {
+export function RankingsThothPanel({
+  rankings,
+  userId,
+  resolvePhotoUrl,
+  loading = false,
+}: RankingsThothPanelProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("superiores");
 
   const activeList = resolveActiveList(rankings, activeTab);
@@ -207,6 +216,7 @@ export function RankingsThothPanel({ rankings, userId, loading = false }: Rankin
                 activeTab === "global" ? entry.vtc_total : entry.vtc_grupo || entry.vtc_total
               }
               isReiSlot={isReiTab}
+              resolvePhotoUrl={resolvePhotoUrl}
             />
           ))}
         </ul>
