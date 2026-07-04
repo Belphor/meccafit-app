@@ -1,13 +1,13 @@
 /**
  * Aplica arquivos SQL específicos no Supabase remoto.
  *
- * Requer SUPABASE_DB_URL em .env.local (Session pooler ou direct).
+ * Requer SUPABASE_DB_URL ou SUPABASE_DB_PASSWORD em .env.local.
  * Uso:
- *   node scripts/apply-migration-files.mjs 20260627250000_mural_superacoes_hoje_metric.sql
+ *   node scripts/apply-migration-files.mjs 20260704120000_fix_mural_comunidade_anon_revoke.sql
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadEnvLocal, requireEnv } from "./lib/env.mjs";
+import { loadEnvLocal } from "./lib/env.mjs";
 
 const files = process.argv.slice(2);
 if (files.length === 0) {
@@ -15,10 +15,32 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-const env = loadEnvLocal();
-requireEnv(env, ["SUPABASE_DB_URL"]);
+function projectRefFromUrl(url) {
+  const match = url?.match(/https:\/\/([^.]+)\.supabase\.co/);
+  return match?.[1] ?? null;
+}
 
-const dbUrl = env.SUPABASE_DB_URL.trim();
+function resolveDbUrl(env) {
+  const direct = env.SUPABASE_DB_URL?.trim();
+  if (direct) return direct;
+
+  const projectRef = projectRefFromUrl(env.NEXT_PUBLIC_SUPABASE_URL?.trim());
+  const dbPassword = (process.env.SUPABASE_DB_PASSWORD || env.SUPABASE_DB_PASSWORD || "").trim();
+  if (dbPassword && projectRef) {
+    return `postgresql://postgres.${projectRef}:${encodeURIComponent(dbPassword)}@aws-0-sa-east-1.pooler.supabase.com:5432/postgres`;
+  }
+
+  return "";
+}
+
+const env = loadEnvLocal();
+const dbUrl = resolveDbUrl(env);
+
+if (!dbUrl) {
+  console.error("SUPABASE_DB_URL ou SUPABASE_DB_PASSWORD necessario em .env.local.");
+  process.exit(1);
+}
+
 const { default: pg } = await import("pg");
 const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 

@@ -108,6 +108,18 @@ jobs:
           tail -n 80 /tmp/meccafit-app.log || true
           exit 1
 
+      - name: Apply pending migrations (remote)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          if [ -n "${SUPABASE_DB_PASSWORD}" ] || [ -n "${SUPABASE_ACCESS_TOKEN}" ]; then
+            node scripts/apply-pending-migrations.mjs
+          else
+            echo "Auto-apply ignorado: configure SUPABASE_DB_PASSWORD ou SUPABASE_ACCESS_TOKEN nos secrets do repositorio."
+            echo "Ou aplique manualmente: supabase/migrations/20260704120000_fix_mural_comunidade_anon_revoke.sql"
+          fi
+
       - name: Run ARGOS test suite
         run: npm run argos:test
 

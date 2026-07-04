@@ -174,6 +174,10 @@ export const MIGRATION_PATCHES = [
     id: "fix_comunidade_fechar_titulos_rei_sup",
     files: ["20260702120000_fix_comunidade_fechar_titulos_rei_sup.sql"],
   },
+  {
+    id: "fix_mural_comunidade_anon_revoke",
+    files: ["20260704120000_fix_mural_comunidade_anon_revoke.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [
@@ -446,6 +450,8 @@ export async function runMigrationProbes(admin, options = {}) {
     });
   }
 
+  probes.push(await probeAnonMuralRevoke());
+
   const failed = probes.filter((p) => !p.ok);
   const authFailures = failed.filter((p) => p.detail?.startsWith("login probe:"));
   const filesToApply = [
@@ -466,6 +472,32 @@ export async function runMigrationProbes(admin, options = {}) {
     allOk: failed.length === 0,
     filesToApply,
     probeUserId,
+  };
+}
+
+async function probeAnonMuralRevoke() {
+  const client = createAnonClient();
+  if (!client) {
+    return {
+      id: "fix_mural_comunidade_anon_revoke",
+      ok: true,
+      detail: "skip · anon key ausente",
+    };
+  }
+
+  const { data, error } = await client.rpc("argos_fetch_mural_comunidade", { p_limit: 5 });
+  if (error) {
+    return {
+      id: "fix_mural_comunidade_anon_revoke",
+      ok: true,
+      detail: error.message,
+    };
+  }
+
+  return {
+    id: "fix_mural_comunidade_anon_revoke",
+    ok: false,
+    detail: `anon rpc permitido · rows=${Array.isArray(data) ? data.length : 0}`,
   };
 }
 

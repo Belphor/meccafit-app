@@ -15,6 +15,9 @@ const config = {
   coverageDirectory: "coverage",
   testEnvironment: "node",
   testMatch: ["**/?(*.)+(test).ts?(x)"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1",
+  },
 };
 
 export default createJestConfig(config);

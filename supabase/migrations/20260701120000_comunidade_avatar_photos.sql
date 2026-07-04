@@ -520,9 +520,16 @@ $$;
 REVOKE ALL ON FUNCTION public.fetch_dashboard_bundle(public.subgrupo_muscular, integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.fetch_dashboard_bundle(public.subgrupo_muscular, integer) TO authenticated;
 
+REVOKE ALL ON FUNCTION public.argos_fetch_mural_comunidade(integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.argos_fetch_mural_comunidade(integer) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.argos_fetch_forum_brasa_viva(integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.argos_fetch_forum_brasa_viva(integer) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.list_clientes_duelo(text, integer, integer) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.list_clientes_duelo(text, integer, integer) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.get_rankings_thoth() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.get_rankings_thoth() TO authenticated, service_role;
 
 COMMIT;
