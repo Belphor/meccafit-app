@@ -33,8 +33,11 @@ import {
   EXERCISE_DIVIDER_COMPLETE,
   EXERCISE_DIVIDER_IDLE,
   EXERCISE_NAME_ACTIVE,
+  EXERCISE_NAME_ACTIVE_COMPACT,
   EXERCISE_NAME_COMPLETE,
+  EXERCISE_NAME_COMPLETE_COMPACT,
   EXERCISE_NAME_IDLE,
+  EXERCISE_NAME_IDLE_COMPACT,
   EXERCISE_PHASE_IDLE,
   EXERCISE_RECORD_META,
   EXERCISE_RECORD_TERM,
@@ -55,6 +58,8 @@ export type MonumentalExerciseCardProps = {
   exercise: Exercise;
   isActive: boolean;
   isMinimized?: boolean;
+  /** Lista do dia com mais de um exercício — reduz só o tamanho do nome */
+  compactName?: boolean;
   isSuperacaoFlame: boolean;
   musculo: Enums<"subgrupo_muscular">;
   isIncubating: boolean;
@@ -79,6 +84,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   exercise,
   isActive,
   isMinimized = false,
+  compactName = false,
   isSuperacaoFlame,
   musculo,
   isIncubating,
@@ -208,10 +214,16 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
       ? EXERCISE_CARD_ACTIVE
       : EXERCISE_CARD_IDLE;
   const nameClass = isSeriesComplete
-    ? EXERCISE_NAME_COMPLETE
+    ? compactName
+      ? EXERCISE_NAME_COMPLETE_COMPACT
+      : EXERCISE_NAME_COMPLETE
     : isActive
-      ? EXERCISE_NAME_ACTIVE
-      : EXERCISE_NAME_IDLE;
+      ? compactName
+        ? EXERCISE_NAME_ACTIVE_COMPACT
+        : EXERCISE_NAME_ACTIVE
+      : compactName
+        ? EXERCISE_NAME_IDLE_COMPACT
+        : EXERCISE_NAME_IDLE;
   const cardFrameClass = [
     isSeriesComplete ? `exercise-card-complete ${EXERCISE_CARD_COMPLETE_FRAME}` : "",
     flameActive ? EXERCISE_CARD_SUPERACAO_FRAME : "",

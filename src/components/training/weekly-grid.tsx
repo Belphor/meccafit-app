@@ -100,9 +100,16 @@ export function WeeklyGrid({ userId, initialSchedule }: WeeklyGridProps) {
   }, [activeDay, isOverride, userId]);
 
   useEffect(() => {
-    if (!initialSchedule?.length) {
-      void loadSchedule();
-    }
+    if (initialSchedule?.length) return;
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadSchedule();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialSchedule?.length, loadSchedule]);
 
   const selectDay = useCallback(

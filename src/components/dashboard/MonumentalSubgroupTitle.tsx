@@ -4,11 +4,19 @@ import { resolveBodyRegionSubtitle, type MuscleSubgroup } from "@/lib/mock-data"
 type MonumentalSubgroupTitleProps = {
   subgroup: MuscleSubgroup;
   compact?: boolean;
+  /** Reduz título quando o dia tem mais de um grupo/exercício prescrito */
+  multiItem?: boolean;
 };
 
-export function MonumentalSubgroupTitle({ subgroup, compact = false }: MonumentalSubgroupTitleProps) {
+export function MonumentalSubgroupTitle({
+  subgroup,
+  compact = false,
+  multiItem = false,
+}: MonumentalSubgroupTitleProps) {
   const bodyRegionSubtitle = resolveBodyRegionSubtitle(subgroup);
   const isPlanilhaDay = subgroup.id.startsWith("planilha-dia-");
+  const titleSegments = subgroup.monumentalTitle.split(" · ").filter(Boolean).length;
+  const useCompactTitle = multiItem || titleSegments > 1;
 
   return (
     <div className={`text-center ${compact ? "mb-2" : "mb-6"}`} aria-labelledby="subgrupo-monumental-title">
@@ -19,12 +27,18 @@ export function MonumentalSubgroupTitle({ subgroup, compact = false }: Monumenta
       ) : null}
       <h2
         id="subgrupo-monumental-title"
-        className={`${PLASMA_TITLE} ${compact ? "mt-0" : "mt-3"} overflow-x-clip py-1 text-balance text-[clamp(1.5rem,7vw,3rem)] leading-[1.15] tracking-[0.06em] sm:text-4xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-5xl lg:leading-[1.1]`}
+        className={`${PLASMA_TITLE} ${compact ? "mt-0" : "mt-3"} overflow-x-clip py-1 text-balance ${
+          useCompactTitle
+            ? "text-[clamp(1.125rem,4.8vw,2.125rem)] leading-[1.16] tracking-[0.05em] sm:text-[clamp(1.25rem,3.2vw,2.25rem)] sm:leading-[1.14] sm:tracking-[0.07em] lg:text-4xl lg:leading-[1.12]"
+            : "text-[clamp(1.5rem,7vw,3rem)] leading-[1.15] tracking-[0.06em] sm:text-4xl sm:leading-[1.12] sm:tracking-[0.1em] lg:text-5xl lg:leading-[1.1]"
+        }`}
       >
         {subgroup.monumentalTitle}
       </h2>
       <p
-        className={`${MONUMENTAL_BODY_REGION_SUBTITLE} ${compact ? "mt-2" : "mt-4"}`}
+        className={`${MONUMENTAL_BODY_REGION_SUBTITLE} ${compact ? "mt-2" : "mt-4"} ${
+          useCompactTitle ? "text-xs tracking-[0.14em] sm:text-sm sm:tracking-[0.22em]" : ""
+        }`}
         aria-label={`Região corporal: ${bodyRegionSubtitle}`}
       >
         {bodyRegionSubtitle}

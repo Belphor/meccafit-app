@@ -40,7 +40,7 @@ type ForjaVtcFeedPanelProps = {
 };
 
 function formatVtc(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "—";
+  if (!Number.isFinite(value) || value <= 0) return "Sem dado";
   return `${Math.round(value)} kg`;
 }
 
@@ -106,11 +106,19 @@ function ForjaVtcFeedPanelComponent({
   }, [onFeedLoaded]);
 
   useEffect(() => {
-    void loadFeed();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadFeed();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadFeed, refreshVersion]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    const timer = window.setTimeout(() => setCurrentPage(1), 0);
+    return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
   const filteredEntries = useMemo(() => {
@@ -138,7 +146,10 @@ function ForjaVtcFeedPanelComponent({
             <h2 className={`${FORJA_SECTION_TITLE} mt-1 text-lg sm:text-xl`}>
               {FORJA_COPY.monitor.vtcFeedSubtitle}
             </h2>
-            <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.monitor.vtcFeedHint}</p>
+            <p className={`${FORJA_META} mt-1`}>
+              Toque em uma linha para ver os <strong className="font-medium text-zinc-300">alertas</strong> e
+              corrigir o <strong className="font-medium text-zinc-300">volume de hoje</strong> daquele cliente.
+            </p>
           </div>
           <button
             type="button"
@@ -257,7 +268,7 @@ function ForjaVtcFeedPanelComponent({
                           </span>
                         </td>
                         <td className="px-2 py-2.5 text-zinc-300">
-                          {entry.forgerName && entry.forgerName !== "—"
+                          {entry.forgerName && entry.forgerName !== "Sem dado"
                             ? entry.forgerName
                             : "Sem Forjador"}
                         </td>

@@ -72,7 +72,7 @@ export function DietExcelDropzone({
         ),
       );
     },
-    [athlete],
+    [athlete, isSovereign],
   );
 
   const parseFile = useCallback(

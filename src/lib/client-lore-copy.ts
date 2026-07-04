@@ -23,10 +23,10 @@ export const TREINO_EMPTY_NO_DAY =
 export const TREINO_EMPTY_NO_EXERCISES =
   "Seu Forjador ainda não prescreveu exercícios para os grupos deste dia.";
 
-export const TREINO_LOADING_VIP = "Abrindo via Forjador...";
+export const TREINO_LOADING_VIP = "Abrindo via Forjador…";
 
 /** Evolução VIP · acompanhamento */
-export const ACOMPANHAMENTO_LOADING = "Carregando dados do Forjador...";
+export const ACOMPANHAMENTO_LOADING = "Carregando dados do Forjador…";
 export const ACOMPANHAMENTO_MEDIDAS_TITLE = "Medidas do Forjador";
 export const ACOMPANHAMENTO_MEDIDAS_EMPTY =
   "Ainda não há medidas publicadas pelo seu Forjador. Elas aparecem aqui quando forem sincronizadas na aba Medidas.";
@@ -49,8 +49,8 @@ export const DIETA_VIP_WAITING =
 
 /** Fenyxia Suporte · canal único no Perfil */
 export const FENYXIA_SUPORTE_CHIP = "Fenyxia Suporte";
-export const FENYXIA_SUPORTE_META = "Canal oficial no Perfil";
-export const FENYXIA_SUPORTE_BADGE = "Canal oficial de suporte";
+export const FENYXIA_SUPORTE_META = "Canal de suporte";
+export const FENYXIA_SUPORTE_BADGE = "Canal de suporte";
 
 /** Acesso suspenso */
 export const CONTA_SUSPENSA =

@@ -7,6 +7,14 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "eslint",
+    "test": "jest",
+    "db:test:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "db:test:down": "docker compose -f docker-compose.test.yml down -v",
+    "test:backend:setup": "node scripts/test/setup-db.mjs",
+    "test:backend": "npm run db:test:up && npm run test:backend:setup && jest --runInBand --testMatch \"**/tests/backend/**/*.spec.ts\"",
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "argos:audit": "node scripts/argos/security-audit.mjs",
     "argos:rls": "node scripts/argos/rls-integration.mjs",
     "argos:test": "npm run argos:audit && npm run argos:rls && npm run argos:unit && npm run argos:sql && npm run argos:migrations && npm run argos:adversarial && npm run argos:two-way && npm run argos:dual-vip && npm run argos:monitoring && npm run argos:forger-lifecycle && npm run argos:purity-evolution && npm run argos:matrix && npm run argos:ui",
@@ -56,20 +64,30 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
     "html2canvas": "^1.4.1",
-    "next": "16.2.4",
+    "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/supertest": "^7.2.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.10",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "pg": "^8.21.0",
+    "supertest": "^7.2.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   }
 }

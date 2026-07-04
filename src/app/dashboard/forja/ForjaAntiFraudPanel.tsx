@@ -98,16 +98,27 @@ function ForjaAntiFraudPanelComponent({
   }, [athlete?.clientId, scopeClientId, showGlobalWhenEmpty, onSignalsLoaded]);
 
   useEffect(() => {
-    void loadSignals();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadSignals();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadSignals]);
 
   useEffect(() => {
-    if (athlete) {
+    if (!athlete) return;
+
+    const timer = window.setTimeout(() => {
       setPhaseTierDraft(String(athlete.phaseTier));
       setVtcSetDraft("");
       setResetVtcToday(false);
-    }
-  }, [athlete?.clientId, athlete?.phaseTier, athlete?.statusAltar]);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [athlete, athlete?.clientId, athlete?.phaseTier, athlete?.statusAltar]);
 
   const applyAthletePatch = useCallback(
     (patch: Partial<ForjaBondedAthlete>) => {
@@ -289,7 +300,7 @@ function ForjaAntiFraudPanelComponent({
   const isGlobalView = showGlobalWhenEmpty && !athlete && !scopeClientId;
   const panelTitle = isGlobalView
     ? FORJA_COPY.monitor.globalAlerts
-    : (athlete?.displayName ?? "—");
+    : (athlete?.displayName ?? "Sem dado");
   const panelHint = isGlobalView
     ? FORJA_COPY.monitor.globalHint
     : athlete
@@ -376,7 +387,8 @@ function ForjaAntiFraudPanelComponent({
         <div className={`${FORJA_COMMAND_INNER} mt-4`}>
           <p className={FORJA_SECTION_CHIP}>{FORJA_COPY.monitor.vtcToday}</p>
           <p className={`${FORJA_META} mt-2`}>
-            {athlete.displayName} · hoje: {Math.round(athlete.vtcToday ?? 0)} kg · últimos 30 dias:{" "}
+            <strong className="font-medium text-zinc-200">{athlete.displayName}</strong>; hoje:{" "}
+            {Math.round(athlete.vtcToday ?? 0)} kg; últimos 30 dias:{" "}
             {Math.round(athlete.vtc30d ?? 0).toLocaleString("pt-BR")} kg
           </p>
           <p className={`${FORJA_META} mt-1 text-zinc-500`}>{FORJA_COPY.monitor.vtcTodayHint}</p>
@@ -425,8 +437,8 @@ function ForjaAntiFraudPanelComponent({
         <div className={`${FORJA_COMMAND_INNER} mt-4 border-red-950/30`}>
           <p className={FORJA_SECTION_CHIP}>{FORJA_COPY.monitor.tribunal}</p>
           <p className={`${FORJA_META} mt-2`}>
-            {athlete.displayName}
-            {` · ${resolveAccountAccessDisplay(athlete.statusAltar).label}`}
+            <strong className="font-medium text-zinc-200">{athlete.displayName}</strong>
+            {`, ${resolveAccountAccessDisplay(athlete.statusAltar).label}`}
           </p>
           <p className={`${FORJA_META} mt-1 text-zinc-500`}>{FORJA_COPY.monitor.tribunalHint}</p>
           <p className={`${FORJA_META} mt-2 rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-3 py-2 text-zinc-500`}>

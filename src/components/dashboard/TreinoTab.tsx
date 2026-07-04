@@ -26,7 +26,7 @@ import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { composeDayTreinoSubgroup, subgroupIdToTrainingMuscle } from "@/lib/treino-subgroup";
 import { TREINO_EMPTY_NO_DAY, TREINO_EMPTY_NO_EXERCISES } from "@/lib/client-lore-copy";
 import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-track";
-import type { PlanilhaDayRow, TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
+import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import { buildForjadorScheduleMap, buildScheduleMap } from "@/lib/training-week";
 import {
   isExerciseWeekLocked,
@@ -86,7 +86,6 @@ export function TreinoTab({
   onSuperacao,
   onPersistSuccess,
   onSetComplete,
-  maxLoadsByExerciseId = {},
   registeredPrByExerciseId = {},
 }: TreinoTabProps) {
   const [cardsMinimized, setCardsMinimized] = useState(true);
@@ -167,7 +166,10 @@ export function TreinoTab({
         }`}
         aria-busy={isTreinoSwitching}
       >
-        <MonumentalSubgroupTitle subgroup={subgroup} />
+        <MonumentalSubgroupTitle
+          subgroup={subgroup}
+          multiItem={subgroup.exercises.length > 1}
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-neutral-500">
@@ -207,6 +209,7 @@ export function TreinoTab({
                   exercise={exercise}
                   isActive={exercise.id === activeExerciseId}
                   isMinimized={cardsMinimized}
+                  compactName={subgroup.exercises.length > 1}
                   isSuperacaoFlame={exercise.id === superacaoExerciseId}
                   musculo={musculo}
                   isIncubating={isIncubating}

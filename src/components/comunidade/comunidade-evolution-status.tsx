@@ -18,6 +18,7 @@ import {
 } from "@/components/comunidade/comunidade-layout";
 import { MUSCLE_LABELS, type SovereignMuscleId } from "@/components/evolution/human-body-constants";
 import type { ComunidadeClienteEvolution } from "@/lib/comunidade-evolution";
+import { LoreEm } from "@/lib/lore-emphasis";
 
 type ComunidadeEvolutionStatusProps = {
   evolution: ComunidadeClienteEvolution | null;
@@ -26,9 +27,17 @@ type ComunidadeEvolutionStatusProps = {
   profilePhotoUrl?: string | null;
 };
 
-function resolveGrupoLabel(grupo: string): string {
-  const key = grupo.trim().toUpperCase() as SovereignMuscleId;
-  return MUSCLE_LABELS[key] ?? grupo;
+const THERMAL_LEVEL_KEYS = new Set(["CINZAS", "FAISCA", "BRASA", "LABAREDA", "FOGO CÓSMICO"]);
+
+function resolveGrupoLabel(grupo: string | null | undefined): string {
+  const key = grupo?.trim().toUpperCase() ?? "";
+  if (!key || THERMAL_LEVEL_KEYS.has(key)) {
+    return "Ainda sem destaque no mês";
+  }
+  if (key in MUSCLE_LABELS) {
+    return MUSCLE_LABELS[key as SovereignMuscleId];
+  }
+  return grupo?.trim() || "Ainda sem destaque no mês";
 }
 
 type TituloBadge = {
@@ -96,9 +105,10 @@ export function ComunidadeEvolutionStatus({
       <header className={COMUNIDADE_HEADER}>
         <p className={`${COMUNIDADE_EYEBROW} text-amber-200/80`}>Seu perfil na comunidade</p>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Aqui você vê o músculo em que mais carregou no ranking mensal e os títulos que já
-          conquistou na arena. A sua foto (salva no Perfil) aparece aqui e em todo lugar onde você
-          consta na comunidade — só neste dispositivo, sem custo na nuvem.
+          Aqui você vê o <LoreEm>músculo em que mais carregou</LoreEm> no ranking mensal e os{" "}
+          <LoreEm>títulos conquistados</LoreEm> na arena. Sua foto, definida no Perfil, aparece no
+          mural, nos duelos e nos rankings quando a <LoreEm>miniatura da comunidade</LoreEm> é
+          sincronizada.
         </p>
       </header>
 

@@ -113,13 +113,16 @@ export function EvolutionVipInsights({
   }, [enabled, userId]);
 
   useEffect(() => {
-    if (!enabled) {
-      setMeasures(null);
-      setTodayGroups([]);
-      return;
-    }
+    if (!enabled) return;
 
-    void loadInsights();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadInsights();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [enabled, loadInsights]);
 
   useEffect(() => {
@@ -219,7 +222,7 @@ export function EvolutionVipInsights({
             <MetricCell
               label="Altura"
               value={
-                measures.heightCm != null ? `${formatScientificNumber(measures.heightCm)} cm` : "—"
+                measures.heightCm != null ? `${formatScientificNumber(measures.heightCm)} cm` : "Sem dado"
               }
             />
             <MetricCell
@@ -227,7 +230,7 @@ export function EvolutionVipInsights({
               value={
                 measures.bodyFatPct != null
                   ? `${formatScientificNumber(measures.bodyFatPct)}%`
-                  : "—"
+                  : "Sem dado"
               }
             />
             <MetricCell
@@ -235,7 +238,7 @@ export function EvolutionVipInsights({
               value={
                 measures.leanMassKg != null
                   ? `${formatScientificNumber(measures.leanMassKg)} kg`
-                  : "—"
+                  : "Sem dado"
               }
             />
             <MetricCell label="Medido em" value={formatScientificDate(measures.measuredAt)} />

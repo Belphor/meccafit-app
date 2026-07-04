@@ -75,7 +75,7 @@ export function EvolutionChamaAcumuladaCard({
         <div className="min-w-0 flex-1">
           <h2 className={DASHBOARD_SECTION_TITLE}>Chama Acumulada da Linhagem</h2>
           <p className={EVOLUTION_SECTION_SUBTITLE}>
-            Volume dos últimos 30 dias. Define sua fase e o anel do avatar.
+            Volume dos últimos 30 dias; define sua fase e o anel do avatar.
           </p>
           <DashboardClientInfoBlock className="mt-3">{system.explanation}</DashboardClientInfoBlock>
 
@@ -142,7 +142,7 @@ export function EvolutionChamaAcumuladaCard({
             </span>
           </span>
           <span className="mt-1 block text-xs text-amber-200/70">
-            Toque para ver cada fase conquistada no anel do avatar
+            Toque para ver cada fase conquistada no anel do avatar.
           </span>
         </summary>
         <div className="border-t border-orange-500/10 px-4 pb-4 pt-3">

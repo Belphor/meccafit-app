@@ -119,7 +119,7 @@ export type PerfilPublicoAtleta = ComunidadeTitulos & {
   atleta_id: string;
   indice_ignicao: number;
   duelos_vencidos: number;
-  grupo_supremo: string;
+  grupo_supremo: string | null;
   tem_cinturao_duelo: boolean;
   is_rei_das_chamas: boolean;
   is_rei_chamas_superiores: boolean;
@@ -382,7 +382,7 @@ export async function fetchPerfilPublicoAtleta(
       atleta_id: String(row.atleta_id ?? atletaId),
       indice_ignicao: Number(row.indice_ignicao ?? 0),
       duelos_vencidos: Number(row.duelos_vencidos ?? 0),
-      grupo_supremo: String(row.grupo_supremo ?? "CINZAS"),
+      grupo_supremo: row.grupo_supremo ? String(row.grupo_supremo) : null,
       tem_cinturao_duelo: Boolean(titulos.temCinturaoDuelo),
       is_rei_das_chamas: Boolean(titulos.isReiDasChamas),
       is_rei_chamas_superiores: Boolean(titulos.isReiChamasSuperiores),

@@ -60,8 +60,10 @@ export function ComunidadeMuralPanel({
             </span>
           </div>
           <p className={`relative mt-2 max-w-prose ${COMUNIDADE_BODY_TEXT} text-neutral-400`}>
-            Até 10 ascensões de hoje (horário de Brasília). Quando bates o teu recorde num exercício,
-            a conquista pode aparecer aqui para motivar os restantes.
+            O quadro mostra até{" "}
+            <strong className="font-semibold text-amber-100/90">10 ascensões de hoje</strong> (horário
+            de Brasília). Quando alguém bate o recorde, a vitória mais recente entra e a mais antiga
+            sai da lista.
           </p>
         </header>
 

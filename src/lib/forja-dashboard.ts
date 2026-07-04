@@ -36,7 +36,7 @@ export type ForjaVtcFeedEntry = {
   alertSpike: boolean;
 };
 
-export type ForjaWorkspaceTab = "comando" | "planilha" | "planilha_treino";
+export type ForjaWorkspaceTab = "comando" | "planilha";
 
 export type ForjaOperatorProfile = {
   displayName: string;

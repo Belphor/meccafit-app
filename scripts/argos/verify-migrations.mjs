@@ -170,6 +170,10 @@ export const MIGRATION_PATCHES = [
     id: "comunidade_avatar_photos",
     files: ["20260701120000_comunidade_avatar_photos.sql"],
   },
+  {
+    id: "fix_comunidade_fechar_titulos_rei_sup",
+    files: ["20260702120000_fix_comunidade_fechar_titulos_rei_sup.sql"],
+  },
 ];
 
 export const ALL_MIGRATION_FILES = [

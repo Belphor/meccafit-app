@@ -16,6 +16,8 @@ export async function syncLatestScientificMetricsToNucleus(
   entry: ScientificMetricsEntry,
   options?: { operatorId?: string; isSovereign?: boolean },
 ): Promise<ScientificMetricsSyncResult> {
+  void options;
+
   if (!athlete.hasVipBond) {
     return {
       ok: false,

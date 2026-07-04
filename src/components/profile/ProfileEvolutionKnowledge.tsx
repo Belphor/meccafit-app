@@ -62,6 +62,15 @@ export function ProfileEvolutionKnowledge({
           Gravidade Térmica.
         </DashboardClientInfoBlock>
 
+        <DashboardClientInfoBlock className="mt-4" label="Meta, Ritmo e Mapa corporal">
+          Na aba <LoreEm>Evolução</LoreEm>, os dias de treino planejados definem a sua meta mensal de{" "}
+          <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>. O <LoreEm>Ritmo da Fênix</LoreEm> mostra quanto dessa meta
+          você cumpriu nos últimos 30 dias. O <LoreEm>Mapa de calor muscular</LoreEm> revela onde as
+          Brasas ficaram mais fortes nos últimos 14 dias; se o Ritmo cair abaixo de{" "}
+          <LoreEm>50 por cento</LoreEm> após o acolhimento, as cores ficam mais suaves até a consistência
+          reacender.
+        </DashboardClientInfoBlock>
+
         <DashboardClientInfoBlock className="mt-4" label="Inatividade da Linhagem">
           Se você ficar <LoreEm>30 dias sem entrar no app</LoreEm>, a chama da linhagem apaga
           gradualmente: sua fase <LoreEm>desce um nível de forma definitiva</LoreEm>. Ao voltar, um

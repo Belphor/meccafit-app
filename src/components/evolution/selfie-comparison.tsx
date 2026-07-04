@@ -150,7 +150,14 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   }, []);
 
   useEffect(() => {
-    void refreshSlots();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void refreshSlots();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [refreshSlots]);
 
   const updateSliderFromClientX = useCallback((clientX: number) => {
@@ -328,10 +335,12 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
             {/* Divisor central arrastável */}
             <button
               type="button"
+              role="slider"
               className={`absolute top-0 z-20 flex h-full w-11 -translate-x-1/2 cursor-ew-resize touch-none flex-col items-center justify-center border-0 bg-transparent p-0 outline-none ${isDragging ? "scale-105" : ""
                 }`}
               style={{ left: `${sliderPercent}%` }}
               aria-label="Arrastar divisor de comparação"
+              aria-orientation="horizontal"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(sliderPercent)}

@@ -123,9 +123,10 @@ export function WorkoutTimer({
   );
 
   useEffect(() => {
-    if (restartToken > 0) {
-      startRest();
-    }
+    if (restartToken <= 0) return;
+
+    const timer = window.setTimeout(() => startRest(), 0);
+    return () => window.clearTimeout(timer);
   }, [restartToken, startRest]);
 
   const stopRest = useCallback(() => {

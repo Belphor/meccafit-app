@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
@@ -21,6 +21,7 @@ import {
   resolveDaysUntilCycleResetSp,
 } from "@/lib/meta-sync-calendar";
 import { LoreEm } from "@/lib/lore-emphasis";
+import { VTC_DISPLAY_NAME, formatVtcKg } from "@/lib/vtc-labels";
 
 export const PLAN_SESSIONS_MIN = 4;
 export const PLAN_SESSIONS_MAX = 28;
@@ -38,6 +39,8 @@ export type PlanConfigFormState = {
 type PlanConfigFormProps = {
   userId: string;
   initialPlan?: AthletePlanConfig;
+  currentMetaVtcMensalKg?: number;
+  onSyncComplete?: () => void;
   /** Dentro do card de Consistência — sem wrapper BrasaVivaCard */
   embedded?: boolean;
 };
@@ -50,6 +53,10 @@ function clampSessions(value: number): number {
 
 function monthlySessionsToDaysPerWeek(monthlySessions: number): number {
   return Math.min(7, Math.max(1, Math.round((monthlySessions * 7) / 30)));
+}
+
+function monthlySessionsToMetaFactor(monthlySessions: number): number {
+  return Math.max(0.5, clampSessions(monthlySessions) / PLAN_SESSIONS_DEFAULT);
 }
 
 function buildPlanState(initialPlan?: AthletePlanConfig): PlanConfigFormState {
@@ -99,14 +106,19 @@ function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderPro
       </div>
       <div className="flex justify-between text-xs text-neutral-500">
         <span>{PLAN_SESSIONS_MIN}</span>
-        <span>mín · máx</span>
+        <span>mínimo e máximo</span>
         <span>{PLAN_SESSIONS_MAX}</span>
       </div>
     </div>
   );
 }
 
-export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanConfigFormProps) {
+export function PlanConfigForm({
+  initialPlan,
+  currentMetaVtcMensalKg,
+  onSyncComplete,
+  embedded = false,
+}: PlanConfigFormProps) {
   const [syncedBaseline, setSyncedBaseline] = useState<PlanConfigFormState>(() =>
     buildPlanState(initialPlan),
   );
@@ -114,15 +126,6 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
   const [metaSyncMes, setMetaSyncMes] = useState<string | null>(initialPlan?.metaSyncMes ?? null);
   const [phase, setPhase] = useState<SyncPhase>("idle");
   const [feedback, setFeedback] = useState<string | null>(null);
-
-  useEffect(() => {
-    const hydrated = buildPlanState(initialPlan);
-    setSyncedBaseline(hydrated);
-    setDraft(hydrated);
-    setMetaSyncMes(initialPlan?.metaSyncMes ?? null);
-    setPhase("idle");
-    setFeedback(null);
-  }, [initialPlan]);
 
   const syncedThisMonth = isMetaSyncedForCurrentMonth(metaSyncMes);
   const currentMonthLabel = formatMonthLabelPt();
@@ -139,6 +142,24 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
     () => monthlySessionsToDaysPerWeek(draft.totalTreinosMensaisPlanejados),
     [draft.totalTreinosMensaisPlanejados],
   );
+
+  const estimatedMetaVtcMensalKg = useMemo(() => {
+    if (typeof currentMetaVtcMensalKg !== "number" || !Number.isFinite(currentMetaVtcMensalKg)) {
+      return null;
+    }
+
+    const currentFactor = monthlySessionsToMetaFactor(
+      syncedBaseline.totalTreinosMensaisPlanejados,
+    );
+    const nextFactor = monthlySessionsToMetaFactor(draft.totalTreinosMensaisPlanejados);
+    const baseMeta = currentMetaVtcMensalKg / currentFactor;
+
+    return Math.round(baseMeta * nextFactor);
+  }, [
+    currentMetaVtcMensalKg,
+    draft.totalTreinosMensaisPlanejados,
+    syncedBaseline.totalTreinosMensaisPlanejados,
+  ]);
 
   const clearTransientFeedback = useCallback(() => {
     setPhase("idle");
@@ -170,22 +191,28 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
       }
 
       const mes = String(result.data.meta_sync_mes ?? resolveCurrentMonthKeySp());
+      const syncedMeta = Number(result.data.meta_vtc_mensal_kg ?? estimatedMetaVtcMensalKg ?? 0);
       setMetaSyncMes(mes);
       setSyncedBaseline(draft);
       setPhase("success");
-      setFeedback(`Meta sincronizada para ${formatMonthLabelPt(mes.slice(0, 7))}.`);
+      setFeedback(
+        syncedMeta > 0
+          ? `Meta sincronizada para ${formatMonthLabelPt(mes.slice(0, 7))}: ${formatVtcKg(syncedMeta)}.`
+          : `Meta sincronizada para ${formatMonthLabelPt(mes.slice(0, 7))}.`,
+      );
+      onSyncComplete?.();
     } catch {
       setPhase("error");
       setFeedback("Falha de rede ao sincronizar a meta de treino.");
     }
-  }, [draft]);
+  }, [draft, estimatedMetaVtcMensalKg, onSyncComplete]);
 
   const isSyncing = phase === "syncing";
 
   const content = (
     <>
       {!embedded ? (
-        <DashboardPanelHeader chip="Meta de treino" meta="Evolução · consistência" />
+        <DashboardPanelHeader chip="Meta de treino" meta="Evolução e consistência" />
       ) : null}
 
       <header className={`${embedded ? "mt-4" : "mt-4 border-b border-orange-500/10 pb-5 sm:pb-6"}`}>
@@ -195,21 +222,25 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
         <p className={`mt-2 max-w-prose ${EVOLUTION_SECTION_SUBTITLE}`}>
           {embedded ? (
             <>
-              Comece por aqui. Quantos dias você pretende treinar nos próximos 30 dias. Esse número
-              alimenta o <LoreEm>Ritmo da Fênix</LoreEm> logo abaixo.
+              <strong className="font-bold tracking-[0.04em] text-amber-50">COMECE POR AQUI</strong>
+              <br />
+              Defina quantos dias você pretende treinar nos próximos 30 dias. Esse compromisso vira a
+              meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do <LoreEm>Ritmo da Fênix</LoreEm>.
             </>
           ) : (
             <>
-              Defina quantos dias você pretende treinar nos próximos 30 dias. Isso alimenta o{" "}
-              <LoreEm>Ritmo da Fênix</LoreEm> e o mapa corporal abaixo. Sincronize uma vez por mês
-              civil ({currentMonthLabel}, horário de Brasília).
+              Defina quantos dias você pretende treinar nos próximos 30 dias. Esse plano calcula a meta
+              mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do <LoreEm>Ritmo da Fênix</LoreEm>; o mapa
+              corporal reage a esse ritmo. Sincronize uma vez por mês civil ({currentMonthLabel},
+              horário de Brasília).
             </>
           )}
         </p>
         <p className={`mt-2 ${EVOLUTION_HINT}`}>{monthLengthHint}</p>
         {!syncedThisMonth ? (
           <p className="mt-3 rounded-lg border border-amber-500/25 bg-amber-950/25 px-3 py-2.5 text-sm leading-relaxed text-amber-100">
-            Você ainda não sincronizou a meta de {currentMonthLabel}. Ajuste o valor e toque em Sincronizar meta.
+            Você ainda não sincronizou a meta de {currentMonthLabel}. Ajuste o valor e toque em
+            Sincronizar meta.
           </p>
         ) : (
           <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2.5 text-sm leading-relaxed text-emerald-100">
@@ -223,8 +254,7 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
           <p id="plan-sessions-label" className="text-sm leading-relaxed text-neutral-300">
             Dias de treino planejados: {draft.totalTreinosMensaisPlanejados}
             <span className="text-neutral-500">
-              {" "}
-              · ≈ {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana
+              {";"} cerca de {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana.
             </span>
           </p>
 
@@ -235,11 +265,21 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
           />
         </section>
 
+        {estimatedMetaVtcMensalKg ? (
+          <p className="text-sm leading-relaxed text-neutral-400">
+            Meta estimada do <LoreEm>Ritmo da Fênix</LoreEm>:{" "}
+            <span className="font-mono font-semibold text-amber-100">
+              {formatVtcKg(estimatedMetaVtcMensalKg)}
+            </span>{"."} A referência é o limiar Faísca da academia para 16 treinos; planos menores respeitam uma
+            meta mínima para manter a forja justa.
+          </p>
+        ) : null}
+
         {!embedded ? (
           <p className="text-sm leading-relaxed text-neutral-400">
-            <LoreEm>Ritmo da Fênix</LoreEm> mede quanto do seu Volume de Carga Máxima(VTC) meta mensal
-            você já acumulou, em percentual. A meta padrão segue o limiar Faísca da academia. Abaixo de
-            50%, as cores do mapa ficam mais suaves.
+            <LoreEm>Ritmo da Fênix</LoreEm> mede quanto da sua meta mensal de{" "}
+            <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> você já acumulou. A meta nasce dos dias planejados, e
+            abaixo de 50% as cores do mapa ficam mais suaves após o período de acolhimento.
           </p>
         ) : null}
       </div>
@@ -257,14 +297,14 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
               {feedback}
             </p>
           ) : hasLocalChanges ? (
-            <p className="text-sm text-amber-200">Alterações aguardando sincronização</p>
+            <p className="text-sm text-amber-200">Alterações aguardando sincronização.</p>
           ) : syncLocked ? (
             <p className={EVOLUTION_HINT}>
               Próxima sincronização em {resolveDaysUntilCycleResetSp()}{" "}
-              {resolveDaysUntilCycleResetSp() === 1 ? "dia" : "dias"} · {cycleResetMessage}
+              {resolveDaysUntilCycleResetSp() === 1 ? "dia" : "dias"}. {cycleResetMessage}
             </p>
           ) : (
-            <p className={EVOLUTION_HINT}>Uma sincronização por mês civil (horário de Brasília)</p>
+            <p className={EVOLUTION_HINT}>Uma sincronização por mês civil (horário de Brasília).</p>
           )}
         </div>
 
@@ -280,7 +320,7 @@ export function PlanConfigForm({ userId, initialPlan, embedded = false }: PlanCo
                 className="inline-block h-3.5 w-3.5 animate-spin rounded-full border border-emerald-300/30 border-t-emerald-400"
                 aria-hidden
               />
-              Sincronizando…
+              Sincronizando...
             </span>
           ) : syncLocked ? (
             "Meta bloqueada neste mês"

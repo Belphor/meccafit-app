@@ -9,6 +9,7 @@ import {
 } from "@/lib/prescription-progression";
 import { TRAINING_MUSCLE_GROUPS, type TrainingMuscleGroup, type WeekdayIndex } from "@/lib/training-week";
 import { batchUpsertPlanilhasForjador } from "@/lib/forja-sovereign-actions";
+import type { PlanilhaImportRow } from "@/lib/forja-planilha-import";
 import { publishForjaTreinoUpdate } from "@/lib/forja-treino-events";
 
 export type ForjaPrescriptionSyncResult =
@@ -196,6 +197,7 @@ function buildPrescriptionRpcPayload(
     series: number;
     label: string;
     descansoSegundos: number | null;
+    pesoPrescrito?: number | null;
   },
   ordem = 1,
 ) {
@@ -206,6 +208,7 @@ function buildPrescriptionRpcPayload(
     series_alvo: payload.series,
     repeticoes_alvo: payload.repeticoes,
     descanso_segundos: payload.descansoSegundos,
+    peso_prescrito: payload.pesoPrescrito ?? null,
     progressao_alternativas: payload.progressaoAlternativas,
     repeticoes_por_serie: payload.repeticoesPorSerie.map((value) =>
       value === "FALHA" ? "FALHA" : value,
@@ -305,6 +308,44 @@ export async function syncPlanilhaDayMuscles(
   return null;
 }
 
+function planilhaSlotKey(diaSemana: number, grupoMuscular: string): string {
+  return `${diaSemana}:${grupoMuscular.trim().toUpperCase()}`;
+}
+
+/** Remove prescrições que não pertencem mais à planilha importada (dia ou grupo ausente). */
+export async function prunePrescriptionsAfterRotinaImport(
+  athleteId: string,
+  planilhaRows: Array<{ dia_semana: number; grupo_muscular: string }>,
+): Promise<ForjaPrescriptionSyncResult | null> {
+  const allowed = new Set(planilhaRows.map((row) => planilhaSlotKey(row.dia_semana, row.grupo_muscular)));
+
+  const { data, error } = await supabase
+    .from("prescricoes_treino_forjador")
+    .select("id, dia_semana, grupo_muscular")
+    .eq("atleta_id", athleteId);
+
+  if (error) {
+    return { ok: false, code: "NETWORK", message: error.message };
+  }
+
+  const idsToDelete = (data ?? [])
+    .filter((row) => !allowed.has(planilhaSlotKey(Number(row.dia_semana), String(row.grupo_muscular))))
+    .map((row) => String(row.id));
+
+  if (idsToDelete.length === 0) return null;
+
+  const { error: deleteError } = await supabase
+    .from("prescricoes_treino_forjador")
+    .delete()
+    .in("id", idsToDelete);
+
+  if (deleteError) {
+    return { ok: false, code: "NETWORK", message: deleteError.message };
+  }
+
+  return null;
+}
+
 /**
  * Prescrição de treino para qualquer atleta vinculado ao forjador.
  * Persiste em prescricoes_treino_forjador + config_treino_atleta (descanso padrão).
@@ -364,19 +405,45 @@ export type TreinoPlanilhaBatchResult =
   | { ok: true; upserted: number }
   | { ok: false; code: "SESSION" | "VALIDATION" | "RLS" | "NETWORK"; message: string };
 
+function buildPlanilhaRowsFromTreinoImport(
+  rows: Array<{ diaSemana: WeekdayIndex; grupoMuscular: TrainingMuscleGroup }>,
+): PlanilhaImportRow[] {
+  const ordemByDay = new Map<number, number>();
+  const seen = new Set<string>();
+  const planilhaRows: PlanilhaImportRow[] = [];
+
+  for (const row of rows) {
+    const slotKey = planilhaSlotKey(row.diaSemana, row.grupoMuscular);
+    if (seen.has(slotKey)) continue;
+    seen.add(slotKey);
+
+    const ordem = (ordemByDay.get(row.diaSemana) ?? 0) + 1;
+    ordemByDay.set(row.diaSemana, ordem);
+
+    planilhaRows.push({
+      dia_semana: row.diaSemana,
+      grupo_muscular: row.grupoMuscular,
+      ordem,
+    });
+  }
+
+  return planilhaRows;
+}
+
 export async function batchSyncTreinoPrescriptionsFromPlanilha(
   athlete: ForjaBondedAthlete,
   rows: Array<{
-    diaSemana?: WeekdayIndex;
+    diaSemana: WeekdayIndex;
     grupoMuscular: TrainingMuscleGroup;
     exercicio: string;
+    pesoPrescrito?: number | null;
     repeticoes: number;
     repeticoesPorSerie?: PrescriptionRepValue[];
     progressaoAlternativas?: PrescriptionProgressionId[];
     series: number;
     descansoSegundos: number | null;
   }>,
-  descansoPadraoSeg: number | null,
+  options?: { cardioMetaMinutos?: number | null },
 ): Promise<TreinoPlanilhaBatchResult> {
   if (rows.length === 0) {
     return { ok: false, code: "VALIDATION", message: "Planilha sem linhas válidas." };
@@ -393,19 +460,39 @@ export async function batchSyncTreinoPrescriptionsFromPlanilha(
       return { ok: false, code: "SESSION", message: "Sessão inválida. Faça login novamente." };
     }
 
-    if (descansoPadraoSeg !== null) {
+    const planilhaRows = buildPlanilhaRowsFromTreinoImport(rows);
+    const planilhaResult = await batchUpsertPlanilhasForjador(athlete.clientId, planilhaRows);
+    if (!planilhaResult.ok) {
+      return { ok: false, code: "NETWORK", message: planilhaResult.message };
+    }
+
+    if (options?.cardioMetaMinutos != null) {
       const configError = await upsertTreinoConfig(athlete, operatorId, {
-        descansoPadraoSeg,
+        cardioMetaMinutos: options.cardioMetaMinutos,
       });
       if (configError && !configError.ok) {
         return { ok: false, code: configError.code, message: configError.message };
       }
     }
 
+    const { error: deleteError } = await supabase
+      .from("prescricoes_treino_forjador")
+      .delete()
+      .eq("atleta_id", athlete.clientId);
+
+    if (deleteError) {
+      return { ok: false, code: "NETWORK", message: deleteError.message };
+    }
+
     let upserted = 0;
+    const ordemByDayMuscle = new Map<string, number>();
 
     for (const row of rows) {
-      const diaSemana = row.diaSemana ?? 1;
+      const diaSemana = row.diaSemana;
+      const ordemKey = planilhaSlotKey(diaSemana, row.grupoMuscular);
+      const ordem = (ordemByDayMuscle.get(ordemKey) ?? 0) + 1;
+      ordemByDayMuscle.set(ordemKey, ordem);
+
       const exercicioId = resolveCatalogExerciseId(row.grupoMuscular, row.exercicio);
       const repeticoesPorSerie =
         row.repeticoesPorSerie && row.repeticoesPorSerie.length > 0
@@ -425,8 +512,9 @@ export async function batchSyncTreinoPrescriptionsFromPlanilha(
             series: row.series,
             label: row.exercicio.trim(),
             descansoSegundos: row.descansoSegundos,
+            pesoPrescrito: row.pesoPrescrito ?? null,
           },
-          upserted + 1,
+          ordem,
         ),
       );
 

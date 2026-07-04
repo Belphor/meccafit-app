@@ -68,13 +68,19 @@ export function EvolutionConsistenciaSection({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="evolucao-consistencia-title"
     >
-      <DashboardPanelHeader chip="Consistência" meta="Meta · Ritmo · Mapa corporal" />
+      <DashboardPanelHeader chip="Consistência" meta="Meta, Ritmo e Mapa corporal" />
 
       <p id="evolucao-consistencia-title" className="sr-only">
         Meta de treino, Ritmo da Fênix e mapa de calor muscular
       </p>
 
-      <PlanConfigForm userId={userId} initialPlan={initialAthletePlan} embedded />
+      <PlanConfigForm
+        userId={userId}
+        initialPlan={initialAthletePlan}
+        currentMetaVtcMensalKg={metaVtcMensalKg}
+        onSyncComplete={onRefreshMap}
+        embedded
+      />
 
       <div className="mx-4 border-t border-orange-500/12 sm:mx-5" aria-hidden />
 

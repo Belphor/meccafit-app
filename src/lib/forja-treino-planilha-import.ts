@@ -1,21 +1,28 @@
+import {
+  parseProgressionFromSpreadsheet,
+  type PrescriptionProgressionId,
+} from "@/lib/prescription-progression";
 import type { TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 import { TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
 
 export type TreinoPlanilhaImportRow = {
-  diaSemana?: WeekdayIndex;
+  diaSemana: WeekdayIndex;
   grupoMuscular: TrainingMuscleGroup;
   exercicio: string;
+  pesoPrescrito: number | null;
   repeticoes: number;
   series: number;
   descansoSegundos: number | null;
+  progressaoAlternativas: PrescriptionProgressionId[];
 };
 
 export type TreinoPlanilhaImportResult =
-  | { ok: true; rows: TreinoPlanilhaImportRow[]; descansoPadraoSeg: number | null; warnings: string[] }
+  | { ok: true; rows: TreinoPlanilhaImportRow[]; warnings: string[]; cardioMetaMinutos: number | null }
   | { ok: false; message: string };
 
 function normalizeHeader(value: string): string {
   return value
+    .replace(/^\uFEFF/, "")
     .trim()
     .toLowerCase()
     .normalize("NFD")
@@ -26,15 +33,23 @@ function normalizeHeader(value: string): string {
 function findColumnIndex(headers: string[], aliases: string[]): number {
   const normalized = headers.map(normalizeHeader);
   for (const alias of aliases) {
-    const idx = normalized.findIndex((header) => header === alias || header.includes(alias));
-    if (idx >= 0) return idx;
+    const exact = normalized.indexOf(alias);
+    if (exact >= 0) return exact;
+  }
+  for (const alias of aliases) {
+    const prefixed = normalized.findIndex(
+      (header) => header.startsWith(`${alias}_`) || header.endsWith(`_${alias}`),
+    );
+    if (prefixed >= 0) return prefixed;
   }
   return -1;
 }
 
 function cellValue(row: unknown[], index: number): string {
   if (index < 0) return "";
-  return String(row[index] ?? "").trim();
+  return String(row[index] ?? "")
+    .replace(/^\uFEFF/, "")
+    .trim();
 }
 
 function parseNumber(raw: string): number | null {
@@ -62,19 +77,31 @@ export function parseTreinoPlanilhaMatrix(
   const repsIdx = findColumnIndex(headers, ["repeticoes", "reps", "rep"]);
   const seriesIdx = findColumnIndex(headers, ["series", "sets", "serie"]);
   const descansoIdx = findColumnIndex(headers, ["descanso_segundos", "descanso", "rest"]);
-  const descansoPadraoIdx = findColumnIndex(headers, ["descanso_padrao_seg", "descanso_padrao"]);
+  const tecnicaIdx = findColumnIndex(headers, [
+    "tecnica",
+    "tecnicas",
+    "progressao",
+    "progressao_alternativas",
+    "tecnica_progressao",
+  ]);
+  const cardioIdx = findColumnIndex(headers, [
+    "meta_cardio",
+    "cardio_meta_minutos",
+    "cardio_meta",
+    "meta_cardio_minutos",
+  ]);
 
-  if (grupoIdx === -1 || exercicioIdx === -1 || repsIdx === -1 || seriesIdx === -1) {
+  if (diaIdx === -1 || grupoIdx === -1 || exercicioIdx === -1 || repsIdx === -1 || seriesIdx === -1) {
     return {
       ok: false,
       message:
-        "Colunas obrigatórias: grupo_muscular, exercicio, repeticoes, series. Opcional: descanso_segundos, descanso_padrao_seg.",
+        "Colunas obrigatórias: dia_semana (1 a 6), grupo_muscular, exercicio, repeticoes, series. Opcional: peso, descanso_segundos, tecnica, meta_cardio.",
     };
   }
 
   const warnings: string[] = [];
   const parsed: TreinoPlanilhaImportRow[] = [];
-  let descansoPadraoSeg: number | null = null;
+  let cardioMetaMinutos: number | null = null;
 
   for (const [index, row] of dataRows.entries()) {
     const grupo = parseMuscle(cellValue(row, grupoIdx));
@@ -83,10 +110,13 @@ export function parseTreinoPlanilhaMatrix(
     const repeticoes = parseNumber(cellValue(row, repsIdx));
     const series = parseNumber(cellValue(row, seriesIdx));
     const descansoRaw = parseNumber(cellValue(row, descansoIdx));
-    const descansoPadraoRaw = parseNumber(cellValue(row, descansoPadraoIdx));
+    const tecnicaRaw = cellValue(row, tecnicaIdx);
+    const cardioRaw = parseNumber(cellValue(row, cardioIdx));
 
-    if (descansoPadraoRaw !== null && descansoPadraoRaw >= 15 && descansoPadraoRaw <= 600) {
-      descansoPadraoSeg = descansoPadraoRaw;
+    if (cardioRaw !== null && cardioRaw >= 5 && cardioRaw <= 180 && cardioMetaMinutos === null) {
+      cardioMetaMinutos = Math.round(cardioRaw);
+    } else if (cardioRaw !== null && (cardioRaw < 5 || cardioRaw > 180)) {
+      warnings.push(`Linha ${index + 2}: meta_cardio ignorada (use 5 a 180 min).`);
     }
 
     if (!grupo || !exercicio) {
@@ -96,7 +126,9 @@ export function parseTreinoPlanilhaMatrix(
       continue;
     }
 
-    if (peso !== null && (peso <= 0 || peso > 9999.99)) {
+    const pesoPrescrito =
+      peso !== null && peso > 0 && peso <= 9999.99 ? peso : null;
+    if (peso !== null && pesoPrescrito === null) {
       warnings.push(`Linha ${index + 2}: peso ignorado (valor inválido).`);
     }
 
@@ -113,21 +145,29 @@ export function parseTreinoPlanilhaMatrix(
     const descansoSegundos =
       descansoRaw !== null && descansoRaw >= 15 && descansoRaw <= 600 ? descansoRaw : null;
 
-    const diaRaw = diaIdx >= 0 ? parseNumber(cellValue(row, diaIdx)) : null;
-    const diaSemana =
+    const diaRaw = parseNumber(cellValue(row, diaIdx));
+    const diaSemana: WeekdayIndex | undefined =
       diaRaw !== null && diaRaw >= 1 && diaRaw <= 6 ? (Math.round(diaRaw) as WeekdayIndex) : undefined;
 
-    if (diaIdx >= 0 && diaRaw !== null && diaSemana === undefined) {
-      warnings.push(`Linha ${index + 2}: dia inválido (use 1–6).`);
+    if (diaSemana === undefined) {
+      warnings.push(`Linha ${index + 2}: dia_semana inválido ou vazio (use 1 a 6).`);
+      continue;
+    }
+
+    const progressaoAlternativas = parseProgressionFromSpreadsheet(tecnicaRaw);
+    if (tecnicaRaw && progressaoAlternativas.length === 0) {
+      warnings.push(`Linha ${index + 2}: técnica não reconhecida («${tecnicaRaw}»).`);
     }
 
     parsed.push({
-      ...(diaSemana !== undefined ? { diaSemana } : {}),
+      diaSemana,
       grupoMuscular: grupo,
       exercicio,
+      pesoPrescrito,
       repeticoes: Math.round(repeticoes),
       series: Math.round(series),
       descansoSegundos,
+      progressaoAlternativas,
     });
   }
 
@@ -135,7 +175,7 @@ export function parseTreinoPlanilhaMatrix(
     return { ok: false, message: "Nenhuma linha válida encontrada na planilha de treino." };
   }
 
-  return { ok: true, rows: parsed, descansoPadraoSeg, warnings };
+  return { ok: true, rows: parsed, warnings, cardioMetaMinutos };
 }
 
 export function parseTreinoPlanilhaCsvText(text: string): TreinoPlanilhaImportResult {

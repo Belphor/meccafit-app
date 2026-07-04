@@ -115,12 +115,13 @@ export function TreinoWeekControls({
   const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
   const lockedDaySet = useMemo(() => new Set(weekLockedDays), [weekLockedDays]);
 
-  const [schedule, setSchedule] = useState(bootSchedule);
+  const [loadedSchedule, setLoadedSchedule] = useState(bootSchedule);
   const [loadingIndication, setLoadingIndication] = useState(
     !useForjadorSchedule && !initialSchedule?.length,
   );
   const [error, setError] = useState<string | null>(null);
 
+  const schedule = useForjadorSchedule ? bootSchedule : loadedSchedule;
   const activeDayMuscles = schedule[activeTrainingDay];
   const activeDayLabel = formatScheduleDayLabel(activeDayMuscles);
   const isActiveDayLocked = lockedDaySet.has(activeTrainingDay);
@@ -141,33 +142,34 @@ export function TreinoWeekControls({
 
       if (queryError) {
         setError(queryError.message);
-        setSchedule(buildScheduleMap([]));
+        setLoadedSchedule(buildScheduleMap([]));
         return;
       }
 
       const rows: PlanilhaDayRow[] = parsePlanilhaDayRows(data);
-      setSchedule(
+      setLoadedSchedule(
         useForjadorSchedule ? buildForjadorScheduleMap(rows) : buildScheduleMap(rows),
       );
     } catch {
       setError("Não foi possível carregar a rotina de treino.");
-      setSchedule(useForjadorSchedule ? buildForjadorScheduleMap([]) : buildScheduleMap([]));
+      setLoadedSchedule(useForjadorSchedule ? buildForjadorScheduleMap([]) : buildScheduleMap([]));
     } finally {
       setLoadingIndication(false);
     }
   }, [userId, useForjadorSchedule]);
 
   useEffect(() => {
-    if (useForjadorSchedule) {
-      setSchedule(bootSchedule);
-      if (initialSchedule?.length) {
-        setLoadingIndication(false);
-      }
-      return;
-    }
+    if (useForjadorSchedule) return;
 
-    void loadSchedule();
-  }, [bootSchedule, initialSchedule?.length, loadSchedule, useForjadorSchedule]);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadSchedule();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSchedule, useForjadorSchedule]);
 
   return (
     <div className={`treino-execution treino-execution--${executionTone}`}>

@@ -6,7 +6,7 @@ export const PORTAL_COPY = {
   rebirthToday: "RENASÇA HOJE.",
   rebirthTodayAria: "Lema RENASÇA HOJE",
   brandName: "MECCAFIT CENTER",
-  portalBrasaAria: "Portal de Brasa — dashboard principal",
+  portalBrasaAria: "Portal de Brasa, dashboard principal",
   loadError: "Não foi possível carregar o altar.",
   profileUnavailable: "Perfil indisponível.",
   loginIdle: "Aproxime-se do altar para reacender sua jornada.",
@@ -22,7 +22,8 @@ export const PORTAL_COPY = {
   loginRoleUnauthorized:
     "Este altar não reconhece o seu papel de acesso. Utilize o portal correto da sua linhagem.",
   loginDbError: "Falha ao validar o login no banco de dados. Tente novamente.",
-  loginAccountSuspended: CONTA_SUSPENSA,  loginSubtitle: "Pronto para queimar os velhos hábitos?",
+  loginAccountSuspended: CONTA_SUSPENSA,
+  loginSubtitle: "Pronto para queimar os velhos hábitos?",
   onboardingTitle: "Primeiro Acesso Fenyxia",
   onboardingSubtitle: "Chave QR incandescente detectada. Forje sua identidade no altar.",
   onboardingInviteBanner:
@@ -38,7 +39,7 @@ export const PORTAL_COPY = {
   onboardingConfirmEmail: "Conta criada. Confirme seu e-mail antes de acessar o altar.",
   onboardingInviteInvalid: "Convite inválido, expirado ou já utilizado.",
   onboardingInviteUnavailable: "Validação de convite indisponível. Tente novamente em instantes.",
-  onboardingAlreadyHaveAccount: "Já possuo conta — ir para login",
+  onboardingAlreadyHaveAccount: "Já possuo conta. Ir para login",
   submitOnboarding: "ACENDER MINHA LINHAGEM",
   forgeSubtitle: "A Forja responde apenas à chave correta.",
   forgeActivateTitle: "Ative a sua",

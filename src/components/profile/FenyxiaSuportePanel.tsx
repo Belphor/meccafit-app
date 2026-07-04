@@ -77,7 +77,7 @@ export function FenyxiaSuportePanel() {
           </h2>
 
           <p className="text-sm leading-relaxed text-neutral-300">
-            Este é o <LoreEm>canal oficial de suporte</LoreEm> da Fenyxia no altar. Envie dúvidas,
+            Este é o <LoreEm>canal de suporte</LoreEm> da Fenyxia no altar. Envie dúvidas,
             sugestões, problemas técnicos ou pedidos de manutenção pelo <LoreEm>WhatsApp</LoreEm>. A
             equipe verifica e responde o que for necessário.
           </p>

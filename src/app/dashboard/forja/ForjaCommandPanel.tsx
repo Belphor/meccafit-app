@@ -41,7 +41,7 @@ type CommandPhase = "idle" | "syncing" | "success" | "error";
 
 function formatBondDate(iso: string): string {
   const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return "—";
+  if (Number.isNaN(parsed.getTime())) return "Sem dado";
   return parsed.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
@@ -76,19 +76,30 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   );
 
   useEffect(() => {
-    if (!athlete) {
-      setPrescription(EMPTY_PRESCRIPTION_DRAFT);
-      return;
-    }
+    let cancelled = false;
 
-    void fetchForjadorTreinoConfigClient(athlete.clientId).then((config) => {
-      setPrescription({
-        ...EMPTY_PRESCRIPTION_DRAFT,
-        descansoPadraoSeg: String(config.descansoPadraoSeg),
-        cardioMetaMinutos: String(config.cardioMetaMinutos),
+    queueMicrotask(() => {
+      if (cancelled) return;
+
+      if (!athlete) {
+        setPrescription(EMPTY_PRESCRIPTION_DRAFT);
+        return;
+      }
+
+      void fetchForjadorTreinoConfigClient(athlete.clientId).then((config) => {
+        if (cancelled) return;
+        setPrescription({
+          ...EMPTY_PRESCRIPTION_DRAFT,
+          descansoPadraoSeg: String(config.descansoPadraoSeg),
+          cardioMetaMinutos: String(config.cardioMetaMinutos),
+        });
       });
     });
-  }, [athlete?.clientId]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [athlete, athlete?.clientId]);
 
   useEffect(() => {
     if (!athlete) return;
@@ -99,7 +110,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
         return { ...current, musculosDoDia: muscles.length > 0 ? muscles : current.musculosDoDia };
       });
     });
-  }, [athlete?.clientId, prescription.diaSemana]);
+  }, [athlete, athlete?.clientId, prescription.diaSemana]);
 
   const toggleDayMuscle = useCallback((muscle: TrainingMuscleGroup) => {
     setPrescription((current) => {
@@ -243,9 +254,9 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
   const isSyncing = phase === "syncing";
 
   return (
-    <section aria-label={`Prescrição · ${athlete.displayName}`}>
+    <section aria-label={`Prescrição de ${athlete.displayName}`}>
       <header className="border-b border-zinc-800/80 pb-4">
-        <p className={FORJA_SECTION_CHIP}>Cliente seleccionado</p>
+        <p className={FORJA_SECTION_CHIP}>Cliente selecionado</p>
         <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{athlete.displayName}</h2>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
           <span
@@ -254,7 +265,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
             {thermal.label}
           </span>
           <span>
-            Fase {athlete.phaseTier} · {phaseLabel}
+            Fase {athlete.phaseTier}, {phaseLabel}
           </span>
           <span
             className={
@@ -270,10 +281,14 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           ) : null}
         </div>
         {athlete.lineageName ? (
-          <p className={`${FORJA_META} mt-2`}>Linhagem · {athlete.lineageName}</p>
+          <p className={`${FORJA_META} mt-2`}>
+            Linhagem: <strong className="font-medium text-zinc-300">{athlete.lineageName}</strong>
+          </p>
         ) : null}
         {athlete.forgerName ? (
-          <p className={`${FORJA_META} mt-1`}>Forjador · {athlete.forgerName}</p>
+          <p className={`${FORJA_META} mt-1`}>
+            Forjador: <strong className="font-medium text-zinc-300">{athlete.forgerName}</strong>
+          </p>
         ) : null}
       </header>
 
@@ -283,7 +298,11 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
       >
         <p className={FORJA_SECTION_CHIP}>Treino</p>
         <h3 className="text-base font-medium text-zinc-100">{FORJA_COPY.prescription.title}</h3>
-        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.prescription.hint}</p>
+        <p className={`${FORJA_META} mt-1`}>
+          Escolha o <strong className="font-medium text-zinc-300">dia da planilha</strong>, marque os{" "}
+          <strong className="font-medium text-zinc-300">grupos musculares</strong> desse dia e monte
+          cada exercício com séries, repetições e descanso.
+        </p>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ForjaAntiFraudPanel } from "@/app/dashboard/forja/ForjaAntiFraudPanel";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
 import { ForjaVtcFeedPanel, type ClientAlertSeverity } from "@/app/dashboard/forja/ForjaVtcFeedPanel";
@@ -28,6 +28,7 @@ import {
   patchFeedEntryVtcAfterAdjust,
   type ForjaMonitorSegment,
 } from "@/lib/forja-monitor-utils";
+import { isAccountSuspended } from "@/lib/account-access-status";
 import { resolveForjadorWorkspaceNav } from "@/lib/forjador-vip-nav";
 import { fetchForjaMonitorAthletes } from "@/lib/forja-sovereign-actions";
 import type { ForjaFraudSignal } from "@/lib/forja-sovereign-actions";
@@ -39,7 +40,7 @@ type MonitoramentoPageClientProps = {
 export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProps) {
   const [athletes, setAthletes] = useState<ForjaBondedAthlete[]>(payload.athletes);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [segment, setSegment] = useState<ForjaMonitorSegment>("todos");
+  const [segment, setSegment] = useState<ForjaMonitorSegment>("vip");
   const [feedEntries, setFeedEntries] = useState<ForjaVtcFeedEntry[]>([]);
   const [feedVersion, setFeedVersion] = useState(0);
   const [clientAlertSeverity, setClientAlertSeverity] = useState<
@@ -59,21 +60,20 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
     setClientAlertSeverity(map);
   }, []);
 
-  useEffect(() => {
-    setAthletes(payload.athletes);
-  }, [payload.athletes]);
-
   const filteredAthletes = useMemo(
-    () => filterAthletesByMonitorSegment(athletes, segment, payload.operator.userId),
-    [athletes, payload.operator.userId, segment],
+    () => filterAthletesByMonitorSegment(athletes, segment),
+    [athletes, segment],
   );
 
   const segmentCounts = useMemo(
     () => ({
-      todos: athletes.length,
-      vip: athletes.filter((athlete) => athlete.hasVipBond).length,
-      comum: athletes.filter((athlete) => !athlete.hasVipBond).length,
-      meus: athletes.filter((athlete) => !athlete.isGlobalListing).length,
+      vip: athletes.filter(
+        (athlete) => athlete.hasVipBond && !isAccountSuspended(athlete.statusAltar),
+      ).length,
+      comum: athletes.filter(
+        (athlete) => !athlete.hasVipBond && !isAccountSuspended(athlete.statusAltar),
+      ).length,
+      suspenso: athletes.filter((athlete) => isAccountSuspended(athlete.statusAltar)).length,
     }),
     [athletes],
   );
@@ -153,9 +153,14 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
               {resolveForjaRoleLabel(payload.operator.role)}
             </p>
             <h1 className={`${FORJA_PAGE_TITLE} mt-1`}>{FORJA_COPY.monitor.title}</h1>
-            <p className={`${FORJA_META} mt-1.5 max-w-2xl`}>{FORJA_COPY.monitor.hint}</p>
+            <p className={`${FORJA_META} mt-1.5 max-w-2xl`}>
+              Acompanhe o{" "}
+              <strong className="font-medium text-zinc-200">Volume de Carga Máxima (VTC)</strong> de
+              todos os clientes da academia em tempo real.
+            </p>
             <p className={`${FORJA_META} mt-1 max-w-2xl text-zinc-500`}>
-              {FORJA_COPY.monitor.globalHint}
+              Todos os forjadores podem consultar; suspensões e punições ficam exclusivamente com o{" "}
+              <strong className="font-medium text-zinc-400">Forjador Soberano</strong>.
             </p>
           </div>
           <ForjaSignOutButton className="shrink-0" />

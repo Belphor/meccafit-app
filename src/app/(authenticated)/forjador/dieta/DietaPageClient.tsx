@@ -18,24 +18,29 @@ const DIETA_TABS: Array<{ id: DietaWorkspaceTab; label: string; description: str
   {
     id: "plano",
     label: "Plano alimentar",
-    description: "Monte metas, refeições e observações para o cliente VIP.",
+    description:
+      "Monte metas diárias, refeições e observações clínicas para o cliente VIP vinculado.",
   },
   {
     id: "importar",
     label: "Importar planilha",
-    description: "Carregue uma planilha Excel com o plano pronto.",
+    description: "Carregue uma planilha Excel com o plano alimentar pronto.",
   },
 ];
 
 export function DietaPageClient({ payload }: DietaPageClientProps) {
   const [activeTab, setActiveTab] = useState<DietaWorkspaceTab>("plano");
-  const activeMeta = DIETA_TABS.find((tab) => tab.id === activeTab) ?? DIETA_TABS[0];
 
   return (
     <ForjadorVipWorkspace
       payload={payload}
       title="Nutrição"
-      description="Publique o plano alimentar de longo prazo do cliente VIP — metas diárias, refeições e observações."
+      description={
+        <>
+          Publique o <strong className="font-medium text-zinc-300">plano alimentar de longo prazo</strong>{" "}
+          do cliente VIP: metas diárias, refeições e observações clínicas.
+        </>
+      }
       activeRoute="/forjador/dieta"
     >
       {({ athlete }) =>
@@ -59,7 +64,19 @@ export function DietaPageClient({ payload }: DietaPageClientProps) {
                   </button>
                 ))}
               </div>
-              <p className={`${FORJA_META} max-w-md text-left sm:text-right`}>{activeMeta.description}</p>
+              <p className={`${FORJA_META} max-w-md text-left sm:text-right`}>
+                {activeTab === "plano" ? (
+                  <>
+                    Monte <strong className="font-medium text-zinc-300">metas diárias</strong>, refeições e
+                    observações clínicas para o cliente VIP vinculado.
+                  </>
+                ) : (
+                  <>
+                    Carregue uma planilha Excel com o{" "}
+                    <strong className="font-medium text-zinc-300">plano alimentar</strong> pronto.
+                  </>
+                )}
+              </p>
             </nav>
 
             {activeTab === "plano" ? (

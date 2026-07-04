@@ -37,17 +37,15 @@ export function ProfileLinhagemIdentity({
   initialIgnicao = 0,
 }: ProfileLinhagemIdentityProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(
+    () => readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "",
+  );
   const [calorRows, setCalorRows] = useState<MuscleCalorRow[]>(initialCalorRows);
   const [indiceIgnicao, setIndiceIgnicao] = useState(initialIgnicao);
   const [phaseTier, setPhaseTier] = useState<PhaseTier>(1);
   const [vtc30dKg, setVtc30dKg] = useState(0);
   const [photoFeedback, setPhotoFeedback] = useState<string | null>(null);
   const [nameFeedback, setNameFeedback] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDisplayName(readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "");
-  }, [serverName, userId]);
 
   useEffect(() => {
     const onNameUpdate = () => {
@@ -140,7 +138,7 @@ export function ProfileLinhagemIdentity({
 
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
-      <DashboardPanelHeader chip="Identidade" meta="Avatar · nome · miniatura comunidade" />
+      <DashboardPanelHeader chip="Identidade" meta="Perfil" />
 
       <div className={`${DASHBOARD_INNER_FRAME} mt-4 flex flex-col items-center gap-5 p-4 sm:flex-row sm:items-start sm:p-5`}>
         <FenixEvolutionAvatar

@@ -66,13 +66,13 @@ export function formatMuralMetricSentence(
   const nome = exerciseName.trim() || "treino";
 
   if (isIsometricMuralExercise(exerciseName, exercicioId)) {
-    return `Novo recorde no ${nome} com ${formatDuration(metricValue)} — a linhagem acompanha cada ascensão.`;
+    return `Novo recorde no ${nome} com ${formatDuration(metricValue)}. A linhagem acompanha cada ascensão.`;
   }
 
   if (isRepMaxMuralExercise(exerciseName, exercicioId)) {
-    return `Novo recorde no ${nome} com ${Math.round(metricValue).toLocaleString("pt-BR")} repetições — a linhagem acompanha cada ascensão.`;
+    return `Novo recorde no ${nome} com ${Math.round(metricValue).toLocaleString("pt-BR")} repetições. A linhagem acompanha cada ascensão.`;
   }
 
   const kg = metricValue.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-  return `Novo recorde no ${nome} com ${kg} kg — a linhagem acompanha cada ascensão.`;
+  return `Novo recorde no ${nome} com ${kg} kg. A linhagem acompanha cada ascensão.`;
 }

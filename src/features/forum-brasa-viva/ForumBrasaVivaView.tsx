@@ -107,7 +107,7 @@ export function ForumBrasaVivaView({
             Fórum Brasa-Viva
           </h2>
           <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
-            Tópicos de ascensão da linhagem — cada recorde pessoal publicado inspira a comunidade.
+            Tópicos de ascensão da linhagem. Cada recorde pessoal publicado inspira a comunidade.
             Forjadores soberanos observam, mas não competem neste fórum.
           </p>
         </>
@@ -117,7 +117,7 @@ export function ForumBrasaVivaView({
         <p
           className={`${embedMode ? "mt-3 rounded-xl border border-dashed border-amber-500/15 bg-black/20 px-4 py-6 text-center text-[11px] text-neutral-500" : DASHBOARD_EMPTY_STATE} animate-pulse`}
         >
-          {embedMode ? "A carregar vitórias da linhagem…" : "Acendendo o fórum..."}
+          {embedMode ? "Carregando vitórias da linhagem…" : "Acendendo o fórum…"}
         </p>
       ) : error ? (
         <div className={embedMode ? "mt-3 rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-4 text-center text-[11px] text-amber-200/90" : DASHBOARD_EMPTY_STATE}>
@@ -142,7 +142,7 @@ export function ForumBrasaVivaView({
           }
         >
           {embedMode
-            ? "Ainda não há superações hoje no mural. Bate o teu recorde no treino para a linhagem ver a tua ascensão."
+            ? "Ainda não há superações hoje no mural. Bata seu recorde no treino para a linhagem ver sua ascensão."
             : "Nenhum tópico aceso ainda. Supere seu recorde histórico para publicar no Fórum Brasa-Viva."}
         </p>
       ) : (

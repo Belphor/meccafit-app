@@ -99,8 +99,6 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
       serverThermal?.session_vtc_today ?? 0,
       Math.max(0, liveSessionVtcKg),
     );
-    const vtc_month = serverThermal?.vtc_month ?? 0;
-
     return evaluateThermalGravity(payload.phase_tier, {
       vtc_month: serverThermal?.vtc_month ?? 0,
       vtc_30d: serverThermal?.vtc_30d ?? 0,

@@ -33,7 +33,6 @@ import {
 } from "@/lib/forjador-prescriptions";
 import {
   composeDayTreinoSubgroup,
-  collectUniqueMusclesFromSubgroup,
 } from "@/lib/treino-subgroup";
 import {
   DEFAULT_DASHBOARD_TAB,
@@ -51,7 +50,6 @@ import {
 } from "@/lib/dashboard-tab-navigation";
 import {
   fetchCommunityMuralPosts,
-  invalidateDashboardCaches,
   loadDashboardTrainingBundle,
   refreshDaySubgroupHistorico,
 } from "@/lib/dashboard-data";
@@ -531,14 +529,21 @@ export function DashboardClient({
     treinoBootstrappedRef.current = true;
 
     if (hasPersonalBond || hasPlanilhaRows(weekSchedule) || forjadorPrescriptions.length > 0) {
-      void refreshTreinoData();
+      scheduleTreinoRefresh();
     }
-  }, [dataReady, forjadorPrescriptions.length, hasPersonalBond, refreshTreinoData, userId, weekSchedule.length]);
+  }, [
+    dataReady,
+    forjadorPrescriptions.length,
+    hasPersonalBond,
+    scheduleTreinoRefresh,
+    userId,
+    weekSchedule,
+  ]);
 
   useEffect(() => {
     if (!dataReady || activeTab !== "treino") return;
-    void refreshTreinoData();
-  }, [activeTab, dataReady, refreshTreinoData]);
+    scheduleTreinoRefresh();
+  }, [activeTab, dataReady, scheduleTreinoRefresh]);
 
   useEffect(() => {
     if (!dataReady || !userId) return;
@@ -687,7 +692,14 @@ export function DashboardClient({
     return () => {
       isMounted = false;
     };
-  }, [loadKey, resolveDashboardAlerts, subgroupParam, syncLinhagemInactivityPendingState]);
+  }, [
+    forjadorPrescriptions,
+    loadKey,
+    resolveDashboardAlerts,
+    scheduleMap,
+    subgroupParam,
+    syncLinhagemInactivityPendingState,
+  ]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -874,14 +886,15 @@ export function DashboardClient({
   }, [linhagemInactivityPending]);
 
   const handleSetComplete = useCallback(
-    (_exerciseId: number) => {
+    () => {
       void handleRekindleInactivity();
     },
     [handleRekindleInactivity],
   );
 
   const handleTrainingPersisted = useCallback(
-    async (_exerciseId: number, detail?: { vtcGenerated: number }) => {
+    async (exerciseId: number, detail?: { vtcGenerated: number }) => {
+      void exerciseId;
       const liveIncrement = detail?.vtcGenerated ?? 0;
       if (liveIncrement > 0) {
         setLiveSessionVtcKg((current) =>

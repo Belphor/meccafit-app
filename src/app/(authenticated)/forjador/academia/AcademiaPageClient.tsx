@@ -36,8 +36,11 @@ export function AcademiaPageClient({ payload }: AcademiaPageClientProps) {
             </p>
             <h1 className={`${FORJA_PAGE_TITLE} mt-1`}>Academia</h1>
             <p className={`${FORJA_META} mt-1.5 max-w-2xl`}>
-              Termômetro coletivo da Comunidade e manutenção dos limiares de fase. Somente o Forjador
-              Soberano edita metas e dificuldade.
+              Termômetro coletivo da <strong className="font-medium text-zinc-300">Comunidade</strong>{" "}
+              e manutenção dos limiares da{" "}
+              <strong className="font-medium text-zinc-300">Chama Acumulada da Linhagem</strong>.
+              Somente o <strong className="font-medium text-zinc-300">Forjador Soberano</strong>{" "}
+              edita metas e dificuldade.
             </p>
           </div>
           <ForjaSignOutButton className="shrink-0" />

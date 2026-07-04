@@ -184,7 +184,7 @@ export function EvolutionChamaProgressBar({
               Próxima virada
             </span>
             <span className="mt-0.5 text-base font-semibold text-orange-50">{viradaDate}</span>
-            <span className="mt-0.5 text-[11px] text-neutral-500">Horário de Brasília</span>
+            <span className="mt-0.5 text-[11px] text-neutral-500">Horário de Brasília.</span>
           </div>
         </div>
       ) : null}

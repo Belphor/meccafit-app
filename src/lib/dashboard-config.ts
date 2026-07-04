@@ -280,11 +280,11 @@ export const VOO_CINZAS_CLIENT_EXPLANATION =
 
 /** Brasas Musculares (Evolução) — VTC por grupo */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "Brasas Musculares somam o Volume de Carga Máxima(VTC) por grupo muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
+  "Brasas Musculares somam o Volume de Carga Máxima (VTC) por grupo muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
 
 /** Ritmo da Fênix (Evolução) — consistência de VTC */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "Ritmo da Fênix mede quanto do seu Volume de Carga Máxima(VTC) meta mensal você já acumulou, em percentual. A meta padrão segue o limiar Faísca da academia. Abaixo de 50%, as cores do mapa ficam mais suaves.";
+  "Ritmo da Fênix mede quanto da sua meta mensal de Volume de Carga Máxima (VTC) você já acumulou, em percentual. A meta nasce dos dias de treino planejados: 16 treinos usam o limiar Faísca da academia como referência. Abaixo de 50%, após o acolhimento, as cores do mapa ficam mais suaves.";
 
 /** Ascensão (Superação) — celebração de recorde no treino */
 export const ASCENSAO_CLIENT_EXPLANATION =
@@ -292,7 +292,7 @@ export const ASCENSAO_CLIENT_EXPLANATION =
 
 /** Nutrição VIP — plano alimentar de longo prazo */
 export const DIETA_CLIENT_EXPLANATION =
-  "Plano alimentar definido pelo seu Forjador. Mostra metas diárias, refeições sugeridas e observações, válido por semanas ou meses.";
+  "Plano alimentar definido pelo seu Forjador. Mostra metas diárias, refeições sugeridas e observações. Válido por semanas ou meses.";
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
@@ -561,6 +561,16 @@ export const EXERCISE_NAME_ACTIVE =
 
 export const EXERCISE_NAME_IDLE =
   "min-w-0 text-balance font-serif text-xl uppercase leading-snug tracking-[0.05em] text-neutral-400/90 sm:text-2xl sm:leading-tight";
+
+/** Nome do exercício — lista com vários exercícios no dia (só tamanho reduzido) */
+export const EXERCISE_NAME_ACTIVE_COMPACT =
+  "min-w-0 text-balance font-serif text-lg font-semibold uppercase leading-snug tracking-[0.04em] text-amber-50 sm:text-xl sm:leading-tight";
+
+export const EXERCISE_NAME_IDLE_COMPACT =
+  "min-w-0 text-balance font-serif text-lg uppercase leading-snug tracking-[0.04em] text-neutral-400/90 sm:text-xl sm:leading-tight";
+
+export const EXERCISE_NAME_COMPLETE_COMPACT =
+  "min-w-0 text-balance font-serif text-lg font-semibold uppercase leading-snug tracking-[0.04em] text-[#FFD700]/88 sm:text-xl sm:leading-tight";
 
 /** Meta prescrição — linha abaixo das métricas */
 export const EXERCISE_RECORD_META =

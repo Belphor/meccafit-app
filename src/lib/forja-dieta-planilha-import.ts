@@ -171,7 +171,7 @@ export function parseDietaPlanilhaMatrix(
   }
 
   if (blueprint.refeicoes.length === 0) {
-    warnings.push("Nenhuma refeição com alimentos encontrada — apenas macros serão publicados.");
+    warnings.push("Nenhuma refeição com alimentos encontrada. Apenas macros serão publicados.");
   }
 
   return { ok: true, blueprint, warnings };

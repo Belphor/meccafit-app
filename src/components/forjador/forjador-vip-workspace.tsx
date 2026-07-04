@@ -24,7 +24,7 @@ import { resolveForjadorWorkspaceNav, type ForjadorNavRoute } from "@/lib/forjad
 type ForjadorVipWorkspaceProps = {
   payload: ForjaDashboardPayload;
   title: string;
-  description: string;
+  description: React.ReactNode;
   activeRoute: ForjadorNavRoute;
   children: (context: {
     athlete: ForjaBondedAthlete | null;
@@ -77,7 +77,7 @@ export function ForjadorVipWorkspace({
           <div>
             <MeccafitCenterBrand variant="portal" />
             <p className={`${FORJA_SECTION_CHIP} mt-3`}>
-              VIP · {resolveForjaRoleLabel(payload.operator.role)}
+              VIP, {resolveForjaRoleLabel(payload.operator.role)}
             </p>
             <h1 className={`${FORJA_PAGE_TITLE} mt-1`}>{title}</h1>
             <p className={`${FORJA_META} mt-1.5 max-w-2xl`}>{description}</p>

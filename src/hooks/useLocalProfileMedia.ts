@@ -15,10 +15,7 @@ export function useLocalProfileAvatar(userId: string | undefined): string | null
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) {
-      setPhotoUrl(null);
-      return;
-    }
+    if (!userId) return;
 
     let cancelled = false;
 
@@ -42,7 +39,7 @@ export function useLocalProfileAvatar(userId: string | undefined): string | null
     };
   }, [userId]);
 
-  return photoUrl;
+  return userId ? photoUrl : null;
 }
 
 export function useResolvedProfileName(
@@ -55,15 +52,6 @@ export function useResolvedProfileName(
   });
 
   useEffect(() => {
-    if (!userId) {
-      setName(serverName?.trim() ?? "");
-      return;
-    }
-
-    setName(readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "");
-  }, [serverName, userId]);
-
-  useEffect(() => {
     if (!userId) return;
 
     const refresh = () => {
@@ -74,5 +62,5 @@ export function useResolvedProfileName(
     return () => window.removeEventListener(PROFILE_DISPLAY_NAME_UPDATED_EVENT, refresh);
   }, [serverName, userId]);
 
-  return name;
+  return userId ? name : serverName?.trim() ?? "";
 }

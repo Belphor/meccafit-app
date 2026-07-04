@@ -77,12 +77,22 @@ export function DueloChallengePanel({
 
   useEffect(() => {
     if (!open) return;
-    void loadClientes();
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadClientes();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [loadClientes, open]);
 
   useEffect(() => {
     if (!open) return;
-    setPage(0);
+
+    const timer = window.setTimeout(() => setPage(0), 0);
+    return () => window.clearTimeout(timer);
   }, [debouncedSearch, open]);
 
   const resetForm = useCallback(() => {
@@ -116,7 +126,7 @@ export function DueloChallengePanel({
 
     if (result.data?.status === "EM_ANDAMENTO") {
       setFeedback(
-        "O duelo iniciou sem convite — aplique a migration 20260628140000 no Supabase para exigir aceite.",
+        "O duelo iniciou sem aceite do desafiado. Atualize o servidor para exigir convite antes do duelo começar.",
       );
       return;
     }

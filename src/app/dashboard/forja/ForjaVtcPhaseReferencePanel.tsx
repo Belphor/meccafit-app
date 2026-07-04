@@ -10,7 +10,14 @@ function ForjaVtcPhaseReferencePanelComponent() {
   return (
     <section aria-label={FORJA_COPY.monitor.vtcPhaseTableTitle} className={FORJA_COMMAND_INNER}>
       <p className={FORJA_SECTION_CHIP}>{FORJA_COPY.monitor.vtcPhaseTableTitle}</p>
-      <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.monitor.vtcPhaseTableHint}</p>
+      <p className={`${FORJA_META} mt-1`}>
+        A fase do cliente depende do{" "}
+        <strong className="font-medium text-zinc-200">VTC acumulado nos últimos 30 dias</strong>.
+        Diferente das{" "}
+        <strong className="font-medium text-zinc-300">Brasas Musculares</strong> (VTC por grupo em
+        14 dias) e da <strong className="font-medium text-zinc-300">Chama do Altar</strong> (VTC de
+        hoje).
+      </p>
 
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px] border-collapse text-left text-sm">

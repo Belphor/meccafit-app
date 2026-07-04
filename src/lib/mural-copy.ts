@@ -5,7 +5,7 @@ import {
 } from "@/lib/mural-metric";
 
 const LEGACY_MURAL_BODY =
-  "Superação registrada no Fórum Brasa-Viva — volume validado por ARGOS.";
+  "Superação registrada no Fórum Brasa-Viva. Volume validado por ARGOS.";
 
 export function muralBodyForExercise(
   exerciseName: string,
@@ -16,7 +16,7 @@ export function muralBodyForExercise(
     return formatMuralMetricSentence(exerciseName, weightKg, exercicioId);
   }
   const nome = exerciseName.trim() || "treino";
-  return `Bateu o recorde pessoal no ${nome} — cada vitória aquece a chama da comunidade.`;
+  return `Bateu o recorde pessoal no ${nome}. Cada vitória aquece a chama da comunidade.`;
 }
 
 export function resolveMuralTopicBody(

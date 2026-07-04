@@ -50,7 +50,7 @@ export const FENIX_QA_ANIMATIONS: ReadonlyArray<{
     hint: "Pulso rápido no anel quando o mapa térmico muda (~1,4 s).",
     tab: "evolucao",
     howTo:
-      "Use a prévia do avatar abaixo. O anel pulsa em laranja — acontece ao registrar carga que altera o calor muscular.",
+      "Use a prévia do avatar abaixo. O anel pulsa em laranja quando você registra carga que altera o calor muscular.",
   },
   {
     kind: "avatar-tier-up",

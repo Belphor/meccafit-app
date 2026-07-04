@@ -122,9 +122,13 @@ function ForjaDietBlueprintFormComponent({ athlete, isSovereign = false }: Forja
 
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className={`${FORJA_COMMAND_INNER} mt-8 border-t border-zinc-800/80 pt-6`}>
-        <p className={FORJA_SECTION_CHIP}>Dieta · exclusivo VIP</p>
+        <p className={FORJA_SECTION_CHIP}>Nutrição exclusiva VIP</p>
       <h3 className={`${FORJA_SECTION_TITLE} mt-1`}>{FORJA_COPY.diet.title}</h3>
-      <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.diet.hint}</p>
+      <p className={`${FORJA_META} mt-1`}>
+        Plano de longo prazo publicado na aba{" "}
+        <strong className="font-medium text-zinc-300">Nutrição</strong> do cliente{" "}
+        <strong className="font-medium text-zinc-300">VIP</strong>.
+      </p>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">

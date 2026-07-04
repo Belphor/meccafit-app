@@ -19,6 +19,8 @@ import {
   parseTreinoPlanilhaXlsxBuffer,
   type TreinoPlanilhaImportRow,
 } from "@/lib/forja-treino-planilha-import";
+import { formatProgressionSummary } from "@/lib/prescription-progression";
+import { WEEKDAY_LABELS, type WeekdayIndex } from "@/lib/training-week";
 
 type TreinoPrescriptionExcelDropzoneProps = {
   athlete: ForjaBondedAthlete | null;
@@ -37,29 +39,25 @@ export function TreinoPrescriptionExcelDropzone({
   const [phase, setPhase] = useState<DropPhase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [preview, setPreview] = useState<TreinoPlanilhaImportRow[] | null>(null);
+  const [cardioMetaMinutos, setCardioMetaMinutos] = useState<number | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
 
   const uploadRows = useCallback(
-    async (
-      rows: TreinoPlanilhaImportRow[],
-      descansoPadraoSeg: number | null,
-      importWarnings: string[],
-    ) => {
+    async (rows: TreinoPlanilhaImportRow[], importWarnings: string[], cardioMeta: number | null) => {
       if (!athlete) {
         setPhase("error");
-        setMessage(FORJA_COPY.planilhaTreino.selectAthlete);
+        setMessage(FORJA_COPY.planilha.selectAthlete);
         return;
       }
 
       setPhase("uploading");
       setWarnings(importWarnings);
       setPreview(rows);
+      setCardioMetaMinutos(cardioMeta);
 
-      const result = await batchSyncTreinoPrescriptionsFromPlanilha(
-        athlete,
-        rows,
-        descansoPadraoSeg,
-      );
+      const result = await batchSyncTreinoPrescriptionsFromPlanilha(athlete, rows, {
+        cardioMetaMinutos: cardioMeta,
+      });
 
       if (!result.ok) {
         setPhase("error");
@@ -68,9 +66,7 @@ export function TreinoPrescriptionExcelDropzone({
       }
 
       setPhase("success");
-      setMessage(
-        FORJA_COPY.planilhaTreino.success(athlete.displayName, result.upserted),
-      );
+      setMessage(FORJA_COPY.planilha.success(athlete.displayName, result.upserted));
     },
     [athlete],
   );
@@ -80,6 +76,7 @@ export function TreinoPrescriptionExcelDropzone({
       setPhase("parsing");
       setMessage(null);
       setPreview(null);
+      setCardioMetaMinutos(null);
       setWarnings([]);
 
       const lower = file.name.toLowerCase();
@@ -103,7 +100,7 @@ export function TreinoPrescriptionExcelDropzone({
           return;
         }
 
-        await uploadRows(parsed.rows, parsed.descansoPadraoSeg, parsed.warnings);
+        await uploadRows(parsed.rows, parsed.warnings, parsed.cardioMetaMinutos);
       } catch {
         setPhase("error");
         setMessage("Não foi possível ler o ficheiro.");
@@ -137,11 +134,11 @@ export function TreinoPrescriptionExcelDropzone({
   const isBusy = phase === "parsing" || phase === "uploading";
 
   return (
-    <section aria-label="Importar prescrição de treino">
+    <section aria-label="Importar treino">
       <div className={FORJA_COMMAND_INNER}>
-        <p className={FORJA_SECTION_CHIP}>Google Sheets · Treino</p>
-        <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{FORJA_COPY.planilhaTreino.title}</h2>
-        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.planilhaTreino.hint}</p>
+        <p className={FORJA_SECTION_CHIP}>Planilha de treino</p>
+        <h2 className={`${FORJA_SECTION_TITLE} mt-1`}>{FORJA_COPY.planilha.title}</h2>
+        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.planilha.hint}</p>
         <p className={`${FORJA_META} mt-2`}>
           Modelo:{" "}
           <a
@@ -151,6 +148,11 @@ export function TreinoPrescriptionExcelDropzone({
           >
             treino-google-sheets-exemplo.csv
           </a>
+        </p>
+        <p className={`${FORJA_META} mt-2`}>
+          O <strong className="font-medium text-zinc-300">dia_semana</strong> usa números de{" "}
+          <strong className="font-medium text-zinc-300">1 a 6</strong>: 1 = Segunda, 2 = Terça,
+          3 = Quarta, 4 = Quinta, 5 = Sexta, 6 = Sábado.
         </p>
         {athlete ? (
           <p className={`${FORJA_META} mt-2 text-zinc-300`}>Atleta · {athlete.displayName}</p>
@@ -174,9 +176,16 @@ export function TreinoPrescriptionExcelDropzone({
           }}
         >
           <p className="text-sm font-medium text-zinc-200">
-            {isBusy ? FORJA_COPY.planilhaTreino.dropBusy : FORJA_COPY.planilhaTreino.drop}
+            {isBusy ? FORJA_COPY.planilha.dropBusy : FORJA_COPY.planilha.drop}
           </p>
-          <p className={`${FORJA_META} mt-2 max-w-lg`}>{FORJA_COPY.planilhaTreino.columns}</p>
+          <p className={`${FORJA_META} mt-2 max-w-lg`}>
+            Obrigatório: <strong className="font-medium text-zinc-300">dia_semana</strong>,{" "}
+            <strong className="font-medium text-zinc-300">grupo_muscular</strong>,{" "}
+            <strong className="font-medium text-zinc-300">exercicio</strong>,{" "}
+            <strong className="font-medium text-zinc-300">repeticoes</strong>,{" "}
+            <strong className="font-medium text-zinc-300">series</strong>. Opcional: peso,
+            descanso_segundos, tecnica, meta_cardio.
+          </p>
           <input
             ref={inputRef}
             type="file"
@@ -194,7 +203,7 @@ export function TreinoPrescriptionExcelDropzone({
             disabled={disabled || isBusy || !athlete}
             onClick={() => inputRef.current?.click()}
           >
-            {FORJA_COPY.planilhaTreino.chooseFile}
+            {FORJA_COPY.planilha.chooseFile}
           </button>
           <button
             type="button"
@@ -202,12 +211,13 @@ export function TreinoPrescriptionExcelDropzone({
             disabled={!preview || isBusy}
             onClick={() => {
               setPreview(null);
+              setCardioMetaMinutos(null);
               setWarnings([]);
               setMessage(null);
               setPhase("idle");
             }}
           >
-            {FORJA_COPY.planilhaTreino.clearPreview}
+            {FORJA_COPY.planilha.clearPreview}
           </button>
         </div>
 
@@ -220,34 +230,55 @@ export function TreinoPrescriptionExcelDropzone({
         ) : null}
 
         {preview && preview.length > 0 ? (
-          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800/80">
-            <table className="min-w-full text-left text-sm text-zinc-300">
-              <thead className="bg-zinc-950/80 text-xs text-zinc-500">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Grupo</th>
-                  <th className="px-3 py-2 font-medium">Exercício</th>
-                  <th className="px-3 py-2 font-medium">Reps</th>
-                  <th className="px-3 py-2 font-medium">Séries</th>
-                  <th className="px-3 py-2 font-medium">Descanso</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.map((row) => (
-                  <tr
-                    key={`${row.grupoMuscular}-${row.exercicio}-${row.series}`}
-                    className="border-t border-zinc-900"
-                  >
-                    <td className="px-3 py-2">{row.grupoMuscular}</td>
-                    <td className="px-3 py-2">{row.exercicio}</td>
-                    <td className="px-3 py-2 tabular-nums">{row.repeticoes}</td>
-                    <td className="px-3 py-2 tabular-nums">{row.series}</td>
-                    <td className="px-3 py-2 tabular-nums">
-                      {row.descansoSegundos ? `${row.descansoSegundos}s` : "—"}
-                    </td>
+          <div className="mt-4 space-y-3">
+            {cardioMetaMinutos !== null ? (
+              <p className={`${FORJA_META} text-zinc-300`}>
+                Meta de cardio: <strong className="font-medium">{cardioMetaMinutos} min/dia</strong>
+              </p>
+            ) : null}
+            <div className="overflow-x-auto rounded-xl border border-zinc-800/80">
+              <table className="min-w-full text-left text-sm text-zinc-300">
+                <thead className="bg-zinc-950/80 text-xs text-zinc-500">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Dia</th>
+                    <th className="px-3 py-2 font-medium">Grupo</th>
+                    <th className="px-3 py-2 font-medium">Exercício</th>
+                    <th className="px-3 py-2 font-medium">Peso</th>
+                    <th className="px-3 py-2 font-medium">Reps</th>
+                    <th className="px-3 py-2 font-medium">Séries</th>
+                    <th className="px-3 py-2 font-medium">Descanso</th>
+                    <th className="px-3 py-2 font-medium">Técnica</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {preview.map((row) => (
+                    <tr
+                      key={`${row.diaSemana}-${row.grupoMuscular}-${row.exercicio}-${row.series}`}
+                      className="border-t border-zinc-900"
+                    >
+                      <td className="px-3 py-2">
+                        {WEEKDAY_LABELS[row.diaSemana as WeekdayIndex]} ({row.diaSemana})
+                      </td>
+                      <td className="px-3 py-2">{row.grupoMuscular}</td>
+                      <td className="px-3 py-2">{row.exercicio}</td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {row.pesoPrescrito ? `${row.pesoPrescrito} kg` : "sem peso"}
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{row.repeticoes}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.series}</td>
+                      <td className="px-3 py-2 tabular-nums">
+                        {row.descansoSegundos ? `${row.descansoSegundos}s` : "não definido"}
+                      </td>
+                      <td className="px-3 py-2">
+                        {row.progressaoAlternativas.length > 0
+                          ? formatProgressionSummary(row.progressaoAlternativas)
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : null}
 

@@ -4,8 +4,6 @@ import {
   brasiliaDateInputToIso,
   brasiliaDisplayToYmd,
   formatBrasiliaDateFromIso,
-  getBrasiliaDateDisplayValue,
-  getBrasiliaDateInputValue,
 } from "@/lib/brasilia-time";
 
 export const SCIENTIFIC_SKINFOLD_IDS = [
@@ -31,7 +29,7 @@ export const SCIENTIFIC_SKINFOLD_LABELS: Record<ScientificSkinfoldId, string> = 
 };
 
 /** Chaves JSON em vip_medidas_corporais.perimetros */
-export const SCIENTIFIC_SKINFOLD_DB_KEYS: Record<ScientificSkinfoldId, string> = {
+export const SCIENTIFIC_SKINFOLD_DB_KEYS = {
   peito: "dobra_peito",
   axilar_media: "dobra_axilar_media",
   triceps: "dobra_triceps",
@@ -39,7 +37,12 @@ export const SCIENTIFIC_SKINFOLD_DB_KEYS: Record<ScientificSkinfoldId, string> =
   abdomen: "dobra_abdomen",
   suprailiaca: "dobra_suprailiaca",
   coxa: "dobra_coxa",
-};
+} as const satisfies Record<ScientificSkinfoldId, string>;
+
+export type ScientificSkinfoldDbKey = (typeof SCIENTIFIC_SKINFOLD_DB_KEYS)[ScientificSkinfoldId];
+export type ScientificPerimetrosJson = Partial<
+  Record<"gordura_pct" | "massa_magra_kg" | ScientificSkinfoldDbKey, number>
+>;
 
 const DB_KEY_TO_SKINFOLD = Object.fromEntries(
   SCIENTIFIC_SKINFOLD_IDS.map((id) => [SCIENTIFIC_SKINFOLD_DB_KEYS[id], id]),
@@ -97,6 +100,19 @@ export type ScientificMetricsSnapshotPayload = {
   massaMagraKg: number | null;
   skinfolds: ScientificSkinfolds;
   medidoEm: string;
+};
+
+export type ScientificServerMetricsRow = {
+  peso_kg: number;
+  altura_cm: number;
+  perimetros: unknown;
+  medido_em: string;
+};
+
+export type ScientificServerSnapshotRow = ScientificServerMetricsRow & {
+  client_id: string;
+  forger_id: string;
+  atualizado_em: string;
 };
 
 function parseOptionalNumber(
@@ -190,8 +206,8 @@ export function scientificEntryToSnapshotPayload(
 
 export function snapshotPayloadToPerimetrosJson(
   payload: ScientificMetricsSnapshotPayload,
-): Record<string, number> {
-  const json: Record<string, number> = {};
+): ScientificPerimetrosJson {
+  const json: ScientificPerimetrosJson = {};
 
   if (payload.gorduraPct !== null) json.gordura_pct = payload.gorduraPct;
   if (payload.massaMagraKg !== null) json.massa_magra_kg = payload.massaMagraKg;
@@ -206,12 +222,9 @@ export function snapshotPayloadToPerimetrosJson(
   return json;
 }
 
-export function parseScientificFromServerRow(row: {
-  peso_kg: number;
-  altura_cm: number;
-  perimetros: unknown;
-  medido_em: string;
-}): Omit<ScientificMetricsEntry, "id" | "clientId" | "forgerId" | "savedAt" | "syncedAt"> {
+export function parseScientificFromServerRow(
+  row: ScientificServerMetricsRow,
+): Omit<ScientificMetricsEntry, "id" | "clientId" | "forgerId" | "savedAt" | "syncedAt"> {
   const source =
     row.perimetros && typeof row.perimetros === "object" && !Array.isArray(row.perimetros)
       ? (row.perimetros as Record<string, unknown>)
@@ -238,15 +251,7 @@ export function parseScientificFromServerRow(row: {
   };
 }
 
-export function mapServerScientificSnapshot(row: {
-  client_id: string;
-  forger_id: string;
-  peso_kg: number;
-  altura_cm: number;
-  perimetros: unknown;
-  medido_em: string;
-  atualizado_em: string;
-}): ScientificMetricsEntry {
+export function mapServerScientificSnapshot(row: ScientificServerSnapshotRow): ScientificMetricsEntry {
   const parsed = parseScientificFromServerRow(row);
   return {
     id: `server-${row.client_id}-${row.medido_em}`,

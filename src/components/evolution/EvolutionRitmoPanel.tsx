@@ -75,33 +75,35 @@ export function EvolutionRitmoPanel({
       <header>
         <h3 className={DASHBOARD_SECTION_TITLE}>Ritmo da Fênix</h3>
         <p className={EVOLUTION_SECTION_SUBTITLE}>
-          Quanto da sua meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> você já acumulou nos últimos 30
-          dias.
+          Quanto da meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>, calculada pelos seus dias de
+          treino planejados, você já acumulou nos últimos 30 dias.
         </p>
         <DashboardClientInfoBlock className="mt-3">
           <p className="text-xs font-semibold text-amber-100">Como funciona</p>
           <p className="mt-2 text-xs leading-relaxed text-neutral-300">
-            O Ritmo mostra o quanto você já aqueceu a linhagem neste ciclo, olhando sempre os{" "}
+            O <LoreEm>Ritmo da Fênix</LoreEm> mostra se o volume real da sua forja acompanha o plano que
+            você declarou para o mês. Ele sempre olha os{" "}
             <strong className="text-amber-50">últimos 30 dias</strong> de treino.
           </p>
           <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed text-neutral-300">
             <li>
-              <strong className="text-amber-50">A cada treino</strong>, somamos o melhor peso que você
-              registrou em cada exercício. Esse total do dia é o seu <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>{" "}
-              diário.
+              <strong className="text-amber-50">Você define os dias planejados</strong>. Esse número vira
+              a meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>; 16 treinos usam o limiar Faísca da
+              academia como referência.
             </li>
             <li>
-              <strong className="text-amber-50">Somamos os últimos 30 dias de treino</strong>. Esse valor
-              aparece em &quot;Acumulado (30d)&quot; abaixo.
+              <strong className="text-amber-50">A cada treino validado</strong>, somamos o melhor peso
+              registrado em cada exercício. Esse total do dia é o seu{" "}
+              <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> diário.
             </li>
             <li>
-              <strong className="text-amber-50">O Ritmo é a porcentagem</strong> desse acumulado em
-              relação à sua meta mensal. No máximo, 100%.
+              <strong className="text-amber-50">O Ritmo é a porcentagem</strong> do acumulado de 30 dias
+              em relação à sua meta mensal. No painel, ele aparece com teto de 100%.
             </li>
           </ol>
           <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-            <strong className="text-neutral-300">Exemplo:</strong> meta de 5.000 kg e acumulado de 2.500 kg
-            nos últimos 30 dias. Ritmo de 50%.
+            <strong className="text-neutral-300">Exemplo:</strong> se a meta do plano for 5.000 kg e o
+            acumulado dos últimos 30 dias for 2.500 kg, o Ritmo fica em 50%.
           </p>
           <p className="mt-3 text-xs leading-relaxed text-neutral-400">
             Nos primeiros <strong className="text-neutral-300">{RITMO_GRACE_DAYS} dias</strong> da
@@ -122,7 +124,7 @@ export function EvolutionRitmoPanel({
 
         <div className="grid gap-2 sm:grid-cols-2">
           <p className={EVOLUTION_HINT}>
-            Meta mensal:{" "}
+            Meta mensal do plano:{" "}
             <span className="font-mono font-semibold text-amber-100">{formatVtcKg(metaVtcMensalKg)}</span>
           </p>
           <p className={EVOLUTION_HINT}>
@@ -141,7 +143,7 @@ export function EvolutionRitmoPanel({
         {ritmoNext.nextLevel && ritmoNext.remainingPercent !== null ? (
           <p className="text-xs text-cyan-200/85">
             Próximo nível: {formatThermalLevelWithContext(ritmoNext.nextLevel, "consistency")}. Faltam{" "}
-            {Math.ceil(ritmoNext.remainingPercent)} pontos percentuais
+            {Math.ceil(ritmoNext.remainingPercent)} pontos percentuais.
           </p>
         ) : null}
 

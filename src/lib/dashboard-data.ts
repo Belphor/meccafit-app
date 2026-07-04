@@ -383,7 +383,13 @@ export async function fetchCommunityMuralPosts(
     if (error) return { data: null, error };
 
     const rows = (data ?? []) as CommunityMuralRow[];
-    return { data: mapCommunityMuralRowsToPosts(rows), error: null };
+    const posts = mapCommunityMuralRowsToPosts(rows);
+    return {
+      data: posts
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, safeLimit),
+      error: null,
+    };
   });
 }
 

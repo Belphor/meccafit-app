@@ -25,6 +25,7 @@ export function isForjadorSovereign(role: string | null | undefined): boolean {
 export function resolveClienteDashboardRoute(
   _subgrupo: string = DEFAULT_DASHBOARD_SUBGRUPO,
 ): string {
+  void _subgrupo;
   return CLIENTE_DASHBOARD_ROUTE;
 }
 

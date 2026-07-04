@@ -13,6 +13,17 @@ import { getActiveSupabaseSession, supabase } from "@/lib/supabase";
 export const FORUM_BRASA_VIVA_DEFAULT_LIMIT = 10;
 export const COMUNIDADE_MURAL_MAX_LIMIT = 10;
 
+/** Quadro do mural: no máximo N ascensões mais recentes (a 11.ª empurra a mais antiga para fora). */
+export function trimMuralTopicsToLimit(
+  topics: ForumBrasaVivaTopic[],
+  limit: number = COMUNIDADE_MURAL_MAX_LIMIT,
+): ForumBrasaVivaTopic[] {
+  const bounded = Math.min(COMUNIDADE_MURAL_MAX_LIMIT, Math.max(1, limit));
+  return [...topics]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, bounded);
+}
+
 function normalizeWeight(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
@@ -91,7 +102,7 @@ export async function fetchForumBrasaVivaTopics(
 
   if (!error && Array.isArray(data)) {
     return {
-      data: (data as ForumBrasaVivaRpcRow[]).map(mapRpcRowToTopic),
+      data: trimMuralTopicsToLimit((data as ForumBrasaVivaRpcRow[]).map(mapRpcRowToTopic), boundedLimit),
       error: null,
     };
   }
@@ -110,7 +121,10 @@ export async function fetchForumBrasaVivaTopics(
   }
 
   return {
-    data: mapMuralFallbackRows((muralRows ?? []) as CommunityMuralRow[]),
+    data: trimMuralTopicsToLimit(
+      mapMuralFallbackRows((muralRows ?? []) as CommunityMuralRow[]),
+      boundedLimit,
+    ),
     error: null,
   };
 }
@@ -142,5 +156,5 @@ export function mapInitialForumTopics(
   muralRows: CommunityMuralRow[] | null | undefined,
 ): ForumBrasaVivaTopic[] {
   if (!muralRows?.length) return [];
-  return mapMuralFallbackRows(muralRows);
+  return trimMuralTopicsToLimit(mapMuralFallbackRows(muralRows));
 }

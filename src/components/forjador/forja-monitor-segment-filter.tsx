@@ -10,7 +10,7 @@ type ForjaMonitorSegmentFilterProps = {
   counts: Record<ForjaMonitorSegment, number>;
 };
 
-const SEGMENTS: ForjaMonitorSegment[] = ["todos", "vip", "comum", "meus"];
+const SEGMENTS: ForjaMonitorSegment[] = ["vip", "comum", "suspenso"];
 
 export function ForjaMonitorSegmentFilter({
   value,

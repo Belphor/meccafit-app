@@ -78,9 +78,12 @@ function ScientificMetricsWorkspace({
       setHydrated(true);
     }
 
-    void hydrate();
-    setFeedback(null);
-    setHydrated(false);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setFeedback(null);
+      setHydrated(false);
+      void hydrate();
+    });
 
     return () => {
       cancelled = true;
@@ -98,9 +101,9 @@ function ScientificMetricsWorkspace({
           await appendScientificMetricsEntry(entry);
         }
         setEntries((current) => mergeScientificEntries([entry, ...current]));
-        setFeedback({ kind: "ok", message: "Medição guardada localmente." });
+        setFeedback({ kind: "ok", message: "Medição salva localmente." });
       } catch {
-        setFeedback({ kind: "error", message: "Falha ao guardar medição." });
+        setFeedback({ kind: "error", message: "Falha ao salvar medição." });
       } finally {
         setSaving(false);
       }
@@ -143,7 +146,7 @@ function ScientificMetricsWorkspace({
       mergeScientificEntries(current.map((row) => (row.id === synced.id ? synced : row))),
     );
     setFeedback({ kind: "ok", message: `Medição publicada para ${athlete.displayName}.` });
-  }, [athlete, canAccess, entries]);
+  }, [athlete, canAccess, entries, isSovereign]);
 
   const handleDeleteEntry = useCallback(
     async (entryId: string) => {
@@ -160,7 +163,7 @@ function ScientificMetricsWorkspace({
   );
 
   if (!hydrated) {
-    return <p className="text-sm text-zinc-500">A carregar histórico…</p>;
+    return <p className="text-sm text-zinc-500">{FORJA_COPY.medidas.loadingHistory}</p>;
   }
 
   return (
@@ -195,7 +198,14 @@ export function MedidasPageClient({ payload, initialSnapshotByClient }: MedidasP
     <ForjadorVipWorkspace
       payload={payload}
       title="Medidas VIP"
-      description={FORJA_COPY.medidas.description}
+      description={
+        <>
+          Registre <strong className="font-medium text-zinc-300">peso</strong>,{" "}
+          <strong className="font-medium text-zinc-300">dobras</strong> e{" "}
+          <strong className="font-medium text-zinc-300">composição corporal</strong> do cliente VIP;
+          guarde no aparelho e publique quando estiver pronto.
+        </>
+      }
       activeRoute="/forjador/medidas"
     >
       {({ athlete }) =>

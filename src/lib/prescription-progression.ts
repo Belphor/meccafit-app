@@ -1,12 +1,70 @@
 export const PRESCRIPTION_PROGRESSION_OPTIONS = [
-  { id: "aumento_carga", label: "Progressão de carga" },
-  { id: "aumento_repeticoes", label: "Aumento de repetições" },
-  { id: "reducao_descanso", label: "Redução de descanso" },
-  { id: "cadencia_controle", label: "Cadência e controle" },
-  { id: "isometria", label: "Isometria" },
-  { id: "drop_sets", label: "Drop sets" },
-  { id: "rest_pause", label: "Rest pause" },
-  { id: "amplitude", label: "Amplitude" },
+  {
+    id: "aumento_carga",
+    label: "Progressão de carga",
+    aliases: [
+      "progressao de carga",
+      "progressao carga",
+      "prog carga",
+      "prog. carga",
+      "aumento carga",
+      "aumento de carga",
+      "carga",
+    ],
+  },
+  {
+    id: "aumento_repeticoes",
+    label: "Aumento de repetições",
+    aliases: [
+      "aumento de repeticoes",
+      "aumento repeticoes",
+      "aumento reps",
+      "aumento de reps",
+      "repeticoes",
+      "reps",
+    ],
+  },
+  {
+    id: "reducao_descanso",
+    label: "Redução de descanso",
+    aliases: [
+      "reducao de descanso",
+      "reducao descanso",
+      "menos descanso",
+      "descanso",
+    ],
+  },
+  {
+    id: "cadencia_controle",
+    label: "Cadência e controle",
+    aliases: [
+      "cadencia e controle",
+      "cadencia controle",
+      "cadencia",
+      "controle",
+      "tempo",
+    ],
+  },
+  {
+    id: "isometria",
+    label: "Isometria",
+    aliases: ["isometrico", "isometrica", "pausa isometrica"],
+  },
+  {
+    id: "drop_sets",
+    label: "Drop sets",
+    aliases: ["drop set", "drop-set", "drop_set", "dropset", "dropsets"],
+  },
+  {
+    id: "rest_pause",
+    label: "Rest pause",
+    aliases: ["rest-pause", "rest_pause", "restpause", "pausa ativa"],
+  },
+  {
+    id: "amplitude",
+    label: "Amplitude",
+    aliases: ["amplitude de movimento", "rom", "range de movimento"],
+  },
 ] as const;
 
 export type PrescriptionProgressionId = (typeof PRESCRIPTION_PROGRESSION_OPTIONS)[number]["id"];
@@ -17,6 +75,62 @@ const PROGRESSION_ID_SET = new Set<string>(PRESCRIPTION_PROGRESSION_OPTIONS.map(
 
 export function resolveProgressionLabel(id: PrescriptionProgressionId): string {
   return PRESCRIPTION_PROGRESSION_OPTIONS.find((item) => item.id === id)?.label ?? id;
+}
+
+function normalizeProgressionToken(value: string): string {
+  return value
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[\s.\-/]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function resolveProgressionIdFromToken(token: string): PrescriptionProgressionId | null {
+  const normalized = normalizeProgressionToken(token);
+  if (!normalized) return null;
+
+  for (const option of PRESCRIPTION_PROGRESSION_OPTIONS) {
+    if (option.id === normalized) return option.id;
+    if (normalizeProgressionToken(option.label) === normalized) return option.id;
+
+    for (const alias of option.aliases) {
+      if (normalizeProgressionToken(alias) === normalized) return option.id;
+    }
+  }
+
+  return null;
+}
+
+export function parseProgressionFromSpreadsheet(raw: string): PrescriptionProgressionId[] {
+  const trimmed = raw.replace(/^\uFEFF/, "").trim();
+  if (!trimmed) return [];
+
+  const tokens = trimmed
+    .split(/[,;|/]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  const seen = new Set<string>();
+  const result: PrescriptionProgressionId[] = [];
+
+  for (const token of tokens) {
+    const resolved = resolveProgressionIdFromToken(token);
+    if (resolved && !seen.has(resolved)) {
+      seen.add(resolved);
+      result.push(resolved);
+    }
+  }
+
+  if (result.length === 0 && tokens.length === 1) {
+    const resolvedWhole = resolveProgressionIdFromToken(trimmed);
+    if (resolvedWhole) return [resolvedWhole];
+  }
+
+  return result;
 }
 
 export function parseProgressionAlternatives(raw: unknown): PrescriptionProgressionId[] {

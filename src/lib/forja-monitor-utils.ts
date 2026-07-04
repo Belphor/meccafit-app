@@ -1,13 +1,14 @@
+import { isAccountSuspended } from "@/lib/account-access-status";
 import type { ForjaBondedAthlete, ForjaVtcFeedEntry } from "@/lib/forja-dashboard";
 import type { ForjaFraudSignal } from "@/lib/forja-sovereign-actions";
 
-export type ForjaMonitorSegment = "todos" | "vip" | "comum" | "meus";
+export type ForjaMonitorSegment = "vip" | "comum" | "suspenso";
 
 export type ForjaMonitorStats = {
   total: number;
   vip: number;
   comum: number;
-  meus: number;
+  suspenso: number;
   withVtcToday: number;
   spikes: number;
 };
@@ -19,12 +20,15 @@ export function computeMonitorStats(
 ): ForjaMonitorStats {
   let vip = 0;
   let comum = 0;
-  let meus = 0;
+  let suspenso = 0;
 
   for (const athlete of athletes) {
+    if (isAccountSuspended(athlete.statusAltar)) {
+      suspenso += 1;
+      continue;
+    }
     if (athlete.hasVipBond) vip += 1;
     else comum += 1;
-    if (!athlete.isGlobalListing) meus += 1;
   }
 
   const withVtcToday = feedEntries.filter((entry) => entry.vtcToday > 0).length;
@@ -34,7 +38,7 @@ export function computeMonitorStats(
     total: athletes.length,
     vip,
     comum,
-    meus,
+    suspenso,
     withVtcToday,
     spikes,
   };
@@ -43,15 +47,18 @@ export function computeMonitorStats(
 export function filterAthletesByMonitorSegment(
   athletes: ForjaBondedAthlete[],
   segment: ForjaMonitorSegment,
-  operatorId: string,
 ): ForjaBondedAthlete[] {
   switch (segment) {
     case "vip":
-      return athletes.filter((athlete) => athlete.hasVipBond);
+      return athletes.filter(
+        (athlete) => athlete.hasVipBond && !isAccountSuspended(athlete.statusAltar),
+      );
     case "comum":
-      return athletes.filter((athlete) => !athlete.hasVipBond);
-    case "meus":
-      return athletes.filter((athlete) => !athlete.isGlobalListing);
+      return athletes.filter(
+        (athlete) => !athlete.hasVipBond && !isAccountSuspended(athlete.statusAltar),
+      );
+    case "suspenso":
+      return athletes.filter((athlete) => isAccountSuspended(athlete.statusAltar));
     default:
       return athletes;
   }
@@ -83,11 +90,11 @@ export function patchFeedEntryVtcAfterAdjust(
 }
 
 const FRAUD_SIGNAL_TITLES: Record<string, string> = {
-  VTC_SPIKE: "AVISO - VOLUME DE HOJE ACIMA DO HABITUAL",
-  SUSPENDED_ACTIVE_TRAINING: "URGENTE - CONTA SUSPENSA COM TREINOS REGISTRADOS",
-  CARGA_FLOOD: "AVISO - MUITOS REGISTROS DE CARGA EM 24 HORAS",
-  TIER_VTC_MISMATCH: "AVISO - FASE NÃO COMBINA COM O VOLUME TOTAL DE CARGA",
-  TIER_VTC_LOW: "AVISO - FASE NÃO COMBINA COM O VOLUME TOTAL DE CARGA",
+  VTC_SPIKE: "Aviso: volume de hoje acima do habitual",
+  SUSPENDED_ACTIVE_TRAINING: "Urgente: conta suspensa com treinos registrados",
+  CARGA_FLOOD: "Aviso: muitos registros de carga em 24 horas",
+  TIER_VTC_MISMATCH: "Aviso: fase não combina com o volume total de carga",
+  TIER_VTC_LOW: "Aviso: fase não combina com o volume total de carga",
 };
 
 const FRAUD_SIGNAL_MESSAGE =
@@ -96,7 +103,7 @@ const FRAUD_SIGNAL_MESSAGE =
 export function resolveFraudSignalTitle(signal: ForjaFraudSignal): string {
   return (
     FRAUD_SIGNAL_TITLES[signal.code] ??
-    `${signal.severity === "critical" ? "URGENTE" : "AVISO"} - ${signal.code.replace(/_/g, " ")}`
+    `${signal.severity === "critical" ? "Urgente" : "Aviso"}: ${signal.code.replace(/_/g, " ").toLowerCase()}`
   );
 }
 
@@ -123,7 +130,7 @@ export function resolveFeedAlertLabel(
   options?: { mismatch?: boolean; spike?: boolean },
 ): string | null {
   if (!severity && !options?.mismatch && !options?.spike) return null;
-  if (severity === "critical") return "URGENTE";
+  if (severity === "critical") return "Urgente";
   if (options?.mismatch) return FRAUD_SIGNAL_TITLES.TIER_VTC_MISMATCH;
   if (options?.spike) return FRAUD_SIGNAL_TITLES.VTC_SPIKE;
   return FRAUD_SIGNAL_TITLES.TIER_VTC_MISMATCH;

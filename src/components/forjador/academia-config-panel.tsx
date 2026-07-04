@@ -5,7 +5,6 @@ import {
   FORJA_COMMAND_INNER,
   FORJA_FEEDBACK_ERROR,
   FORJA_FEEDBACK_OK,
-  FORJA_GHOST_BUTTON,
   FORJA_INPUT,
   FORJA_LABEL,
   FORJA_META,
@@ -31,6 +30,11 @@ function formatKgInput(value: number): string {
   return Number.isFinite(value) ? String(Math.round(value)) : "";
 }
 
+function parseKgInput(value: string): number {
+  const parsed = Number(value.trim());
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
 export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
   const [config, setConfig] = useState<AcademiaConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,11 +42,13 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
   const [feedback, setFeedback] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
   const [metaMesAlvo, setMetaMesAlvo] = useState("");
-  const [metaPadrao, setMetaPadrao] = useState("");
-  const [faisca, setFaisca] = useState("");
-  const [brasa, setBrasa] = useState("");
-  const [labareda, setLabareda] = useState("");
-  const [fogoCosmico, setFogoCosmico] = useState("");
+  const [faiscaMin, setFaiscaMin] = useState("");
+  const [faiscaMax, setFaiscaMax] = useState("");
+  const [brasaMin, setBrasaMin] = useState("");
+  const [brasaMax, setBrasaMax] = useState("");
+  const [labaredaMin, setLabaredaMin] = useState("");
+  const [labaredaMax, setLabaredaMax] = useState("");
+  const [fogoCosmicoMin, setFogoCosmicoMin] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -57,15 +63,24 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
     const cfg = result.config;
     setConfig(cfg);
     setMetaMesAlvo(formatKgInput(cfg.tonelagem_alvo_mes ?? cfg.meta_coletiva_alvo_kg));
-    setMetaPadrao(formatKgInput(cfg.meta_coletiva_alvo_kg));
-    setFaisca(formatKgInput(cfg.phase_vtc_faisca));
-    setBrasa(formatKgInput(cfg.phase_vtc_brasa));
-    setLabareda(formatKgInput(cfg.phase_vtc_labareda));
-    setFogoCosmico(formatKgInput(cfg.phase_vtc_fogo_cosmico));
+    setFaiscaMin(formatKgInput(cfg.phase_vtc_faisca));
+    setFaiscaMax(formatKgInput(cfg.phase_vtc_brasa - 1));
+    setBrasaMin(formatKgInput(cfg.phase_vtc_brasa));
+    setBrasaMax(formatKgInput(cfg.phase_vtc_labareda - 1));
+    setLabaredaMin(formatKgInput(cfg.phase_vtc_labareda));
+    setLabaredaMax(formatKgInput(cfg.phase_vtc_fogo_cosmico - 1));
+    setFogoCosmicoMin(formatKgInput(cfg.phase_vtc_fogo_cosmico));
   }, []);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void load();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [load]);
 
   const phasePreview = useMemo(() => buildPhaseLevelRows(config), [config]);
@@ -74,7 +89,7 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
 
   const handleSaveMeta = useCallback(async () => {
     if (!isSovereign) return;
-    const alvo = Number(metaMesAlvo);
+    const alvo = parseKgInput(metaMesAlvo);
     if (!Number.isFinite(alvo) || alvo <= 0) {
       setFeedback({ kind: "error", message: "Informe uma meta mensal válida em kg." });
       return;
@@ -98,15 +113,45 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
     if (!isSovereign) return;
 
     const patch = {
-      meta_coletiva_alvo_kg: Number(metaPadrao),
-      phase_vtc_faisca: Number(faisca),
-      phase_vtc_brasa: Number(brasa),
-      phase_vtc_labareda: Number(labareda),
-      phase_vtc_fogo_cosmico: Number(fogoCosmico),
+      phase_vtc_faisca: parseKgInput(faiscaMin),
+      phase_vtc_brasa: parseKgInput(brasaMin),
+      phase_vtc_labareda: parseKgInput(labaredaMin),
+      phase_vtc_fogo_cosmico: parseKgInput(fogoCosmicoMin),
     };
 
-    if (Object.values(patch).some((value) => !Number.isFinite(value) || value <= 0)) {
-      setFeedback({ kind: "error", message: "Todos os limiares devem ser números positivos." });
+    const ranges = [
+      { label: "Faísca", min: parseKgInput(faiscaMin), max: parseKgInput(faiscaMax) },
+      { label: "Brasa", min: parseKgInput(brasaMin), max: parseKgInput(brasaMax) },
+      { label: "Labareda", min: parseKgInput(labaredaMin), max: parseKgInput(labaredaMax) },
+      { label: "Fogo Cósmico", min: parseKgInput(fogoCosmicoMin), max: Number.POSITIVE_INFINITY },
+    ];
+
+    if (ranges.some((range) => !Number.isFinite(range.min) || range.min <= 0)) {
+      setFeedback({
+        kind: "error",
+        message: "Todos os valores mínimos devem ser números positivos em kg.",
+      });
+      return;
+    }
+
+    if (ranges.slice(0, 3).some((range) => !Number.isFinite(range.max) || range.max <= range.min)) {
+      setFeedback({
+        kind: "error",
+        message: "Cada fase precisa de um máximo maior que o mínimo (exceto Fogo Cósmico).",
+      });
+      return;
+    }
+
+    if (
+      patch.phase_vtc_brasa !== parseKgInput(faiscaMax) + 1
+      || patch.phase_vtc_labareda !== parseKgInput(brasaMax) + 1
+      || patch.phase_vtc_fogo_cosmico !== parseKgInput(labaredaMax) + 1
+    ) {
+      setFeedback({
+        kind: "error",
+        message:
+          "Os intervalos devem ser contínuos: o mínimo de cada fase é o máximo da anterior + 1 kg.",
+      });
       return;
     }
 
@@ -132,9 +177,19 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
       return;
     }
 
-    setFeedback({ kind: "ok", message: "Limiares de fase e meta padrão salvos." });
+    setFeedback({ kind: "ok", message: "Limiares de fase salvos com sucesso." });
     void load();
-  }, [isSovereign, metaPadrao, faisca, brasa, labareda, fogoCosmico, load]);
+  }, [
+    isSovereign,
+    faiscaMin,
+    faiscaMax,
+    brasaMin,
+    brasaMax,
+    labaredaMin,
+    labaredaMax,
+    fogoCosmicoMin,
+    load,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -142,9 +197,13 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
         <p className={FORJA_SECTION_CHIP}>Termômetro coletivo</p>
         <h2 className={`${FORJA_SECTION_TITLE} mt-1 text-lg`}>Meta mensal da academia</h2>
         <p className={`${FORJA_META} mt-2`}>
-          A barra da Comunidade enche conforme o peso registrado por todos os clientes no mês. Cada
-          linha de carga no histórico soma automaticamente (sem polling). Referência:{" "}
-          {config?.mes_referencia?.slice(0, 7) ?? "mês atual"}.
+          A barra da <strong className="font-medium text-zinc-200">Comunidade</strong> enche conforme
+          o peso registrado por todos os clientes no mês. Cada linha de carga no histórico soma
+          automaticamente, sem necessidade de atualização manual. Referência:{" "}
+          <strong className="font-medium text-zinc-300">
+            {config?.mes_referencia?.slice(0, 7) ?? "mês atual"}
+          </strong>
+          .
         </p>
 
         {loading ? (
@@ -162,7 +221,9 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
                   style={{ width: `${Math.min(100, progressPct)}%` }}
                 />
               </div>
-              <p className={`${FORJA_META} mt-1`}>{progressPct}% da meta</p>
+              <p className={`${FORJA_META} mt-1`}>
+                <strong className="font-medium text-zinc-300">{progressPct}%</strong> da meta
+              </p>
             </div>
 
             {isSovereign ? (
@@ -175,11 +236,16 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
                     id="meta-mes-alvo"
                     type="number"
                     min={1}
+                    step={1}
+                    inputMode="numeric"
                     value={metaMesAlvo}
                     onChange={(event) => setMetaMesAlvo(event.target.value)}
                     className={FORJA_INPUT}
                     disabled={busy}
                   />
+                  <p className={`${FORJA_META} mt-1.5 text-zinc-500`}>
+                    Define o alvo do termômetro coletivo apenas para o mês em curso.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -192,7 +258,8 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
               </div>
             ) : (
               <p className={`${FORJA_META} mt-3 text-zinc-500`}>
-                Apenas o Forjador Soberano pode alterar a meta mensal.
+                Apenas o <strong className="font-medium text-zinc-400">Forjador Soberano</strong>{" "}
+                pode alterar a meta mensal.
               </p>
             )}
           </>
@@ -202,39 +269,143 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
       <section className={FORJA_COMMAND_INNER}>
         <p className={FORJA_SECTION_CHIP}>Manutenção de níveis</p>
         <h2 className={`${FORJA_SECTION_TITLE} mt-1 text-lg`}>
-          Chama Acumulada da Linhagem · limiares (volume mensal / 30d)
+          Chama Acumulada da Linhagem
         </h2>
         <p className={`${FORJA_META} mt-2`}>
-          Ajuste a dificuldade das fases da Linhagem com base no Volume de Carga Máxima(VTC) acumulado nos últimos 30 dias. Valores menores facilitam a progressão. Valores maiores exigem mais acúmulo. Não confundir com Brasas Musculares, VTC por grupo em 14 dias, nem com a Chama do Altar, VTC de hoje.
+          Ajuste a dificuldade das fases com base no{" "}
+          <strong className="font-medium text-zinc-200">Volume de Carga Máxima (VTC)</strong>{" "}
+          acumulado nos últimos 30 dias. Valores menores facilitam a progressão; valores maiores
+          exigem mais acúmulo. Não confundir com{" "}
+          <strong className="font-medium text-zinc-300">Brasas Musculares</strong> (VTC por grupo em
+          14 dias) nem com a <strong className="font-medium text-zinc-300">Chama do Altar</strong>{" "}
+          (VTC de hoje).
         </p>
 
         {isSovereign ? (
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className={FORJA_LABEL}>Meta padrão novos meses (kg)</label>
-              <input type="number" min={1} value={metaPadrao} onChange={(e) => setMetaPadrao(e.target.value)} className={FORJA_INPUT} disabled={busy} />
-            </div>
-            <div>
-              <label className={FORJA_LABEL}>Faísca (tier 2) mín. kg</label>
-              <input type="number" min={1} value={faisca} onChange={(e) => setFaisca(e.target.value)} className={FORJA_INPUT} disabled={busy} />
-            </div>
-            <div>
-              <label className={FORJA_LABEL}>Brasa (tier 3) mín. kg</label>
-              <input type="number" min={1} value={brasa} onChange={(e) => setBrasa(e.target.value)} className={FORJA_INPUT} disabled={busy} />
-            </div>
-            <div>
-              <label className={FORJA_LABEL}>Labareda (tier 4) mín. kg</label>
-              <input type="number" min={1} value={labareda} onChange={(e) => setLabareda(e.target.value)} className={FORJA_INPUT} disabled={busy} />
-            </div>
-            <div>
-              <label className={FORJA_LABEL}>Fogo Cósmico (tier 5) mín. kg</label>
-              <input type="number" min={1} value={fogoCosmico} onChange={(e) => setFogoCosmico(e.target.value)} className={FORJA_INPUT} disabled={busy} />
-            </div>
-            <div className="sm:col-span-2">
-              <button type="button" className={FORJA_PRIMARY_BUTTON} disabled={busy} onClick={() => void handleSaveThresholds()}>
-                Salvar limiares de fase
-              </button>
-            </div>
+          <div className="mt-4 space-y-4">
+            {[
+              {
+                title: "Faísca (fase 2)",
+                minId: "phase-faisca-min",
+                maxId: "phase-faisca-max",
+                min: faiscaMin,
+                max: faiscaMax,
+                onMinChange: setFaiscaMin,
+                onMaxChange: (value: string) => {
+                  setFaiscaMax(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setBrasaMin(formatKgInput(parsed + 1));
+                },
+                showMax: true,
+              },
+              {
+                title: "Brasa (fase 3)",
+                minId: "phase-brasa-min",
+                maxId: "phase-brasa-max",
+                min: brasaMin,
+                max: brasaMax,
+                onMinChange: (value: string) => {
+                  setBrasaMin(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setFaiscaMax(formatKgInput(parsed - 1));
+                },
+                onMaxChange: (value: string) => {
+                  setBrasaMax(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setLabaredaMin(formatKgInput(parsed + 1));
+                },
+                showMax: true,
+              },
+              {
+                title: "Labareda (fase 4)",
+                minId: "phase-labareda-min",
+                maxId: "phase-labareda-max",
+                min: labaredaMin,
+                max: labaredaMax,
+                onMinChange: (value: string) => {
+                  setLabaredaMin(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setBrasaMax(formatKgInput(parsed - 1));
+                },
+                onMaxChange: (value: string) => {
+                  setLabaredaMax(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setFogoCosmicoMin(formatKgInput(parsed + 1));
+                },
+                showMax: true,
+              },
+              {
+                title: "Fogo Cósmico (fase 5)",
+                minId: "phase-fogo-cosmico-min",
+                maxId: "phase-fogo-cosmico-max",
+                min: fogoCosmicoMin,
+                max: "",
+                onMinChange: (value: string) => {
+                  setFogoCosmicoMin(value);
+                  const parsed = parseKgInput(value);
+                  if (Number.isFinite(parsed)) setLabaredaMax(formatKgInput(parsed - 1));
+                },
+                onMaxChange: () => undefined,
+                showMax: false,
+              },
+            ].map((tier) => (
+              <div
+                key={tier.title}
+                className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-4"
+              >
+                <p className="text-sm font-medium text-zinc-100">{tier.title}</p>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor={tier.minId} className={FORJA_LABEL}>
+                      Mínimo (kg)
+                    </label>
+                    <input
+                      id={tier.minId}
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="numeric"
+                      value={tier.min}
+                      onChange={(event) => tier.onMinChange(event.target.value)}
+                      className={FORJA_INPUT}
+                      disabled={busy}
+                    />
+                  </div>
+                  {tier.showMax ? (
+                    <div>
+                      <label htmlFor={tier.maxId} className={FORJA_LABEL}>
+                        Máximo (kg)
+                      </label>
+                      <input
+                        id={tier.maxId}
+                        type="number"
+                        min={1}
+                        step={1}
+                        inputMode="numeric"
+                        value={tier.max}
+                        onChange={(event) => tier.onMaxChange(event.target.value)}
+                        className={FORJA_INPUT}
+                        disabled={busy}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-end">
+                      <p className={`${FORJA_META} pb-2 text-zinc-500`}>
+                        Sem limite superior; a partir do mínimo, o cliente permanece na fase máxima.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              className={FORJA_PRIMARY_BUTTON}
+              disabled={busy}
+              onClick={() => void handleSaveThresholds()}
+            >
+              Salvar limiares de fase
+            </button>
           </div>
         ) : null}
 
@@ -244,7 +415,7 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
               <tr className="border-b border-zinc-800/80 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 <th className="px-2 py-2">Fase</th>
                 <th className="px-2 py-2">Nome</th>
-                <th className="px-2 py-2">Volume</th>
+                <th className="px-2 py-2">Volume (30 dias)</th>
               </tr>
             </thead>
             <tbody>
@@ -261,7 +432,10 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
       </section>
 
       {feedback ? (
-        <p className={feedback.kind === "ok" ? FORJA_FEEDBACK_OK : FORJA_FEEDBACK_ERROR} role={feedback.kind === "error" ? "alert" : "status"}>
+        <p
+          className={feedback.kind === "ok" ? FORJA_FEEDBACK_OK : FORJA_FEEDBACK_ERROR}
+          role={feedback.kind === "error" ? "alert" : "status"}
+        >
           {feedback.message}
         </p>
       ) : null}

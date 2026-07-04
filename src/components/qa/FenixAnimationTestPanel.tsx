@@ -70,6 +70,11 @@ export function isFenixQaLabEnabled(): boolean {
   return readQaModeEnabled();
 }
 
+function resolveThermalQaSummary(): string | null {
+  const override = readThermalGravityQaOverride();
+  return override ? describeThermalGravityQaState(override) : null;
+}
+
 type FenixAnimationTestPanelProps = {
   userId: string;
   profileName?: string | null;
@@ -81,22 +86,16 @@ export function FenixAnimationTestPanel({
   profileName,
   profilePhotoUrl,
 }: FenixAnimationTestPanelProps) {
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState(readQaModeEnabled);
   const [showRestorationPreview, setShowRestorationPreview] = useState(false);
   const [avatarPreviewTier, setAvatarPreviewTier] = useState<4 | 3>(4);
-  const [thermalQaSummary, setThermalQaSummary] = useState<string | null>(null);
+  const [thermalQaSummary, setThermalQaSummary] = useState<string | null>(resolveThermalQaSummary);
   const [inactivityQaSummary, setInactivityQaSummary] = useState<string | null>(null);
 
   useEffect(() => {
-    setEnabled(readQaModeEnabled());
-  }, []);
-
-  useEffect(() => {
     const refreshThermal = () => {
-      const override = readThermalGravityQaOverride();
-      setThermalQaSummary(override ? describeThermalGravityQaState(override) : null);
+      setThermalQaSummary(resolveThermalQaSummary());
     };
-    refreshThermal();
     window.addEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, refreshThermal);
     return () => window.removeEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, refreshThermal);
   }, []);

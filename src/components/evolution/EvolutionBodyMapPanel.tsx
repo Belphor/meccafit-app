@@ -67,9 +67,9 @@ export function EvolutionBodyMapPanel({
           <div className="min-w-0 flex-1">
             <h3 className={DASHBOARD_SECTION_TITLE}>Mapa de calor muscular</h3>
             <p className={EVOLUTION_SECTION_SUBTITLE}>
-              Onde você mais carregou nos últimos 14 dias. As cores seguem o{" "}
-              <LoreEm>Ritmo da Fênix</LoreEm>
-              {ritmoBaixo ? ". Abaixo de 50%, o mapa fica mais suave." : "."}
+              Onde você mais carregou nos últimos 14 dias. As cores nascem das{" "}
+              <LoreEm>Brasas Musculares</LoreEm> e respeitam o <LoreEm>Ritmo da Fênix</LoreEm>
+              {ritmoBaixo ? "; abaixo de 50%, o mapa fica mais suave." : "."}
             </p>
           </div>
           {hasMapData ? (
@@ -79,14 +79,15 @@ export function EvolutionBodyMapPanel({
               onClick={onRefresh}
               className={`${EVOLUTION_ACTION_BUTTON} shrink-0 self-start`}
             >
-              {refreshing ? "Sincronizando…" : "Atualizar mapa"}
+              {refreshing ? "Sincronizando..." : "Atualizar mapa"}
             </button>
           ) : null}
         </div>
         <DashboardClientInfoBlock className="mt-3">
           <LoreEm>Brasas Musculares</LoreEm> somam o <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> por grupo
-          muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume
-          acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.
+          muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado.
+          Quando o <LoreEm>Ritmo da Fênix</LoreEm> cai abaixo de 50% após o acolhimento, a Fênix preserva
+          os dados, mas suaviza as cores para mostrar que a consistência precisa reacender.
         </DashboardClientInfoBlock>
       </header>
 
@@ -102,7 +103,7 @@ export function EvolutionBodyMapPanel({
               onClick={onRefresh}
               className={`${EVOLUTION_ACTION_BUTTON} mt-4`}
             >
-              {refreshing ? "Sincronizando…" : "Sincronizar evolução"}
+              {refreshing ? "Sincronizando..." : "Sincronizar evolução"}
             </button>
           </div>
         ) : (

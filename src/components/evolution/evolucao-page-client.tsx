@@ -80,6 +80,19 @@ async function fetchCalorPayload(expectedUserId: string): Promise<EvolutionCalor
   return fetchMuscularEvolutionPayload();
 }
 
+function resolvePerformanceModePreference(): boolean {
+  const reduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lowMemory =
+    typeof navigator !== "undefined" &&
+    "deviceMemory" in navigator &&
+    (navigator as Navigator & { deviceMemory?: number }).deviceMemory !== undefined &&
+    ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 4;
+
+  return reduced || lowMemory;
+}
+
 export function EvolucaoPageClient({
   userId,
   initialPayload,
@@ -89,7 +102,6 @@ export function EvolucaoPageClient({
   profileName,
   profilePhotoUrl,
   variant = "page",
-  hasPersonalBond = false,
   conqueredPhaseTier,
   thermalSettlement = null,
   phaseSetupAt = null,
@@ -119,7 +131,7 @@ export function EvolucaoPageClient({
   const [nivelTermicoGlobal, setNivelTermicoGlobal] = useState<MuscleCalorLevel | null>(null);
   const [loading, setLoading] = useState(!resolvedInitial);
   const [activeMuscle, setActiveMuscle] = useState<SovereignMuscleId>("PEITO");
-  const [performanceMode, setPerformanceMode] = useState(false);
+  const [performanceMode] = useState(resolvePerformanceModePreference);
   const [showSelfie, setShowSelfie] = useState(false);
   const [espelhoExpanded, setEspelhoExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -154,7 +166,7 @@ export function EvolucaoPageClient({
       ...thermalState,
       settled_month_label: thermalSettlement.settled_month_label,
     };
-  }, [thermalSettlement?.settled_month_label, thermalState]);
+  }, [thermalSettlement, thermalState]);
 
   const monthBoundaryDegraded =
     qaMonthBoundaryDegraded || thermalSettlement?.degraded === true;
@@ -162,29 +174,11 @@ export function EvolucaoPageClient({
   const displayPhaseTier =
     simulatedPhaseTier ?? conqueredPhaseTier ?? phaseTier;
 
-  useEffect(() => {
-    if (conqueredPhaseTier != null) {
-      setPhaseTier(conqueredPhaseTier);
-    }
-  }, [conqueredPhaseTier]);
-
   const niveisTermicos = useMemo(() => calorRowsToNiveisTermicos(calorRows), [calorRows]);
   const congelamentoPorMembro = useMemo(
     () => calorRowsToCongelamento(calorRows),
     [calorRows],
   );
-
-  useEffect(() => {
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lowMemory =
-      typeof navigator !== "undefined" &&
-      "deviceMemory" in navigator &&
-      (navigator as Navigator & { deviceMemory?: number }).deviceMemory !== undefined &&
-      ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) < 4;
-    setPerformanceMode(reduced || lowMemory);
-  }, []);
 
   const applyPayload = useCallback((payload: EvolutionCalorPayload) => {
     setCalorRows(payload.calorRows);
@@ -222,11 +216,6 @@ export function EvolucaoPageClient({
   }, [applyPayload, userId]);
 
   useEffect(() => {
-    if (resolvedInitial) {
-      applyPayload(resolvedInitial);
-      setLoading(false);
-    }
-
     let cancelled = false;
 
     void (async () => {

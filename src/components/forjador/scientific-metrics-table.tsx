@@ -120,7 +120,12 @@ export function ScientificMetricsTable({
       <header className="border-b border-zinc-800/80 pb-4">
         <p className={FORJA_SECTION_CHIP}>Medidas corporais</p>
         <h2 className={FORJA_SECTION_TITLE}>{athlete.displayName}</h2>
-        <p className={`${FORJA_META} mt-1`}>{FORJA_COPY.medidas.description}</p>
+        <p className={`${FORJA_META} mt-1`}>
+          Registre <strong className="font-medium text-zinc-300">peso</strong>,{" "}
+          <strong className="font-medium text-zinc-300">dobras</strong> e{" "}
+          <strong className="font-medium text-zinc-300">composição</strong> do cliente VIP; guarde
+          no aparelho e publique quando estiver pronto.
+        </p>
       </header>
 
       <form onSubmit={(event) => void handleSubmit(event)} className="mt-5 space-y-4">
@@ -194,7 +199,7 @@ export function ScientificMetricsTable({
             disabled={saving}
             className={`${FORJA_PRIMARY_BUTTON} ${TOUCH_BUTTON} w-full sm:w-auto`}
           >
-            {saving ? "A guardar…" : "Registar medição"}
+            {saving ? FORJA_COPY.medidas.savingEntry : FORJA_COPY.medidas.saveEntry}
           </button>
           <button
             type="button"
@@ -202,7 +207,7 @@ export function ScientificMetricsTable({
             onClick={() => void onSyncLatest()}
             className={`${FORJA_GHOST_BUTTON} ${TOUCH_BUTTON} w-full sm:w-auto`}
           >
-            {syncing ? "A publicar…" : FORJA_COPY.medidas.publish}
+            {syncing ? FORJA_COPY.medidas.syncingEntry : FORJA_COPY.medidas.publish}
           </button>
         </div>
       </form>
@@ -228,7 +233,7 @@ export function ScientificMetricsTable({
             {sortedEntries.length === 0 ? (
               <tr>
                 <td colSpan={totalColumns} className="px-3 py-8 text-center text-zinc-500">
-                  Sem registos. Adicione a primeira medição acima.
+                  {FORJA_COPY.medidas.emptyHistory}
                 </td>
               </tr>
             ) : (

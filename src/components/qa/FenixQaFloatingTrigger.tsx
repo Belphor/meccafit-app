@@ -8,10 +8,9 @@ type FenixQaFloatingTriggerProps = {
 };
 
 export function FenixQaFloatingTrigger({ tab }: FenixQaFloatingTriggerProps) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(isFenixQaLabEnabled);
 
   useEffect(() => {
-    setVisible(isFenixQaLabEnabled());
     const onStorage = () => setVisible(isFenixQaLabEnabled());
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);

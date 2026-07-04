@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ForjaAthleteCard } from "@/app/dashboard/forja/ForjaAthleteCard";
 import {
   FORJA_EMPTY_STATE,
@@ -44,21 +44,69 @@ function AthleteSection({
   selectedClientId,
   onSelect,
   vipHighlight = false,
+  forceOpen = false,
 }: {
   label: string;
   athletes: ForjaBondedAthlete[];
   selectedClientId: string | null;
   onSelect: (clientId: string) => void;
   vipHighlight?: boolean;
+  forceOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(forceOpen);
+
+  useEffect(() => {
+    if (!forceOpen) return;
+
+    const timer = window.setTimeout(() => setOpen(true), 0);
+    return () => window.clearTimeout(timer);
+  }, [forceOpen]);
+
   if (athletes.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <p className="sticky top-0 z-[1] bg-black/90 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
-        {label}
-        <span className="ml-2 tabular-nums text-zinc-700">{athletes.length}</span>
-      </p>
+    <details
+      className="group rounded-xl border border-zinc-900/80 bg-zinc-950/20"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="cursor-pointer list-none px-3 py-2.5 marker:content-none [&::-webkit-details-marker]:hidden">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {label}
+          <span className="ml-2 tabular-nums text-zinc-600">{athletes.length}</span>
+          <span className="ml-2 font-normal normal-case tracking-normal text-zinc-600 group-open:hidden">
+            · toque para expandir
+          </span>
+        </p>
+      </summary>
+      <div className="space-y-2 border-t border-zinc-900/60 px-2 pb-2 pt-2">
+        {athletes.map((athlete) => (
+          <ForjaAthleteCard
+            key={athlete.bondId}
+            athlete={athlete}
+            isSelected={selectedClientId === athlete.clientId}
+            onSelect={onSelect}
+            vipHighlight={vipHighlight}
+          />
+        ))}
+      </div>
+    </details>
+  );
+}
+
+function AthleteCardList({
+  athletes,
+  selectedClientId,
+  onSelect,
+  vipHighlight = false,
+}: {
+  athletes: ForjaBondedAthlete[];
+  selectedClientId: string | null;
+  onSelect: (clientId: string) => void;
+  vipHighlight?: boolean;
+}) {
+  return (
+    <>
       {athletes.map((athlete) => (
         <ForjaAthleteCard
           key={athlete.bondId}
@@ -68,7 +116,7 @@ function AthleteSection({
           vipHighlight={vipHighlight}
         />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -82,7 +130,9 @@ export function ForjaAthleteSidebar({
   searchable = true,
 }: ForjaAthleteSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [listOpen, setListOpen] = useState(false);
   const normalizedQuery = normalizeSearch(searchQuery);
+  const hasSearch = normalizedQuery.length > 0;
 
   const filteredAthletes = useMemo(
     () => athletes.filter((athlete) => matchesAthleteSearch(athlete, normalizedQuery)),
@@ -91,6 +141,13 @@ export function ForjaAthleteSidebar({
 
   const lists = splitAthletesByVipBond(filteredAthletes);
   const visible = vipOnly ? lists.vip : lists.all;
+
+  useEffect(() => {
+    if (!hasSearch || visible.length === 0) return;
+
+    const timer = window.setTimeout(() => setListOpen(true), 0);
+    return () => window.clearTimeout(timer);
+  }, [hasSearch, visible.length]);
 
   if (athletes.length === 0) {
     return (
@@ -114,8 +171,30 @@ export function ForjaAthleteSidebar({
         className={FORJA_INPUT}
         autoComplete="off"
       />
+      <p className={`${FORJA_META} mt-1.5 text-zinc-600`}>{FORJA_COPY.monitor.sidebarSearchHint}</p>
     </div>
   ) : null;
+
+  const wrapCollapsibleList = (content: ReactNode, count: number) => (
+    <details
+      className="group rounded-xl border border-zinc-900/80 bg-zinc-950/20"
+      open={listOpen}
+      onToggle={(event) => setListOpen(event.currentTarget.open)}
+    >
+      <summary className="cursor-pointer list-none px-3 py-2.5 marker:content-none [&::-webkit-details-marker]:hidden">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          {FORJA_COPY.monitor.sidebarListLabel}
+          <span className="ml-2 tabular-nums text-zinc-600">{count}</span>
+          <span className="ml-2 font-normal normal-case tracking-normal text-zinc-600 group-open:hidden">
+            · toque para expandir
+          </span>
+        </p>
+      </summary>
+      <div className={`${FORJA_SIDEBAR_SCROLL} border-t border-zinc-900/60 px-2 pb-2 pt-2`}>
+        {content}
+      </div>
+    </details>
+  );
 
   if (visible.length === 0) {
     return (
@@ -132,17 +211,15 @@ export function ForjaAthleteSidebar({
     return (
       <>
         {searchInput}
-        <div className={FORJA_SIDEBAR_SCROLL}>
-          {visible.map((athlete) => (
-            <ForjaAthleteCard
-              key={athlete.bondId}
-              athlete={athlete}
-              isSelected={selectedClientId === athlete.clientId}
-              onSelect={onSelect}
-              vipHighlight={vipOnly}
-            />
-          ))}
-        </div>
+        {wrapCollapsibleList(
+          <AthleteCardList
+            athletes={visible}
+            selectedClientId={selectedClientId}
+            onSelect={onSelect}
+            vipHighlight={vipOnly}
+          />,
+          visible.length,
+        )}
       </>
     );
   }
@@ -150,19 +227,21 @@ export function ForjaAthleteSidebar({
   return (
     <>
       {searchInput}
-      <div className={`${FORJA_SIDEBAR_SCROLL} space-y-4`}>
+      <div className="space-y-4">
         <AthleteSection
           label="Clientes VIP"
           athletes={lists.vip}
           selectedClientId={selectedClientId}
           onSelect={onSelect}
           vipHighlight
+          forceOpen={hasSearch && lists.vip.length > 0}
         />
         <AthleteSection
           label="Clientes comuns"
           athletes={lists.comum}
           selectedClientId={selectedClientId}
           onSelect={onSelect}
+          forceOpen={hasSearch && lists.comum.length > 0}
         />
         {lists.vip.length === 0 && lists.comum.length === 0 ? (
           <div className={FORJA_EMPTY_STATE}>

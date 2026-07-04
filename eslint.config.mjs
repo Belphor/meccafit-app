@@ -13,6 +13,19 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "error",
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    rules: {
+      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "no-unused-expressions": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

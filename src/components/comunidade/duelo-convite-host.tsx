@@ -38,7 +38,10 @@ export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps)
   }, []);
 
   useEffect(() => {
-    void loadConvite();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void loadConvite();
+    });
 
     const interval = window.setInterval(() => {
       void loadConvite();
@@ -52,6 +55,7 @@ export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps)
     document.addEventListener("visibilitychange", onFocus);
 
     return () => {
+      cancelled = true;
       window.clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);

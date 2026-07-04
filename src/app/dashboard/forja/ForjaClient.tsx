@@ -5,7 +5,6 @@ import { useCallback, useMemo, useState } from "react";
 import { ForjaAthleteSidebar } from "@/components/forjador/forja-athlete-sidebar";
 import { ForjaCommandPanel } from "@/app/dashboard/forja/ForjaCommandPanel";
 import { ForjaSignOutButton } from "@/app/dashboard/forja/ForjaSignOutButton";
-import { ExcelDropzone } from "@/components/forjador/excel-dropzone";
 import { TreinoPrescriptionExcelDropzone } from "@/components/forjador/treino-prescription-excel-dropzone";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
@@ -66,8 +65,6 @@ export function ForjaClient({ payload }: ForjaClientProps) {
     () => (selectedClientId ? (athleteById.get(selectedClientId) ?? null) : null),
     [athleteById, selectedClientId],
   );
-
-  const activeTabMeta = FORJA_WORKSPACE_TABS.find((tab) => tab.id === activeTab) ?? FORJA_WORKSPACE_TABS[0];
 
   const handleSelectAthlete = useCallback((clientId: string) => {
     setSelectedClientId(clientId);
@@ -155,11 +152,19 @@ export function ForjaClient({ payload }: ForjaClientProps) {
                   </button>
                 ))}
               </div>
-              {activeTabMeta ? (
-                <p className={`${FORJA_META} max-w-md text-left sm:text-right`}>
-                  {activeTabMeta.description}
-                </p>
-              ) : null}
+              <p className={`${FORJA_META} max-w-md text-left sm:text-right`}>
+                {activeTab === "comando" ? (
+                  <>
+                    Escolha o <strong className="font-medium text-zinc-300">dia da planilha</strong>
+                    {" "}(1 a 6), marque os grupos musculares e monte cada exercício.
+                  </>
+                ) : (
+                  <>
+                    Envie dias, grupos e exercícios numa só planilha. O treino anterior é{" "}
+                    <strong className="font-medium text-zinc-300">substituído por completo</strong>.
+                  </>
+                )}
+              </p>
             </nav>
 
             {activeTab === "comando" ? (
@@ -170,17 +175,6 @@ export function ForjaClient({ payload }: ForjaClientProps) {
             ) : null}
 
             {activeTab === "planilha" ? (
-              selectedAthlete ? (
-                <ExcelDropzone
-                  atletaId={selectedAthlete.clientId}
-                  atletaName={selectedAthlete.displayName}
-                />
-              ) : (
-                <ForjaEmptyWorkspace message={FORJA_COPY.selectAthlete} />
-              )
-            ) : null}
-
-            {activeTab === "planilha_treino" ? (
               selectedAthlete ? (
                 <TreinoPrescriptionExcelDropzone athlete={selectedAthlete} />
               ) : (

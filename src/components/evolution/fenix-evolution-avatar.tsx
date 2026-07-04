@@ -92,8 +92,18 @@ export function FenixEvolutionAvatar({
   }, [profilePhotoUrl, userId]);
 
   useEffect(() => {
-    void refreshPhoto();
-  }, [refreshPhoto]);
+    let cancelled = false;
+
+    void getLocalAvatarPath(userId).then((localPath) => {
+      if (!cancelled) {
+        setPhotoSrc(localPath ?? profilePhotoUrl ?? null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profilePhotoUrl, userId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -109,20 +119,14 @@ export function FenixEvolutionAvatar({
   }, [refreshPhoto, userId]);
 
   useEffect(() => {
-    if (tierLevelUpActive) {
-      setTierUpActive(true);
-      const timer = window.setTimeout(() => setTierUpActive(false), TIER_UP_DURATION_MS);
-      return () => window.clearTimeout(timer);
-    }
-    return undefined;
-  }, [tierLevelUpActive]);
-
-  useEffect(() => {
     if (prevTierRef.current !== null && tier > prevTierRef.current) {
-      setTierUpActive(true);
-      const timer = window.setTimeout(() => setTierUpActive(false), TIER_UP_DURATION_MS);
+      const startTimer = window.setTimeout(() => setTierUpActive(true), 0);
+      const endTimer = window.setTimeout(() => setTierUpActive(false), TIER_UP_DURATION_MS);
       prevTierRef.current = tier;
-      return () => window.clearTimeout(timer);
+      return () => {
+        window.clearTimeout(startTimer);
+        window.clearTimeout(endTimer);
+      };
     }
     prevTierRef.current = tier;
     return undefined;
@@ -154,9 +158,12 @@ export function FenixEvolutionAvatar({
     if (fingerprintRef.current === fingerprint) return;
 
     fingerprintRef.current = fingerprint;
-    setFlashActive(true);
-    const timer = window.setTimeout(() => setFlashActive(false), FLASH_DURATION_MS);
-    return () => window.clearTimeout(timer);
+    const startTimer = window.setTimeout(() => setFlashActive(true), 0);
+    const endTimer = window.setTimeout(() => setFlashActive(false), FLASH_DURATION_MS);
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearTimeout(endTimer);
+    };
   }, [calorRows, indiceIgnicao, tier, vtc30dKg]);
 
   const ringAnimation = tierUpActive || tierLevelUpActive ? TIER_UP_ANIMATION : flashActive ? FLASH_ANIMATION : "";
