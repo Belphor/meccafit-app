@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 type NextRouteHandler = (request: Request) => Promise<Response> | Response;
 
-async function readRequestBody(request: IncomingMessage): Promise<Uint8Array | undefined> {
+async function readRequestBody(request: IncomingMessage): Promise<ArrayBuffer | undefined> {
   const chunks: Buffer[] = [];
 
   for await (const chunk of request) {
@@ -10,7 +10,9 @@ async function readRequestBody(request: IncomingMessage): Promise<Uint8Array | u
   }
 
   if (chunks.length === 0) return undefined;
-  return new Uint8Array(Buffer.concat(chunks));
+
+  const body = Buffer.concat(chunks);
+  return body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer;
 }
 
 function buildHeaders(request: IncomingMessage): Headers {
