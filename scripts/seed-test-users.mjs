@@ -7,6 +7,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { seedPlanilhasForAllClientes } from "./lib/planilhas-seed.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -261,6 +262,14 @@ try {
   const registryPath = resolve(process.cwd(), "scripts/argos/test-users.json");
   writeFileSync(registryPath, JSON.stringify({ generatedAt: new Date().toISOString(), users: registry }, null, 2));
   console.log(`\nRegistro ARGOS salvo: scripts/argos/test-users.json`);
+
+  try {
+    const planilhasSeeded = await seedPlanilhasForAllClientes(admin);
+    console.log(`planilhas_forjador seed: ${planilhasSeeded} linha(s) inserida(s)`);
+  } catch (planilhasError) {
+    console.warn("planilhas_forjador seed:", planilhasError.message ?? planilhasError);
+  }
+
   console.log("seed-test-users: concluído.");
 } catch (error) {
   console.error("\nseed-test-users FALHOU:", error.message ?? error);

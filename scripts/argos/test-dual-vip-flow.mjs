@@ -20,6 +20,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import {
+  DEFAULT_APP_URL,
+  ensureAppServer,
+  stopManagedAppServer,
+} from "../lib/argos-app-server.mjs";
 
 const SEED_PASSWORD = "senha123";
 
@@ -50,10 +55,12 @@ const RX_PRESETS = {
 };
 
 function parseArgs(argv) {
-  const args = { appUrl: "", skipSetup: false };
+  const args = { appUrl: DEFAULT_APP_URL, skipSetup: false, skipAppBoot: false };
   for (let i = 2; i < argv.length; i += 1) {
     if (argv[i] === "--app-url") args.appUrl = argv[i + 1] ?? args.appUrl;
     if (argv[i] === "--skip-setup") args.skipSetup = true;
+    if (argv[i] === "--skip-app-boot") args.skipAppBoot = true;
+    if (argv[i] === "--no-app-url") args.appUrl = "";
   }
   return args;
 }
@@ -107,7 +114,7 @@ function isAccessDeniedError(error) {
   );
 }
 
-const { appUrl, skipSetup } = parseArgs(process.argv);
+const { appUrl, skipSetup, skipAppBoot } = parseArgs(process.argv);
 const env = loadEnv();
 const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim()?.replace(/\/$/, "");
 const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
@@ -280,6 +287,20 @@ async function assertDietIsolation(client, label, foreignClientId, hasDietTable)
 }
 
 console.log("\n=== ARGOS Dual VIP Flow · Forjador Mestre ===\n");
+
+if (appUrl && !skipAppBoot) {
+  try {
+    const server = await ensureAppServer(appUrl);
+    if (server.started) {
+      console.log(`ARGOS dual-vip: Next.js iniciado em ${server.appUrl}\n`);
+    }
+  } catch (error) {
+    console.error(
+      `ARGOS dual-vip: app indisponível — ${error instanceof Error ? error.message : error}`,
+    );
+    process.exit(2);
+  }
+}
 
 const service = createServiceClient();
 const probeClient = service ?? createBrowserClient();
@@ -602,32 +623,32 @@ await record("Etapa 4 · Cliente 2 · INSERT via comum bloqueado", async () => {
 await assertDietIsolation(cliente2.client, "Etapa 4 · Cliente 2", cliente1.userId, hasDietTable);
 await assertBffHasPersonalBond(cliente2, "Etapa 4 · Cliente 2");
 
-if (!appUrl) {
-  console.log("\n(dica: --app-url http://127.0.0.1:3000 para validar BFF hasPersonalBond)\n");
-}
-
 // =============================================================================
 // Cleanup · probes ARGOS removidos (bonds opcionalmente revertidos)
 // =============================================================================
 
-if (service) {
-  if (createdRxIds.length > 0) {
-    await service.from("historico_treinos_personais").delete().in("id", createdRxIds);
-  } else {
+try {
+  if (service) {
+    if (createdRxIds.length > 0) {
+      await service.from("historico_treinos_personais").delete().in("id", createdRxIds);
+    } else {
+      await service
+        .from("historico_treinos_personais")
+        .delete()
+        .like("exercicio_id", `${PROBE_PREFIX}%`);
+    }
+
     await service
-      .from("historico_treinos_personais")
+      .from("historico_treinos_comuns")
       .delete()
       .like("exercicio_id", `${PROBE_PREFIX}%`);
-  }
 
-  await service
-    .from("historico_treinos_comuns")
-    .delete()
-    .like("exercicio_id", `${PROBE_PREFIX}%`);
-
-  if (createdBondIds.length > 0 && !skipSetup) {
-    await service.from("forger_client_bonds").delete().in("id", createdBondIds);
+    if (createdBondIds.length > 0 && !skipSetup) {
+      await service.from("forger_client_bonds").delete().in("id", createdBondIds);
+    }
   }
+} finally {
+  await stopManagedAppServer();
 }
 
 console.log(`\nARGOS Dual VIP: ${passed} pass · ${failed} fail · ${skipped} skip`);

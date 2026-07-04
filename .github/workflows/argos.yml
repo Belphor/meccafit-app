@@ -120,6 +120,9 @@ jobs:
             echo "Ou aplique manualmente: supabase/migrations/20260704120000_fix_mural_comunidade_anon_revoke.sql"
           fi
 
+      - name: Ensure ARGOS test users and planilhas seed
+        run: npm run seed:test-users
+
       - name: Run ARGOS test suite
         run: npm run argos:test
 

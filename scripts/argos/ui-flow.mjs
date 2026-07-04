@@ -5,6 +5,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import {
+  DEFAULT_APP_URL,
+  ensureAppServer,
+  stopManagedAppServer,
+} from "../lib/argos-app-server.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -26,7 +31,8 @@ const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 const forgeKey = env.FORGE_KEY?.trim() ?? "";
 const appUrl = process.argv.includes("--app-url")
   ? process.argv[process.argv.indexOf("--app-url") + 1]
-  : "http://127.0.0.1:3000";
+  : DEFAULT_APP_URL;
+const skipAppBoot = process.argv.includes("--skip-app-boot") || process.env.ARGOS_SKIP_APP_BOOT === "1";
 
 if (!baseUrl || !anonKey) {
   console.error("ARGOS ui-flow: env ausente");
@@ -261,6 +267,17 @@ function isRouteStatusOk(route, status) {
   return status === 200 || status === 307 || status === 308;
 }
 
+if (!skipAppBoot) {
+  try {
+    const server = await ensureAppServer(appUrl);
+    if (server.started) {
+      console.log(`ARGOS ui-flow: Next.js iniciado em ${server.appUrl}\n`);
+    }
+  } catch (err) {
+    fail("app:server:boot", err instanceof Error ? err.message : String(err));
+  }
+}
+
 for (const route of ["/", "/dashboard", "/dashboard?subgrupo=geral", "/dashboard?tab=comunidade"]) {
   try {
     const res = await fetch(`${appUrl}${route}`, { redirect: "manual" });
@@ -271,6 +288,8 @@ for (const route of ["/", "/dashboard", "/dashboard?subgrupo=geral", "/dashboard
     fail(`route:${route}`, err.message);
   }
 }
+
+await stopManagedAppServer();
 
 // 11. Anon bloqueado no dashboard data
 {

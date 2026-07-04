@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnvLocal, requireEnv } from "./lib/env.mjs";
+import { seedPlanilhasForAllClientes } from "./lib/planilhas-seed.mjs";
 
 const env = loadEnvLocal();
 requireEnv(env, ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
@@ -212,6 +213,13 @@ async function main() {
     console.warn("matriz_forca:", matrizError.message);
   }
 
+  let planilhasSeeded = 0;
+  try {
+    planilhasSeeded = await seedPlanilhasForAllClientes(client);
+  } catch (seedError) {
+    console.warn("planilhas_forjador seed:", seedError.message);
+  }
+
   console.log("reset-full: OK");
   console.log(`  comunidade.modo: ${comunidade.modo ?? "?"}`);
   console.log(`  comunidade.duelos_removidos: ${comunidade.duelos_removidos ?? "?"}`);
@@ -224,6 +232,7 @@ async function main() {
   for (const [table, count] of Object.entries(sideCounts)) {
     console.log(`  ${table} removidos: ${count}`);
   }
+  console.log(`  planilhas_forjador re-seed: ${planilhasSeeded} linha(s)`);
   console.log("");
   console.log("No navegador (F12 → Console):");
   console.log(

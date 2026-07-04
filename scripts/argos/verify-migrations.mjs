@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
+import { seedPlanilhasForAllClientes, seedPlanilhasForAtleta } from "../lib/planilhas-seed.mjs";
 
 export const SOVEREIGN_JSON_KEYS = [
   "peito",
@@ -233,12 +234,12 @@ async function signInClientePrincipal(client) {
   let lastErr = null;
 
   for (let attempt = 1; attempt <= LOGIN_PROBE_RETRIES; attempt += 1) {
-    const { error } = await client.auth.signInWithPassword({
+    const { data, error } = await client.auth.signInWithPassword({
       email,
       password: SEED_PASSWORD,
     });
     if (!error) {
-      return { email, error: null };
+      return { email, userId: data.user?.id ?? null, error: null };
     }
     lastErr = error;
     if (attempt < LOGIN_PROBE_RETRIES) {
@@ -246,7 +247,32 @@ async function signInClientePrincipal(client) {
     }
   }
 
-  return { email, error: lastErr };
+  return { email, userId: null, error: lastErr };
+}
+
+/** UUID vivo de cliente@meccafit.com — auth.uid() é a fonte de verdade (não test-users.json). */
+async function resolveClientePrincipalUserId(admin, fallbackUserId) {
+  const registry = loadTestUsers();
+  const email = registry.cliente_principal?.email ?? "cliente@meccafit.com";
+
+  const client = createAnonClient();
+  if (client) {
+    const login = await signInClientePrincipal(client);
+    if (!login.error && login.userId) {
+      await client.auth.signOut();
+      return login.userId;
+    }
+  }
+
+  const { data: listed, error: listErr } = await admin.auth.admin.listUsers({ perPage: 200 });
+  if (!listErr && listed?.users) {
+    const match = listed.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (match?.id) {
+      return match.id;
+    }
+  }
+
+  return registry.cliente_principal?.userId ?? fallbackUserId ?? null;
 }
 
 function assertMidasEvolutionJson(payload) {
@@ -1158,18 +1184,47 @@ async function probeComunidadeSnapshotAuth(client) {
 }
 
 async function probePlanilhasForjador(admin, userId) {
-  const { data, error } = await admin
-    .from("planilhas_forjador")
-    .select("dia_semana, grupo_muscular")
-    .eq("atleta_id", userId);
+  const atletaId = await resolveClientePrincipalUserId(admin, userId);
 
-  if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+  const { error: tableErr } = await admin.from("planilhas_forjador").select("id").limit(1);
+  if (tableErr?.code === "42P01" || tableErr?.message?.includes("does not exist")) {
     return {
       id: "planilhas_forjador",
       ok: false,
       detail: "tabela planilhas_forjador ausente",
     };
   }
+
+  if (tableErr) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: tableErr.message,
+    };
+  }
+
+  if (!atletaId) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: "cliente@meccafit.com ausente — rode node scripts/seed-test-users.mjs",
+    };
+  }
+
+  try {
+    await seedPlanilhasForAtleta(admin, atletaId);
+  } catch (seedErr) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: `seed probe falhou (${atletaId}): ${seedErr instanceof Error ? seedErr.message : String(seedErr)}`,
+    };
+  }
+
+  let { data, error } = await admin
+    .from("planilhas_forjador")
+    .select("dia_semana, grupo_muscular")
+    .eq("atleta_id", atletaId);
 
   if (error) {
     return {
@@ -1179,7 +1234,35 @@ async function probePlanilhasForjador(admin, userId) {
     };
   }
 
-  const rows = data ?? [];
+  let rows = data ?? [];
+
+  if (rows.length === 0) {
+    try {
+      await seedPlanilhasForAllClientes(admin);
+    } catch (seedErr) {
+      return {
+        id: "planilhas_forjador",
+        ok: false,
+        detail: `seed fallback falhou: ${seedErr instanceof Error ? seedErr.message : String(seedErr)}`,
+      };
+    }
+
+    ({ data, error } = await admin
+      .from("planilhas_forjador")
+      .select("dia_semana, grupo_muscular")
+      .eq("atleta_id", atletaId));
+
+    if (error) {
+      return {
+        id: "planilhas_forjador",
+        ok: false,
+        detail: error.message,
+      };
+    }
+
+    rows = data ?? [];
+  }
+
   const hasSixDays = [1, 2, 3, 4, 5, 6].every((day) =>
     rows.some((row) => Number(row.dia_semana) === day),
   );
@@ -1191,7 +1274,7 @@ async function probePlanilhasForjador(admin, userId) {
       ? hasSixDays
         ? "grade Seg–Sáb ok"
         : `${rows.length} dia(s) · seed parcial`
-      : "sem linhas para atleta probe",
+      : `sem linhas para atleta probe (${atletaId})`,
   };
 }
 
