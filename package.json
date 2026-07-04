@@ -25,6 +25,7 @@
     "argos:unit": "node scripts/argos/unit-smoke.mjs",
     "argos:sql": "node scripts/argos/sql-verify.mjs",
     "argos:migrations": "node scripts/argos/verify-migrations.mjs",
+    "argos:seed-planilhas": "node scripts/argos/seed-planilhas-ci.mjs",
     "argos:apply-migrations": "node scripts/apply-pending-migrations.mjs",
     "argos:adversarial": "node scripts/argos/adversarial.mjs",
     "argos:two-way": "node scripts/argos/test-two-way-architecture.mjs",

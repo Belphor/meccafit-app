@@ -65,4 +65,10 @@ if (map.get("INVITE_DEV_BYPASS")?.trim() === "true") {
   process.exit(1);
 }
 
+if (process.env.CI === "true" && !map.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()) {
+  console.error("\nvalidate-env-local: SUPABASE_SERVICE_ROLE_KEY ausente no CI.");
+  console.error("Inclua a service role no ENV_LOCAL_B64 ou crie o secret SUPABASE_SERVICE_ROLE_KEY.");
+  process.exit(1);
+}
+
 console.log(`\nvalidate-env-local: OK (${map.size} chaves, URL via ${urlHit.key}, chave via ${keyHit.key})`);

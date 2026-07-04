@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
-import { seedPlanilhasForAllClientes, seedPlanilhasForAtleta } from "../lib/planilhas-seed.mjs";
+import { ensurePlanilhasForAtletaProbe, hasFullPlanilhaWeek } from "../lib/planilhas-seed.mjs";
 
 export const SOVEREIGN_JSON_KEYS = [
   "peito",
@@ -484,6 +484,10 @@ export async function runMigrationProbes(admin, options = {}) {
     ...new Set(
       failed
         .filter((p) => !p.detail?.startsWith("login probe:"))
+        .filter((p) => {
+          if (p.id !== "planilhas_forjador") return true;
+          return p.detail?.includes("ausente") || p.detail?.includes("argos_batch_upsert");
+        })
         .flatMap((probe) => {
           const patch = MIGRATION_PATCHES.find((p) => p.id === probe.id);
           return patch?.files ?? [];
@@ -1184,6 +1188,12 @@ async function probeComunidadeSnapshotAuth(client) {
 }
 
 async function probePlanilhasForjador(admin, userId) {
+  const env = loadEnv();
+  const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim()?.replace(/\/$/, "");
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ||
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
+
   const atletaId = await resolveClientePrincipalUserId(admin, userId);
 
   const { error: tableErr } = await admin.from("planilhas_forjador").select("id").limit(1);
@@ -1211,46 +1221,48 @@ async function probePlanilhasForjador(admin, userId) {
     };
   }
 
+  if (!url || !anonKey) {
+    return {
+      id: "planilhas_forjador",
+      ok: false,
+      detail: "anon key ausente — não foi possível seed via RPC forjador",
+    };
+  }
+
+  let seedDetail = "";
   try {
-    await seedPlanilhasForAtleta(admin, atletaId);
+    const ensured = await ensurePlanilhasForAtletaProbe({ admin, url, anonKey, atletaId });
+    seedDetail = ensured.attempts.join(" · ");
   } catch (seedErr) {
     return {
       id: "planilhas_forjador",
       ok: false,
-      detail: `seed probe falhou (${atletaId}): ${seedErr instanceof Error ? seedErr.message : String(seedErr)}`,
+      detail: `seed falhou (${atletaId}): ${seedErr instanceof Error ? seedErr.message : String(seedErr)}`,
     };
   }
 
-  let { data, error } = await admin
-    .from("planilhas_forjador")
-    .select("dia_semana, grupo_muscular")
-    .eq("atleta_id", atletaId);
+  const clienteClient = createAnonClient();
+  let rows = [];
 
-  if (error) {
-    return {
-      id: "planilhas_forjador",
-      ok: false,
-      detail: error.message,
-    };
+  if (clienteClient) {
+    const login = await signInClientePrincipal(clienteClient);
+    if (!login.error) {
+      const { data, error } = await clienteClient
+        .from("planilhas_forjador")
+        .select("dia_semana, grupo_muscular")
+        .eq("atleta_id", atletaId);
+      await clienteClient.auth.signOut();
+      if (!error) {
+        rows = data ?? [];
+      }
+    }
   }
-
-  let rows = data ?? [];
 
   if (rows.length === 0) {
-    try {
-      await seedPlanilhasForAllClientes(admin);
-    } catch (seedErr) {
-      return {
-        id: "planilhas_forjador",
-        ok: false,
-        detail: `seed fallback falhou: ${seedErr instanceof Error ? seedErr.message : String(seedErr)}`,
-      };
-    }
-
-    ({ data, error } = await admin
+    const { data, error } = await admin
       .from("planilhas_forjador")
       .select("dia_semana, grupo_muscular")
-      .eq("atleta_id", atletaId));
+      .eq("atleta_id", atletaId);
 
     if (error) {
       return {
@@ -1263,18 +1275,16 @@ async function probePlanilhasForjador(admin, userId) {
     rows = data ?? [];
   }
 
-  const hasSixDays = [1, 2, 3, 4, 5, 6].every((day) =>
-    rows.some((row) => Number(row.dia_semana) === day),
-  );
+  const hasSixDays = hasFullPlanilhaWeek(rows);
 
   return {
     id: "planilhas_forjador",
-    ok: rows.length > 0,
+    ok: rows.length > 0 && hasSixDays,
     detail: rows.length
       ? hasSixDays
-        ? "grade Seg–Sáb ok"
-        : `${rows.length} dia(s) · seed parcial`
-      : `sem linhas para atleta probe (${atletaId})`,
+        ? `grade Seg–Sáb ok · ${seedDetail}`
+        : `${rows.length} dia(s) · seed parcial · ${seedDetail}`
+      : `sem linhas após seed (${atletaId}) · ${seedDetail}`,
   };
 }
 

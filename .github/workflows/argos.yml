@@ -121,7 +121,7 @@ jobs:
           fi
 
       - name: Ensure ARGOS test users and planilhas seed
-        run: npm run seed:test-users
+        run: npm run seed:test-users && npm run argos:seed-planilhas
 
       - name: Run ARGOS test suite
         run: npm run argos:test
