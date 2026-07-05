@@ -131,6 +131,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           text: PHOENIX_PUNISHMENT_LORE,
           fullName: profileName,
           isPunished: true,
+          allowIntroFallback: false,
         }),
       900,
     );
@@ -169,13 +170,18 @@ export const PhoenixHelper = memo(function PhoenixHelper({
             text: ANIMA_DEBT_SOFT_GREETING,
             fullName: profileName,
             tier: phaseContext.phaseTier,
+            allowIntroFallback: false,
           }),
         420,
       );
       return;
     }
 
-    igniteVoice({ tier: phaseContext.phaseTier, fullName: profileName });
+    igniteVoice({
+      tier: phaseContext.phaseTier,
+      fullName: profileName,
+      allowIntroFallback: false,
+    });
   }, [daysAbsent, igniteVoice, isPunished, phaseContext.phaseTier, profileName, userId]);
 
   useEffect(() => {
@@ -209,7 +215,12 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
     onboardingNarrationFiredRef.current = true;
     const timer = window.setTimeout(
-      () => igniteVoice({ tier: phaseContext.phaseTier, fullName: profileName }),
+      () =>
+        igniteVoice({
+          tier: phaseContext.phaseTier,
+          fullName: profileName,
+          allowIntroFallback: true,
+        }),
       480,
     );
 
@@ -264,6 +275,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       text: ANIMA_EXIT_COPY,
       fullName: profileName,
       tier: phaseContext.phaseTier,
+      allowIntroFallback: false,
     });
   }, [cancelVoice, clearExitTimer, igniteVoice, phaseContext.phaseTier, profileName]);
 
@@ -290,6 +302,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         text: resolveIntentSummary(balloon.intentId, speechCtx),
         fullName: profileName,
         tier: phaseContext.phaseTier,
+        allowIntroFallback: false,
       });
 
       setHighlightAnchor(anchor);
@@ -312,7 +325,9 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
   const onboardingSecondsLeft = Math.ceil(onboardingLockMs / 1000);
   const onboardingLockReleased = onboardingLockMs <= 0;
-  const canAcenderLinhagem = onboardingLockReleased && onboardingNarrationDone;
+  const canSkipOnboardingNarrative = animaPortalVisto;
+  const canAcenderLinhagem =
+    onboardingLockReleased && (onboardingNarrationDone || canSkipOnboardingNarrative);
 
   const resolveOnboardingHint = (): string => {
     if (!onboardingLockReleased) {
@@ -359,6 +374,15 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               {onboardingSpeech}
             </p>
             <p className="mt-4 text-xs text-neutral-400">{resolveOnboardingHint()}</p>
+            {canSkipOnboardingNarrative ? (
+              <button
+                type="button"
+                onClick={completeOnboarding}
+                className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full border border-neutral-700/60 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-300 transition hover:border-amber-500/30 hover:text-amber-100`}
+              >
+                Pular narrativa
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={!canAcenderLinhagem}

@@ -15,6 +15,16 @@ export function injectName(text: string, fullName: string): string {
   return text.replaceAll("[Nome]", resolveProfileFirstName(fullName));
 }
 
+/**
+ * Substitui [Nome] pelo nome registrado — sem fallback "Nova Chama".
+ * Usado após a introdução do Portal de Brasa (tour, transmutação, balões).
+ */
+export function injectRegisteredName(text: string, fullName: string): string {
+  const trimmed = fullName.trim();
+  const firstName = trimmed.length > 0 ? trimmed.split(/\s+/)[0] ?? trimmed : "";
+  return text.replaceAll("[Nome]", firstName);
+}
+
 export function readLocalProfileDisplayName(userId: string): string | null {
   if (typeof window === "undefined") return null;
   try {

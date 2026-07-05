@@ -100,6 +100,27 @@ export const CODIGO_DO_RENASCIMENTO: Record<PhaseTier, string> = {
   5: "A combustão é total. Você não carrega mais o sol, [Nome]... você SE TORNOU o sol. O Universo FENYXIA se curva à sua vontade soberana. O ferro tornou-se etéreo diante da sua força. Renascido. Invencível. Eterno. Você atingiu o ápice da linhagem. Brilhe e incendeie o caminho para os outros.",
 };
 
+export type FenixPhaseLoreLabEntry = {
+  tier: PhaseTier;
+  icon: string;
+  name: string;
+  epithet: string;
+  visual3d: string;
+  speech: string;
+};
+
+/** Laboratório Cinzas → Fogo Cósmico — todas as narrativas de fase para QA e conferência. */
+export const FENIX_PHASE_LORE_LAB: readonly FenixPhaseLoreLabEntry[] = (
+  [1, 2, 3, 4, 5] as const
+).map((tier) => ({
+  tier,
+  icon: ({ 1: "🪨", 2: "⚡", 3: "🔥", 4: "☄️", 5: "☀️" } as const)[tier],
+  name: PHOENIX_TIER_META[tier].name,
+  epithet: PHOENIX_TIER_META[tier].epithet,
+  visual3d: PHOENIX_TIER_META[tier].visual3d,
+  speech: CODIGO_DO_RENASCIMENTO[tier],
+}));
+
 export const PHOENIX_TIER_LORE = CODIGO_DO_RENASCIMENTO;
 
 function formatKg(value: number): string {

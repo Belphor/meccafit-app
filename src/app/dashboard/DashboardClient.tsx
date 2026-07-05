@@ -17,6 +17,7 @@ import { PhoenixDisplayTitle } from "@/components/PhoenixDisplayTitle";
 import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
 import { DueloConviteHost } from "@/components/comunidade/duelo-convite-host";
 import { LinhagemTransmutationHost } from "@/components/evolution/LinhagemTransmutationHost";
+import { EvolutionLinhagemLevelUp } from "@/components/evolution/EvolutionLinhagemLevelUp";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import { PhoenixHelper } from "@/components/dashboard/PhoenixHelper";
@@ -83,6 +84,11 @@ import {
 import { isFenixQaLabEnabled } from "@/components/qa/FenixAnimationTestPanel";
 import { rekindleLinhagemAfterInactivity } from "@/lib/linhagem-inactivity-server";
 import { syncLinhagemTierAfterDemotion } from "@/lib/linhagem-tier-tracker";
+import { syncPhaseTierAfterActivity } from "@/lib/phase-tier-sync";
+import {
+  EVOLUTION_CALOR_REFRESH_EVENT,
+  type EvolutionCalorRefreshDetail,
+} from "@/lib/evolution-events";
 import { supabase } from "@/lib/supabase";
 import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
 import {
@@ -829,11 +835,16 @@ export function DashboardClient({
       return;
     }
 
-    setTourStepIndex(nextStep);
-    writeEcossistemaTourStepIndex(userId, nextStep);
     const nextTab = ECOSSISTEMA_TOUR_STEPS[nextStep].tab;
     applyDashboardTab(nextTab);
     syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: false });
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add(nextTab);
+      return next;
+    });
+    setTourStepIndex(nextStep);
+    writeEcossistemaTourStepIndex(userId, nextStep);
   }, [applyDashboardTab, showPortalToast, subgroupParam, tourStepIndex, userId]);
 
   useEffect(() => {
@@ -879,6 +890,11 @@ export function DashboardClient({
     const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "perfil";
     applyDashboardTab(tab);
     syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add(tab);
+      return next;
+    });
   }, [
     applyDashboardTab,
     dataReady,
@@ -1058,9 +1074,31 @@ export function DashboardClient({
           Math.round((current + liveIncrement) * 100) / 100,
         );
       }
+
+      const nextTier = await syncPhaseTierAfterActivity(userId);
+      if (nextTier !== null) {
+        setProfileRow((row) => (row ? { ...row, phase_tier: nextTier } : row));
+      }
     },
-    [],
+    [userId],
   );
+
+  useEffect(() => {
+    if (!dataReady) return;
+
+    const onEvolutionRefresh = (event: Event) => {
+      const detail = (event as CustomEvent<EvolutionCalorRefreshDetail>).detail;
+      if (!detail || detail.userId !== userId) return;
+
+      void syncPhaseTierAfterActivity(userId).then((nextTier) => {
+        if (nextTier === null) return;
+        setProfileRow((row) => (row ? { ...row, phase_tier: nextTier } : row));
+      });
+    };
+
+    window.addEventListener(EVOLUTION_CALOR_REFRESH_EVENT, onEvolutionRefresh);
+    return () => window.removeEventListener(EVOLUTION_CALOR_REFRESH_EVENT, onEvolutionRefresh);
+  }, [dataReady, userId]);
 
   const handleWatchVideo = useCallback(
     (exerciseId: number) => {
@@ -1170,7 +1208,12 @@ export function DashboardClient({
               aria-hidden="true"
             />
             <SuperacaoOverlay visible={showSuperacaoFlash} />
-            <LinhagemTransmutationHost userId={userId} />
+            <LinhagemTransmutationHost userId={userId} profileName={resolvedProfileName} />
+            <EvolutionLinhagemLevelUp
+              userId={userId}
+              phaseTier={phase.phaseTier}
+              dataReady={dataReady}
+            />
             <DueloConviteHost userId={userId} />
             {profile.role === "cliente" ? (
               <PhoenixHelper

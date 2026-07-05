@@ -21,7 +21,8 @@ import {
 } from "@/lib/dashboard-config";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { FENIX_NARRATIVE_CATALOG } from "@/lib/fenix-ecossistema-tour";
-import { injectName } from "@/lib/profile-display-name";
+import { FENIX_PHASE_LORE_LAB } from "@/lib/phoenix-lore";
+import { injectRegisteredName } from "@/lib/profile-display-name";
 import {
   dispatchFenixQaAnimation,
   FENIX_QA_ANIMATIONS,
@@ -101,13 +102,14 @@ export function FenixAnimationTestPanel({
   const narrativeGroups = useMemo(
     () =>
       [
-        { id: "fase", label: "Fases da Chama Acumulada" },
         { id: "ritual", label: "Rituais" },
         { id: "tour", label: "Tour do ecossistema" },
         { id: "alerta", label: "Alertas" },
       ] as const,
     [],
   );
+
+  const loreProfileName = profileName?.trim() || "Atleta";
 
   useEffect(() => {
     return () => cancelVoice();
@@ -151,11 +153,12 @@ export function FenixAnimationTestPanel({
       setActiveNarrativeId(id);
       igniteVoice({
         text: speech,
-        fullName: profileName?.trim() || "Atleta",
+        fullName: loreProfileName,
         tier: tier ?? 1,
+        allowIntroFallback: false,
       });
     },
-    [igniteVoice, profileName],
+    [igniteVoice, loreProfileName],
   );
 
   const treinoAnimations = useMemo(
@@ -320,6 +323,68 @@ export function FenixAnimationTestPanel({
               </ul>
             </section>
 
+            <section
+              aria-labelledby="qa-laboratorio-cinzas-title"
+              className="rounded-xl border border-neutral-700/60 bg-neutral-950/60 px-4 py-4"
+            >
+              <p
+                id="qa-laboratorio-cinzas-title"
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200/90"
+              >
+                Laboratório Cinzas → Fogo Cósmico
+              </p>
+              <p className={`mt-2 ${EVOLUTION_HINT}`}>
+                Código do Renascimento — narrativas integrais das cinco fases da Chama Acumulada.
+                Toque para ouvir a Anima Fênix; o visual 3D descreve o avatar em cada era.
+              </p>
+              {!isSupported ? (
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  Voz indisponível neste dispositivo. Leia os textos abaixo.
+                </p>
+              ) : null}
+              <ul className="mt-4 space-y-3">
+                {FENIX_PHASE_LORE_LAB.map((entry) => {
+                  const narrativeId = `fase-lab-${entry.tier}`;
+                  const preview = injectRegisteredName(entry.speech, loreProfileName);
+                  const isActive = activeNarrativeId === narrativeId;
+
+                  return (
+                    <li key={narrativeId}>
+                      <button
+                        type="button"
+                        onClick={() => playNarrative(narrativeId, entry.speech, entry.tier)}
+                        className={`${DASHBOARD_TAP_TARGET} w-full rounded-xl border px-4 py-4 text-left ${
+                          isActive
+                            ? "border-amber-500/40 bg-amber-950/25"
+                            : "border-orange-500/15 bg-black/35 hover:border-amber-500/30"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl leading-none" aria-hidden="true">
+                            {entry.icon}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-amber-50">
+                              Nível {entry.tier} · {entry.name}
+                            </p>
+                            <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.1em] text-amber-200/75">
+                              {entry.epithet}
+                            </p>
+                            <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">
+                              Visual 3D: {entry.visual3d}
+                            </p>
+                            <p className="mt-3 text-[12px] leading-relaxed text-neutral-300">
+                              {preview}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
             <section aria-labelledby="qa-narrativas-title">
               <p
                 id="qa-narrativas-title"
@@ -328,8 +393,8 @@ export function FenixAnimationTestPanel({
                 Narrativas da Anima Fênix
               </p>
               <p className={`mt-2 ${EVOLUTION_HINT}`}>
-                Ouça todas as falas de fases, rituais, tour e alertas. O texto aparece abaixo para
-                conferência de lore e português.
+                Rituais, tour do ecossistema e alertas. As cinco fases estão no Laboratório Cinzas
+                acima.
               </p>
               {!isSupported ? (
                 <p className="mt-2 text-[11px] text-neutral-500">
@@ -347,7 +412,7 @@ export function FenixAnimationTestPanel({
                     </p>
                     <ul className="mt-2 grid gap-2 sm:grid-cols-2">
                       {entries.map((entry) => {
-                        const preview = injectName(entry.speech, profileName?.trim() || "Atleta");
+                        const preview = injectRegisteredName(entry.speech, loreProfileName);
                         const isActive = activeNarrativeId === entry.id;
 
                         return (

@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import { DASHBOARD_TAB_CHANGE_EVENT } from "@/lib/dashboard-tab-navigation";
-import { injectName } from "@/lib/profile-display-name";
+import { injectName, injectRegisteredName } from "@/lib/profile-display-name";
 import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
 
-export { injectName } from "@/lib/profile-display-name";
+export { injectName, injectRegisteredName } from "@/lib/profile-display-name";
 
 export const PHOENYX_VOICE_SPECS = {
   rate: 0.86,
@@ -18,8 +18,15 @@ export type PhoenixVoiceState = "idle" | "loading-voices" | "speaking" | "unsupp
 
 export type IgniteVoiceInput =
   | string
-  | { text: string; fullName: string; tier?: PhaseTier; isPunished?: boolean }
-  | { tier: PhaseTier; fullName: string; isPunished?: boolean };
+  | {
+      text: string;
+      fullName: string;
+      tier?: PhaseTier;
+      isPunished?: boolean;
+      /** false = usa nome registrado sem fallback "Nova Chama" (pós-introdução). */
+      allowIntroFallback?: boolean;
+    }
+  | { tier: PhaseTier; fullName: string; isPunished?: boolean; allowIntroFallback?: boolean };
 
 type VoiceModulation = {
   tier?: PhaseTier;
@@ -206,16 +213,19 @@ function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulati
     return { text: input.trim(), modulation: {} };
   }
 
+  const nameInjector =
+    input.allowIntroFallback === false ? injectRegisteredName : injectName;
+
   if ("tier" in input && !("text" in input)) {
     return {
-      text: injectName(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName),
+      text: nameInjector(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName),
       modulation: { tier: input.tier, isPunished: input.isPunished },
     };
   }
 
   if ("text" in input) {
     return {
-      text: injectName(input.text, input.fullName),
+      text: nameInjector(input.text, input.fullName),
       modulation: {
         tier: input.tier,
         isPunished: input.isPunished,

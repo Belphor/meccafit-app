@@ -22,15 +22,15 @@ export type EcossistemaTourStep = {
   continueLabel: string;
 };
 
-/** Ordem canônica: Perfil (após identidade) → Treino → Evolução → Comunidade. */
+/** Ordem canônica: Perfil (após identidade) → Treino → Evolução (Cinzas) → Comunidade. */
 export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
   {
     id: "perfil",
     tab: "perfil",
     eyebrow: "Anima Fênix · Perfil",
-    title: "Cinzas e identidade da linhagem",
+    title: "Identidade da linhagem",
     speech:
-      "[Nome], você ainda respira em Cinzas, o Mármore Frio: pedra e silêncio antes da combustão. Aqui você selou nome e gênero na linhagem. O anel reflete sua Chama Acumulada e define sua arena na comunidade.",
+      "[Nome], você selou nome e gênero na linhagem. O anel reflete sua Chama Acumulada e define sua arena na comunidade.",
     continueLabel: "Continuar para o Treino",
   },
   {
@@ -46,9 +46,8 @@ export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
     id: "evolucao",
     tab: "evolucao",
     eyebrow: "Anima Fênix · Evolução",
-    title: "Leitura da sua chama acumulada",
-    speech:
-      "[Nome], em Evolução você acompanha a Chama Acumulada, o Ritmo da Fênix, as Brasas Musculares e a Gravidade Térmica. Cada métrica mostra se sua linhagem avança, mantém o fogo ou esfria.",
+    title: "Cinzas · O Mármore Frio",
+    speech: CODIGO_DO_RENASCIMENTO[1],
     continueLabel: "Continuar para Comunidade",
   },
   {
@@ -61,6 +60,9 @@ export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
     continueLabel: "Entrar no Portal de Brasa",
   },
 ] as const;
+
+/** Aguarda a aba destino renderizar antes da narrativa da Anima. */
+export const ECOSSISTEMA_TOUR_NAV_DELAY_MS = 520;
 
 export type FenixNarrativeCatalogEntry = {
   id: string;

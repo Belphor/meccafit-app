@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { PhaseTransmutation } from "@/components/dashboard/PhaseTransmutation";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import { resolveLinhagemTransmutationCopy } from "@/lib/fenix-evolution-glossary";
+import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { canShowLinhagemTransmutation, writeAcknowledgedLinhagemTier } from "@/lib/linhagem-tier-tracker";
 import {
   LINHAGEM_TRANSMUTATION_EVENT,
@@ -16,23 +17,31 @@ import {
 
 type LinhagemTransmutationHostProps = {
   userId: string;
+  profileName: string;
 };
 
-export function LinhagemTransmutationHost({ userId }: LinhagemTransmutationHostProps) {
+export function LinhagemTransmutationHost({ userId, profileName }: LinhagemTransmutationHostProps) {
+  const { igniteVoice, cancelVoice } = usePhoenixVoice();
   const [activeTier, setActiveTier] = useState<PhaseTier | null>(null);
 
   const dismiss = useCallback(() => {
-    if (activeTier !== null) {
-      writeAcknowledgedLinhagemTier(userId, activeTier);
-    }
+    if (activeTier === null) return;
+
+    const tier = activeTier;
+    writeAcknowledgedLinhagemTier(userId, tier);
     setActiveTier(null);
-  }, [activeTier, userId]);
+
+    window.setTimeout(() => {
+      igniteVoice({ tier, fullName: profileName, allowIntroFallback: false });
+    }, 480);
+  }, [activeTier, igniteVoice, profileName, userId]);
 
   useEffect(() => {
     const onLinhagem = (event: Event) => {
       const detail = (event as CustomEvent<LinhagemTransmutationDetail>).detail;
       if (!detail || detail.userId !== userId) return;
       if (!canShowLinhagemTransmutation(userId, detail.tier)) return;
+      cancelVoice();
       setActiveTier(detail.tier);
     };
 
@@ -41,6 +50,7 @@ export function LinhagemTransmutationHost({ userId }: LinhagemTransmutationHostP
       if (!detail) return;
       if (detail.kind === "linhagem-level-up") {
         const tier = Math.min(5, Math.max(1, Math.round(detail.tier ?? 3))) as PhaseTier;
+        cancelVoice();
         setActiveTier(tier);
       }
     };
@@ -51,7 +61,7 @@ export function LinhagemTransmutationHost({ userId }: LinhagemTransmutationHostP
       window.removeEventListener(LINHAGEM_TRANSMUTATION_EVENT, onLinhagem);
       window.removeEventListener(FENIX_QA_ANIMATION_EVENT, onQa);
     };
-  }, [userId]);
+  }, [cancelVoice, userId]);
 
   if (activeTier === null) return null;
 

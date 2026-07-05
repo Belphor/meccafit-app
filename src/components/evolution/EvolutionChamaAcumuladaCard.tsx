@@ -2,7 +2,6 @@
 
 import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { EvolutionChamaProgressBar } from "@/components/evolution/EvolutionChamaProgressBar";
-import { EvolutionLinhagemLevelUp } from "@/components/evolution/EvolutionLinhagemLevelUp";
 import { FenixEvolutionAvatar } from "@/components/evolution/fenix-evolution-avatar";
 import type { MuscleCalorRow } from "@/components/evolution/human-body-constants";
 import {
@@ -67,10 +66,6 @@ export function EvolutionChamaAcumuladaCard({
 
   return (
     <div className={`${DASHBOARD_INNER_FRAME} mt-4 space-y-4 p-4 sm:p-5`}>
-      {!loading ? (
-        <EvolutionLinhagemLevelUp userId={userId} phaseTier={activeTier} dataReady={dataReady} />
-      ) : null}
-
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <h2 className={DASHBOARD_SECTION_TITLE}>Chama Acumulada da Linhagem</h2>

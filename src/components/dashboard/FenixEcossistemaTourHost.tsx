@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 import type { PhaseTier } from "@/lib/dashboard-config";
-import type { EcossistemaTourStep } from "@/lib/fenix-ecossistema-tour";
-import { injectName } from "@/lib/profile-display-name";
+import {
+  ECOSSISTEMA_TOUR_NAV_DELAY_MS,
+  type EcossistemaTourStep,
+} from "@/lib/fenix-ecossistema-tour";
+import { injectRegisteredName } from "@/lib/profile-display-name";
 
 type FenixEcossistemaTourHostProps = {
   step: EcossistemaTourStep;
@@ -21,20 +24,25 @@ export function FenixEcossistemaTourHost({
   onContinue,
 }: FenixEcossistemaTourHostProps) {
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
+  const [tabReady, setTabReady] = useState(false);
   const [narrationDone, setNarrationDone] = useState(!isSupported);
   const resolvedSpeech = useMemo(
-    () => injectName(step.speech, profileName),
+    () => injectRegisteredName(step.speech, profileName),
     [profileName, step.speech],
   );
 
   useEffect(() => {
+    setTabReady(false);
     setNarrationDone(!isSupported);
+    const timer = window.setTimeout(() => setTabReady(true), ECOSSISTEMA_TOUR_NAV_DELAY_MS);
+    return () => window.clearTimeout(timer);
   }, [isSupported, step.id]);
 
   useEffect(() => {
-    igniteVoice({ text: step.speech, fullName: profileName, tier: phaseTier });
+    if (!tabReady) return;
+    igniteVoice({ text: step.speech, fullName: profileName, tier: phaseTier, allowIntroFallback: false });
     return () => cancelVoice();
-  }, [cancelVoice, igniteVoice, phaseTier, profileName, step.id, step.speech]);
+  }, [cancelVoice, igniteVoice, phaseTier, profileName, step.id, step.speech, tabReady]);
 
   useEffect(() => {
     if (!isSupported) return;
@@ -42,12 +50,12 @@ export function FenixEcossistemaTourHost({
       setNarrationDone(false);
       return;
     }
-    if (state === "idle") {
+    if (state === "idle" && tabReady) {
       setNarrationDone(true);
     }
-  }, [isSupported, state]);
+  }, [isSupported, state, tabReady]);
 
-  const canContinue = narrationDone;
+  const canContinue = tabReady && narrationDone;
 
   return (
     <div
@@ -65,11 +73,13 @@ export function FenixEcossistemaTourHost({
           {resolvedSpeech}
         </p>
         <p className="mt-3 text-[11px] text-neutral-400">
-          {isSupported
-            ? state === "speaking"
-              ? "Ouça a Anima Fênix enquanto lê."
-              : "Leia e avance quando estiver pronto."
-            : "Voz indisponível neste dispositivo. Leia e continue."}
+          {!tabReady
+            ? "Abrindo o altar desta aba…"
+            : isSupported
+              ? state === "speaking"
+                ? "Ouça a Anima Fênix enquanto lê."
+                : "Leia e avance quando estiver pronto."
+              : "Voz indisponível neste dispositivo. Leia e continue."}
         </p>
         <button
           type="button"
