@@ -142,7 +142,7 @@ export function resolveDebtSoftGreeting(profileName: string): string {
 }
 
 export function resolveOnboardingSpeech(ctx: AnimaSpeechContext): string {
-  return resolveTierLore(ctx.phaseContext.phaseTier, ctx.profileName);
+  return resolveTierLore(1, ctx.profileName);
 }
 
 export function resolvePunishmentSpeech(profileName: string): string {

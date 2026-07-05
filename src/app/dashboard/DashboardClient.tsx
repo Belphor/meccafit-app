@@ -862,6 +862,8 @@ export function DashboardClient({
     }
 
     const nextTab = ECOSSISTEMA_TOUR_STEPS[nextStep].tab;
+    setTourStepIndex(nextStep);
+    writeEcossistemaTourStepIndex(userId, nextStep);
     applyDashboardTab(nextTab);
     syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
@@ -869,8 +871,6 @@ export function DashboardClient({
       next.add(nextTab);
       return next;
     });
-    setTourStepIndex(nextStep);
-    writeEcossistemaTourStepIndex(userId, nextStep);
   }, [applyDashboardTab, showPortalToast, subgroupParam, tourStepIndex, userId]);
 
   useEffect(() => {
@@ -1308,6 +1308,7 @@ export function DashboardClient({
             {tourActive && tourStepIndex !== null ? (
               <FenixEcossistemaTourHost
                 step={ECOSSISTEMA_TOUR_STEPS[tourStepIndex]}
+                activeTab={activeTab}
                 profileName={resolvedProfileName}
                 phaseTier={phase.phaseTier}
                 onContinue={handleTourContinue}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 import type { PhaseTier } from "@/lib/dashboard-config";
+import type { DashboardTabId } from "@/lib/dashboard-tabs";
 import {
   ECOSSISTEMA_TOUR_NAV_DELAY_MS,
   type EcossistemaTourStep,
@@ -12,6 +13,7 @@ import { injectRegisteredName } from "@/lib/profile-display-name";
 
 type FenixEcossistemaTourHostProps = {
   step: EcossistemaTourStep;
+  activeTab: DashboardTabId;
   profileName: string;
   phaseTier: PhaseTier;
   onContinue: () => void;
@@ -19,6 +21,7 @@ type FenixEcossistemaTourHostProps = {
 
 export function FenixEcossistemaTourHost({
   step,
+  activeTab,
   profileName,
   phaseTier,
   onContinue,
@@ -26,6 +29,7 @@ export function FenixEcossistemaTourHost({
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [tabReady, setTabReady] = useState(false);
   const [narrationDone, setNarrationDone] = useState(!isSupported);
+  const tabAligned = activeTab === step.tab;
   const resolvedSpeech = useMemo(
     () => injectRegisteredName(step.speech, profileName),
     [profileName, step.speech],
@@ -34,15 +38,27 @@ export function FenixEcossistemaTourHost({
   useEffect(() => {
     setTabReady(false);
     setNarrationDone(!isSupported);
+
+    if (!tabAligned) return;
+
     const timer = window.setTimeout(() => setTabReady(true), ECOSSISTEMA_TOUR_NAV_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isSupported, step.id]);
+  }, [isSupported, step.id, step.tab, tabAligned]);
 
   useEffect(() => {
-    if (!tabReady) return;
+    if (!tabReady || !tabAligned) return;
     igniteVoice({ text: step.speech, fullName: profileName, tier: phaseTier, allowIntroFallback: false });
     return () => cancelVoice();
-  }, [cancelVoice, igniteVoice, phaseTier, profileName, step.id, step.speech, tabReady]);
+  }, [
+    cancelVoice,
+    igniteVoice,
+    phaseTier,
+    profileName,
+    step.id,
+    step.speech,
+    tabAligned,
+    tabReady,
+  ]);
 
   useEffect(() => {
     if (!isSupported) return;
@@ -50,12 +66,12 @@ export function FenixEcossistemaTourHost({
       setNarrationDone(false);
       return;
     }
-    if (state === "idle" && tabReady) {
+    if (state === "idle" && tabReady && tabAligned) {
       setNarrationDone(true);
     }
-  }, [isSupported, state, tabReady]);
+  }, [isSupported, state, tabAligned, tabReady]);
 
-  const canContinue = tabReady && narrationDone;
+  const canContinue = tabAligned && tabReady && narrationDone;
 
   return (
     <div
@@ -73,13 +89,15 @@ export function FenixEcossistemaTourHost({
           {resolvedSpeech}
         </p>
         <p className="mt-3 text-[11px] text-neutral-400">
-          {!tabReady
-            ? "Abrindo o altar desta aba…"
-            : isSupported
-              ? state === "speaking"
-                ? "Ouça a Anima Fênix enquanto lê."
-                : "Leia e avance quando estiver pronto."
-              : "Voz indisponível neste dispositivo. Leia e continue."}
+          {!tabAligned
+            ? `Abrindo ${step.eyebrow.replace("Anima Fênix · ", "")}…`
+            : !tabReady
+              ? "Abrindo o altar desta aba…"
+              : isSupported
+                ? state === "speaking"
+                  ? "Ouça a Anima Fênix enquanto lê."
+                  : "Leia e avance quando estiver pronto."
+                : "Voz indisponível neste dispositivo. Leia e continue."}
         </p>
         <button
           type="button"

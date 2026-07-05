@@ -219,7 +219,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     const timer = window.setTimeout(
       () =>
         igniteVoice({
-          tier: phaseContext.phaseTier,
+          tier: 1,
           fullName: profileName,
           allowIntroFallback: true,
         }),
@@ -227,7 +227,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     );
 
     return () => window.clearTimeout(timer);
-  }, [onboardingActive, isPunished, igniteVoice, phaseContext.phaseTier, profileName]);
+  }, [onboardingActive, isPunished, igniteVoice, profileName]);
 
   useEffect(() => {
     if (!onboardingActive) return;
