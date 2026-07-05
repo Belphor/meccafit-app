@@ -5,6 +5,7 @@ import {
   MAGMA_SPECTRUM,
   PHASE_TRANSMUTATION_COPY,
   PHASE_TRANSMUTATION_FADE_MS,
+  PHASE_TRANSMUTATION_HOLD_MS,
   PHASE_TRANSMUTATION_MS,
   PHASE_TRANSMUTATION_REVEAL_MS,
   PHASE_TRANSMUTATION_SKIP_AFTER_MS,
@@ -42,6 +43,9 @@ function phaseIrisCssVars(phaseTier: PhaseTier): CSSProperties {
     "--phase-portal-rgb": "249, 115, 22",
     "--phase-tier-intensity": String(0.55 + phaseTier * 0.12),
     "--phase-genesis-ms": `${PHASE_TRANSMUTATION_IRIS.genesisMs}ms`,
+    "--phase-transmutation-ms": `${PHASE_TRANSMUTATION_MS}ms`,
+    "--phase-transmutation-fade-ms": `${PHASE_TRANSMUTATION_FADE_MS}ms`,
+    "--phase-transmutation-reveal-ms": `${PHASE_TRANSMUTATION_REVEAL_MS}ms`,
     "--phase-eye-size": PHASE_TRANSMUTATION_IRIS.eyeSize,
   } as CSSProperties;
 }
@@ -276,10 +280,10 @@ function IrisFocalBloom({ act }: { act: TransmutationAct }) {
 }
 
 function FlameEmber({ index }: { index: number }) {
-  const spread = 88;
+  const spread = 92;
   const angle = -spread / 2 + (index / FLAME_EMBER_COUNT) * spread;
-  const delay = 160 + index * 48;
-  const distance = 48 + (index % 5) * 12;
+  const delay = 120 + index * 56;
+  const distance = 52 + (index % 5) * 14;
 
   return (
     <span
@@ -352,7 +356,7 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
   useEffect(() => {
     const revealAt = PHASE_TRANSMUTATION_IRIS.awakenMs;
     const holdAt = revealAt + PHASE_TRANSMUTATION_REVEAL_MS;
-    const fadeAt = PHASE_TRANSMUTATION_MS - PHASE_TRANSMUTATION_FADE_MS;
+    const fadeAt = holdAt + PHASE_TRANSMUTATION_HOLD_MS;
 
     const timers = [
       window.setTimeout(() => setAct("reveal"), revealAt),
@@ -389,7 +393,7 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
       </div>
 
       <div
-        className={`phase-transmutation-copy-stack pointer-events-none absolute inset-x-0 z-[2] flex flex-col items-center gap-3 px-4 transition-opacity duration-700 ${showCopy ? "opacity-100" : "opacity-0"}`}
+        className={`phase-transmutation-copy-stack pointer-events-none absolute inset-x-0 z-[2] flex flex-col items-center gap-3 px-4 transition-opacity duration-[900ms] ease-out ${showCopy ? "opacity-100" : "opacity-0"}`}
       >
         <p
           className={`${PLASMA_TITLE} phase-transmutation-tier text-[clamp(1.75rem,8vw,3.25rem)] font-semibold tracking-[0.18em] sm:tracking-[0.24em]`}
