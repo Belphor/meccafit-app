@@ -1,4 +1,4 @@
-import type { ElementType, HTMLAttributes, ReactNode } from "react";
+import { createElement, type ElementType, type HTMLAttributes, type ReactNode } from "react";
 import {
   BRASAO_LIGHT_PANEL,
   BRASA_PANEL,
@@ -22,8 +22,8 @@ type BrasaVivaCardVariant =
   | "selectable-idle"
   | "cardio-idle";
 
-type BrasaVivaCardProps<T extends ElementType = "div"> = {
-  as?: T;
+type BrasaVivaCardProps = {
+  as?: ElementType;
   children: ReactNode;
   className?: string;
   overlay?: ReactNode;
@@ -31,15 +31,14 @@ type BrasaVivaCardProps<T extends ElementType = "div"> = {
   variant?: BrasaVivaCardVariant;
 } & Omit<HTMLAttributes<HTMLElement>, "className">;
 
-export function BrasaVivaCard<T extends ElementType = "div">({
-  as,
+export function BrasaVivaCard({
+  as = "div",
   children,
   className = "",
   overlay,
   variant = "static",
   ...rest
-}: BrasaVivaCardProps<T>) {
-  const Tag = as ?? "div";
+}: BrasaVivaCardProps) {
   const surface =
     variant === "pulse"
       ? BRASA_VIVA_CARD
@@ -51,22 +50,27 @@ export function BrasaVivaCard<T extends ElementType = "div">({
             ? PORTAL_FRAME_PANEL
             : variant === "treino"
               ? TREINO_FRAME_PANEL
-            : variant === "inner"
-              ? TREINO_INNER_PANEL
-              : variant === "selectable-idle"
-                ? SELECTABLE_IDLE_PANEL
-                : variant === "cardio-idle"
-                  ? CARDIO_VOO_PANEL_IDLE
-                  : BRASA_PANEL;
+              : variant === "inner"
+                ? TREINO_INNER_PANEL
+                : variant === "selectable-idle"
+                  ? SELECTABLE_IDLE_PANEL
+                  : variant === "cardio-idle"
+                    ? CARDIO_VOO_PANEL_IDLE
+                    : BRASA_PANEL;
 
-  return (
-    <Tag className={`${surface} relative ${className}`.trim()} {...rest}>
-      {overlay ? (
-        <div className="pointer-events-none absolute inset-0 z-[2] overflow-visible rounded-[inherit]">
-          {overlay}
-        </div>
-      ) : null}
-      <div className="relative z-[1]">{children}</div>
-    </Tag>
+  return createElement(
+    as,
+    { className: `${surface} relative ${className}`.trim(), ...rest },
+    overlay
+      ? createElement(
+          "div",
+          {
+            className:
+              "pointer-events-none absolute inset-0 z-[2] overflow-visible rounded-[inherit]",
+          },
+          overlay,
+        )
+      : null,
+    createElement("div", { className: "relative z-[1]" }, children),
   );
 }

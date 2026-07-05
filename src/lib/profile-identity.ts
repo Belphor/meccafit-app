@@ -60,6 +60,24 @@ export async function confirmProfileIdentity(
   };
 }
 
+export async function markEcossistemaTourComplete(): Promise<void> {
+  const { data, error } = await supabase.rpc(
+    "client_complete_ecossistema_tour" as "client_submit_feedback",
+    {} as never,
+  );
+
+  if (error) {
+    if (error.code === "PGRST202") return;
+    throw new Error(error.message);
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) return;
+  const row = data as Record<string, unknown>;
+  if (row.error) {
+    throw new Error(typeof row.message === "string" ? row.message : "Erro ao concluir tour.");
+  }
+}
+
 export async function markAnimaPortalVisto(): Promise<void> {
   const { data, error } = await supabase.rpc(
     "client_mark_anima_portal_visto" as "client_submit_feedback",

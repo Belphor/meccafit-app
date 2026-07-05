@@ -32,6 +32,7 @@ export type Database = {
           sexo: Database["public"]["Enums"]["profile_sexo"] | null;
           perfil_identidade_confirmada: boolean;
           anima_portal_visto: boolean;
+          ecossistema_tour_concluido: boolean;
         };
         Insert: {
           id: string;

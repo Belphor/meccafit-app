@@ -17,7 +17,11 @@ import {
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_TAP_TARGET,
   EVOLUTION_HINT,
+  type PhaseTier,
 } from "@/lib/dashboard-config";
+import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
+import { FENIX_NARRATIVE_CATALOG } from "@/lib/fenix-ecossistema-tour";
+import { injectName } from "@/lib/profile-display-name";
 import {
   dispatchFenixQaAnimation,
   FENIX_QA_ANIMATIONS,
@@ -91,6 +95,23 @@ export function FenixAnimationTestPanel({
   const [avatarPreviewTier, setAvatarPreviewTier] = useState<4 | 3>(4);
   const [thermalQaSummary, setThermalQaSummary] = useState<string | null>(resolveThermalQaSummary);
   const [inactivityQaSummary, setInactivityQaSummary] = useState<string | null>(null);
+  const [activeNarrativeId, setActiveNarrativeId] = useState<string | null>(null);
+  const { igniteVoice, cancelVoice, isSupported } = usePhoenixVoice();
+
+  const narrativeGroups = useMemo(
+    () =>
+      [
+        { id: "fase", label: "Fases da Chama Acumulada" },
+        { id: "ritual", label: "Rituais" },
+        { id: "tour", label: "Tour do ecossistema" },
+        { id: "alerta", label: "Alertas" },
+      ] as const,
+    [],
+  );
+
+  useEffect(() => {
+    return () => cancelVoice();
+  }, [cancelVoice]);
 
   useEffect(() => {
     const refreshThermal = () => {
@@ -124,6 +145,18 @@ export function FenixAnimationTestPanel({
     }
     dispatchFenixQaAnimation({ kind, tier: kind === "linhagem-level-up" ? 3 : avatarPreviewTier });
   }, [avatarPreviewTier]);
+
+  const playNarrative = useCallback(
+    (id: string, speech: string, tier?: PhaseTier) => {
+      setActiveNarrativeId(id);
+      igniteVoice({
+        text: speech,
+        fullName: profileName?.trim() || "Atleta",
+        tier: tier ?? 1,
+      });
+    },
+    [igniteVoice, profileName],
+  );
 
   const treinoAnimations = useMemo(
     () => FENIX_QA_ANIMATIONS.filter((item) => item.tab === "treino"),
@@ -285,6 +318,61 @@ export function FenixAnimationTestPanel({
                   </li>
                 ))}
               </ul>
+            </section>
+
+            <section aria-labelledby="qa-narrativas-title">
+              <p
+                id="qa-narrativas-title"
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200/90"
+              >
+                Narrativas da Anima Fênix
+              </p>
+              <p className={`mt-2 ${EVOLUTION_HINT}`}>
+                Ouça todas as falas de fases, rituais, tour e alertas. O texto aparece abaixo para
+                conferência de lore e português.
+              </p>
+              {!isSupported ? (
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  Voz indisponível neste dispositivo. Os textos ainda podem ser lidos abaixo.
+                </p>
+              ) : null}
+              {narrativeGroups.map((group) => {
+                const entries = FENIX_NARRATIVE_CATALOG.filter((item) => item.group === group.id);
+                if (entries.length === 0) return null;
+
+                return (
+                  <div key={group.id} className="mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-100/80">
+                      {group.label}
+                    </p>
+                    <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                      {entries.map((entry) => {
+                        const preview = injectName(entry.speech, profileName?.trim() || "Atleta");
+                        const isActive = activeNarrativeId === entry.id;
+
+                        return (
+                          <li key={entry.id}>
+                            <button
+                              type="button"
+                              onClick={() => playNarrative(entry.id, entry.speech, entry.tier)}
+                              className={`${DASHBOARD_TAP_TARGET} w-full rounded-xl border px-3 py-3 text-left ${
+                                isActive
+                                  ? "border-amber-500/40 bg-amber-950/25"
+                                  : "border-orange-500/15 bg-black/35 hover:border-amber-500/30"
+                              }`}
+                            >
+                              <span className="text-sm font-medium text-amber-50">{entry.label}</span>
+                              <span className="mt-2 block max-h-24 overflow-y-auto text-[11px] leading-relaxed text-neutral-400">
+                                {preview}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
             </section>
 
             <section aria-labelledby="qa-treino-title">

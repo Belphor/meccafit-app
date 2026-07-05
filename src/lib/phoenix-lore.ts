@@ -25,8 +25,8 @@ export type PhoenixRitualId = "punishment" | "exit";
 
 export const PHOENIX_RITUAL_LORE = {
   punishment:
-    "[Nome], sua essência foi corrompida. Por ordem do Soberano, suas chamas foram exiladas...",
-  exit: "Suas CHAMAS foram apagadas por hoje. O frio retorna no instante em que você para.",
+    "[Nome], sua essência foi corrompida. Por ordem do Soberano, suas chamas foram exiladas ao frio das cinzas. Sua jornada está suspensa devido à falta de comprometimento e disciplina. O Deus do Universo FENYXIA não tolera o fogo que se apaga por negligência. Fale com um dos Forjadores Escolhidos para tentar restabelecer seu Altar.",
+  exit: "Suas CHAMAS foram apagadas por hoje. Descanse, braseiro, mas não esqueça: o frio retorna no instante em que você para. Até o próximo renascimento.",
 } as const;
 
 export const ANIMA_EXIT_COPY = PHOENIX_RITUAL_LORE.exit;
@@ -60,12 +60,35 @@ export type AnimaSpeechContext = {
   daysAbsent: number | null;
 };
 
-export const PHOENIX_TIER_META: Record<PhaseTier, { epithet: string }> = {
-  1: { epithet: "O Mármore Frio" },
-  2: { epithet: "O Nascimento do Atrito" },
-  3: { epithet: "O Sangue Fervente" },
-  4: { epithet: "O Incêndio em Movimento" },
-  5: { epithet: "A Supernova Humana" },
+export const PHOENIX_TIER_META: Record<
+  PhaseTier,
+  { name: string; epithet: string; visual3d: string }
+> = {
+  1: {
+    name: "Cinzas",
+    epithet: "O Mármore Frio",
+    visual3d: "Modelo estático, textura de rocha e pedra rachada, sem emissão de luz.",
+  },
+  2: {
+    name: "Faísca",
+    epithet: "O Nascimento do Atrito",
+    visual3d: "Pequenas faíscas laranjas emanando do peito da Fênix.",
+  },
+  3: {
+    name: "Brasas",
+    epithet: "O Sangue Fervente",
+    visual3d: "O corpo da Fênix começa a brilhar internamente com um tom âmbar viscoso.",
+  },
+  4: {
+    name: "Labareda",
+    epithet: "O Incêndio em Movimento",
+    visual3d: "Asas em chamas ativas com animação de batimento fluido.",
+  },
+  5: {
+    name: "Fogo Cósmico",
+    epithet: "A Supernova Humana",
+    visual3d: "Combustão total, brilho solar etéreo e presença soberana.",
+  },
 };
 
 /** Código do Renascimento — narrativas integrais (Cinzas → Fogo Cósmico). */
@@ -143,7 +166,7 @@ export function resolveIntentSummary(intentId: AnimaIntentId, ctx: AnimaSpeechCo
           vtc30d > 0 && maintenanceKg
             ? `Nos últimos 30 dias: ${formatKg(vtc30d)} kg. Meta de manutenção: ${formatKg(maintenanceKg)} kg.`
             : "O layout reflete cinzas até você reacender com consistência.",
-          "Isso não apaga sua conquista — apenas revela o momento atual.",
+          "Isso não apaga sua conquista. Apenas revela o momento atual.",
         );
       }
       return vibrantSummary(
@@ -162,21 +185,21 @@ export function resolveIntentSummary(intentId: AnimaIntentId, ctx: AnimaSpeechCo
     case "transmutation":
       return vibrantSummary(
         "Transmutação",
-        "Ritual em que sua linhagem deixa uma era e assume outra — o olho da Fênix abre porque você cumpriu os portões da forja.",
+        "Ritual em que sua linhagem deixa uma era e assume outra. O olho da Fênix abre porque você cumpriu os portões da forja.",
         `Era atual: ${phaseLabel}.`,
         "Nova era desbloqueada quando os portões forem cumpridos.",
       );
     case "superacao":
       return vibrantSummary(
         "Superação",
-        "Quando você ultrapassa seu próprio recorde no exercício — não o do vizinho.",
+        "Quando você ultrapassa seu próprio recorde no exercício, não o do vizinho.",
         sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "",
         "É a Fênix testemunhando: você renasceu mais forte que ontem.",
       );
     case "portal":
       return vibrantSummary(
         "Portal de Brasa",
-        "Entrada do Meccafit Center — onde você reacende sua chama ou forja sua linhagem no primeiro acesso.",
+        "Entrada do Meccafit Center, onde você reacende sua chama ou forja sua linhagem no primeiro acesso.",
         "",
         "Lema do altar: deixe o ontem para trás. Renasça hoje.",
       );
@@ -190,14 +213,14 @@ export function resolveIntentSummary(intentId: AnimaIntentId, ctx: AnimaSpeechCo
     case "mural":
       return vibrantSummary(
         "Mural comunitário",
-        "Celebra ascensões reais da comunidade — superações e marcos forjados no treino.",
+        "Celebra ascensões reais da comunidade: superações e marcos forjados no treino.",
         "",
         "O que aparece lá passou pelo altar e por ARGOS.",
       );
     case "forum":
       return vibrantSummary(
         "Fórum Brasa-Viva",
-        "Voz da linhagem — tópicos de superação onde cada card reflete a fase do autor.",
+        "Voz da linhagem: tópicos de superação onde cada card reflete a fase do autor.",
         phaseContext.isThermallyDegraded
           ? "Seu fórum pode aparecer em cinzas até você reengajar no altar."
           : "",

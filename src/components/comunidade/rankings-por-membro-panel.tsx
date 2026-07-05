@@ -182,10 +182,9 @@ export function RankingsThothPanel({
           : `VTC ${MUSCLE_TABS.find((t) => t.key === activeTab)?.label.toLowerCase()}`;
 
   const isReiTab = activeTab === "superiores" || activeTab === "pernas";
-  const reiLeaderLabel =
-    isReiTab && activeTab !== "global"
-      ? resolveReiLeaderLabel(activeGenero, activeTab as "superiores" | "pernas")
-      : undefined;
+  const reiLeaderLabel = isReiTab
+    ? resolveReiLeaderLabel(activeGenero, activeTab as "superiores" | "pernas")
+    : undefined;
 
   const generoArenaLabel = activeGenero === "feminino" ? "feminina" : "masculina";
 

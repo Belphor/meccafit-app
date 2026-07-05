@@ -37,7 +37,7 @@ function resolveFireballClass(
   if (flashFading) return "phoenix-fireball-mask--nova-fading";
   if (flashHidden && showModel) return "phoenix-fireball-mask--open";
   if (phase === "igniting") return "phoenix-fireball-mask--ignited";
-  if (flashVisible && (phase === "revealing" || phase === "igniting")) {
+  if (flashVisible && phase === "revealing") {
     return "phoenix-fireball-mask--nova";
   }
   if (showModel) return "phoenix-fireball-mask--radiant";

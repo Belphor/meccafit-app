@@ -46,6 +46,7 @@ export type DashboardProfileRow = Pick<
   | "sexo"
   | "perfil_identidade_confirmada"
   | "anima_portal_visto"
+  | "ecossistema_tour_concluido"
 > & {
   phase_tier?: number;
   phase_setup_at?: string;
@@ -66,6 +67,7 @@ export function profileRowToEnginePayload(
     sexo: row.sexo ?? null,
     perfil_identidade_confirmada: row.perfil_identidade_confirmada ?? false,
     anima_portal_visto: row.anima_portal_visto ?? false,
+    ecossistema_tour_concluido: row.ecossistema_tour_concluido ?? false,
   };
 
   const extended = row as DashboardProfileRow & {
@@ -98,7 +100,7 @@ export type HistoricoTreinoRow = Pick<
 >;
 
 const PROFILE_COLUMNS =
-  "full_name, nome_linhagem, status_altar, data_nascimento, role, phase_tier, phase_setup_at, custom_preferences, sexo, perfil_identidade_confirmada, anima_portal_visto" as const;
+  "full_name, nome_linhagem, status_altar, data_nascimento, role, phase_tier, phase_setup_at, custom_preferences, sexo, perfil_identidade_confirmada, anima_portal_visto, ecossistema_tour_concluido" as const;
 
 const HISTORICO_COLUMNS =
   "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em" as const;

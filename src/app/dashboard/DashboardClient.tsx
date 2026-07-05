@@ -20,6 +20,7 @@ import { LinhagemTransmutationHost } from "@/components/evolution/LinhagemTransm
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import { PhoenixHelper } from "@/components/dashboard/PhoenixHelper";
+import { FenixEcossistemaTourHost } from "@/components/dashboard/FenixEcossistemaTourHost";
 import VideoModal from "@/components/VideoModal";
 import {
   FENIX_QA_ANIMATION_EVENT,
@@ -105,7 +106,15 @@ import {
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
-import { parseProfileSexo } from "@/lib/profile-identity";
+import { parseProfileSexo, markEcossistemaTourComplete } from "@/lib/profile-identity";
+import {
+  ECOSSISTEMA_TOUR_STEPS,
+  isTabEnabledDuringTour,
+  readEcossistemaTourStepIndex,
+  resolveDisabledTabsDuringTour,
+  writeEcossistemaTourComplete,
+  writeEcossistemaTourStepIndex,
+} from "@/lib/fenix-ecossistema-tour";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { invalidateComunidadeCache } from "@/lib/comunidade-cache";
 import {
@@ -246,6 +255,8 @@ export function DashboardClient({
   const [inactivityAlert, setInactivityAlert] = useState<string | null>(null);
   const [linhagemInactivityPending, setLinhagemInactivityPending] =
     useState<LinhagemInactivitySyncResult | null>(null);
+  const [tourStepIndex, setTourStepIndex] = useState<number | null>(null);
+  const tourBootstrappedRef = useRef(false);
   const [linhagemDaysAbsent, setLinhagemDaysAbsent] = useState<number | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
@@ -707,10 +718,22 @@ export function DashboardClient({
 
   const perfilIdentidadeConfirmada = Boolean(profileRow?.perfil_identidade_confirmada);
   const animaPortalVisto = Boolean(profileRow?.anima_portal_visto);
+  const ecossistemaTourConcluido = Boolean(profileRow?.ecossistema_tour_concluido);
   const profileSexo = parseProfileSexo(profileRow?.sexo);
   const tabsLockedForIdentity =
     profile?.role === "cliente" && !perfilIdentidadeConfirmada && !profile?.is_punished;
   const tabsLocked = Boolean(profile?.is_punished) || tabsLockedForIdentity;
+  const tourActive =
+    profile?.role === "cliente" &&
+    perfilIdentidadeConfirmada &&
+    !ecossistemaTourConcluido &&
+    tourStepIndex !== null &&
+    !profile?.is_punished;
+
+  const disabledTourTabIds = useMemo(() => {
+    if (!tourActive || tourStepIndex === null) return undefined;
+    return resolveDisabledTabsDuringTour(tourStepIndex, hasPersonalBond);
+  }, [hasPersonalBond, tourActive, tourStepIndex]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
@@ -719,6 +742,17 @@ export function DashboardClient({
       }
 
       if (tabsLockedForIdentity && tab !== "perfil") {
+        return;
+      }
+
+      if (
+        profile?.role === "cliente" &&
+        perfilIdentidadeConfirmada &&
+        !ecossistemaTourConcluido &&
+        tourStepIndex !== null &&
+        !profile?.is_punished &&
+        !isTabEnabledDuringTour(tab, tourStepIndex)
+      ) {
         return;
       }
 
@@ -735,7 +769,16 @@ export function DashboardClient({
         return next;
       });
     },
-    [activeTab, hasPersonalBond, profile?.is_punished, tabsLockedForIdentity],
+    [
+      activeTab,
+      ecossistemaTourConcluido,
+      hasPersonalBond,
+      perfilIdentidadeConfirmada,
+      profile?.is_punished,
+      profile?.role,
+      tabsLockedForIdentity,
+      tourStepIndex,
+    ],
   );
 
   const handleOnboardingComplete = useCallback(() => {
@@ -759,8 +802,39 @@ export function DashboardClient({
           }
         : row,
     );
-    showPortalToast("Identidade selada. Suas abas foram liberadas.", "success", 8000);
-  }, [showPortalToast]);
+    tourBootstrappedRef.current = true;
+    setTourStepIndex(0);
+    writeEcossistemaTourStepIndex(userId, 0);
+    applyDashboardTab("perfil");
+    syncDashboardTabToUrl("perfil", { subgrupo: subgroupParam, dispatch: false });
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add("perfil");
+      return next;
+    });
+  }, [applyDashboardTab, subgroupParam, userId]);
+
+  const handleTourContinue = useCallback(() => {
+    const currentStep = tourStepIndex ?? 0;
+    const nextStep = currentStep + 1;
+
+    if (nextStep >= ECOSSISTEMA_TOUR_STEPS.length) {
+      setTourStepIndex(null);
+      writeEcossistemaTourComplete(userId);
+      setProfileRow((row) => (row ? { ...row, ecossistema_tour_concluido: true } : row));
+      void markEcossistemaTourComplete().catch(() => {
+        // localStorage já marca conclusão; servidor sincroniza na próxima sessão
+      });
+      showPortalToast("Ecossistema FENYXIA revelado. Suas chamas estão livres.", "success", 7000);
+      return;
+    }
+
+    setTourStepIndex(nextStep);
+    writeEcossistemaTourStepIndex(userId, nextStep);
+    const nextTab = ECOSSISTEMA_TOUR_STEPS[nextStep].tab;
+    applyDashboardTab(nextTab);
+    syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: false });
+  }, [applyDashboardTab, showPortalToast, subgroupParam, tourStepIndex, userId]);
 
   useEffect(() => {
     if (!dataReady || tabBootstrappedRef.current) return;
@@ -785,6 +859,36 @@ export function DashboardClient({
       return next;
     });
   }, [applyDashboardTab, dataReady, tabsLockedForIdentity]);
+
+  useEffect(() => {
+    if (
+      !dataReady ||
+      !perfilIdentidadeConfirmada ||
+      ecossistemaTourConcluido ||
+      profile?.role !== "cliente" ||
+      profile?.is_punished
+    ) {
+      return;
+    }
+    if (tourBootstrappedRef.current) return;
+
+    tourBootstrappedRef.current = true;
+    const savedStep = readEcossistemaTourStepIndex(userId);
+    const step = savedStep ?? 0;
+    setTourStepIndex(step);
+    const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "perfil";
+    applyDashboardTab(tab);
+    syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
+  }, [
+    applyDashboardTab,
+    dataReady,
+    ecossistemaTourConcluido,
+    perfilIdentidadeConfirmada,
+    profile?.is_punished,
+    profile?.role,
+    subgroupParam,
+    userId,
+  ]);
 
   useEffect(() => {
     if (!dataReady) return;
@@ -1081,6 +1185,15 @@ export function DashboardClient({
               />
             ) : null}
 
+            {tourActive && tourStepIndex !== null ? (
+              <FenixEcossistemaTourHost
+                step={ECOSSISTEMA_TOUR_STEPS[tourStepIndex]}
+                profileName={resolvedProfileName}
+                phaseTier={phase.phaseTier}
+                onContinue={handleTourContinue}
+              />
+            ) : null}
+
             {profile.is_punished ? (
               <div
                 className="pointer-events-none fixed inset-0 z-[45] bg-[radial-gradient(circle_at_50%_40%,rgba(40,40,40,0.22),rgba(0,0,0,0.72)_55%)]"
@@ -1133,6 +1246,7 @@ export function DashboardClient({
                     muralCount={muralPosts.length}
                     hasPersonalBond={hasPersonalBond}
                     tabsLocked={tabsLocked}
+                    disabledTabIds={disabledTourTabIds}
                     onTabChange={handleTabChange}
                   />
 
@@ -1144,7 +1258,17 @@ export function DashboardClient({
                       <p className="mt-2 text-xs leading-relaxed text-amber-50/85">
                         Confirme seu <strong className="font-semibold text-amber-50">nome único</strong> e{" "}
                         <strong className="font-semibold text-amber-50">gênero</strong> na aba Perfil para
-                        liberar o altar.
+                        selar sua identidade.
+                      </p>
+                    </div>
+                  ) : tourActive && tourStepIndex !== null ? (
+                    <div className="mt-4 rounded-2xl border border-orange-500/20 bg-orange-950/10 px-4 py-3 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/90">
+                        Revelação do ecossistema · passo {(tourStepIndex ?? 0) + 1} de{" "}
+                        {ECOSSISTEMA_TOUR_STEPS.length}
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-amber-50/85">
+                        A Anima Fênix apresenta cada altar. Ouça, leia e avance quando estiver pronto.
                       </p>
                     </div>
                   ) : null}
