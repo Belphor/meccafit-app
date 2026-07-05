@@ -29,6 +29,9 @@ export type Database = {
           linhagem_inactivity_pending: boolean;
           linhagem_inactivity_restore_tier: number | null;
           comunidade_avatar_path: string | null;
+          sexo: Database["public"]["Enums"]["profile_sexo"] | null;
+          perfil_identidade_confirmada: boolean;
+          anima_portal_visto: boolean;
         };
         Insert: {
           id: string;
@@ -1221,6 +1224,7 @@ export type Database = {
       };
     };
     Enums: {
+      profile_sexo: "masculino" | "feminino";
       user_role: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
       estagio_forca: "cinzas" | "faisca" | "brasa" | "labareda" | "fogo_cosmico_sagrado";
       subgrupo_muscular: "costas" | "peito" | "ombros" | "bracos" | "abdomen" | "pernas";

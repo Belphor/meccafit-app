@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
 import {
   COMUNIDADE_BODY_TEXT,
@@ -14,18 +14,27 @@ import {
   COMUNIDADE_TAB_LIST,
 } from "@/components/comunidade/comunidade-layout";
 import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
-import type { RankingsThoth, RankingVtcEntry } from "@/lib/comunidade-data";
+import type { ProfileSexo } from "@/lib/profile-identity";
+import type { RankingsThoth, RankingsThothSlice, RankingVtcEntry } from "@/lib/comunidade-data";
+import { LoreEm } from "@/lib/lore-emphasis";
 
 type RankingsThothPanelProps = {
   rankings: RankingsThoth | null;
   userId: string;
+  userSexo?: ProfileSexo | null;
   resolvePhotoUrl?: ComunidadePhotoResolver;
   loading?: boolean;
 };
 
-type TabKey = "superiores" | "pernas" | "global" | "peito" | "ombros" | "costas";
+type GeneroTab = ProfileSexo;
+type MuscleTabKey = "superiores" | "pernas" | "global" | "peito" | "ombros" | "costas";
 
-const TABS: { key: TabKey; label: string; rei?: boolean }[] = [
+const GENERO_TABS: { key: GeneroTab; label: string }[] = [
+  { key: "masculino", label: "Masculino" },
+  { key: "feminino", label: "Feminino" },
+];
+
+const MUSCLE_TABS: { key: MuscleTabKey; label: string; rei?: boolean }[] = [
   { key: "superiores", label: "Superiores", rei: true },
   { key: "pernas", label: "Pernas", rei: true },
   { key: "global", label: "Global" },
@@ -46,12 +55,20 @@ function formatMesReferencia(value?: string): string {
   return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
+function resolveReiLeaderLabel(genero: GeneroTab, faixa: "superiores" | "pernas"): string {
+  if (genero === "feminino") {
+    return faixa === "superiores" ? "· líder Rainha Superiores" : "· líder Rainha Pernas";
+  }
+  return faixa === "superiores" ? "· líder Rei Superiores" : "· líder Rei Pernas";
+}
+
 function RankingRow({
   entry,
   userId,
   metricLabel,
   metricValue,
   isReiSlot = false,
+  reiLeaderLabel,
   resolvePhotoUrl,
 }: {
   entry: RankingVtcEntry;
@@ -59,6 +76,7 @@ function RankingRow({
   metricLabel: string;
   metricValue: number;
   isReiSlot?: boolean;
+  reiLeaderLabel?: string;
   resolvePhotoUrl?: ComunidadePhotoResolver;
 }) {
   const isSelf = entry.atleta_id === userId;
@@ -95,9 +113,9 @@ function RankingRow({
       <div className="min-w-0 flex-1 basis-[calc(100%-3rem)] xs:basis-auto">
         <p className="break-words text-pretty text-[10px] font-medium text-neutral-200 xs:text-[11px]">
           {isSelf ? "Tu" : entry.atleta_nome}
-          {isReiLeader ? (
-            <span className="block xs:inline xs:ml-1 text-[9px] font-bold uppercase tracking-wide text-violet-300/90">
-              · líder Rei
+          {isReiLeader && reiLeaderLabel ? (
+            <span className="block xs:ml-1 text-[9px] font-bold uppercase tracking-wide text-violet-300/90">
+              {reiLeaderLabel}
             </span>
           ) : null}
         </p>
@@ -117,25 +135,42 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function resolveActiveList(rankings: RankingsThoth | null, activeTab: TabKey): RankingVtcEntry[] {
-  if (!rankings) return [];
+function resolveActiveList(slice: RankingsThothSlice | null, activeTab: MuscleTabKey): RankingVtcEntry[] {
+  if (!slice) return [];
 
-  if (activeTab === "global") return rankings.vtc_global;
-  if (activeTab === "superiores") return rankings.vtc_faixa?.superiores ?? [];
-  if (activeTab === "pernas") return rankings.vtc_faixa?.inferiores ?? rankings.vtc_por_membro.pernas;
-  return rankings.vtc_por_membro[activeTab] ?? [];
+  if (activeTab === "global") return slice.vtc_global;
+  if (activeTab === "superiores") return slice.vtc_faixa?.superiores ?? [];
+  if (activeTab === "pernas") return slice.vtc_faixa?.inferiores ?? slice.vtc_por_membro.pernas;
+  return slice.vtc_por_membro[activeTab] ?? [];
+}
+
+function resolveRankingSlice(
+  rankings: RankingsThoth | null,
+  genero: GeneroTab,
+): RankingsThothSlice | null {
+  if (!rankings) return null;
+  const fromGenero = rankings.por_genero?.[genero];
+  if (fromGenero) return fromGenero;
+  return rankings;
 }
 
 export function RankingsThothPanel({
   rankings,
   userId,
+  userSexo = null,
   resolvePhotoUrl,
   loading = false,
 }: RankingsThothPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("superiores");
+  const [activeGenero, setActiveGenero] = useState<GeneroTab>(userSexo ?? "masculino");
+  const [activeTab, setActiveTab] = useState<MuscleTabKey>("superiores");
 
-  const activeList = resolveActiveList(rankings, activeTab);
-  const mesLabel = formatMesReferencia(rankings?.mes_referencia);
+  const activeSlice = useMemo(
+    () => resolveRankingSlice(rankings, activeGenero),
+    [activeGenero, rankings],
+  );
+
+  const activeList = resolveActiveList(activeSlice, activeTab);
+  const mesLabel = formatMesReferencia(activeSlice?.mes_referencia ?? rankings?.mes_referencia);
 
   const activeLabel =
     activeTab === "global"
@@ -144,9 +179,15 @@ export function RankingsThothPanel({
         ? "VTC superiores"
         : activeTab === "pernas"
           ? "VTC pernas"
-          : `VTC ${TABS.find((t) => t.key === activeTab)?.label.toLowerCase()}`;
+          : `VTC ${MUSCLE_TABS.find((t) => t.key === activeTab)?.label.toLowerCase()}`;
 
   const isReiTab = activeTab === "superiores" || activeTab === "pernas";
+  const reiLeaderLabel =
+    isReiTab && activeTab !== "global"
+      ? resolveReiLeaderLabel(activeGenero, activeTab as "superiores" | "pernas")
+      : undefined;
+
+  const generoArenaLabel = activeGenero === "feminino" ? "feminina" : "masculina";
 
   return (
     <section
@@ -156,23 +197,47 @@ export function RankingsThothPanel({
       <header className={COMUNIDADE_HEADER}>
         <p className={`${COMUNIDADE_EYEBROW} text-violet-300/85`}>Ranking mensal</p>
         <h3 className={`${COMUNIDADE_HEADING} text-violet-50/95`}>
-          Top 10: quem lidera em {mesLabel}
+          Top 10 · arena {generoArenaLabel} · {mesLabel}
         </h3>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Contamos seu <span className="font-medium text-neutral-300">melhor peso do dia</span> em
-          cada exercício e somamos tudo no mês. Essa pontuação chama-se{" "}
-          <span className="font-medium text-neutral-300">VTC</span>.
+          Contamos seu <LoreEm>melhor peso do dia</LoreEm> em cada exercício e somamos tudo no mês.
+          Essa pontuação chama-se <LoreEm>VTC</LoreEm>.
         </p>
         <p className={`mt-2 ${COMUNIDADE_BODY_TEXT}`}>
-          Nas abas <span className="font-medium text-neutral-300">Superiores</span> e{" "}
-          <span className="font-medium text-neutral-300">Pernas</span>, quem fechar o mês em 1º
-          lugar torna-se <span className="font-medium text-neutral-300">Rei das Chamas</span> no mês
-          seguinte. As outras abas servem para ver o detalhe por músculo.
+          Nas abas <LoreEm>Superiores</LoreEm> e <LoreEm>Pernas</LoreEm>, quem fechar o mês em 1º
+          lugar torna-se <LoreEm>Rei ou Rainha das Chamas</LoreEm> no mês seguinte, dentro da arena
+          do seu gênero. As outras abas mostram o detalhe por músculo.
         </p>
       </header>
 
-      <div className={`mt-4 ${COMUNIDADE_TAB_LIST}`} role="tablist" aria-label="Filtrar ranking por grupo muscular">
-        {TABS.map(({ key, label, rei }) => {
+      <div className={`mt-4 ${COMUNIDADE_TAB_LIST}`} role="tablist" aria-label="Filtrar ranking por gênero">
+        {GENERO_TABS.map(({ key, label }) => {
+          const selected = activeGenero === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => setActiveGenero(key)}
+              className={`${COMUNIDADE_TAB_BUTTON} ${
+                selected
+                  ? "border-amber-400/40 bg-amber-950/35 text-amber-100"
+                  : "border-neutral-800 bg-neutral-950/60 text-neutral-500"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className={`mt-3 ${COMUNIDADE_TAB_LIST}`}
+        role="tablist"
+        aria-label="Filtrar ranking por grupo muscular"
+      >
+        {MUSCLE_TABS.map(({ key, label, rei }) => {
           const selected = activeTab === key;
           return (
             <button
@@ -190,7 +255,7 @@ export function RankingsThothPanel({
               {label}
               {rei ? (
                 <>
-                  <span className="hidden sm:inline"> (define Rei)</span>
+                  <span className="hidden sm:inline"> (título)</span>
                   <span className="sm:hidden"> (Rei)</span>
                 </>
               ) : null}
@@ -203,13 +268,13 @@ export function RankingsThothPanel({
         <div className="mt-4 h-40 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
       ) : activeList.length === 0 ? (
         <div className="mt-4">
-          <EmptyState message="Ainda não há dados neste mês. Registre treinos com peso para entrar na classificação." />
+          <EmptyState message="Ainda não há dados neste mês para esta arena. Registre treinos com peso para entrar na classificação." />
         </div>
       ) : (
         <ul className={`mt-4 ${COMUNIDADE_LIST_SCROLL}`}>
           {activeList.map((entry) => (
             <RankingRow
-              key={`${activeTab}-${entry.atleta_id}`}
+              key={`${activeGenero}-${activeTab}-${entry.atleta_id}`}
               entry={entry}
               userId={userId}
               metricLabel={activeLabel}
@@ -217,6 +282,7 @@ export function RankingsThothPanel({
                 activeTab === "global" ? entry.vtc_total : entry.vtc_grupo || entry.vtc_total
               }
               isReiSlot={isReiTab}
+              reiLeaderLabel={reiLeaderLabel}
               resolvePhotoUrl={resolvePhotoUrl}
             />
           ))}

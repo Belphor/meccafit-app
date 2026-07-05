@@ -13,6 +13,24 @@ export function isAccountSuspended(statusAltar: string | null | undefined): bool
   return normalizeAccountAccessStatus(statusAltar) === "suspenso";
 }
 
+/** Penalidade suprema — exílio das chamas no altar. */
+export function resolveProfileIsPunished(
+  statusAltar: string | null | undefined,
+  customPreferences?: unknown,
+): boolean {
+  if (
+    customPreferences &&
+    typeof customPreferences === "object" &&
+    !Array.isArray(customPreferences)
+  ) {
+    const prefs = customPreferences as Record<string, unknown>;
+    if (prefs.is_punished === true) return true;
+  }
+
+  const normalized = normalizeAccountAccessStatus(statusAltar);
+  return normalized === "penalizado" || normalized === "punished" || normalized === "exilado";
+}
+
 export type AccountAccessTone = "active" | "suspended" | "neutral";
 
 export type AccountAccessDisplay = {

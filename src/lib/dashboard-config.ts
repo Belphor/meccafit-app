@@ -507,11 +507,10 @@ export const PHASE_ONE_MIN_SESSIONS = 4;
 export const PHASE_ONE_MIN_VTC_KG = 2000;
 
 /** IRIS transmutation breakscreen — timeline olho da Fênix */
-export const PHASE_TRANSMUTATION_MS = 12_000;
-export const PHASE_TRANSMUTATION_REVEAL_MS = 1_600;
-export const PHASE_TRANSMUTATION_HOLD_MS = 5_200;
-export const PHASE_TRANSMUTATION_FADE_MS = 2_000;
-export const PHASE_TRANSMUTATION_SKIP_AFTER_MS = 6_000;
+export const PHASE_TRANSMUTATION_REVEAL_MS = 2_000;
+export const PHASE_TRANSMUTATION_HOLD_MS = 3_200;
+export const PHASE_TRANSMUTATION_FADE_MS = 1_600;
+export const PHASE_TRANSMUTATION_SKIP_AFTER_MS = 5_800;
 
 export const PHASE_TRANSMUTATION_COPY =
   "「A LINHAGEM EVOLUIU · NOVA CAMADA NA CHAMA ACUMULADA」";
@@ -527,10 +526,17 @@ export const PHASE_TRANSMUTATION_IRIS = {
   emberDeep: "#c2410c",
   obsidian: "#050505",
   eyeSize: "min(42vw, 11rem)",
-  /** Whiteout IRIS lento · passos micro */
-  genesisMs: 5_400,
-  awakenMs: 5_700,
+  /** Whiteout IRIS — genesis termina quando o olho abre */
+  genesisMs: 5_200,
+  awakenMs: 5_200,
 } as const;
+
+/** Duração total derivada dos atos (pulse → reveal → hold → fade). */
+export const PHASE_TRANSMUTATION_MS =
+  PHASE_TRANSMUTATION_IRIS.awakenMs +
+  PHASE_TRANSMUTATION_REVEAL_MS +
+  PHASE_TRANSMUTATION_HOLD_MS +
+  PHASE_TRANSMUTATION_FADE_MS;
 
 export const PHASE_TIER_STORAGE_PREFIX = "meccafit:phase-tier-ack:";
 

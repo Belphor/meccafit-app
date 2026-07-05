@@ -19,6 +19,7 @@ import { DueloConviteHost } from "@/components/comunidade/duelo-convite-host";
 import { LinhagemTransmutationHost } from "@/components/evolution/LinhagemTransmutationHost";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
+import { PhoenixHelper } from "@/components/dashboard/PhoenixHelper";
 import VideoModal from "@/components/VideoModal";
 import {
   FENIX_QA_ANIMATION_EVENT,
@@ -104,6 +105,7 @@ import {
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
+import { parseProfileSexo } from "@/lib/profile-identity";
 import { clearThermicSessionCache } from "@/lib/session-cache-cleanup";
 import { invalidateComunidadeCache } from "@/lib/comunidade-cache";
 import {
@@ -244,6 +246,7 @@ export function DashboardClient({
   const [inactivityAlert, setInactivityAlert] = useState<string | null>(null);
   const [linhagemInactivityPending, setLinhagemInactivityPending] =
     useState<LinhagemInactivitySyncResult | null>(null);
+  const [linhagemDaysAbsent, setLinhagemDaysAbsent] = useState<number | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
   const inactivityPendingRef = useRef<LinhagemInactivitySyncResult | null>(null);
@@ -671,6 +674,7 @@ export function DashboardClient({
       setThermalSettlement(bundle.data.thermalSettlement ?? null);
 
       const inactivity = bundle.data.linhagemInactivity;
+      setLinhagemDaysAbsent(inactivity?.days_absent ?? null);
       inactivityPendingRef.current =
         inactivity?.pending_rekindle ? inactivity : null;
       syncLinhagemInactivityPendingState(inactivity ?? null);
@@ -701,8 +705,23 @@ export function DashboardClient({
     syncLinhagemInactivityPendingState,
   ]);
 
+  const perfilIdentidadeConfirmada = Boolean(profileRow?.perfil_identidade_confirmada);
+  const animaPortalVisto = Boolean(profileRow?.anima_portal_visto);
+  const profileSexo = parseProfileSexo(profileRow?.sexo);
+  const tabsLockedForIdentity =
+    profile?.role === "cliente" && !perfilIdentidadeConfirmada && !profile?.is_punished;
+  const tabsLocked = Boolean(profile?.is_punished) || tabsLockedForIdentity;
+
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId) => {
+      if (profile?.is_punished && tab !== activeTab) {
+        return;
+      }
+
+      if (tabsLockedForIdentity && tab !== "perfil") {
+        return;
+      }
+
       if (!isDietaTabAllowed(hasPersonalBond, tab)) {
         setActiveTab(DEFAULT_DASHBOARD_TAB);
         return;
@@ -716,8 +735,32 @@ export function DashboardClient({
         return next;
       });
     },
-    [hasPersonalBond],
+    [activeTab, hasPersonalBond, profile?.is_punished, tabsLockedForIdentity],
   );
+
+  const handleOnboardingComplete = useCallback(() => {
+    setProfileRow((row) => (row ? { ...row, anima_portal_visto: true } : row));
+    applyDashboardTab("perfil");
+    syncDashboardTabToUrl("perfil", { subgrupo: subgroupParam, dispatch: false });
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add("perfil");
+      return next;
+    });
+  }, [applyDashboardTab, subgroupParam]);
+
+  const handleIdentityConfirmed = useCallback(() => {
+    setProfileRow((row) =>
+      row
+        ? {
+            ...row,
+            perfil_identidade_confirmada: true,
+            anima_portal_visto: true,
+          }
+        : row,
+    );
+    showPortalToast("Identidade selada. Suas abas foram liberadas.", "success", 8000);
+  }, [showPortalToast]);
 
   useEffect(() => {
     if (!dataReady || tabBootstrappedRef.current) return;
@@ -732,6 +775,16 @@ export function DashboardClient({
       return next;
     });
   }, [applyDashboardTab, dataReady, hasPersonalBond, tabParam]);
+
+  useEffect(() => {
+    if (!dataReady || !tabsLockedForIdentity) return;
+    applyDashboardTab("perfil");
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add("perfil");
+      return next;
+    });
+  }, [applyDashboardTab, dataReady, tabsLockedForIdentity]);
 
   useEffect(() => {
     if (!dataReady) return;
@@ -1015,6 +1068,25 @@ export function DashboardClient({
             <SuperacaoOverlay visible={showSuperacaoFlash} />
             <LinhagemTransmutationHost userId={userId} />
             <DueloConviteHost userId={userId} />
+            {profile.role === "cliente" ? (
+              <PhoenixHelper
+                userId={userId}
+                profileName={resolvedProfileName}
+                phaseContext={phase}
+                daysAbsent={linhagemDaysAbsent}
+                isPunished={Boolean(profile.is_punished)}
+                animaPortalVisto={animaPortalVisto}
+                onTabChange={handleTabChange}
+                onOnboardingComplete={handleOnboardingComplete}
+              />
+            ) : null}
+
+            {profile.is_punished ? (
+              <div
+                className="pointer-events-none fixed inset-0 z-[45] bg-[radial-gradient(circle_at_50%_40%,rgba(40,40,40,0.22),rgba(0,0,0,0.72)_55%)]"
+                aria-hidden="true"
+              />
+            ) : null}
 
             <section className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col">
               <DashboardBrandHeader
@@ -1044,12 +1116,38 @@ export function DashboardClient({
                 </div>
 
                 <div className="z-[1]">
+                  {profile.is_punished ? (
+                    <div className="mt-6 rounded-2xl border border-neutral-800/80 bg-neutral-950/70 px-5 py-6 text-center backdrop-blur-md">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-500">
+                        Penalidade Suprema · Exílio das Chamas
+                      </p>
+                      <p className="mt-4 text-sm leading-relaxed text-neutral-400">
+                        Suas abas do altar estão seladas. Fale com um Forjador Escolhido para
+                        restabelecer sua linhagem.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
                   <DashboardTabNav
                     activeTab={activeTab}
                     muralCount={muralPosts.length}
                     hasPersonalBond={hasPersonalBond}
+                    tabsLocked={tabsLocked}
                     onTabChange={handleTabChange}
                   />
+
+                  {tabsLockedForIdentity ? (
+                    <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-950/15 px-4 py-3 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/90">
+                        Selo da Linhagem pendente
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-amber-50/85">
+                        Confirme seu <strong className="font-semibold text-amber-50">nome único</strong> e{" "}
+                        <strong className="font-semibold text-amber-50">gênero</strong> na aba Perfil para
+                        liberar o altar.
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className={dashboardTabPanelClass(activeTab === "treino")}>
                     {trainingTrack.track === "personal" ? (
@@ -1104,6 +1202,7 @@ export function DashboardClient({
                         userId={userId}
                         profileName={resolvedProfileName}
                         profilePhotoUrl={localProfilePhotoUrl}
+                        profileSexo={profileSexo}
                         phase={phase}
                         muralFocusToken={muralFocusToken}
                         muralFocusExerciseName={muralFocusExerciseName}
@@ -1117,11 +1216,16 @@ export function DashboardClient({
                         userId={userId}
                         profileName={resolvedProfileName}
                         profilePhotoUrl={localProfilePhotoUrl}
+                        profileSexo={profileSexo}
+                        identidadeConfirmada={perfilIdentidadeConfirmada}
+                        onIdentityConfirmed={handleIdentityConfirmed}
                         initialCalorRows={initialEvolutionCalor}
                         initialIgnicao={initialEvolutionIgnicao}
                       />
                     </div>
                   ) : null}
+                    </>
+                  )}
                 </div>
               </BrasaVivaCard>
 

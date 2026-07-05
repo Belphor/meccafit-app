@@ -1,0 +1,292 @@
+import {
+  PHASE_LAYOUT_RESTORATION_SESSION_KG,
+  PHASE_TIER_LABELS,
+  type PhaseLayoutCode,
+  type PhaseTier,
+} from "@/lib/dashboard-config";
+import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
+import { injectName } from "@/lib/profile-display-name";
+
+/** Dias sem visita ao altar antes do alerta suave da Anima (penalidade hard = 30d). */
+export const ANIMA_DEBT_SOFT_DAYS = 5;
+
+export const ANIMA_ONBOARDING_LOCK_MS = 15_000;
+
+export const ANIMA_ONBOARDING_STORAGE_PREFIX = "meccafit:anima-onboarding:v1:";
+
+export const ANIMA_LAST_VISIT_STORAGE_PREFIX = "meccafit:anima-last-visit:";
+
+export const ANIMA_GREETING_SESSION_PREFIX = "meccafit:anima-greeting-session:";
+
+/** Fallback curto de balão — a voz usa a tier lore completa. */
+export const ANIMA_ORB_GREETING = "Eu sou a ANIMA FÊNIX. Em que posso ajudar?";
+
+export type PhoenixRitualId = "punishment" | "exit";
+
+export const PHOENIX_RITUAL_LORE = {
+  punishment:
+    "[Nome], sua essência foi corrompida. Por ordem do Soberano, suas chamas foram exiladas...",
+  exit: "Suas CHAMAS foram apagadas por hoje. O frio retorna no instante em que você para.",
+} as const;
+
+export const ANIMA_EXIT_COPY = PHOENIX_RITUAL_LORE.exit;
+
+/** EXIT RITUAL — spoken when the athlete closes the Anima HUD. */
+export const PHOENIX_EXIT_RITUAL = ANIMA_EXIT_COPY;
+
+export const PHOENIX_PUNISHMENT_LORE = PHOENIX_RITUAL_LORE.punishment;
+
+export const SUPREME_PENALTY_SPEECH = PHOENIX_PUNISHMENT_LORE;
+
+export const ANIMA_DEBT_SOFT_GREETING =
+  "[Nome], sua chama está morrendo devido à sua negligência. Sinta o frio e volte ao Altar.";
+
+export type AnimaIntentId =
+  | "vtc"
+  | "degradation"
+  | "restoration"
+  | "transmutation"
+  | "superacao"
+  | "portal"
+  | "roles"
+  | "mural"
+  | "forum";
+
+export type AnimaBalloonAnchor = "treino" | "evolucao" | "perfil";
+
+export type AnimaSpeechContext = {
+  profileName: string;
+  phaseContext: PhoenixPhaseRuntimeContext;
+  daysAbsent: number | null;
+};
+
+export const PHOENIX_TIER_META: Record<PhaseTier, { epithet: string }> = {
+  1: { epithet: "O Mármore Frio" },
+  2: { epithet: "O Nascimento do Atrito" },
+  3: { epithet: "O Sangue Fervente" },
+  4: { epithet: "O Incêndio em Movimento" },
+  5: { epithet: "A Supernova Humana" },
+};
+
+/** Código do Renascimento — narrativas integrais (Cinzas → Fogo Cósmico). */
+export const CODIGO_DO_RENASCIMENTO: Record<PhaseTier, string> = {
+  1: "Olá, [Nome]. Eu sou a ANIMA FÊNIX, a voz deste Altar. No momento, você é apenas pedra e silêncio. No Universo FENYXIA, as cinzas são o resto de quem desistiu antes de começar. Seus músculos são mármore frio aguardando o sopro da vida. Sinta o frio do ferro e inicie a combustão agora, ou desapareça na obscuridade da estagnação.",
+  2: "[Nome], o atrito gerou calor. Uma fibra se rompeu para que a luz pudesse passar. Você ainda é frágil como uma chama ao vento, mas o escuro já começa a temer o seu progresso. Cada repetição é um choque que afasta o frio. Mantenha o movimento; o Universo FENYXIA está começando a notar sua existência.",
+  3: "Você já não sente apenas o peso, [Nome]. Você sente o calor. O sangue ferve em suas veias e a sua linhagem reconhece o seu sacrifício. A brasa está viva e o Altar está aquecido. Não aceite o estado morno; o morno é o cemitério da evolução. Sopre o fogo com sua disciplina ou retorne ao pó.",
+  4: "As asas de fogo se abriram, [Nome]. Cada repetição agora é o sopro que alimenta o seu próprio incêndio. Você não está mais apenas treinando; você está se tornando luz em movimento. O suor é o combustível que transmuta o esforço em poder. O topo está próximo, e as chamas devoram qualquer dúvida que restava em sua alma.",
+  5: "A combustão é total. Você não carrega mais o sol, [Nome]... você SE TORNOU o sol. O Universo FENYXIA se curva à sua vontade soberana. O ferro tornou-se etéreo diante da sua força. Renascido. Invencível. Eterno. Você atingiu o ápice da linhagem. Brilhe e incendeie o caminho para os outros.",
+};
+
+export const PHOENIX_TIER_LORE = CODIGO_DO_RENASCIMENTO;
+
+function formatKg(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0";
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function resolveRestorationBaseline(layout: PhaseLayoutCode | null): number {
+  if (!layout) return 1000;
+  return PHASE_LAYOUT_RESTORATION_SESSION_KG[layout] ?? 1000;
+}
+
+export function resolveTierLore(tier: PhaseTier, profileName: string): string {
+  return injectName(CODIGO_DO_RENASCIMENTO[tier], profileName);
+}
+
+export function resolveDebtSoftGreeting(profileName: string): string {
+  return injectName(ANIMA_DEBT_SOFT_GREETING, profileName);
+}
+
+export function resolveOnboardingSpeech(ctx: AnimaSpeechContext): string {
+  return resolveTierLore(ctx.phaseContext.phaseTier, ctx.profileName);
+}
+
+export function resolvePunishmentSpeech(profileName: string): string {
+  return injectName(PHOENIX_PUNISHMENT_LORE, profileName);
+}
+
+export function resolveExitSpeech(profileName: string): string {
+  return injectName(ANIMA_EXIT_COPY, profileName);
+}
+
+function vibrantSummary(term: string, definition: string, dataLine: string, cta: string): string {
+  const parts = [`${term}: ${definition}`];
+  if (dataLine.trim()) parts.push(dataLine.trim());
+  if (cta.trim()) parts.push(cta.trim());
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+export function resolveIntentSummary(intentId: AnimaIntentId, ctx: AnimaSpeechContext): string {
+  const { phaseContext } = ctx;
+  const thermal = phaseContext.thermalGravity;
+  const sessionVtc = phaseContext.sessionVtcToday;
+  const vtc30d = phaseContext.vtcMonth;
+  const phaseLabel = phaseContext.phaseLabel;
+  const phaseReached = thermal?.phase_reached ?? "CINZAS";
+  const activeLayout = thermal?.active_phase_layout ?? phaseReached;
+  const maintenanceKg = thermal?.monthly_goal_kg;
+  const restorationBaseline = resolveRestorationBaseline(activeLayout);
+
+  switch (intentId) {
+    case "vtc":
+      return vibrantSummary(
+        "VTC",
+        "Volume Total de Carga: soma dos quilos máximos que você registrou hoje em cada exercício do altar.",
+        `Hoje: ${formatKg(sessionVtc)} kg.`,
+        "Registre a próxima série com verdade.",
+      );
+    case "degradation":
+      if (phaseContext.isThermallyDegraded && thermal) {
+        return vibrantSummary(
+          "Degradação térmica",
+          `Sua linhagem conquistou a era ${PHASE_TIER_LABELS[phaseContext.phaseTier]}, mas o braseiro precisa de ritmo.`,
+          vtc30d > 0 && maintenanceKg
+            ? `Nos últimos 30 dias: ${formatKg(vtc30d)} kg. Meta de manutenção: ${formatKg(maintenanceKg)} kg.`
+            : "O layout reflete cinzas até você reacender com consistência.",
+          "Isso não apaga sua conquista — apenas revela o momento atual.",
+        );
+      }
+      return vibrantSummary(
+        "Layout ativo",
+        `Sua linhagem está em ${phaseLabel}. O altar reflete seu ritmo real.`,
+        sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "Ainda sem VTC registrado hoje.",
+        "Mantenha o fogo com sessões verdadeiras.",
+      );
+    case "restoration":
+      return vibrantSummary(
+        "Restauração",
+        "Uma sessão de verdade pode trazer a chama de volta ao layout degradado.",
+        `Meta desta sessão: ${formatKg(restorationBaseline)} kg. Você tem ${formatKg(sessionVtc)} kg hoje.`,
+        "A Fênix responde ao esforço medido, não à intenção.",
+      );
+    case "transmutation":
+      return vibrantSummary(
+        "Transmutação",
+        "Ritual em que sua linhagem deixa uma era e assume outra — o olho da Fênix abre porque você cumpriu os portões da forja.",
+        `Era atual: ${phaseLabel}.`,
+        "Nova era desbloqueada quando os portões forem cumpridos.",
+      );
+    case "superacao":
+      return vibrantSummary(
+        "Superação",
+        "Quando você ultrapassa seu próprio recorde no exercício — não o do vizinho.",
+        sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "",
+        "É a Fênix testemunhando: você renasceu mais forte que ontem.",
+      );
+    case "portal":
+      return vibrantSummary(
+        "Portal de Brasa",
+        "Entrada do Meccafit Center — onde você reacende sua chama ou forja sua linhagem no primeiro acesso.",
+        "",
+        "Lema do altar: deixe o ontem para trás. Renasça hoje.",
+      );
+    case "roles":
+      return vibrantSummary(
+        "Classes de acesso",
+        "No ecossistema FENYXIA existem atleta, Forjador, níveis superiores de forja e Soberano.",
+        "",
+        "ARGOS garante que cada um só vê o que lhe cabe.",
+      );
+    case "mural":
+      return vibrantSummary(
+        "Mural comunitário",
+        "Celebra ascensões reais da comunidade — superações e marcos forjados no treino.",
+        "",
+        "O que aparece lá passou pelo altar e por ARGOS.",
+      );
+    case "forum":
+      return vibrantSummary(
+        "Fórum Brasa-Viva",
+        "Voz da linhagem — tópicos de superação onde cada card reflete a fase do autor.",
+        phaseContext.isThermallyDegraded
+          ? "Seu fórum pode aparecer em cinzas até você reengajar no altar."
+          : "",
+        "Acenda o flash de reativação com uma sessão forte.",
+      );
+    default: {
+      const _exhaustive: never = intentId;
+      return String(_exhaustive);
+    }
+  }
+}
+
+export type AnimaBalloonDefinition = {
+  anchor: AnimaBalloonAnchor;
+  label: string;
+  intentId: AnimaIntentId;
+  tabLabel: string;
+};
+
+export const ANIMA_BALLOONS: readonly AnimaBalloonDefinition[] = [
+  { anchor: "treino", label: "VTC & Treino", intentId: "vtc", tabLabel: "Treino" },
+  { anchor: "evolucao", label: "Fases & Chama", intentId: "degradation", tabLabel: "Evolução" },
+  { anchor: "perfil", label: "Sua Linhagem", intentId: "roles", tabLabel: "Perfil" },
+] as const;
+
+export function readAnimaOnboardingComplete(userId: string): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(`${ANIMA_ONBOARDING_STORAGE_PREFIX}${userId}`) === "done";
+  } catch {
+    return true;
+  }
+}
+
+export function writeAnimaOnboardingComplete(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${ANIMA_ONBOARDING_STORAGE_PREFIX}${userId}`, "done");
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function readAnimaDaysSinceLastVisit(userId: string): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(`${ANIMA_LAST_VISIT_STORAGE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const last = new Date(raw);
+    if (Number.isNaN(last.getTime())) return null;
+    const diffMs = Date.now() - last.getTime();
+    return Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  } catch {
+    return null;
+  }
+}
+
+export function writeAnimaLastVisit(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      `${ANIMA_LAST_VISIT_STORAGE_PREFIX}${userId}`,
+      new Date().toISOString(),
+    );
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function shouldShowDebtSoftGreeting(userId: string, daysAbsent: number | null): boolean {
+  const daysSinceVisit = readAnimaDaysSinceLastVisit(userId);
+  const effectiveDays = daysAbsent ?? daysSinceVisit;
+  if (effectiveDays === null || effectiveDays < ANIMA_DEBT_SOFT_DAYS) return false;
+
+  if (typeof window === "undefined") return false;
+  try {
+    const sessionKey = `${ANIMA_GREETING_SESSION_PREFIX}${userId}`;
+    if (window.sessionStorage.getItem(sessionKey) === "shown") return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function markDebtSoftGreetingShown(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(`${ANIMA_GREETING_SESSION_PREFIX}${userId}`, "shown");
+  } catch {
+    // private mode
+  }
+}

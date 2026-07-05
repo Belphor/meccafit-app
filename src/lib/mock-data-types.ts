@@ -48,6 +48,8 @@ export interface ClientProfile {
   birth: string;
   age: number;
   role?: "forjador" | "forjador_linhagem" | "forjador_soberano" | "cliente";
+  /** Penalidade suprema — exílio das chamas (workspace bloqueado). */
+  is_punished?: boolean;
 }
 
 export type MuralPost = {

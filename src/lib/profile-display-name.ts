@@ -2,6 +2,19 @@ import { supabase } from "@/lib/supabase";
 
 const DISPLAY_NAME_PREFIX = "meccafit:profile-display-name:";
 
+export const ANIMA_NAME_FALLBACK = "Nova Chama";
+
+/** Primeiro nome de profiles.full_name — usado pela Anima Fênix (TTS natural). */
+export function resolveProfileFirstName(fullName: string): string {
+  const trimmed = fullName.trim();
+  return trimmed.length > 0 ? trimmed.split(/\s+/)[0] ?? trimmed : ANIMA_NAME_FALLBACK;
+}
+
+/** Substitui [Nome] pelo primeiro nome cadastrado no perfil. */
+export function injectName(text: string, fullName: string): string {
+  return text.replaceAll("[Nome]", resolveProfileFirstName(fullName));
+}
+
 export function readLocalProfileDisplayName(userId: string): string | null {
   if (typeof window === "undefined") return null;
   try {

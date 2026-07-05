@@ -1,4 +1,4 @@
-import { isAccountSuspended } from "@/lib/account-access-status";
+import { isAccountSuspended, resolveProfileIsPunished } from "@/lib/account-access-status";
 import { LINHAGEM_PADRAO } from "@/lib/client-lore-copy";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
@@ -38,7 +38,14 @@ import { collectUniqueMusclesFromSubgroup } from "@/lib/treino-subgroup";
 
 export type DashboardProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "full_name" | "nome_linhagem" | "status_altar" | "data_nascimento" | "role"
+  | "full_name"
+  | "nome_linhagem"
+  | "status_altar"
+  | "data_nascimento"
+  | "role"
+  | "sexo"
+  | "perfil_identidade_confirmada"
+  | "anima_portal_visto"
 > & {
   phase_tier?: number;
   phase_setup_at?: string;
@@ -55,6 +62,10 @@ export function profileRowToEnginePayload(
     phase_setup_at: row.phase_setup_at,
     custom_preferences: row.custom_preferences,
     phase_progress: row.phase_progress,
+    full_name: row.full_name,
+    sexo: row.sexo ?? null,
+    perfil_identidade_confirmada: row.perfil_identidade_confirmada ?? false,
+    anima_portal_visto: row.anima_portal_visto ?? false,
   };
 
   const extended = row as DashboardProfileRow & {
@@ -87,7 +98,7 @@ export type HistoricoTreinoRow = Pick<
 >;
 
 const PROFILE_COLUMNS =
-  "full_name, nome_linhagem, status_altar, data_nascimento, role, phase_tier, phase_setup_at, custom_preferences" as const;
+  "full_name, nome_linhagem, status_altar, data_nascimento, role, phase_tier, phase_setup_at, custom_preferences, sexo, perfil_identidade_confirmada, anima_portal_visto" as const;
 
 const HISTORICO_COLUMNS =
   "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em" as const;
@@ -134,6 +145,7 @@ export function mapProfileRowToClientProfile(row: DashboardProfileRow): ClientPr
     birth: resolveBirthPhase(age),
     age,
     role: row.role,
+    is_punished: resolveProfileIsPunished(row.status_altar, row.custom_preferences),
   };
 }
 

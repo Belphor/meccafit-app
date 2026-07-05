@@ -41,12 +41,14 @@ import {
   MURAL_REFRESH_EVENT,
   type ComunidadeMuralFocusDetail,
 } from "@/lib/dashboard-tab-navigation";
+import type { ProfileSexo } from "@/lib/profile-identity";
 import { useComunidadePhotoResolver } from "@/hooks/useComunidadePhotoResolver";
 
 type ComunidadePageClientProps = {
   userId: string;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
+  profileSexo?: ProfileSexo | null;
   phase: Pick<PhoenixPhaseRuntimeContext, "isForumInactive" | "isHydrated" | "vtcMonth">;
   muralFocusToken?: number;
   muralFocusExerciseName?: string;
@@ -70,6 +72,7 @@ export function ComunidadePageClient({
   userId,
   profileName,
   profilePhotoUrl,
+  profileSexo = null,
   phase,
   muralFocusToken = 0,
   muralFocusExerciseName,
@@ -170,7 +173,14 @@ export function ComunidadePageClient({
 
   const meta = arena?.meta ?? EMPTY_META;
   const pilares = arena?.pilares_cooperativos ?? [];
-  const reisChamas = arena?.reis_chamas ?? { SUPERIORES: null, INFERIORES: null };
+  const reisChamas = arena?.reis_chamas ?? {
+    SUPERIORES_MASCULINO: null,
+    SUPERIORES_FEMININO: null,
+    INFERIORES_MASCULINO: null,
+    INFERIORES_FEMININO: null,
+    SUPERIORES: null,
+    INFERIORES: null,
+  };
   const rankings = arena?.rankings_thoth ?? null;
   const resolvePhotoUrl = useComunidadePhotoResolver(userId, profilePhotoUrl, rankings);
 
@@ -266,6 +276,7 @@ export function ComunidadePageClient({
           <RankingsThothPanel
             rankings={rankings}
             userId={userId}
+            userSexo={profileSexo}
             resolvePhotoUrl={resolvePhotoUrl}
             loading={arenaLoading && !arena}
           />

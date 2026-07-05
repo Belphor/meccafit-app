@@ -15,6 +15,7 @@ import {
   IRIS_BORDER_REI_CHAMAS,
 } from "@/components/comunidade/plutus-avatar";
 import type { RankingsThoth, ReisChamas } from "@/lib/comunidade-data";
+import { LoreEm } from "@/lib/lore-emphasis";
 
 type ComunidadeTitulosPanelProps = {
   reisChamas: ReisChamas;
@@ -68,7 +69,7 @@ function TituloCard({
   }
 
   return (
-      <li
+    <li
       className={`${COMUNIDADE_INNER_CARD} flex min-h-[4.25rem] min-w-0 items-center gap-2.5 bg-neutral-950/50 px-2.5 py-2.5 xs:gap-3 xs:px-3 xs:py-3 sm:min-h-[4.5rem] sm:px-4 ${
         pulse ? "border-[#FFD700]/25" : "border-neutral-800/80"
       }`}
@@ -86,7 +87,9 @@ function TituloCard({
         >
           {label}
         </p>
-        <p className="break-words text-pretty text-[11px] font-medium text-neutral-200 xs:text-[12px]">{nome}</p>
+        <p className="break-words text-pretty text-[11px] font-medium text-neutral-200 xs:text-[12px]">
+          {nome}
+        </p>
       </div>
     </li>
   );
@@ -97,17 +100,17 @@ function IrisLegend() {
     {
       color: IRIS_BORDER_CINTURAO,
       label: "Rosa: Cinturão",
-      detail: "Você ganhou um duelo e mantém o título até perder",
+      detail: "Você ganhou um duelo e mantém o título até perder.",
     },
     {
       color: IRIS_BORDER_REI_CHAMAS,
-      label: "Violeta: Rei das Chamas",
-      detail: "Você ficou em 1º no ranking mensal da faixa (superiores ou pernas)",
+      label: "Violeta: Rei ou Rainha das Chamas",
+      detail: "Você ficou em 1º no ranking mensal da faixa, na arena do seu gênero.",
     },
     {
       color: IRIS_BORDER_PILAR_COOP,
       label: "Dourado: Pilar",
-      detail: "Você esteve entre os 3 que mais ajudaram o termômetro no mês",
+      detail: "Você esteve entre os 3 que mais ajudaram o termômetro no mês.",
     },
   ];
 
@@ -126,7 +129,7 @@ function IrisLegend() {
             />
             <span className="min-w-0 break-words text-pretty leading-relaxed">
               <span className="font-medium text-neutral-300">{item.label}</span>
-              <span className="text-neutral-500">. {item.detail}</span>
+              <span className="text-neutral-500"> {item.detail}</span>
             </span>
           </li>
         ))}
@@ -134,6 +137,16 @@ function IrisLegend() {
     </div>
   );
 }
+
+const REI_SLOTS: {
+  key: keyof ReisChamas;
+  label: string;
+}[] = [
+  { key: "SUPERIORES_MASCULINO", label: "Rei Superiores" },
+  { key: "SUPERIORES_FEMININO", label: "Rainha Superiores" },
+  { key: "INFERIORES_MASCULINO", label: "Rei Pernas" },
+  { key: "INFERIORES_FEMININO", label: "Rainha Pernas" },
+];
 
 export function ComunidadeTitulosPanel({
   reisChamas,
@@ -152,14 +165,11 @@ export function ComunidadeTitulosPanel({
     >
       <header className={COMUNIDADE_HEADER}>
         <p className={`${COMUNIDADE_EYEBROW} text-amber-200/80`}>Títulos mensais</p>
-        <h3 className={`${COMUNIDADE_HEADING} text-amber-50/95`}>
-          Quem está em destaque este mês
-        </h3>
+        <h3 className={`${COMUNIDADE_HEADING} text-amber-50/95`}>Quem está em destaque este mês</h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Os <span className="font-medium text-neutral-300">Reis</span> vêm do ranking mensal
-          fechado. Os <span className="font-medium text-neutral-300">Pilares</span> vêm do
-          termômetro. O <span className="font-medium text-neutral-300">cinturão</span> é só por
-          duelo. Veja os campeões na arena acima.
+          Os <LoreEm>Reis e Rainhas das Chamas</LoreEm> vêm do ranking mensal fechado, separados por
+          gênero. Os <LoreEm>Pilares</LoreEm> vêm do termômetro. O{" "}
+          <LoreEm>cinturão</LoreEm> é só por duelo.
         </p>
       </header>
 
@@ -169,30 +179,27 @@ export function ComunidadeTitulosPanel({
         <div className="mt-4 space-y-4">
           <div>
             <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.1em] text-violet-300/85 xs:tracking-[0.14em]">
-              Reis das Chamas
+              Reis e Rainhas das Chamas
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
-              Vencedores do último fechamento mensal, um por faixa (superiores e pernas).
+              Vencedores do último fechamento mensal: um título por faixa e por gênero.
             </p>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <TituloCard
-                label="Rei Superiores"
-                atletaId={reisChamas.SUPERIORES}
-                nome={resolveNome(reisChamas.SUPERIORES, userId, rankings)}
-                borderColor={IRIS_BORDER_REI_CHAMAS}
-                flags={{ isReiDasChamas: Boolean(reisChamas.SUPERIORES) }}
-                resolvePhotoUrl={resolvePhotoUrl}
-                empty={!reisChamas.SUPERIORES}
-              />
-              <TituloCard
-                label="Rei Inferiores"
-                atletaId={reisChamas.INFERIORES}
-                nome={resolveNome(reisChamas.INFERIORES, userId, rankings)}
-                borderColor={IRIS_BORDER_REI_CHAMAS}
-                flags={{ isReiDasChamas: Boolean(reisChamas.INFERIORES) }}
-                resolvePhotoUrl={resolvePhotoUrl}
-                empty={!reisChamas.INFERIORES}
-              />
+              {REI_SLOTS.map(({ key, label }) => {
+                const atletaId = reisChamas[key];
+                return (
+                  <TituloCard
+                    key={key}
+                    label={label}
+                    atletaId={atletaId}
+                    nome={resolveNome(atletaId, userId, rankings)}
+                    borderColor={IRIS_BORDER_REI_CHAMAS}
+                    flags={{ isReiDasChamas: Boolean(atletaId) }}
+                    resolvePhotoUrl={resolvePhotoUrl}
+                    empty={!atletaId}
+                  />
+                );
+              })}
             </ul>
           </div>
 
@@ -201,7 +208,7 @@ export function ComunidadeTitulosPanel({
               Pilares cooperativos
             </p>
             <p className="mb-2 text-[10px] leading-relaxed text-neutral-500">
-              Top 3 que mais ajudaram a encher o termómetro no mês passado.
+              Top 3 que mais ajudaram a encher o termômetro no mês passado.
             </p>
             <ul className="grid grid-cols-1 gap-2 xs:grid-cols-2 lg:grid-cols-3">
               {pilaresSlots.map((pilar, index) =>

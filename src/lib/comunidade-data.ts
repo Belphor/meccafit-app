@@ -62,6 +62,11 @@ export type CampeoesCinturao = {
 };
 
 export type ReisChamas = {
+  SUPERIORES_MASCULINO: string | null;
+  SUPERIORES_FEMININO: string | null;
+  INFERIORES_MASCULINO: string | null;
+  INFERIORES_FEMININO: string | null;
+  /** Legado · primeiro titular encontrado */
   SUPERIORES: string | null;
   INFERIORES: string | null;
 };
@@ -80,13 +85,12 @@ export type RankingsVtcFaixa = {
   inferiores: RankingVtcEntry[];
 };
 
-export type RankingsThoth = {
+export type RankingsThothSlice = {
   janela_tipo?: "mensal";
   mes_referencia?: string;
   janela_inicio: string;
   janela_fim?: string;
-  /** @deprecated rankings passaram a ser mensais */
-  janela_dias?: number;
+  sexo?: "masculino" | "feminino";
   vtc_global: RankingVtcEntry[];
   vtc_faixa?: RankingsVtcFaixa;
   vtc_por_membro: {
@@ -94,6 +98,15 @@ export type RankingsThoth = {
     ombros: RankingVtcEntry[];
     costas: RankingVtcEntry[];
     pernas: RankingVtcEntry[];
+  };
+};
+
+export type RankingsThoth = RankingsThothSlice & {
+  /** @deprecated rankings passaram a ser mensais */
+  janela_dias?: number;
+  por_genero?: {
+    masculino: RankingsThothSlice;
+    feminino: RankingsThothSlice;
   };
 };
 
@@ -165,7 +178,7 @@ function parseVtcEntry(raw: unknown): RankingVtcEntry | null {
   };
 }
 
-function parseRankingsThoth(payload: unknown): RankingsThoth | null {
+function parseRankingsThothSlice(payload: unknown): RankingsThothSlice | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const row = payload as Record<string, unknown>;
   const porMembroRaw = row.vtc_por_membro ?? row.rankings;
@@ -205,7 +218,7 @@ function parseRankingsThoth(payload: unknown): RankingsThoth | null {
     mes_referencia: row.mes_referencia ? String(row.mes_referencia) : undefined,
     janela_inicio: String(row.janela_inicio ?? ""),
     janela_fim: row.janela_fim ? String(row.janela_fim) : undefined,
-    janela_dias: row.janela_dias !== undefined ? Number(row.janela_dias) : undefined,
+    sexo: row.sexo === "masculino" || row.sexo === "feminino" ? row.sexo : undefined,
     vtc_global: vtcGlobal,
     vtc_faixa: faixaObj
       ? {
@@ -222,12 +235,47 @@ function parseRankingsThoth(payload: unknown): RankingsThoth | null {
   };
 }
 
+function parseRankingsThoth(payload: unknown): RankingsThoth | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const row = payload as Record<string, unknown>;
+  const base = parseRankingsThothSlice(payload);
+  if (!base) return null;
+
+  const porGeneroRaw = row.por_genero;
+  let porGenero: RankingsThoth["por_genero"];
+  if (porGeneroRaw && typeof porGeneroRaw === "object" && !Array.isArray(porGeneroRaw)) {
+    const generoObj = porGeneroRaw as Record<string, unknown>;
+    const masc = parseRankingsThothSlice(generoObj.masculino);
+    const fem = parseRankingsThothSlice(generoObj.feminino);
+    if (masc && fem) {
+      porGenero = { masculino: masc, feminino: fem };
+    }
+  }
+
+  return {
+    ...base,
+    janela_dias: row.janela_dias !== undefined ? Number(row.janela_dias) : undefined,
+    por_genero: porGenero,
+  };
+}
+
 function parseReisChamas(raw: unknown): ReisChamas {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return { SUPERIORES: null, INFERIORES: null };
+    return {
+      SUPERIORES_MASCULINO: null,
+      SUPERIORES_FEMININO: null,
+      INFERIORES_MASCULINO: null,
+      INFERIORES_FEMININO: null,
+      SUPERIORES: null,
+      INFERIORES: null,
+    };
   }
   const row = raw as Record<string, unknown>;
   return {
+    SUPERIORES_MASCULINO: row.SUPERIORES_MASCULINO ? String(row.SUPERIORES_MASCULINO) : null,
+    SUPERIORES_FEMININO: row.SUPERIORES_FEMININO ? String(row.SUPERIORES_FEMININO) : null,
+    INFERIORES_MASCULINO: row.INFERIORES_MASCULINO ? String(row.INFERIORES_MASCULINO) : null,
+    INFERIORES_FEMININO: row.INFERIORES_FEMININO ? String(row.INFERIORES_FEMININO) : null,
     SUPERIORES: row.SUPERIORES ? String(row.SUPERIORES) : null,
     INFERIORES: row.INFERIORES ? String(row.INFERIORES) : null,
   };

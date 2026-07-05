@@ -8,6 +8,7 @@ import type { MuscleCalorRow } from "@/components/evolution/human-body-constants
 import { FenyxiaSuportePanel } from "@/components/profile/FenyxiaSuportePanel";
 import { ProfileLinhagemIdentity } from "@/components/profile/ProfileLinhagemIdentity";
 import { FenixAnimationTestPanel } from "@/components/qa/FenixAnimationTestPanel";
+import type { ProfileSexo } from "@/lib/profile-identity";
 import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
 import { FENIX_EVOLUTION_SYSTEMS } from "@/lib/fenix-evolution-glossary";
 import { LoreEm } from "@/lib/lore-emphasis";
@@ -17,6 +18,9 @@ type ProfileEvolutionKnowledgeProps = {
   userId: string;
   profileName?: string | null;
   profilePhotoUrl?: string | null;
+  profileSexo?: ProfileSexo | null;
+  identidadeConfirmada?: boolean;
+  onIdentityConfirmed?: () => void;
   initialCalorRows?: MuscleCalorRow[];
   initialIgnicao?: number;
 };
@@ -25,6 +29,9 @@ export function ProfileEvolutionKnowledge({
   userId,
   profileName,
   profilePhotoUrl,
+  profileSexo = null,
+  identidadeConfirmada = false,
+  onIdentityConfirmed,
   initialCalorRows = [],
   initialIgnicao = 0,
 }: ProfileEvolutionKnowledgeProps) {
@@ -33,6 +40,9 @@ export function ProfileEvolutionKnowledge({
       <ProfileLinhagemIdentity
         userId={userId}
         serverName={profileName}
+        serverSexo={profileSexo}
+        identidadeConfirmada={identidadeConfirmada}
+        onIdentityConfirmed={onIdentityConfirmed}
         initialCalorRows={initialCalorRows}
         initialIgnicao={initialIgnicao}
       />

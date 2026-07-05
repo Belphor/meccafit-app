@@ -14,6 +14,7 @@ type DashboardTabNavProps = {
   activeTab: DashboardTabId;
   muralCount: number;
   hasPersonalBond: boolean;
+  tabsLocked?: boolean;
   onTabChange: (tab: DashboardTabId) => void;
 };
 
@@ -21,6 +22,7 @@ export function DashboardTabNav({
   activeTab,
   muralCount,
   hasPersonalBond,
+  tabsLocked = false,
   onTabChange,
 }: DashboardTabNavProps) {
   const visibleTabs = filterDashboardTabs(hasPersonalBond);
@@ -38,8 +40,15 @@ export function DashboardTabNav({
             key={tab.id}
             type="button"
             aria-current={isActive ? "page" : undefined}
-            onClick={() => onTabChange(tab.id)}
-            className={`min-h-11 max-w-[calc(50%-0.375rem)] shrink sm:max-w-none ${isActive ? DASHBOARD_TAB_BUTTON_ACTIVE : DASHBOARD_TAB_BUTTON_IDLE}`}
+            onClick={() => {
+              if (tabsLocked) return;
+              onTabChange(tab.id);
+            }}
+            disabled={tabsLocked && !isActive}
+            aria-disabled={tabsLocked && !isActive ? true : undefined}
+            className={`min-h-11 max-w-[calc(50%-0.375rem)] shrink sm:max-w-none ${
+              tabsLocked && !isActive ? "cursor-not-allowed opacity-35" : ""
+            } ${isActive ? DASHBOARD_TAB_BUTTON_ACTIVE : DASHBOARD_TAB_BUTTON_IDLE}`}
           >
             <span className={`relative z-[1] ${isActive ? PLASMA_TITLE : ""}`}>
               {tab.label}
