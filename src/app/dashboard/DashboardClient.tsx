@@ -109,6 +109,12 @@ import {
   FORJA_TREINO_UPDATE_EVENT,
   type ForjaTreinoUpdateDetail,
 } from "@/lib/forja-treino-events";
+import {
+  bumpAnimaPortalEntryCount,
+  markSecondEntryTreinoRedirectDone,
+  readAnimaOnboardingComplete,
+  readSecondEntryTreinoRedirectDone,
+} from "@/lib/phoenix-lore";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
@@ -116,8 +122,12 @@ import { parseProfileSexo, markEcossistemaTourComplete } from "@/lib/profile-ide
 import {
   ECOSSISTEMA_TOUR_STEPS,
   isTabEnabledDuringTour,
+  markEcossistemaTourPending,
+  readEcossistemaTourComplete,
+  readEcossistemaTourPending,
   readEcossistemaTourStepIndex,
   resolveDisabledTabsDuringTour,
+  skipEcossistemaTourForReturningAccount,
   writeEcossistemaTourComplete,
   writeEcossistemaTourStepIndex,
 } from "@/lib/fenix-ecossistema-tour";
@@ -263,6 +273,7 @@ export function DashboardClient({
     useState<LinhagemInactivitySyncResult | null>(null);
   const [tourStepIndex, setTourStepIndex] = useState<number | null>(null);
   const tourBootstrappedRef = useRef(false);
+  const secondEntryTreinoBootRef = useRef(false);
   const [linhagemDaysAbsent, setLinhagemDaysAbsent] = useState<number | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
@@ -724,7 +735,9 @@ export function DashboardClient({
 
   const perfilIdentidadeConfirmada = Boolean(profileRow?.perfil_identidade_confirmada);
   const animaPortalVisto = Boolean(profileRow?.anima_portal_visto);
-  const ecossistemaTourConcluido = Boolean(profileRow?.ecossistema_tour_concluido);
+  const ecossistemaTourConcluido =
+    Boolean(profileRow?.ecossistema_tour_concluido) || readEcossistemaTourComplete(userId);
+  const tourPendingFirstRun = readEcossistemaTourPending(userId);
   const profileSexo = parseProfileSexo(profileRow?.sexo);
   const tabsLockedForIdentity =
     profile?.role === "cliente" && !perfilIdentidadeConfirmada && !profile?.is_punished;
@@ -733,6 +746,7 @@ export function DashboardClient({
     profile?.role === "cliente" &&
     perfilIdentidadeConfirmada &&
     !ecossistemaTourConcluido &&
+    tourPendingFirstRun &&
     tourStepIndex !== null &&
     !profile?.is_punished;
 
@@ -755,6 +769,7 @@ export function DashboardClient({
         profile?.role === "cliente" &&
         perfilIdentidadeConfirmada &&
         !ecossistemaTourConcluido &&
+        tourPendingFirstRun &&
         tourStepIndex !== null &&
         !profile?.is_punished &&
         !isTabEnabledDuringTour(tab, tourStepIndex)
@@ -783,6 +798,7 @@ export function DashboardClient({
       profile?.is_punished,
       profile?.role,
       tabsLockedForIdentity,
+      tourPendingFirstRun,
       tourStepIndex,
     ],
   );
@@ -798,6 +814,15 @@ export function DashboardClient({
     });
   }, [applyDashboardTab, subgroupParam]);
 
+  const finalizeEcossistemaTourSkip = useCallback(() => {
+    skipEcossistemaTourForReturningAccount(userId);
+    setTourStepIndex(null);
+    setProfileRow((row) => (row ? { ...row, ecossistema_tour_concluido: true } : row));
+    void markEcossistemaTourComplete().catch(() => {
+      // localStorage já marca conclusão
+    });
+  }, [userId]);
+
   const handleIdentityConfirmed = useCallback(() => {
     setProfileRow((row) =>
       row
@@ -809,6 +834,7 @@ export function DashboardClient({
         : row,
     );
     tourBootstrappedRef.current = true;
+    markEcossistemaTourPending(userId);
     setTourStepIndex(0);
     writeEcossistemaTourStepIndex(userId, 0);
     applyDashboardTab("perfil");
@@ -851,15 +877,52 @@ export function DashboardClient({
     if (!dataReady || tabBootstrappedRef.current) return;
 
     tabBootstrappedRef.current = true;
-    const resolved = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
+    let resolved = resolveDashboardTabFromParam(tabParam, hasPersonalBond);
+
+    if (
+      profile?.role === "cliente" &&
+      !profile?.is_punished &&
+      perfilIdentidadeConfirmada
+    ) {
+      const entryCount = bumpAnimaPortalEntryCount(userId);
+      const portalVisto = animaPortalVisto || readAnimaOnboardingComplete(userId);
+
+      if (
+        entryCount === 2 &&
+        portalVisto &&
+        !readSecondEntryTreinoRedirectDone(userId)
+      ) {
+        markSecondEntryTreinoRedirectDone(userId);
+        secondEntryTreinoBootRef.current = true;
+        resolved = "treino";
+      }
+
+      if (entryCount >= 2 && !readEcossistemaTourComplete(userId)) {
+        finalizeEcossistemaTourSkip();
+      }
+    }
+
     applyDashboardTab(resolved);
+    syncDashboardTabToUrl(resolved, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
       const next = new Set(current);
       next.add(DEFAULT_DASHBOARD_TAB);
       next.add(resolved);
       return next;
     });
-  }, [applyDashboardTab, dataReady, hasPersonalBond, tabParam]);
+  }, [
+    animaPortalVisto,
+    applyDashboardTab,
+    dataReady,
+    hasPersonalBond,
+    perfilIdentidadeConfirmada,
+    profile?.is_punished,
+    profile?.role,
+    subgroupParam,
+    tabParam,
+    userId,
+    finalizeEcossistemaTourSkip,
+  ]);
 
   useEffect(() => {
     if (!dataReady || !tabsLockedForIdentity) return;
@@ -881,12 +944,25 @@ export function DashboardClient({
     ) {
       return;
     }
+
+    if (!readEcossistemaTourPending(userId)) {
+      if (!ecossistemaTourConcluido && !readEcossistemaTourComplete(userId)) {
+        finalizeEcossistemaTourSkip();
+      }
+      return;
+    }
+
     if (tourBootstrappedRef.current) return;
 
     tourBootstrappedRef.current = true;
     const savedStep = readEcossistemaTourStepIndex(userId);
     const step = savedStep ?? 0;
     setTourStepIndex(step);
+
+    if (secondEntryTreinoBootRef.current) {
+      return;
+    }
+
     const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "perfil";
     applyDashboardTab(tab);
     syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
@@ -899,6 +975,7 @@ export function DashboardClient({
     applyDashboardTab,
     dataReady,
     ecossistemaTourConcluido,
+    finalizeEcossistemaTourSkip,
     perfilIdentidadeConfirmada,
     profile?.is_punished,
     profile?.role,

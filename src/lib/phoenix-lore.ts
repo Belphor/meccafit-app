@@ -285,6 +285,63 @@ export function writeAnimaOnboardingComplete(userId: string): void {
   }
 }
 
+export const ANIMA_PORTAL_ENTRY_COUNT_PREFIX = "meccafit:anima-portal-entry-count:v1:";
+
+export const ANIMA_SECOND_ENTRY_TREINO_PREFIX = "meccafit:anima-second-entry-treino:v1:";
+
+export function readAnimaPortalEntryCount(userId: string): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem(`${ANIMA_PORTAL_ENTRY_COUNT_PREFIX}${userId}`);
+    if (!raw) return 0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Incrementa a cada abertura do dashboard (mesma conta). */
+export function bumpAnimaPortalEntryCount(userId: string): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const next = readAnimaPortalEntryCount(userId) + 1;
+    window.localStorage.setItem(`${ANIMA_PORTAL_ENTRY_COUNT_PREFIX}${userId}`, String(next));
+    return next;
+  } catch {
+    return readAnimaPortalEntryCount(userId);
+  }
+}
+
+export function readSecondEntryTreinoRedirectDone(userId: string): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return (
+      window.localStorage.getItem(`${ANIMA_SECOND_ENTRY_TREINO_PREFIX}${userId}`) === "done"
+    );
+  } catch {
+    return true;
+  }
+}
+
+export function markSecondEntryTreinoRedirectDone(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${ANIMA_SECOND_ENTRY_TREINO_PREFIX}${userId}`, "done");
+  } catch {
+    // quota / private mode
+  }
+}
+
+/** Introdução do Portal só na 1ª entrada real da conta. */
+export function shouldShowAnimaPortalOnboarding(
+  userId: string,
+  animaPortalVisto: boolean,
+): boolean {
+  if (animaPortalVisto) return false;
+  return !readAnimaOnboardingComplete(userId);
+}
+
 export function readAnimaDaysSinceLastVisit(userId: string): number | null {
   if (typeof window === "undefined") return null;
   try {

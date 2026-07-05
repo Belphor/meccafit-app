@@ -11,13 +11,14 @@ import {
   ANIMA_ONBOARDING_LOCK_MS,
   markDebtSoftGreetingShown,
   readAnimaOnboardingComplete,
+  shouldShowAnimaPortalOnboarding,
+  writeAnimaOnboardingComplete,
   resolveIntentSummary,
   resolveOnboardingSpeech,
   resolvePunishmentSpeech,
   resolveTierLore,
   shouldShowDebtSoftGreeting,
   writeAnimaLastVisit,
-  writeAnimaOnboardingComplete,
   PHOENIX_PUNISHMENT_LORE,
   type AnimaBalloonAnchor,
   type AnimaSpeechContext,
@@ -64,9 +65,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [hudOpen, setHudOpen] = useState(false);
   const [onboardingActive, setOnboardingActive] = useState(false);
-  const [onboardingLockMs, setOnboardingLockMs] = useState(
-    animaPortalVisto ? 0 : ANIMA_ONBOARDING_LOCK_MS,
-  );
+  const [onboardingLockMs, setOnboardingLockMs] = useState(ANIMA_ONBOARDING_LOCK_MS);
   const [exitDesaturate, setExitDesaturate] = useState(false);
   const [highlightAnchor, setHighlightAnchor] = useState<AnimaBalloonAnchor | null>(null);
   const onboardingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -77,9 +76,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const onboardingNarrationFiredRef = useRef(false);
   const onboardingHasSpokenRef = useRef(false);
   const skipNextRevealSpeechRef = useRef(false);
-  const [onboardingNarrationDone, setOnboardingNarrationDone] = useState(
-    animaPortalVisto || !isSupported,
-  );
+  const [onboardingNarrationDone, setOnboardingNarrationDone] = useState(!isSupported);
 
   const speechCtx = useMemo<AnimaSpeechContext>(
     () => ({ profileName, phaseContext, daysAbsent }),
@@ -141,15 +138,20 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   useEffect(() => {
     if (isPunished) return;
 
-    const needsOnboarding = !readAnimaOnboardingComplete(userId);
+    if (animaPortalVisto && !readAnimaOnboardingComplete(userId)) {
+      writeAnimaOnboardingComplete(userId);
+    }
+
+    const needsOnboarding = shouldShowAnimaPortalOnboarding(userId, animaPortalVisto);
     if (needsOnboarding) {
       setOnboardingActive(true);
-      setOnboardingLockMs(animaPortalVisto ? 0 : ANIMA_ONBOARDING_LOCK_MS);
-      setOnboardingNarrationDone(animaPortalVisto || !isSupported);
+      setOnboardingLockMs(ANIMA_ONBOARDING_LOCK_MS);
+      setOnboardingNarrationDone(!isSupported);
       writeAnimaLastVisit(userId);
       return;
     }
 
+    setOnboardingActive(false);
     writeAnimaLastVisit(userId);
   }, [animaPortalVisto, isSupported, userId, isPunished]);
 
@@ -325,9 +327,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
   const onboardingSecondsLeft = Math.ceil(onboardingLockMs / 1000);
   const onboardingLockReleased = onboardingLockMs <= 0;
-  const canSkipOnboardingNarrative = animaPortalVisto;
-  const canAcenderLinhagem =
-    onboardingLockReleased && (onboardingNarrationDone || canSkipOnboardingNarrative);
+  const canAcenderLinhagem = onboardingLockReleased && onboardingNarrationDone;
 
   const resolveOnboardingHint = (): string => {
     if (!onboardingLockReleased) {
@@ -344,7 +344,6 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   };
 
   const resolveAcenderButtonLabel = (): string => {
-    if (animaPortalVisto) return "Acender minha chama";
     if (!onboardingLockReleased) return `Forja em ${onboardingSecondsLeft}s`;
     if (!onboardingNarrationDone) return "Narrativa em chamas…";
     return "Acender minha linhagem";
@@ -374,15 +373,6 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               {onboardingSpeech}
             </p>
             <p className="mt-4 text-xs text-neutral-400">{resolveOnboardingHint()}</p>
-            {canSkipOnboardingNarrative ? (
-              <button
-                type="button"
-                onClick={completeOnboarding}
-                className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full border border-neutral-700/60 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-300 transition hover:border-amber-500/30 hover:text-amber-100`}
-              >
-                Pular narrativa
-              </button>
-            ) : null}
             <button
               type="button"
               disabled={!canAcenderLinhagem}

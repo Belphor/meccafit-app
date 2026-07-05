@@ -10,6 +10,8 @@ import {
 
 export const ECOSSISTEMA_TOUR_STORAGE_PREFIX = "meccafit:ecossistema-tour:v1:";
 export const ECOSSISTEMA_TOUR_STEP_PREFIX = "meccafit:ecossistema-tour-step:v1:";
+/** Só true após selar identidade na 1ª vez — autoriza o tour nesta sessão ou reload imediato. */
+export const ECOSSISTEMA_TOUR_PENDING_PREFIX = "meccafit:ecossistema-tour-pending:v1:";
 
 export type EcossistemaTourStepId = "perfil" | "treino" | "evolucao" | "comunidade";
 
@@ -120,9 +122,43 @@ export function writeEcossistemaTourComplete(userId: string): void {
   try {
     window.localStorage.setItem(`${ECOSSISTEMA_TOUR_STORAGE_PREFIX}${userId}`, "done");
     window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_STEP_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`);
   } catch {
     // quota / private mode
   }
+}
+
+export function markEcossistemaTourPending(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`, "1");
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function readEcossistemaTourPending(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearEcossistemaTourPending(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`);
+  } catch {
+    // quota / private mode
+  }
+}
+
+/** Conta já passou do fluxo de 1ª visita — tour não deve mais rodar. */
+export function skipEcossistemaTourForReturningAccount(userId: string): void {
+  writeEcossistemaTourComplete(userId);
+  clearEcossistemaTourPending(userId);
 }
 
 export function readEcossistemaTourStepIndex(userId: string): number | null {
