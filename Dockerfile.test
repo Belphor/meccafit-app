@@ -1,0 +1,16 @@
+# Bateria global — Node 22 + Playwright + dependências de QA
+FROM mcr.microsoft.com/playwright:v1.61.1-noble
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+ENV CI=true
+ENV DOCKER_TEST=1
+ENV NODE_ENV=test
+ENV PLAYWRIGHT_SKIP_WEBSERVER=1
+
+CMD ["npm", "run", "test:global"]

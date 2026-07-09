@@ -148,6 +148,12 @@ function PhoenixModelMesh({
   const gltf = useGLTF(FENYXIA_CORE_GLB);
 
   const { scene, wingLayers } = useMemo(() => preparePhoenixScene(gltf.scene), [gltf.scene]);
+  const wingLayersRef = useRef<Object3D[]>([]);
+
+  useEffect(() => {
+    wingLayersRef.current = wingLayers;
+  }, [wingLayers]);
+
   const wingFlapActive = isVisible && isOpenOrb && !isPunished;
 
   useEffect(() => {
@@ -156,13 +162,13 @@ function PhoenixModelMesh({
 
   useEffect(() => {
     if (wingFlapActive) return;
-    for (const layer of wingLayers) {
+    for (const layer of wingLayersRef.current) {
       layer.rotation.x = 0;
       layer.rotation.y = 0;
       layer.rotation.z = 0;
     }
     invalidate();
-  }, [invalidate, wingFlapActive, wingLayers]);
+  }, [invalidate, wingFlapActive]);
 
   useEffect(() => {
     applyPhoenixMaterials(scene, isPunished, maxAnisotropy);
@@ -174,12 +180,14 @@ function PhoenixModelMesh({
   }, [onLoaded, scene]);
 
   useFrame((_, delta) => {
-    if (!wingFlapActive || wingLayers.length === 0 || reducedMotionRef.current) return;
+    if (!wingFlapActive || wingLayersRef.current.length === 0 || reducedMotionRef.current) return;
 
     wingPhaseRef.current += delta * PHOENIX_WING_FLAP_SPEED;
     const flap = Math.sin(wingPhaseRef.current) * PHOENIX_WING_FLAP_AMPLITUDE;
+    const layers = wingLayersRef.current;
 
-    for (const layer of wingLayers) {
+    // R3F: animação de asas exige mutação direta do grafo Three.js em useFrame.
+    for (const layer of layers) {
       layer.rotation.x = flap * 1.2;
       layer.rotation.y = flap * 0.35;
       layer.rotation.z = flap * 0.95;

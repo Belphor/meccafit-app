@@ -299,6 +299,7 @@ export function EvolucaoPageClient({
         variant="treino"
         className={DASHBOARD_PANEL_FRAME}
         aria-labelledby="evolucao-linhagem-title"
+        data-tour-target="evolucao-chama"
       >
         <DashboardPanelHeader chip="Linhagem" meta={`${VTC_DISPLAY_NAME} acumulado · 30 dias`} />
         <EvolutionChamaAcumuladaCard

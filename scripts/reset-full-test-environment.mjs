@@ -220,6 +220,33 @@ async function main() {
     console.warn("planilhas_forjador seed:", seedError.message);
   }
 
+  console.log("reset-full: reiniciando fluxo de primeira visita (ANYMA / identidade / tour)…");
+
+  const { data: clientProfiles, error: clientProfilesError } = await client
+    .from("profiles")
+    .select("id")
+    .eq("role", "cliente");
+
+  if (clientProfilesError) {
+    console.warn("profiles onboarding reset:", clientProfilesError.message);
+  } else if (clientProfiles?.length) {
+    const { error: onboardingResetError } = await client
+      .from("profiles")
+      .update({
+        perfil_identidade_confirmada: false,
+        anima_portal_visto: false,
+        ecossistema_tour_concluido: false,
+        sexo: null,
+      })
+      .eq("role", "cliente");
+
+    if (onboardingResetError) {
+      console.warn("profiles onboarding reset:", onboardingResetError.message);
+    } else {
+      console.log(`  perfis cliente reiniciados (1ª visita): ${clientProfiles.length}`);
+    }
+  }
+
   console.log("reset-full: OK");
   console.log(`  comunidade.modo: ${comunidade.modo ?? "?"}`);
   console.log(`  comunidade.duelos_removidos: ${comunidade.duelos_removidos ?? "?"}`);
@@ -234,11 +261,12 @@ async function main() {
   }
   console.log(`  planilhas_forjador re-seed: ${planilhasSeeded} linha(s)`);
   console.log("");
-  console.log("No navegador (F12 → Console):");
+  console.log("No navegador (F12 → Console) — limpar cache local da ANYMA:");
   console.log(
     "  Object.keys(localStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>localStorage.removeItem(k));",
   );
-  console.log("Depois: Ctrl+F5 e faça login novamente.");
+  console.log("  Object.keys(sessionStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>sessionStorage.removeItem(k));");
+  console.log("Depois: Ctrl+F5 e faça login novamente. O fluxo ANYMA recomeça do zero.");
 }
 
 main().catch((error) => {

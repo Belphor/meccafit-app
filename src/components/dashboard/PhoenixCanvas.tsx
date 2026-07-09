@@ -74,7 +74,7 @@ export function PhoenixCanvas({
   greetingCopy = ANIMA_ORB_GREETING,
   onEngage,
   onPhoenixRevealed,
-  ariaLabel = "Despertar Anima Fênix",
+  ariaLabel = "Despertar ANYMA FÊNIX",
   className = "",
 }: PhoenixCanvasProps) {
   const [phase, setPhase] = useState<PhoenixOrbPhase>("orb");
@@ -151,30 +151,34 @@ export function PhoenixCanvas({
 
   useEffect(() => {
     if (phase === "awake" || isHudOpen) {
-      setModelEmerging(true);
-      setModelRevealed(true);
+      queueMicrotask(() => {
+        setModelEmerging(true);
+        setModelRevealed(true);
+      });
       return;
     }
 
     if (phase === "igniting" || phase === "revealing") {
       if (modelReady) {
-        beginModelEmerging();
+        queueMicrotask(() => beginModelEmerging());
       }
       return;
     }
 
-    setModelEmerging(false);
-    setModelRevealed(false);
+    queueMicrotask(() => {
+      setModelEmerging(false);
+      setModelRevealed(false);
+    });
   }, [beginModelEmerging, isHudOpen, modelReady, phase]);
 
   useEffect(() => {
     if (!modelEmerging) {
-      setModelRevealed(false);
+      queueMicrotask(() => setModelRevealed(false));
       return;
     }
 
     if (PHOENIX_MODEL_FADE_IN_MS <= 0) {
-      setModelRevealed(true);
+      queueMicrotask(() => setModelRevealed(true));
       return;
     }
 
@@ -212,11 +216,13 @@ export function PhoenixCanvas({
     if (phase !== "awake") return;
 
     clearTimers();
-    setShowGreeting(false);
-    setPhase("orb");
-    setModelEmerging(false);
-    setModelRevealed(false);
-    resetFlashState();
+    queueMicrotask(() => {
+      setShowGreeting(false);
+      setPhase("orb");
+      setModelEmerging(false);
+      setModelRevealed(false);
+      resetFlashState();
+    });
   }, [clearTimers, isHudOpen, phase, resetFlashState]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
@@ -271,7 +277,7 @@ export function PhoenixCanvas({
   };
 
   return (
-    <div className={`phoenix-anchor ${className}`}>
+    <div className={`phoenix-anchor ${className}`} data-anima-phoenix-anchor>
       {showGreeting && greetingCopy ? (
         <div
           className="phoenix-orb-greeting phoenix-orb-greeting--revealed pointer-events-none absolute z-[70]"

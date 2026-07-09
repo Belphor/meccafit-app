@@ -5,9 +5,17 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_APP_URL } from "../lib/argos-app-server.mjs";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function parseArgs(argv) {
-  const args = { vus: 200, duration: 30, ramp: 8, latencyBudget: 0, appUrl: "" };
+  const args = {
+    vus: 200,
+    duration: 30,
+    ramp: 8,
+    latencyBudget: 0,
+    appUrl: process.env.ARGOS_APP_URL?.trim() || DEFAULT_APP_URL,
+  };
   for (let i = 2; i < argv.length; i += 1) {
     if (argv[i] === "--vus") args.vus = Number(argv[i + 1] ?? args.vus);
     if (argv[i] === "--duration") args.duration = Number(argv[i + 1] ?? args.duration);
@@ -49,12 +57,14 @@ if (!baseUrl || !anonKey) {
   process.exit(1);
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 const POOL = [
-  { email: "cliente@meccafit.com", password: "senha123" },
-  { email: "atleta2@meccafit.com", password: "senha123" },
-  { email: "atleta3@meccafit.com", password: "senha123" },
-  { email: "atleta4@meccafit.com", password: "senha123" },
-  { email: "master@meccafit.com", password: "senha123" },
+  { email: "cliente@meccafit.com", password: SEED_PASSWORD },
+  { email: "atleta2@meccafit.com", password: SEED_PASSWORD },
+  { email: "atleta3@meccafit.com", password: SEED_PASSWORD },
+  { email: "atleta4@meccafit.com", password: SEED_PASSWORD },
+  { email: "master@meccafit.com", password: SEED_PASSWORD },
 ];
 
 const SUPERACAO_STATUS = encodeURIComponent("SUPERAÇÃO");

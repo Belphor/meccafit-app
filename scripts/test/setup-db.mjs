@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import pg from "pg";
-
-const SAFE_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+import { assertSafeTestDatabaseUrl } from "./safe-test-db.mjs";
 
 function loadEnvTest(cwd = process.cwd()) {
   const envPath = resolve(cwd, ".env.test");
@@ -21,35 +20,6 @@ function loadEnvTest(cwd = process.cwd()) {
     const value = trimmed.slice(idx + 1).trim();
     process.env[key] = value;
   }
-}
-
-function requireSafeTestDatabaseUrl() {
-  if (process.env.NODE_ENV !== "test") {
-    throw new Error("Recusado: NODE_ENV precisa ser exatamente 'test'.");
-  }
-
-  const rawUrl = process.env.TEST_DATABASE_URL?.trim();
-  if (!rawUrl) {
-    throw new Error("Recusado: TEST_DATABASE_URL ausente.");
-  }
-
-  const url = new URL(rawUrl);
-  const databaseName = url.pathname.replace(/^\//, "");
-  const host = url.hostname.toLowerCase();
-
-  if (!SAFE_HOSTS.has(host)) {
-    throw new Error(`Recusado: host de banco inseguro para testes (${url.hostname}).`);
-  }
-
-  if (!databaseName.toLowerCase().includes("test")) {
-    throw new Error(`Recusado: o database precisa conter 'test' no nome (${databaseName}).`);
-  }
-
-  if (rawUrl.includes("supabase.co") || rawUrl.includes("pooler.supabase.com")) {
-    throw new Error("Recusado: testes nunca podem apontar para Supabase remoto.");
-  }
-
-  return rawUrl;
 }
 
 async function connectWithRetry(connectionString) {
@@ -99,7 +69,8 @@ async function resetDatabase(client) {
 }
 
 loadEnvTest();
-const connectionString = requireSafeTestDatabaseUrl();
+process.env.NODE_ENV = "test";
+const connectionString = assertSafeTestDatabaseUrl(process.env.TEST_DATABASE_URL);
 const client = await connectWithRetry(connectionString);
 
 try {

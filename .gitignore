@@ -43,9 +43,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# QA local
+.qa-app.pid
+test-global-*.log
+
 # typescript
 *.tsbuildinfo
 
 .vercel
 
 .vercel
+
+.env*.local

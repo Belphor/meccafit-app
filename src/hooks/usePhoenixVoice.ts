@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PhaseTier } from "@/lib/dashboard-config";
-import { DASHBOARD_TAB_CHANGE_EVENT } from "@/lib/dashboard-tab-navigation";
+import {
+  DASHBOARD_TAB_CHANGE_EVENT,
+  type DashboardTabChangeDetail,
+} from "@/lib/dashboard-tab-navigation";
+import { formatAnimaSpeech } from "@/lib/anima-speech";
 import { injectName, injectRegisteredName } from "@/lib/profile-display-name";
 import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
 
@@ -210,7 +214,7 @@ function applyPhoenixVoiceSpecs(
 
 function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulation: VoiceModulation } {
   if (typeof input === "string") {
-    return { text: input.trim(), modulation: {} };
+    return { text: formatAnimaSpeech(input.trim()), modulation: {} };
   }
 
   const nameInjector =
@@ -218,14 +222,14 @@ function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulati
 
   if ("tier" in input && !("text" in input)) {
     return {
-      text: nameInjector(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName),
+      text: formatAnimaSpeech(nameInjector(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName)),
       modulation: { tier: input.tier, isPunished: input.isPunished },
     };
   }
 
   if ("text" in input) {
     return {
-      text: nameInjector(input.text, input.fullName),
+      text: formatAnimaSpeech(nameInjector(input.text, input.fullName)),
       modulation: {
         tier: input.tier,
         isPunished: input.isPunished,
@@ -252,7 +256,9 @@ export function usePhoenixVoice() {
     setState(isSupported ? "idle" : "unsupported");
   }, [isSupported]);
 
-  cancelVoiceRef.current = cancelVoice;
+  useEffect(() => {
+    cancelVoiceRef.current = cancelVoice;
+  }, [cancelVoice]);
 
   const igniteVoice = useCallback((input: IgniteVoiceInput) => {
     const { text, modulation } = resolveIgnitePayload(input);
@@ -293,7 +299,6 @@ export function usePhoenixVoice() {
   useEffect((): (() => void) | void => {
     const synthesis = getSynthesis();
     if (!synthesis) {
-      setState("unsupported");
       return;
     }
 
@@ -322,7 +327,9 @@ export function usePhoenixVoice() {
       }
     };
 
-    const onTabChange = (): void => {
+    const onTabChange = (event: Event): void => {
+      const detail = (event as CustomEvent<DashboardTabChangeDetail>).detail;
+      if (detail?.preserveVoice) return;
       cancelVoiceRef.current?.();
     };
 

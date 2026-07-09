@@ -1,5 +1,9 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { isAccountSuspended } from "@/lib/account-access-status";
+import {
+  applySecurityHeaders,
+  createRequestNonce,
+} from "@/lib/security-headers";
 import { createMiddlewareClient } from "@/lib/supabase-middleware";
 
 const PROTECTED_PREFIXES = [
@@ -32,23 +36,41 @@ function isForjaRoute(pathname: string): boolean {
   );
 }
 
+function secureResponse(response: NextResponse, nonce: string): NextResponse {
+  applySecurityHeaders(response, nonce);
+  response.headers.set("x-nonce", nonce);
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const nonce = createRequestNonce();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const securedRequest = new NextRequest(request.url, {
+    headers: requestHeaders,
+    method: request.method,
+  });
+
+  const { pathname } = securedRequest.nextUrl;
 
   if (!isProtectedRoute(pathname)) {
-    return NextResponse.next();
+    return secureResponse(
+      NextResponse.next({ request: { headers: requestHeaders } }),
+      nonce,
+    );
   }
 
-  const { supabase, response } = createMiddlewareClient(request);
+  const { supabase, response } = createMiddlewareClient(securedRequest);
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = request.nextUrl.clone();
+    const loginUrl = securedRequest.nextUrl.clone();
     loginUrl.pathname = "/";
     loginUrl.search = "";
-    return NextResponse.redirect(loginUrl);
+    return secureResponse(NextResponse.redirect(loginUrl), nonce);
   }
 
   const { data: profile } = await supabase
@@ -59,42 +81,38 @@ export async function proxy(request: NextRequest) {
 
   if (isForjaRoute(pathname)) {
     if (!FORJADOR_PANEL_ROLES.has(String(profile?.role ?? ""))) {
-      const dashboardUrl = request.nextUrl.clone();
+      const dashboardUrl = securedRequest.nextUrl.clone();
       dashboardUrl.pathname = "/dashboard";
-      return NextResponse.redirect(dashboardUrl);
+      return secureResponse(NextResponse.redirect(dashboardUrl), nonce);
     }
-    return response;
+    return secureResponse(response, nonce);
   }
 
   if (profile?.role === "cliente" && isAccountSuspended(profile.status_altar)) {
-    const loginUrl = request.nextUrl.clone();
+    const loginUrl = securedRequest.nextUrl.clone();
     loginUrl.pathname = "/";
     loginUrl.search = "?suspended=1";
-    return NextResponse.redirect(loginUrl);
+    return secureResponse(NextResponse.redirect(loginUrl), nonce);
   }
 
   if (FORJADOR_PANEL_ROLES.has(String(profile?.role ?? "")) && pathname === "/dashboard") {
-    const forjaUrl = request.nextUrl.clone();
+    const forjaUrl = securedRequest.nextUrl.clone();
     forjaUrl.pathname = "/dashboard/forja";
-    return NextResponse.redirect(forjaUrl);
+    return secureResponse(NextResponse.redirect(forjaUrl), nonce);
   }
 
-  return response;
+  return secureResponse(response, nonce);
 }
 
 export const config = {
   matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/evolucao",
-    "/evolucao/:path*",
-    "/treino",
-    "/treino/:path*",
-    "/comunidade",
-    "/comunidade/:path*",
-    "/perfil",
-    "/perfil/:path*",
-    "/forjador",
-    "/forjador/:path*",
+    {
+      source:
+        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?|ico)$).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };

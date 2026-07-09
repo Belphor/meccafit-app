@@ -173,7 +173,7 @@ export function TreinoWeekControls({
 
   return (
     <div className={`treino-execution treino-execution--${executionTone}`}>
-      <div className={TREINO_EXECUTION_HERO}>
+      <div className={TREINO_EXECUTION_HERO} data-tour-target="treino-dia">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <p className={resolveExecutionLabelClass(executionTone)}>Execução</p>
           {isActiveDayLocked ? (
@@ -207,7 +207,7 @@ export function TreinoWeekControls({
           </p>
         </div>
 
-        <div className="treino-execution-day-grid" role="group">
+        <div className="treino-execution-day-grid" role="group" data-tour-target="treino-calendario">
           {WEEKDAY_INDICES.map((day) => {
             const isSelected = day === activeTrainingDay;
             const isToday = day === calendarToday;

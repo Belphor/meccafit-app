@@ -12,13 +12,17 @@ export const PORTAL_COPY = {
   loginIdle: "Aproxime-se do altar para reacender sua jornada.",
   loginAltarAccess: "Cliente, administrador ou Dono Supremo acessam pelo altar principal.",
   loginPasswordHint:
-    "Informe a senha de teste. Use senha123 para os usuários criados no Supabase.",
+    process.env.NODE_ENV === "development"
+      ? "Informe a senha de teste. Use senha123 para os usuários criados no Supabase."
+      : "Informe sua senha de acesso para reacender sua chama.",
   loginOpening: "Abrindo o Portal de Brasa...",
   loginSessionError: "Não foi possível confirmar a sessão. Tente novamente.",
   loginProfileMissing:
     "Login reconhecido, mas o perfil não foi encontrado no altar. Contate o Forjador.",
   loginConfirmed: "Acesso confirmado no altar. Entrando no dashboard...",
   loginInvalidCredentials: "E-mail ou senha incorretos. Verifique suas credenciais e tente novamente.",
+  loginRateLimited:
+    "Muitas tentativas de acesso. Aguarde um minuto e tente novamente.",
   loginRoleUnauthorized:
     "Este altar não reconhece o seu papel de acesso. Utilize o portal correto da sua linhagem.",
   loginDbError: "Falha ao validar o login no banco de dados. Tente novamente.",

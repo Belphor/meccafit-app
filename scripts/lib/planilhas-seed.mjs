@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { resolveSeedPassword } from "./seed-credentials.mjs";
 
 /** Grade semanal padrão Seg–Sáb (sem abdômen · ordem 1). */
 export const DEFAULT_WEEKLY_PLANILHA = [
@@ -11,7 +12,7 @@ export const DEFAULT_WEEKLY_PLANILHA = [
 ];
 
 const FULL_WEEK_DAYS = [1, 2, 3, 4, 5, 6];
-const SEED_PASSWORD = "senha123";
+const SEED_PASSWORD = resolveSeedPassword();
 const DEFAULT_FORJADOR_EMAIL = "master@meccafit.com";
 
 export function hasFullPlanilhaWeek(rows) {

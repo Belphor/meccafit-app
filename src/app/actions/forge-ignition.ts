@@ -2,11 +2,7 @@
 
 import { isForgeIgnitionConfigured, matchesForgeIgnitionKey } from "@/lib/forge-config.server";
 import { getRequestClientKey } from "@/lib/request-client.server";
-import {
-  buildRateLimitKey,
-  isRateLimited,
-  recordRateLimitAttempt,
-} from "@/lib/rate-limit.server";
+import { buildRateLimitKey, consumeRateLimitSlot } from "@/lib/rate-limit.server";
 
 export type ForgeIgnitionAvailability = {
   configured: boolean;
@@ -17,7 +13,7 @@ export type ForgeIgnitionValidation = {
   valid: boolean;
 };
 
-const FORGE_KEY_MAX_ATTEMPTS = 8;
+const FORGE_KEY_MAX_ATTEMPTS = 5;
 
 export async function checkForgeIgnitionAvailable(): Promise<ForgeIgnitionAvailability> {
   return { configured: isForgeIgnitionConfigured() };
@@ -32,11 +28,9 @@ export async function validateForgeIgnitionKey(
 
   const clientKey = await getRequestClientKey();
   const rateKey = buildRateLimitKey("forge-ignition", clientKey);
-  if (isRateLimited(rateKey, FORGE_KEY_MAX_ATTEMPTS)) {
+  if (await consumeRateLimitSlot(rateKey, FORGE_KEY_MAX_ATTEMPTS)) {
     return { configured: true, valid: false };
   }
-
-  recordRateLimitAttempt(rateKey);
 
   return {
     configured: true,

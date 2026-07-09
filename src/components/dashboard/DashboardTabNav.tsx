@@ -43,6 +43,7 @@ export function DashboardTabNav({
           <button
             key={tab.id}
             type="button"
+            data-tour-tab={tab.id}
             aria-current={isActive ? "page" : undefined}
             onClick={() => {
               if (isDisabled) return;

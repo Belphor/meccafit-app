@@ -481,8 +481,9 @@ export function DashboardTreinoWorkspace({
           />
         </div>
 
+          <div className="order-2 lg:order-2" data-tour-target="treino-altar">
           <BraseiroPanel
-            className="order-2 lg:order-2"
+            className="w-full"
             profile={profile}
             isIncubating={isIncubating}
             formattedVtcTotal={formattedVtcTotal}
@@ -491,6 +492,7 @@ export function DashboardTreinoWorkspace({
             biologicalMultiplier={BIOLOGICAL_BALANCE_MULTIPLIER}
             isChamaReativa={isChamaReativa}
           />
+          </div>
         </div>
       </TreinoLinhagemInactivityDegradation>
     </div>

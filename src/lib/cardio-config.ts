@@ -5,8 +5,9 @@ import {
 } from "@/lib/cardio-voo-cinzas";
 
 const CARDIO_TEST_MODE =
-  process.env.NEXT_PUBLIC_CARDIO_TEST_MODE === "1" ||
-  process.env.NEXT_PUBLIC_CARDIO_TEST_MODE === "true";
+  process.env.NODE_ENV !== "production" &&
+  (process.env.NEXT_PUBLIC_CARDIO_TEST_MODE === "1" ||
+    process.env.NEXT_PUBLIC_CARDIO_TEST_MODE === "true");
 
 export function isCardioTestMode(): boolean {
   return CARDIO_TEST_MODE;

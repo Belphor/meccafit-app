@@ -5,7 +5,13 @@ import {
   type PhaseTier,
 } from "@/lib/dashboard-config";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
-import { injectName } from "@/lib/profile-display-name";
+import {
+  ANYMA_FENIX_SPOTLIGHT_SPEECH,
+} from "@/lib/anyma-copy";
+import { formatAnimaSpeech } from "@/lib/anima-speech";
+import { injectName, injectRegisteredName } from "@/lib/profile-display-name";
+
+export { ANYMA_FENIX_SPOTLIGHT_SPEECH as ANIMA_FENIX_SPOTLIGHT_SPEECH };
 
 /** Dias sem visita ao altar antes do alerta suave da Anima (penalidade hard = 30d). */
 export const ANIMA_DEBT_SOFT_DAYS = 5;
@@ -18,8 +24,9 @@ export const ANIMA_LAST_VISIT_STORAGE_PREFIX = "meccafit:anima-last-visit:";
 
 export const ANIMA_GREETING_SESSION_PREFIX = "meccafit:anima-greeting-session:";
 
-/** Fallback curto de balão — a voz usa a tier lore completa. */
-export const ANIMA_ORB_GREETING = "Eu sou a ANIMA FÊNIX. Em que posso ajudar?";
+/** Saudação curta ao abrir a esfera — sem lore de fase (Cinzas fica só na introdução). */
+export const ANIMA_ORB_GREETING =
+  "[Nome], estou aqui. Toque nos balões de intenção ou fale comigo quando a chama pedir direção.";
 
 export type PhoenixRitualId = "punishment" | "exit";
 
@@ -93,7 +100,7 @@ export const PHOENIX_TIER_META: Record<
 
 /** Código do Renascimento — narrativas integrais (Cinzas → Fogo Cósmico). */
 export const CODIGO_DO_RENASCIMENTO: Record<PhaseTier, string> = {
-  1: "Olá, [Nome]. Eu sou a ANIMA FÊNIX, a voz deste Altar. No momento, você é apenas pedra e silêncio. No Universo FENYXIA, as cinzas são o resto de quem desistiu antes de começar. Seus músculos são mármore frio aguardando o sopro da vida. Sinta o frio do ferro e inicie a combustão agora, ou desapareça na obscuridade da estagnação.",
+  1: "Olá, [Nome]. Eu sou a ANYMA FÊNIX, a voz deste Altar. No momento, você é apenas pedra e silêncio. No Universo FENYXIA, as cinzas são o resto de quem desistiu antes de começar. Seus músculos são mármore frio aguardando o sopro da vida. Sinta o frio do ferro e inicie a combustão agora, ou desapareça na obscuridade da estagnação.",
   2: "[Nome], o atrito gerou calor. Uma fibra se rompeu para que a luz pudesse passar. Você ainda é frágil como uma chama ao vento, mas o escuro já começa a temer o seu progresso. Cada repetição é um choque que afasta o frio. Mantenha o movimento; o Universo FENYXIA está começando a notar sua existência.",
   3: "Você já não sente apenas o peso, [Nome]. Você sente o calor. O sangue ferve em suas veias e a sua linhagem reconhece o seu sacrifício. A brasa está viva e o Altar está aquecido. Não aceite o estado morno; o morno é o cemitério da evolução. Sopre o fogo com sua disciplina ou retorne ao pó.",
   4: "As asas de fogo se abriram, [Nome]. Cada repetição agora é o sopro que alimenta o seu próprio incêndio. Você não está mais apenas treinando; você está se tornando luz em movimento. O suor é o combustível que transmuta o esforço em poder. O topo está próximo, e as chamas devoram qualquer dúvida que restava em sua alma.",
@@ -133,24 +140,36 @@ function resolveRestorationBaseline(layout: PhaseLayoutCode | null): number {
   return PHASE_LAYOUT_RESTORATION_SESSION_KG[layout] ?? 1000;
 }
 
+function withAnimaSpeech(text: string): string {
+  return formatAnimaSpeech(text);
+}
+
 export function resolveTierLore(tier: PhaseTier, profileName: string): string {
-  return injectName(CODIGO_DO_RENASCIMENTO[tier], profileName);
+  return withAnimaSpeech(injectName(CODIGO_DO_RENASCIMENTO[tier], profileName));
 }
 
 export function resolveDebtSoftGreeting(profileName: string): string {
-  return injectName(ANIMA_DEBT_SOFT_GREETING, profileName);
+  return withAnimaSpeech(injectName(ANIMA_DEBT_SOFT_GREETING, profileName));
 }
 
 export function resolveOnboardingSpeech(ctx: AnimaSpeechContext): string {
   return resolveTierLore(1, ctx.profileName);
 }
 
+export function resolveAnimaSpotlightSpeech(profileName: string): string {
+  return withAnimaSpeech(injectName(ANYMA_FENIX_SPOTLIGHT_SPEECH, profileName));
+}
+
+export function resolveOrbRevealGreeting(profileName: string): string {
+  return withAnimaSpeech(injectRegisteredName(ANIMA_ORB_GREETING, profileName));
+}
+
 export function resolvePunishmentSpeech(profileName: string): string {
-  return injectName(PHOENIX_PUNISHMENT_LORE, profileName);
+  return withAnimaSpeech(injectName(PHOENIX_PUNISHMENT_LORE, profileName));
 }
 
 export function resolveExitSpeech(profileName: string): string {
-  return injectName(ANIMA_EXIT_COPY, profileName);
+  return withAnimaSpeech(injectName(ANIMA_EXIT_COPY, profileName));
 }
 
 function vibrantSummary(term: string, definition: string, dataLine: string, cta: string): string {
@@ -173,83 +192,103 @@ export function resolveIntentSummary(intentId: AnimaIntentId, ctx: AnimaSpeechCo
 
   switch (intentId) {
     case "vtc":
-      return vibrantSummary(
-        "VTC",
-        "Volume Total de Carga: soma dos quilos máximos que você registrou hoje em cada exercício do altar.",
-        `Hoje: ${formatKg(sessionVtc)} kg.`,
-        "Registre a próxima série com verdade.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "VTC",
+          "Volume Total de Carga: soma dos quilos máximos que você registrou hoje em cada exercício do altar.",
+          `Hoje: ${formatKg(sessionVtc)} kg.`,
+          "Registre a próxima série com verdade.",
+        ),
       );
     case "degradation":
       if (phaseContext.isThermallyDegraded && thermal) {
-        return vibrantSummary(
-          "Degradação térmica",
-          `Sua linhagem conquistou a era ${PHASE_TIER_LABELS[phaseContext.phaseTier]}, mas o braseiro precisa de ritmo.`,
-          vtc30d > 0 && maintenanceKg
-            ? `Nos últimos 30 dias: ${formatKg(vtc30d)} kg. Meta de manutenção: ${formatKg(maintenanceKg)} kg.`
-            : "O layout reflete cinzas até você reacender com consistência.",
-          "Isso não apaga sua conquista. Apenas revela o momento atual.",
+        return withAnimaSpeech(
+          vibrantSummary(
+            "Degradação térmica",
+            `Sua linhagem conquistou a era ${PHASE_TIER_LABELS[phaseContext.phaseTier]}, mas o braseiro precisa de ritmo.`,
+            vtc30d > 0 && maintenanceKg
+              ? `Nos últimos 30 dias: ${formatKg(vtc30d)} kg. Meta de manutenção: ${formatKg(maintenanceKg)} kg.`
+              : "O layout reflete cinzas até você reacender com consistência.",
+            "Isso não apaga sua conquista. Apenas revela o momento atual.",
+          ),
         );
       }
-      return vibrantSummary(
-        "Layout ativo",
-        `Sua linhagem está em ${phaseLabel}. O altar reflete seu ritmo real.`,
-        sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "Ainda sem VTC registrado hoje.",
-        "Mantenha o fogo com sessões verdadeiras.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Layout ativo",
+          `Sua linhagem está em ${phaseLabel}. O altar reflete seu ritmo real.`,
+          sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "Ainda sem VTC registrado hoje.",
+          "Mantenha o fogo com sessões verdadeiras.",
+        ),
       );
     case "restoration":
-      return vibrantSummary(
-        "Restauração",
-        "Uma sessão de verdade pode trazer a chama de volta ao layout degradado.",
-        `Meta desta sessão: ${formatKg(restorationBaseline)} kg. Você tem ${formatKg(sessionVtc)} kg hoje.`,
-        "A Fênix responde ao esforço medido, não à intenção.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Restauração",
+          "Uma sessão de verdade pode trazer a chama de volta ao layout degradado.",
+          `Meta desta sessão: ${formatKg(restorationBaseline)} kg. Você tem ${formatKg(sessionVtc)} kg hoje.`,
+          "A Fênix responde ao esforço medido, não à intenção.",
+        ),
       );
     case "transmutation":
-      return vibrantSummary(
-        "Transmutação",
-        "Ritual em que sua linhagem deixa uma era e assume outra. O olho da Fênix abre porque você cumpriu os portões da forja.",
-        `Era atual: ${phaseLabel}.`,
-        "Nova era desbloqueada quando os portões forem cumpridos.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Transmutação",
+          "Ritual em que sua linhagem deixa uma era e assume outra. O olho da Fênix abre porque você cumpriu os portões da forja.",
+          `Era atual: ${phaseLabel}.`,
+          "Nova era desbloqueada quando os portões forem cumpridos.",
+        ),
       );
     case "superacao":
-      return vibrantSummary(
-        "Superação",
-        "Quando você ultrapassa seu próprio recorde no exercício, não o do vizinho.",
-        sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "",
-        "É a Fênix testemunhando: você renasceu mais forte que ontem.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Superação",
+          "Quando você ultrapassa seu próprio recorde no exercício, não o do vizinho.",
+          sessionVtc > 0 ? `VTC de hoje: ${formatKg(sessionVtc)} kg.` : "",
+          "É a Fênix testemunhando: você renasceu mais forte que ontem.",
+        ),
       );
     case "portal":
-      return vibrantSummary(
-        "Portal de Brasa",
-        "Entrada do Meccafit Center, onde você reacende sua chama ou forja sua linhagem no primeiro acesso.",
-        "",
-        "Lema do altar: deixe o ontem para trás. Renasça hoje.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Portal de Brasa",
+          "Entrada do Meccafit Center, onde você reacende sua chama ou forja sua linhagem no primeiro acesso.",
+          "",
+          "Lema do altar: deixe o ontem para trás. Renasça hoje.",
+        ),
       );
     case "roles":
-      return vibrantSummary(
-        "Classes de acesso",
-        "No ecossistema FENYXIA existem atleta, Forjador, níveis superiores de forja e Soberano.",
-        "",
-        "ARGOS garante que cada um só vê o que lhe cabe.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Classes de acesso",
+          "No ecossistema FENYXIA existem atleta, Forjador, níveis superiores de forja e Soberano.",
+          "",
+          "ARGOS garante que cada um só vê o que lhe cabe.",
+        ),
       );
     case "mural":
-      return vibrantSummary(
-        "Mural comunitário",
-        "Celebra ascensões reais da comunidade: superações e marcos forjados no treino.",
-        "",
-        "O que aparece lá passou pelo altar e por ARGOS.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Mural comunitário",
+          "Celebra ascensões reais da comunidade: superações e marcos forjados no treino.",
+          "",
+          "O que aparece lá passou pelo altar e por ARGOS.",
+        ),
       );
     case "forum":
-      return vibrantSummary(
-        "Fórum Brasa-Viva",
-        "Voz da linhagem: tópicos de superação onde cada card reflete a fase do autor.",
-        phaseContext.isThermallyDegraded
-          ? "Seu fórum pode aparecer em cinzas até você reengajar no altar."
-          : "",
-        "Acenda o flash de reativação com uma sessão forte.",
+      return withAnimaSpeech(
+        vibrantSummary(
+          "Fórum Brasa-Viva",
+          "Voz da linhagem: tópicos de superação onde cada card reflete a fase do autor.",
+          phaseContext.isThermallyDegraded
+            ? "Seu fórum pode aparecer em cinzas até você reengajar no altar."
+            : "",
+          "Acenda o flash de reativação com uma sessão forte.",
+        ),
       );
     default: {
       const _exhaustive: never = intentId;
-      return String(_exhaustive);
+      return withAnimaSpeech(String(_exhaustive));
     }
   }
 }

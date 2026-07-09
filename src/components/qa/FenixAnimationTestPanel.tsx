@@ -72,6 +72,7 @@ function writeQaModeEnabled(enabled: boolean): void {
 }
 
 export function isFenixQaLabEnabled(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   return readQaModeEnabled();
 }
 
@@ -170,6 +171,10 @@ export function FenixAnimationTestPanel({
     [],
   );
 
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+
   return (
     <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
       <DashboardPanelHeader chip="Laboratório QA" meta="Animações · sistemas · testes" />
@@ -184,7 +189,7 @@ export function FenixAnimationTestPanel({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className={EVOLUTION_HINT}>
             Ative o laboratório para ver botões de teste nas abas Treino, Evolução e Comunidade.
-            Não inclui a Anima FENYXIA (IA).
+            Não inclui a ANYMA FENYXIA (IA).
           </p>
           <button
             type="button"
@@ -335,7 +340,7 @@ export function FenixAnimationTestPanel({
               </p>
               <p className={`mt-2 ${EVOLUTION_HINT}`}>
                 Código do Renascimento — narrativas integrais das cinco fases da Chama Acumulada.
-                Toque para ouvir a Anima Fênix; o visual 3D descreve o avatar em cada era.
+                Toque para ouvir a ANYMA FÊNIX; o visual 3D descreve o avatar em cada era.
               </p>
               {!isSupported ? (
                 <p className="mt-2 text-[11px] text-neutral-500">
@@ -390,7 +395,7 @@ export function FenixAnimationTestPanel({
                 id="qa-narrativas-title"
                 className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200/90"
               >
-                Narrativas da Anima Fênix
+                Narrativas da ANYMA FÊNIX
               </p>
               <p className={`mt-2 ${EVOLUTION_HINT}`}>
                 Rituais, tour do ecossistema e alertas. As cinco fases estão no Laboratório Cinzas

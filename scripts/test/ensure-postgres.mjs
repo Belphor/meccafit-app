@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import pg from "pg";
+import { assertSafeTestDatabaseUrl } from "./safe-test-db.mjs";
 
 const DOCKER_BIN = "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe";
 const COMPOSE_FILE = "docker-compose.test.yml";
@@ -26,23 +27,8 @@ function loadEnvTest() {
 }
 
 function assertSafeTestUrl(rawUrl) {
-  if (process.env.NODE_ENV !== "test") {
-    throw new Error("Recusado: NODE_ENV precisa ser 'test'.");
-  }
-
-  const url = new URL(rawUrl);
-  const host = url.hostname.toLowerCase();
-  const databaseName = url.pathname.replace(/^\//, "");
-
-  if (!["localhost", "127.0.0.1", "::1"].includes(host)) {
-    throw new Error(`Recusado: host inseguro (${url.hostname}).`);
-  }
-  if (!databaseName.toLowerCase().includes("test")) {
-    throw new Error(`Recusado: database precisa conter 'test' (${databaseName}).`);
-  }
-  if (rawUrl.includes("supabase.co") || rawUrl.includes("pooler.supabase.com")) {
-    throw new Error("Recusado: testes nunca podem apontar para Supabase remoto.");
-  }
+  process.env.NODE_ENV = "test";
+  return assertSafeTestDatabaseUrl(rawUrl);
 }
 
 async function canConnect(connectionString) {
@@ -69,11 +55,7 @@ function runDockerComposeUp() {
 }
 
 loadEnvTest();
-const connectionString = process.env.TEST_DATABASE_URL?.trim();
-if (!connectionString) {
-  throw new Error("TEST_DATABASE_URL ausente em .env.test");
-}
-assertSafeTestUrl(connectionString);
+const connectionString = assertSafeTestUrl(process.env.TEST_DATABASE_URL?.trim() ?? "");
 
 if (await canConnect(connectionString)) {
   console.log("Postgres de teste ja disponivel:", new URL(connectionString).pathname.slice(1));
@@ -81,6 +63,10 @@ if (await canConnect(connectionString)) {
 }
 
 console.log("Postgres de teste indisponivel — tentando Docker Compose...");
+if (process.env.DOCKER_TEST === "1") {
+  console.error("DOCKER_TEST=1: postgres-test deve estar saudavel no compose.");
+  process.exit(1);
+}
 if (runDockerComposeUp()) {
   for (let attempt = 1; attempt <= 30; attempt += 1) {
     if (await canConnect(connectionString)) {

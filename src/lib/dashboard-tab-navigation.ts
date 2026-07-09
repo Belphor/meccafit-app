@@ -24,6 +24,8 @@ export type ComunidadeMuralFocusDetail = {
 
 export type DashboardTabChangeDetail = {
   tab: DashboardTabId;
+  /** Mantém TTS da ANYMA (tour guiado / onboarding). */
+  preserveVoice?: boolean;
 };
 
 /** Sincroniza vínculo VIP com navegação mobile (Dieta condicional). */

@@ -136,6 +136,7 @@ export function CardioVooCinzasPanel({
       <BrasaVivaCard
         as="section"
         variant={brasaoVariant}
+        data-tour-target="treino-voo-cinzas"
         className={`mb-4 ${shellClass} ${visualContext === "elite" ? `brasao-light-border cardio-voo-elite ${CARDIO_VOO_PANEL_ELITE}` : ""
           }`}
         aria-labelledby="voo-cinzas-title"

@@ -22,6 +22,7 @@ import type { AthletePlanConfig } from "@/components/evolution/plan-config-form"
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import { PhoenixHelper } from "@/components/dashboard/PhoenixHelper";
 import { FenixEcossistemaTourHost } from "@/components/dashboard/FenixEcossistemaTourHost";
+import { AnymaPerfilIdentityGuide } from "@/components/dashboard/AnymaPerfilIdentityGuide";
 import VideoModal from "@/components/VideoModal";
 import {
   FENIX_QA_ANIMATION_EVENT,
@@ -125,9 +126,12 @@ import {
   markEcossistemaTourPending,
   readEcossistemaTourComplete,
   readEcossistemaTourPending,
+  readEcossistemaTourBeatIndex,
   readEcossistemaTourStepIndex,
   resolveDisabledTabsDuringTour,
+  resolveTourBeats,
   skipEcossistemaTourForReturningAccount,
+  writeEcossistemaTourBeatIndex,
   writeEcossistemaTourComplete,
   writeEcossistemaTourStepIndex,
 } from "@/lib/fenix-ecossistema-tour";
@@ -272,8 +276,12 @@ export function DashboardClient({
   const [linhagemInactivityPending, setLinhagemInactivityPending] =
     useState<LinhagemInactivitySyncResult | null>(null);
   const [tourStepIndex, setTourStepIndex] = useState<number | null>(null);
+  const [tourBeatIndex, setTourBeatIndex] = useState(0);
   const tourBootstrappedRef = useRef(false);
   const secondEntryTreinoBootRef = useRef(false);
+  /** Evita que reload assíncrono do perfil reverta o selo de identidade e force Perfil de novo. */
+  const identitySealedRef = useRef(false);
+  const pendingPostIdentityTabRef = useRef<DashboardTabId | null>(null);
   const [linhagemDaysAbsent, setLinhagemDaysAbsent] = useState<number | null>(null);
   const [thermalSettlement, setThermalSettlement] =
     useState<ThermalGravitySettlementResult | null>(null);
@@ -675,7 +683,24 @@ export function DashboardClient({
       }
 
       setProfile(bundle.data.profile);
-      setProfileRow(bundle.data.profileRow);
+      setProfileRow((current) => {
+        const incoming = bundle.data!.profileRow;
+        if (!incoming) return incoming;
+        if (incoming.perfil_identidade_confirmada) {
+          identitySealedRef.current = true;
+        }
+        if (!identitySealedRef.current) return incoming;
+        return {
+          ...incoming,
+          perfil_identidade_confirmada: true,
+          anima_portal_visto: true,
+          full_name:
+            typeof current?.full_name === "string" && current.full_name.trim().length > 0
+              ? current.full_name
+              : incoming.full_name,
+          sexo: current?.sexo ?? incoming.sexo,
+        };
+      });
       const bootDay = resolveCalendarWeekdayIndex();
       const composeDay = initialDashboardLoadRef.current ? bootDay : activeTrainingDayRef.current;
       const bootSubgroup = composeDayTreinoSubgroup(
@@ -824,6 +849,7 @@ export function DashboardClient({
   }, [userId]);
 
   const handleIdentityConfirmed = useCallback(() => {
+    identitySealedRef.current = true;
     setProfileRow((row) =>
       row
         ? {
@@ -836,22 +862,44 @@ export function DashboardClient({
     tourBootstrappedRef.current = true;
     markEcossistemaTourPending(userId);
     setTourStepIndex(0);
+    setTourBeatIndex(0);
     writeEcossistemaTourStepIndex(userId, 0);
-    applyDashboardTab("perfil");
-    syncDashboardTabToUrl("perfil", { subgrupo: subgroupParam, dispatch: false });
+    writeEcossistemaTourBeatIndex(userId, 0);
+    pendingPostIdentityTabRef.current = "treino";
+  }, [userId]);
+
+  useEffect(() => {
+    const nextTab = pendingPostIdentityTabRef.current;
+    if (!nextTab || tabsLockedForIdentity) return;
+
+    pendingPostIdentityTabRef.current = null;
+    applyDashboardTab(nextTab);
+    syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: true });
     setVisitedTabs((current) => {
-      const next = new Set(current);
-      next.add("perfil");
-      return next;
+      if (current.has(nextTab)) return current;
+      const merged = new Set(current);
+      merged.add(nextTab);
+      return merged;
     });
-  }, [applyDashboardTab, subgroupParam, userId]);
+  }, [applyDashboardTab, subgroupParam, tabsLockedForIdentity]);
 
   const handleTourContinue = useCallback(() => {
     const currentStep = tourStepIndex ?? 0;
+    const stepDef = ECOSSISTEMA_TOUR_STEPS[currentStep];
+    const beats = resolveTourBeats(stepDef);
+
+    if (tourBeatIndex < beats.length - 1) {
+      const nextBeat = tourBeatIndex + 1;
+      setTourBeatIndex(nextBeat);
+      writeEcossistemaTourBeatIndex(userId, nextBeat);
+      return;
+    }
+
     const nextStep = currentStep + 1;
 
     if (nextStep >= ECOSSISTEMA_TOUR_STEPS.length) {
       setTourStepIndex(null);
+      setTourBeatIndex(0);
       writeEcossistemaTourComplete(userId);
       setProfileRow((row) => (row ? { ...row, ecossistema_tour_concluido: true } : row));
       void markEcossistemaTourComplete().catch(() => {
@@ -863,7 +911,9 @@ export function DashboardClient({
 
     const nextTab = ECOSSISTEMA_TOUR_STEPS[nextStep].tab;
     setTourStepIndex(nextStep);
+    setTourBeatIndex(0);
     writeEcossistemaTourStepIndex(userId, nextStep);
+    writeEcossistemaTourBeatIndex(userId, 0);
     applyDashboardTab(nextTab);
     syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
@@ -871,7 +921,7 @@ export function DashboardClient({
       next.add(nextTab);
       return next;
     });
-  }, [applyDashboardTab, showPortalToast, subgroupParam, tourStepIndex, userId]);
+  }, [applyDashboardTab, showPortalToast, subgroupParam, tourBeatIndex, tourStepIndex, userId]);
 
   useEffect(() => {
     if (!dataReady || tabBootstrappedRef.current) return;
@@ -898,7 +948,7 @@ export function DashboardClient({
       }
 
       if (entryCount >= 2 && !readEcossistemaTourComplete(userId)) {
-        finalizeEcossistemaTourSkip();
+        queueMicrotask(() => finalizeEcossistemaTourSkip());
       }
     }
 
@@ -925,14 +975,15 @@ export function DashboardClient({
   ]);
 
   useEffect(() => {
-    if (!dataReady || !tabsLockedForIdentity) return;
+    if (!dataReady || !tabsLockedForIdentity || identitySealedRef.current) return;
     applyDashboardTab("perfil");
+    syncDashboardTabToUrl("perfil", { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
       const next = new Set(current);
       next.add("perfil");
       return next;
     });
-  }, [applyDashboardTab, dataReady, tabsLockedForIdentity]);
+  }, [applyDashboardTab, dataReady, subgroupParam, tabsLockedForIdentity]);
 
   useEffect(() => {
     if (
@@ -947,7 +998,7 @@ export function DashboardClient({
 
     if (!readEcossistemaTourPending(userId)) {
       if (!ecossistemaTourConcluido && !readEcossistemaTourComplete(userId)) {
-        finalizeEcossistemaTourSkip();
+        queueMicrotask(() => finalizeEcossistemaTourSkip());
       }
       return;
     }
@@ -958,12 +1009,13 @@ export function DashboardClient({
     const savedStep = readEcossistemaTourStepIndex(userId);
     const step = savedStep ?? 0;
     setTourStepIndex(step);
+    setTourBeatIndex(readEcossistemaTourBeatIndex(userId));
 
     if (secondEntryTreinoBootRef.current) {
       return;
     }
 
-    const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "perfil";
+    const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "treino";
     applyDashboardTab(tab);
     syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
@@ -1011,7 +1063,7 @@ export function DashboardClient({
   }, [applyDashboardTab, dataReady]);
 
   const handleTabChange = useCallback(
-    (tab: DashboardTabId) => {
+    (tab: DashboardTabId, options?: { preserveVoice?: boolean }) => {
       applyDashboardTab(tab);
       syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
       if (tab === "comunidade") {
@@ -1019,12 +1071,33 @@ export function DashboardClient({
       }
       window.dispatchEvent(
         new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
-          detail: { tab: isDietaTabAllowed(hasPersonalBond, tab) ? tab : DEFAULT_DASHBOARD_TAB },
+          detail: {
+            tab: isDietaTabAllowed(hasPersonalBond, tab) ? tab : DEFAULT_DASHBOARD_TAB,
+            preserveVoice: options?.preserveVoice,
+          },
         }),
       );
     },
     [applyDashboardTab, hasPersonalBond, subgroupParam],
   );
+
+  const ensurePerfilTabForIdentity = useCallback(() => {
+    applyDashboardTab("perfil");
+    syncDashboardTabToUrl("perfil", { subgrupo: subgroupParam, dispatch: false });
+    setVisitedTabs((current) => {
+      const next = new Set(current);
+      next.add("perfil");
+      return next;
+    });
+    window.dispatchEvent(
+      new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
+        detail: { tab: "perfil", preserveVoice: true },
+      }),
+    );
+  }, [applyDashboardTab, subgroupParam]);
+
+  const showPerfilIdentityGuide =
+    tabsLockedForIdentity && animaPortalVisto && !tourActive;
 
   const handleSignOut = useCallback(async () => {
     invalidateComunidadeCache();
@@ -1305,9 +1378,18 @@ export function DashboardClient({
               />
             ) : null}
 
+            {showPerfilIdentityGuide ? (
+              <AnymaPerfilIdentityGuide
+                activeTab={activeTab}
+                profileName={resolvedProfileName}
+                onEnsurePerfilTab={ensurePerfilTabForIdentity}
+              />
+            ) : null}
+
             {tourActive && tourStepIndex !== null ? (
               <FenixEcossistemaTourHost
                 step={ECOSSISTEMA_TOUR_STEPS[tourStepIndex]}
+                beatIndex={tourBeatIndex}
                 activeTab={activeTab}
                 profileName={resolvedProfileName}
                 phaseTier={phase.phaseTier}
@@ -1389,7 +1471,7 @@ export function DashboardClient({
                         {ECOSSISTEMA_TOUR_STEPS.length}
                       </p>
                       <p className="mt-2 text-xs leading-relaxed text-amber-50/85">
-                        A Anima Fênix apresenta cada altar. Ouça, leia e avance quando estiver pronto.
+                        A ANYMA FÊNIX apresenta cada altar. Ouça, leia e avance quando estiver pronto.
                       </p>
                     </div>
                   ) : null}
@@ -1455,7 +1537,7 @@ export function DashboardClient({
                     </div>
                   ) : null}
 
-                  {visitedTabs.has("perfil") ? (
+                  {(visitedTabs.has("perfil") || tabsLockedForIdentity) ? (
                     <div className={dashboardTabPanelClass(activeTab === "perfil")}>
                       <ProfileEvolutionKnowledge
                         userId={userId}

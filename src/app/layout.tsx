@@ -23,6 +23,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/** CSP com nonce exige render dinâmico (scripts embutidos por requisição). */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

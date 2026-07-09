@@ -190,6 +190,7 @@ export function ComunidadePageClient({
       variant="treino"
       className={`${DASHBOARD_PANEL_FRAME} min-w-0 max-w-full overflow-x-hidden`}
       aria-labelledby="comunidade-page-title"
+      data-tour-target="comunidade-arena"
     >
       <DashboardPanelHeader chip="Comunidade" meta="Arena cooperativa" />
 

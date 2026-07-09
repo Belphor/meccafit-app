@@ -41,7 +41,6 @@ type EvolutionChamaAcumuladaCardProps = {
 export function EvolutionChamaAcumuladaCard({
   userId,
   loading,
-  dataReady = false,
   indiceIgnicao,
   calorRows,
   phaseTier,

@@ -1,0 +1,45 @@
+{
+  "name": "Meccafit App",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/app",
+  "forwardPorts": [3000, 55432],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js",
+      "onAutoForward": "notify"
+    },
+    "55432": {
+      "label": "Postgres (testes)",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "echo 'Dev Container pronto. Comandos: npm run dev | npm run test:global:fast | npm run test:global'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+  "remoteEnv": {
+    "TEST_DATABASE_URL": "postgresql://postgres:postgres@postgres-test:5432/meccafit_test",
+    "TEST_DB_ALLOWED_HOSTS": "postgres-test",
+    "ARGOS_APP_URL": "http://localhost:3000",
+    "PLAYWRIGHT_BASE_URL": "http://localhost:3000"
+  },
+  "remoteUser": "root",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:2": {
+      "moby": false
+    }
+  }
+}

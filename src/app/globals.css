@@ -2966,6 +2966,60 @@ body {
   pointer-events: auto;
 }
 
+.anima-tour-spotlight-dim {
+  z-index: 0;
+}
+
+.anima-tour-spotlight-ring {
+  z-index: 1;
+  animation: anima-tour-ring-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes anima-tour-ring-pulse {
+  0%,
+  100% {
+    border-color: rgba(251, 191, 36, 0.62);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  50% {
+    border-color: rgba(253, 224, 71, 0.95);
+    box-shadow: 0 0 22px rgba(251, 191, 36, 0.38);
+  }
+}
+
+.anima-tour-pointer-line line {
+  filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.42));
+}
+
+.anima-tour-callout {
+  animation: anima-tour-callout-enter 420ms ease-out both;
+}
+
+@keyframes anima-tour-callout-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anima-phoenix-spotlight-pulse .phoenix-orb-shell {
+  animation: anima-phoenix-spotlight-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes anima-phoenix-spotlight-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 28px rgba(249, 115, 22, 0.62));
+  }
+}
+
 .phoenix-orb-shell {
   position: relative;
   display: block;

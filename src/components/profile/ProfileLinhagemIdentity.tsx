@@ -25,6 +25,7 @@ import {
   parseProfileSexo,
   type ProfileSexo,
 } from "@/lib/profile-identity";
+import { publishPerfilIdentityTourInput } from "@/lib/anima-perfil-identity-form";
 import { saveLocalAvatar } from "@/services/local-storage";
 import { syncComunidadeAvatarFromFile } from "@/lib/comunidade-avatar";
 
@@ -56,8 +57,10 @@ export function ProfileLinhagemIdentity({
   const [displayName, setDisplayName] = useState(
     () => readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "",
   );
-  const [sexo, setSexo] = useState<ProfileSexo | null>(serverSexo);
-  const [confirmed, setConfirmed] = useState(identidadeConfirmada);
+  const [sexoSelection, setSexoSelection] = useState<ProfileSexo | null>(null);
+  const sexo = sexoSelection ?? serverSexo;
+  const [identityConfirmedLocal, setIdentityConfirmedLocal] = useState(false);
+  const confirmed = identidadeConfirmada || identityConfirmedLocal;
   const [calorRows, setCalorRows] = useState<MuscleCalorRow[]>(initialCalorRows);
   const [indiceIgnicao, setIndiceIgnicao] = useState(initialIgnicao);
   const [phaseTier, setPhaseTier] = useState<PhaseTier>(1);
@@ -68,14 +71,6 @@ export function ProfileLinhagemIdentity({
     tone: "success" | "error";
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    setConfirmed(identidadeConfirmada);
-  }, [identidadeConfirmada]);
-
-  useEffect(() => {
-    if (serverSexo) setSexo(serverSexo);
-  }, [serverSexo]);
 
   useEffect(() => {
     const onNameUpdate = () => {
@@ -114,6 +109,18 @@ export function ProfileLinhagemIdentity({
     [displayName, serverName],
   );
 
+  useEffect(() => {
+    publishPerfilIdentityTourInput({ displayName, sexo });
+  }, [displayName, sexo]);
+
+  const handleDisplayNameChange = useCallback((value: string) => {
+    setDisplayName(value);
+  }, []);
+
+  const handleSexoPick = useCallback((value: ProfileSexo) => {
+    setSexoSelection(value);
+  }, []);
+
   const canConfirm =
     !confirmed &&
     displayName.trim().length >= 2 &&
@@ -130,10 +137,10 @@ export function ProfileLinhagemIdentity({
       await confirmProfileIdentity(userId, displayName, sexo);
       writeLocalProfileDisplayName(userId, displayName.trim());
       notifyProfileDisplayNameUpdated();
-      setConfirmed(true);
+      setIdentityConfirmedLocal(true);
       setIdentityFeedback({
         message:
-          "Identidade selada. Seu nome é único na linhagem e o ranking mensal passa a considerar seu gênero.",
+          "Identidade selada. A ANYMA FÊNIX vai abrir a aba Treino e apresentar o altar onde sua chama nasce.",
         tone: "success",
       });
       onIdentityConfirmed?.();
@@ -171,7 +178,12 @@ export function ProfileLinhagemIdentity({
   );
 
   return (
-    <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
+    <BrasaVivaCard
+      as="section"
+      variant="treino"
+      className={DASHBOARD_PANEL_FRAME}
+      data-tour-target="perfil-identidade"
+    >
       <DashboardPanelHeader chip="Identidade" meta="Perfil" />
 
       <div className={`${DASHBOARD_INNER_FRAME} mt-4 flex flex-col items-center gap-5 p-4 sm:flex-row sm:items-start sm:p-5`}>
@@ -201,12 +213,12 @@ export function ProfileLinhagemIdentity({
             </p>
           )}
 
-          <label className="block">
+          <label className="block" data-tour-target="perfil-nome">
             <span className="text-xs font-medium text-neutral-400">Nome exibido</span>
             <input
               type="text"
               value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
+              onChange={(event) => handleDisplayNameChange(event.target.value)}
               placeholder={serverName?.trim() || "Seu nome na linhagem"}
               className="mt-2 w-full rounded-xl border border-orange-500/20 bg-black/50 px-3 py-2.5 text-sm text-amber-50 outline-none transition focus:border-amber-500/35"
               maxLength={48}
@@ -214,7 +226,7 @@ export function ProfileLinhagemIdentity({
             />
           </label>
 
-          <fieldset className="block">
+          <fieldset className="block" data-tour-target="perfil-genero">
             <legend className="text-xs font-medium text-neutral-400">Gênero na arena</legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {SEXO_OPTIONS.map((option) => {
@@ -223,8 +235,9 @@ export function ProfileLinhagemIdentity({
                   <button
                     key={option.value}
                     type="button"
+                    data-sexo={option.value}
                     disabled={confirmed}
-                    onClick={() => setSexo(option.value)}
+                    onClick={() => handleSexoPick(option.value)}
                     className={`${DASHBOARD_TAP_TARGET} rounded-full border px-4 py-2 text-xs font-semibold transition ${
                       selected
                         ? "border-amber-400/45 bg-amber-950/40 text-amber-100"
@@ -242,6 +255,7 @@ export function ProfileLinhagemIdentity({
           {!confirmed ? (
             <button
               type="button"
+              data-tour-target="perfil-confirmar"
               disabled={!canConfirm}
               onClick={() => void handleConfirmIdentity()}
               className={`${DASHBOARD_TAP_TARGET} w-full rounded-full border px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] transition ${

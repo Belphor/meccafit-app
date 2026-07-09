@@ -6,6 +6,17 @@ import { resolve } from "node:path";
 
 const target = resolve(process.cwd(), ".env.local");
 
+function stripEnvValue(raw) {
+  const trimmed = raw.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 function parseEnvBlock(raw) {
   const map = new Map();
   for (const line of raw.split(/\r?\n/)) {
@@ -14,7 +25,7 @@ function parseEnvBlock(raw) {
     const idx = trimmed.indexOf("=");
     if (idx === -1) continue;
     const key = trimmed.slice(0, idx).trim();
-    const value = trimmed.slice(idx + 1).trim();
+    const value = stripEnvValue(trimmed.slice(idx + 1));
     if (key) map.set(key, value);
   }
   return map;
@@ -69,6 +80,28 @@ if (process.env.CI === "true" && !map.get("SUPABASE_SERVICE_ROLE_KEY")?.trim()) 
   console.error("\nvalidate-env-local: SUPABASE_SERVICE_ROLE_KEY ausente no CI.");
   console.error("Inclua a service role no ENV_LOCAL_B64 ou crie o secret SUPABASE_SERVICE_ROLE_KEY.");
   process.exit(1);
+}
+
+const cardioTestMode = map.get("NEXT_PUBLIC_CARDIO_TEST_MODE")?.trim();
+if (
+  process.env.CI === "true" &&
+  (cardioTestMode === "1" || cardioTestMode === "true")
+) {
+  console.error(
+    "\nvalidate-env-local: NEXT_PUBLIC_CARDIO_TEST_MODE ativo — desative em CI/produção.",
+  );
+  process.exit(1);
+}
+
+if (process.env.CI === "true") {
+  const upstashUrl = map.get("UPSTASH_REDIS_REST_URL")?.trim();
+  const upstashToken = map.get("UPSTASH_REDIS_REST_TOKEN")?.trim();
+  if (!upstashUrl || !upstashToken) {
+    console.warn(
+      "\nvalidate-env-local: UPSTASH_REDIS_REST_URL/TOKEN ausentes — rate limit usará memória no CI.",
+    );
+    console.warn("Configure Upstash antes do deploy em produção (Vercel).");
+  }
 }
 
 console.log(`\nvalidate-env-local: OK (${map.size} chaves, URL via ${urlHit.key}, chave via ${keyHit.key})`);

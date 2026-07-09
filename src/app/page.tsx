@@ -20,8 +20,7 @@ import { PrimeiroAcessoFenyxiaPanel } from "@/components/portal/PrimeiroAcessoFe
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { SacredPhoenixLogo, type PhoenixTone } from "@/components/SacredPhoenixLogo";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
-import { fetchAuthenticatedProfile, mapAuthError } from "@/lib/portal-auth";
-import { resolveLoginBlockMessage } from "@/lib/account-access-status";
+import { signInPortal } from "@/app/actions/portal-login";
 import { validateInviteToken } from "@/app/actions/invite-onboarding";
 import { registerPrimeiroAcesso } from "@/app/actions/onboarding";
 import type { PrimeiroAcessoInput } from "@/lib/portal-onboarding";
@@ -38,7 +37,7 @@ import {
   PORTAL_SHELL,
   type PortalTone,
 } from "@/lib/portal-theme";
-import { resolveClienteDashboardRoute, resolvePostLoginRoute } from "@/lib/internal-routes";
+import { resolveClienteDashboardRoute } from "@/lib/internal-routes";
 import { supabase } from "@/lib/supabase";
 
 type PortalMode = "login_cliente" | "primeiro_acesso" | "ignicao_forja" | "cadastro_forja";
@@ -272,57 +271,22 @@ export default function PortalDeBrasaPage() {
     setToast(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password: normalizedPassword,
-      });
+      const result = await signInPortal(normalizedEmail, normalizedPassword);
 
-      if (error) {
+      if (!result.ok) {
         resetLoginFeedback();
-        showPortalToast(mapAuthError(error));
-        return;
-      }
-
-      if (!data.user) {
-        resetLoginFeedback();
-        showPortalToast(PORTAL_COPY.loginSessionError);
-        return;
-      }
-
-      const profile = await fetchAuthenticatedProfile(data.user.id);
-
-      if (!profile) {
-        await supabase.auth.signOut();
-        resetLoginFeedback();
-        showPortalToast(PORTAL_COPY.loginProfileMissing);
-        return;
-      }
-
-      const loginBlockMessage = resolveLoginBlockMessage(profile.status_altar);
-      if (profile.role === "cliente" && loginBlockMessage) {
-        await supabase.auth.signOut();
-        resetLoginFeedback();
-        showPortalToast(loginBlockMessage);
-        return;
-      }
-
-      const destination = resolvePostLoginRoute(profile.role);
-
-      if (!destination) {
-        await supabase.auth.signOut();
-        resetLoginFeedback();
-        showPortalToast(PORTAL_COPY.loginRoleUnauthorized);
+        showPortalToast(result.message);
         return;
       }
 
       setFeedback({ status: "loading", message: PORTAL_COPY.loginConfirmed });
 
-      if (profile.role === "forjador_soberano") {
-        router.push(destination);
+      if (result.destination.startsWith("/dashboard/forja")) {
+        router.push(result.destination);
         return;
       }
 
-      router.replace(destination);
+      router.replace(result.destination);
     } catch {
       resetLoginFeedback();
       showPortalToast(PORTAL_COPY.loginDbError);

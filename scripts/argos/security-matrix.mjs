@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -85,12 +86,13 @@ function expectAllowed(error, data) {
 }
 
 async function runMatrix() {
+  const seedPassword = resolveSeedPassword();
   const anon = createClientAnon();
-  const cliente = await signIn("cliente@meccafit.com", "senha123");
-  const soberano = await signIn("master@meccafit.com", "senha123");
+  const cliente = await signIn("cliente@meccafit.com", seedPassword);
+  const soberano = await signIn("master@meccafit.com", seedPassword);
   let forjador = null;
   try {
-    forjador = await signIn("forjador@meccafit.com", "senha123");
+    forjador = await signIn("forjador@meccafit.com", seedPassword);
   } catch {
     // seed opcional
   }

@@ -1,0 +1,36 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# build / cache
+.next
+out
+build
+coverage
+
+# tests & reports
+test-results
+playwright-report
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# git & IDE
+.git
+.gitignore
+.devcontainer
+.vscode
+.cursor
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+npm-debug.log*
+.vercel
+README.md
+docker-compose*.yml
+Dockerfile*

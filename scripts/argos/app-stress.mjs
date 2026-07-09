@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function parseArgs(argv) {
   const args = { vus: 400, duration: 45, ramp: 12, appUrl: process.env.ARGOS_APP_URL ?? "http://127.0.0.1:3000" };
@@ -93,9 +94,11 @@ if (!baseUrl || !anonKey) {
   process.exit(1);
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 const ACCOUNTS = [
-  { label: "cliente", email: "cliente@meccafit.com", password: "senha123" },
-  { label: "soberano", email: "master@meccafit.com", password: "senha123" },
+  { label: "cliente", email: "cliente@meccafit.com", password: SEED_PASSWORD },
+  { label: "soberano", email: "master@meccafit.com", password: SEED_PASSWORD },
 ];
 
 let passed = 0;
@@ -253,7 +256,8 @@ async function runWriteProbes(cliente) {
     });
 
     const numericPeso = Number(peso);
-    const validWeight = Number.isFinite(numericPeso) && numericPeso > 0 && numericPeso <= 9999.99;
+    const validWeight =
+      Number.isFinite(numericPeso) && numericPeso >= 1 && numericPeso <= 9999.99;
     if (validWeight) {
       if (!error) {
         pass(id);

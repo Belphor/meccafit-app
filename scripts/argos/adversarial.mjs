@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -67,11 +68,13 @@ async function signIn(email, password) {
   return { client, userId: data.user.id };
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 console.log("\n=== ARGOS Adversarial Simulation ===\n");
 
-const atacante = await signIn(registry.cliente_principal?.email ?? "cliente@meccafit.com", "senha123");
-const vitima = await signIn(registry.atleta_vitima?.email ?? "atleta2@meccafit.com", "senha123");
-const soberano = await signIn(registry.forjador_soberano?.email ?? "master@meccafit.com", "senha123");
+const atacante = await signIn(registry.cliente_principal?.email ?? "cliente@meccafit.com", SEED_PASSWORD);
+const vitima = await signIn(registry.atleta_vitima?.email ?? "atleta2@meccafit.com", SEED_PASSWORD);
+const soberano = await signIn(registry.forjador_soberano?.email ?? "master@meccafit.com", SEED_PASSWORD);
 
 await attack("Atacante registra treino em nome da vitima", async () => {
   const { error } = await atacante.client.rpc("registrar_treino_com_status", {

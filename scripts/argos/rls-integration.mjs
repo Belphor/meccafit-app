@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -29,10 +30,12 @@ if (!url || !anonKey) {
   process.exit(1);
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 const ACCOUNTS = [
-  { label: "cliente", email: "cliente@meccafit.com", password: "senha123" },
-  { label: "vitima", email: "atleta2@meccafit.com", password: "senha123" },
-  { label: "soberano", email: "master@meccafit.com", password: "senha123" },
+  { label: "cliente", email: "cliente@meccafit.com", password: SEED_PASSWORD },
+  { label: "vitima", email: "atleta2@meccafit.com", password: SEED_PASSWORD },
+  { label: "soberano", email: "master@meccafit.com", password: SEED_PASSWORD },
 ];
 
 const FALLBACK_OTHER_USER_ID = "bad0554d-5c68-4e2e-b9d3-ba55f6e86634";

@@ -65,7 +65,7 @@ export function FenyxiaAppNav() {
     syncDashboardTabToUrl(tab, { dispatch: false });
     window.dispatchEvent(
       new CustomEvent<DashboardTabChangeDetail>(DASHBOARD_TAB_CHANGE_EVENT, {
-        detail: { tab },
+        detail: { tab, preserveVoice: true },
       }),
     );
   }, []);
@@ -87,6 +87,7 @@ export function FenyxiaAppNav() {
             <li key={item.id} className="min-w-0 flex-1">
               <button
                 type="button"
+                data-tour-tab={item.id}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => handleTabPick(item.id)}
                 className={`${DASHBOARD_TAP_TARGET} flex h-full w-full min-h-11 items-center justify-center rounded-xl border px-1 py-2.5 text-center transition-[border-color,background-color,color] duration-200 ${

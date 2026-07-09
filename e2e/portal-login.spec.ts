@@ -19,7 +19,7 @@ test.describe("Portal de Brasa login", () => {
 
     await expect(
       page.getByRole("alert").filter({
-        hasText: "Informe a senha de teste. Use senha123 para os usuários criados no Supabase.",
+        hasText: /Informe (a senha de teste|sua senha de acesso)/i,
       }),
     ).toBeVisible();
   });

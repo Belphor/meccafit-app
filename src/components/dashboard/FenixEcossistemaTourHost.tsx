@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimaTourCallout } from "@/components/dashboard/AnimaTourCallout";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
+import { ANYMA_BRAND } from "@/lib/anyma-copy";
 import {
   ECOSSISTEMA_TOUR_NAV_DELAY_MS,
+  resolveEcossistemaTourSpeech,
+  resolveTourBeats,
   type EcossistemaTourStep,
 } from "@/lib/fenix-ecossistema-tour";
-import { injectRegisteredName } from "@/lib/profile-display-name";
 
 type FenixEcossistemaTourHostProps = {
   step: EcossistemaTourStep;
+  beatIndex: number;
   activeTab: DashboardTabId;
   profileName: string;
   phaseTier: PhaseTier;
@@ -21,81 +25,87 @@ type FenixEcossistemaTourHostProps = {
 
 export function FenixEcossistemaTourHost({
   step,
+  beatIndex,
   activeTab,
   profileName,
   phaseTier,
   onContinue,
 }: FenixEcossistemaTourHostProps) {
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
-  const [tabReady, setTabReady] = useState(false);
-  const [narrationDone, setNarrationDone] = useState(!isSupported);
+  const [tabReadyKey, setTabReadyKey] = useState("");
   const tabAligned = activeTab === step.tab;
-  const resolvedSpeech = useMemo(
-    () => injectRegisteredName(step.speech, profileName),
-    [profileName, step.speech],
+  const tabReady = tabAligned && tabReadyKey === `${step.id}-${beatIndex}`;
+
+  const beats = useMemo(() => resolveTourBeats(step), [step]);
+  const beat = beats[Math.min(beatIndex, beats.length - 1)] ?? beats[0];
+  const highlightSelectors = useMemo(
+    () => beat.highlightSelectors ?? [step.navTargetSelector],
+    [beat.highlightSelectors, step.navTargetSelector],
   );
 
-  useEffect(() => {
-    setTabReady(false);
-    setNarrationDone(!isSupported);
+  const resolvedSpeech = useMemo(
+    () => resolveEcossistemaTourSpeech(beat.speech, profileName),
+    [beat.speech, profileName],
+  );
 
+  const narrationDone = !isSupported || (state === "idle" && tabReady && tabAligned);
+
+  useEffect(() => {
     if (!tabAligned) return;
 
-    const timer = window.setTimeout(() => setTabReady(true), ECOSSISTEMA_TOUR_NAV_DELAY_MS);
+    const readyKey = `${step.id}-${beatIndex}`;
+    const timer = window.setTimeout(() => setTabReadyKey(readyKey), ECOSSISTEMA_TOUR_NAV_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [isSupported, step.id, step.tab, tabAligned]);
+  }, [beatIndex, step.id, tabAligned]);
 
   useEffect(() => {
     if (!tabReady || !tabAligned) return;
-    igniteVoice({ text: step.speech, fullName: profileName, tier: phaseTier, allowIntroFallback: false });
+    igniteVoice({ text: beat.speech, fullName: profileName, tier: phaseTier, allowIntroFallback: false });
     return () => cancelVoice();
   }, [
+    beat.speech,
+    beatIndex,
     cancelVoice,
     igniteVoice,
     phaseTier,
     profileName,
-    step.id,
-    step.speech,
     tabAligned,
     tabReady,
   ]);
 
-  useEffect(() => {
-    if (!isSupported) return;
-    if (state === "speaking") {
-      setNarrationDone(false);
-      return;
-    }
-    if (state === "idle" && tabReady && tabAligned) {
-      setNarrationDone(true);
-    }
-  }, [isSupported, state, tabAligned, tabReady]);
-
   const canContinue = tabAligned && tabReady && narrationDone;
+  const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[125] flex justify-center px-4 sm:px-6"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Apresentação da aba ${step.title}`}
+    <AnimaTourCallout
+      active={tabAligned && tabReady}
+      targetSelector={beat.targetSelector}
+      highlightSelectors={highlightSelectors}
+      placement={beat.calloutPlacement}
+      zIndex={125}
     >
-      <div className="w-full max-w-lg rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-5 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl">
+      <div
+        className="rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-5 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Apresentação da aba ${beat.title}`}
+      >
         <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
           {step.eyebrow}
+          {beats.length > 1 ? ` · ${beatIndex + 1}/${beats.length}` : ""}
         </p>
-        <h2 className="mt-2 text-base font-semibold text-amber-50">{step.title}</h2>
-        <p className="mt-3 max-h-[min(40vh,14rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
+        <h2 className="mt-2 text-base font-semibold text-amber-50">{beat.title}</h2>
+        <p className="mt-3 max-h-[min(36vh,12rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
           {resolvedSpeech}
         </p>
         <p className="mt-3 text-[11px] text-neutral-400">
           {!tabAligned
-            ? `Abrindo ${step.eyebrow.replace("Anima Fênix · ", "")}…`
+            ? `Abrindo ${eyebrowSuffix}.`
             : !tabReady
-              ? "Abrindo o altar desta aba…"
+              ? "Alinhando o altar destacado."
               : isSupported
                 ? state === "speaking"
-                  ? "Ouça a Anima Fênix enquanto lê."
+                  ? `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o que importa.`
                   : "Leia e avance quando estiver pronto."
                 : "Voz indisponível neste dispositivo. Leia e continue."}
         </p>
@@ -109,9 +119,9 @@ export function FenixEcossistemaTourHost({
               : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
           }`}
         >
-          {canContinue ? step.continueLabel : "Narrativa em chamas…"}
+          {canContinue ? beat.continueLabel : "Narrativa em chamas…"}
         </button>
       </div>
-    </div>
+    </AnimaTourCallout>
   );
 }

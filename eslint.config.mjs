@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // WASM decoders de terceiros (Draco) — não lintar assets vendidos
+    "public/draco/**",
   ]),
   {
     rules: {
@@ -24,6 +26,12 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unused-expressions": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "no-unused-expressions": "off",
+    },
+  },
+  {
+    files: ["src/components/dashboard/PhoenixModel.tsx"],
+    rules: {
+      "react-hooks/immutability": "off",
     },
   },
 ]);

@@ -2,12 +2,13 @@
  * ARGOS — usuários simulados para testes de segurança e carga.
  * Uso: node scripts/seed-test-users.mjs
  *
- * Senha padrão de todos: senha123 (apenas ambiente de teste)
+ * Senha: ARGOS_SEED_PASSWORD ou fallback dev (scripts/lib/seed-credentials.mjs)
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { seedPlanilhasForAllClientes } from "./lib/planilhas-seed.mjs";
+import { resolveSeedPassword } from "./lib/seed-credentials.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -23,11 +24,13 @@ function loadEnv() {
   return env;
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 /** Pool ARGOS — simula atletas, forjador e admin soberano */
 const TEST_USERS = [
   {
     email: "cliente@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "cliente_principal",
     user_metadata: {
       full_name: "Cliente Teste",
@@ -38,7 +41,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta2@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_vitima",
     user_metadata: {
       full_name: "Atleta Dois",
@@ -49,7 +52,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta3@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_carga",
     user_metadata: {
       full_name: "Atleta Três",
@@ -60,7 +63,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta4@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_carga",
     user_metadata: {
       full_name: "Atleta Quatro",
@@ -71,7 +74,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta5@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_5",
     user_metadata: {
       full_name: "Atleta Cinco",
@@ -82,7 +85,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta6@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_6",
     user_metadata: {
       full_name: "Atleta Seis",
@@ -93,7 +96,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta7@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_7",
     user_metadata: {
       full_name: "Atleta Sete",
@@ -104,7 +107,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta8@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_8",
     user_metadata: {
       full_name: "Atleta Oito",
@@ -115,7 +118,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta9@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_9",
     user_metadata: {
       full_name: "Atleta Nove",
@@ -126,7 +129,7 @@ const TEST_USERS = [
   },
   {
     email: "atleta10@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "atleta_ranking_10",
     user_metadata: {
       full_name: "Atleta Dez",
@@ -137,7 +140,7 @@ const TEST_USERS = [
   },
   {
     email: "forjador@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "forjador_linhagem",
     user_metadata: {
       full_name: "Forjador Linhagem",
@@ -148,7 +151,7 @@ const TEST_USERS = [
   },
   {
     email: "master@meccafit.com",
-    password: "senha123",
+    password: SEED_PASSWORD,
     label: "forjador_soberano",
     user_metadata: {
       full_name: "Mestre Supremo",

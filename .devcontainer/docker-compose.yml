@@ -1,0 +1,52 @@
+services:
+  devcontainer:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    container_name: meccafit-devcontainer
+    volumes:
+      - ..:/app:cached
+      - devcontainer_node_modules:/app/node_modules
+      - devcontainer_next_cache:/app/.next
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - path: ../.env.local
+        required: false
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+      TEST_DATABASE_URL: postgresql://postgres:postgres@postgres-test:5432/meccafit_test
+      TEST_DB_ALLOWED_HOSTS: postgres-test
+    command: sleep infinity
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - meccafit-dev
+
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: meccafit-dev-postgres-test
+    environment:
+      POSTGRES_DB: meccafit_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d meccafit_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks:
+      - meccafit-dev
+
+volumes:
+  devcontainer_node_modules:
+  devcontainer_next_cache:
+
+networks:
+  meccafit-dev:
+    driver: bridge

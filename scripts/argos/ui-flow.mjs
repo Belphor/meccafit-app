@@ -10,6 +10,7 @@ import {
   ensureAppServer,
   stopManagedAppServer,
 } from "../lib/argos-app-server.mjs";
+import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -94,6 +95,8 @@ function sanitizeSubgroupParam(param) {
   return n;
 }
 
+const SEED_PASSWORD = resolveSeedPassword();
+
 console.log("\n=== ARGOS UI Flow ===\n");
 
 // 1. Validação de peso (botão/blur PhoenixInput)
@@ -152,7 +155,7 @@ for (const p of [null, "", "geral", "peitoral-superior", "' OR 1=1"]) {
 // 6. Login cliente + dashboard bundle APIs
 let clienteSession;
 try {
-  clienteSession = await signIn("cliente@meccafit.com", "senha123");
+  clienteSession = await signIn("cliente@meccafit.com", SEED_PASSWORD);
   pass("login:cliente:ok");
 
   const { data: profile, error: pErr } = await clienteSession.client
@@ -236,7 +239,7 @@ if (clienteSession) {
 
 // 8. Soberano — login + mural read + não auto-publica
 try {
-  const soberano = await signIn("master@meccafit.com", "senha123");
+  const soberano = await signIn("master@meccafit.com", SEED_PASSWORD);
   pass("login:soberano:ok");
 
   const { data: profiles } = await soberano.client.from("profiles").select("id");
