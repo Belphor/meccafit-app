@@ -1,5 +1,5 @@
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
-import { LINHAGEM_PADRAO } from "@/lib/client-lore-copy";
+import { resolveLinhagemDisplay } from "@/lib/client-lore-copy";
 import { mapCommunityMuralRowsToPosts, type CommunityMuralRow } from "@/lib/dashboard-data";
 import { muralBodyForExercise, resolveMuralTopicBody } from "@/lib/mural-copy";
 import { formatMuralMetricBadge } from "@/lib/mural-metric";
@@ -45,7 +45,7 @@ function mapRpcRowToTopic(row: ForumBrasaVivaRpcRow): ForumBrasaVivaTopic {
     body: resolveMuralTopicBody(row.topic_body, title, weightKg, exercicioId),
     authorId: String(row.author_id ?? ""),
     authorName: row.author_name?.trim() || "Membro da Linhagem",
-    authorLineage: row.author_lineage?.trim() || LINHAGEM_PADRAO,
+    authorLineage: resolveLinhagemDisplay(row.author_lineage),
     authorAvatarPath: row.author_avatar_path ? String(row.author_avatar_path) : null,
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
     isReiDasChamas: Boolean(row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas),
@@ -65,7 +65,7 @@ function mapMuralFallbackRows(rows: CommunityMuralRow[]): ForumBrasaVivaTopic[] 
     body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
-    authorLineage: post.lineageName ?? LINHAGEM_PADRAO,
+    authorLineage: resolveLinhagemDisplay(post.lineageName),
     authorAvatarPath: post.athleteAvatarPath ?? null,
     temCinturaoDuelo: post.temCinturaoDuelo ?? false,
     isReiDasChamas: post.isReiDasChamas ?? false,
@@ -136,7 +136,7 @@ export function mapMuralPostsToForumTopics(posts: MuralPost[]): ForumBrasaVivaTo
     body: muralBodyForExercise(post.exerciseName, post.weight, post.exercicioId),
     authorId: post.athleteId ?? "",
     authorName: post.athleteName ?? "Membro da Linhagem",
-    authorLineage: post.lineageName ?? LINHAGEM_PADRAO,
+    authorLineage: resolveLinhagemDisplay(post.lineageName),
     authorAvatarPath: post.athleteAvatarPath ?? null,
     temCinturaoDuelo: post.temCinturaoDuelo ?? false,
     isReiDasChamas: post.isReiDasChamas ?? false,

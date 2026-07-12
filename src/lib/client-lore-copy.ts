@@ -58,3 +58,22 @@ export const CONTA_SUSPENSA =
 
 /** Linhagem padrão */
 export const LINHAGEM_PADRAO = "Linhagem Fenyxia";
+
+/** Linhagem exibida para atletas VIP (vínculo com Forjador). */
+export const LINHAGEM_VIP = "Linhagem Fenyxia Soberana";
+
+/**
+ * Resolve o nome de linhagem exibido ao usuário e ao Forjador.
+ * Substitui marcações legadas ARGOS e aplica o rótulo VIP quando houver vínculo.
+ */
+export function resolveLinhagemDisplay(
+  raw: string | null | undefined,
+  isVip = false,
+): string {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed || /argos/i.test(trimmed)) {
+    return isVip ? LINHAGEM_VIP : LINHAGEM_PADRAO;
+  }
+  if (isVip) return LINHAGEM_VIP;
+  return trimmed;
+}

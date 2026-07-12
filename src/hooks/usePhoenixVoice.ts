@@ -6,8 +6,8 @@ import {
   DASHBOARD_TAB_CHANGE_EVENT,
   type DashboardTabChangeDetail,
 } from "@/lib/dashboard-tab-navigation";
-import { formatAnimaSpeech } from "@/lib/anima-speech";
-import { injectName, injectRegisteredName } from "@/lib/profile-display-name";
+import { formatAnymaSpeech, prepareAnymaSpeechForTts } from "@/lib/anima-speech";
+import { injectName } from "@/lib/profile-display-name";
 import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
 
 export { injectName, injectRegisteredName } from "@/lib/profile-display-name";
@@ -27,7 +27,7 @@ export type IgniteVoiceInput =
       fullName: string;
       tier?: PhaseTier;
       isPunished?: boolean;
-      /** false = usa nome registrado sem fallback "Nova Chama" (pós-introdução). */
+      /** Mantido por compatibilidade. Card e voz sempre usam Nova Chama como fallback. */
       allowIntroFallback?: boolean;
     }
   | { tier: PhaseTier; fullName: string; isPunished?: boolean; allowIntroFallback?: boolean };
@@ -214,22 +214,29 @@ function applyPhoenixVoiceSpecs(
 
 function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulation: VoiceModulation } {
   if (typeof input === "string") {
-    return { text: formatAnimaSpeech(input.trim()), modulation: {} };
+    return {
+      text: prepareAnymaSpeechForTts(formatAnymaSpeech(input.trim())),
+      modulation: {},
+    };
   }
 
-  const nameInjector =
-    input.allowIntroFallback === false ? injectRegisteredName : injectName;
+  // Card e voz usam a mesma regra: primeiro nome ou Nova Chama.
+  const nameInjector = injectName;
 
   if ("tier" in input && !("text" in input)) {
     return {
-      text: formatAnimaSpeech(nameInjector(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName)),
+      text: prepareAnymaSpeechForTts(
+        formatAnymaSpeech(nameInjector(CODIGO_DO_RENASCIMENTO[input.tier], input.fullName)),
+      ),
       modulation: { tier: input.tier, isPunished: input.isPunished },
     };
   }
 
   if ("text" in input) {
     return {
-      text: formatAnimaSpeech(nameInjector(input.text, input.fullName)),
+      text: prepareAnymaSpeechForTts(
+        formatAnymaSpeech(nameInjector(input.text, input.fullName)),
+      ),
       modulation: {
         tier: input.tier,
         isPunished: input.isPunished,

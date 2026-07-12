@@ -10,6 +10,8 @@ const TARGET_EDGE_INSET = 10;
 const EMPTY_HIGHLIGHTS: readonly string[] = [];
 
 export type AnimaTourCalloutPlacement = "left" | "right" | "top" | "bottom" | "auto";
+/** Alias de marca — mesmo tipo. */
+export type AnymaTourCalloutPlacement = AnimaTourCalloutPlacement;
 
 type Rect = { top: number; left: number; width: number; height: number };
 
@@ -268,8 +270,43 @@ function computeGeometry(
       break;
   }
 
-  calloutLeft = clamp(calloutLeft, VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN);
-  calloutTop = clamp(calloutTop, VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN);
+  calloutLeft = clamp(calloutLeft, VIEWPORT_MARGIN, Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN));
+  calloutTop = clamp(calloutTop, VIEWPORT_MARGIN, Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN));
+
+  // Se o card ainda cobrir o alvo após o clamp, empurra para a zona com mais espaço livre.
+  const overlapsTarget =
+    calloutLeft < targetRect.right + CALLOUT_GAP &&
+    calloutLeft + cw > targetRect.left - CALLOUT_GAP &&
+    calloutTop < targetRect.bottom + CALLOUT_GAP &&
+    calloutTop + ch > targetRect.top - CALLOUT_GAP;
+
+  if (overlapsTarget) {
+    const spaceBelow = vh - targetRect.bottom - VIEWPORT_MARGIN;
+    const spaceAbove = targetRect.top - VIEWPORT_MARGIN;
+    if (spaceBelow >= ch + CALLOUT_GAP || spaceBelow >= spaceAbove) {
+      calloutTop = clamp(
+        targetRect.bottom + CALLOUT_GAP,
+        VIEWPORT_MARGIN,
+        Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN),
+      );
+      calloutLeft = clamp(
+        tcx - cw / 2,
+        VIEWPORT_MARGIN,
+        Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN),
+      );
+    } else if (spaceAbove >= ch + CALLOUT_GAP) {
+      calloutTop = clamp(
+        targetRect.top - CALLOUT_GAP - ch,
+        VIEWPORT_MARGIN,
+        Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN),
+      );
+      calloutLeft = clamp(
+        tcx - cw / 2,
+        VIEWPORT_MARGIN,
+        Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN),
+      );
+    }
+  }
 
   const calloutCenterX = calloutLeft + cw / 2;
   const calloutCenterY = calloutTop + ch / 2;
@@ -399,7 +436,7 @@ export function AnimaTourCallout({
 
     const target = resolveTourTargetElement(targetSelector);
     if (target instanceof HTMLElement) {
-      target.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+      target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
     }
 
     let rafId = 0;
@@ -409,6 +446,13 @@ export function AnimaTourCallout({
     };
 
     scheduleSync();
+    const recenterTimer = window.setTimeout(() => {
+      const latest = resolveTourTargetElement(targetSelector);
+      if (latest instanceof HTMLElement) {
+        latest.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+      }
+      scheduleSync();
+    }, 360);
 
     window.addEventListener("resize", scheduleSync);
     window.addEventListener("scroll", scheduleSync, true);
@@ -424,6 +468,7 @@ export function AnimaTourCallout({
     observed.forEach((node) => observer.observe(node));
 
     return () => {
+      window.clearTimeout(recenterTimer);
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", scheduleSync);
       window.removeEventListener("scroll", scheduleSync, true);
@@ -510,7 +555,7 @@ export function AnimaTourCallout({
 
       <div
         ref={calloutRef}
-        className="anima-tour-callout pointer-events-auto fixed w-[min(100vw-1.75rem,28rem)]"
+        className="anima-tour-callout pointer-events-auto fixed w-[min(100vw-1.75rem,24rem)] max-h-[min(58vh,26rem)]"
         style={
           geometry
             ? { top: geometry.calloutTop, left: geometry.calloutLeft, transform: "none" }
@@ -522,3 +567,7 @@ export function AnimaTourCallout({
     </div>
   );
 }
+
+/** Alias canônico de marca — mesmo componente. */
+export const AnymaTourCallout = AnimaTourCallout;
+export type AnymaTourCalloutProps = AnimaTourCalloutProps;

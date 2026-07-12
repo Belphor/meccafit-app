@@ -1,5 +1,6 @@
 import type { Enums } from "@/types/database.types";
 import type { HistoricoTreinoRow } from "@/lib/dashboard-data";
+import type { LinhagemInactivitySyncResult, ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
 import type { ClientProfile, MuralPost } from "@/lib/mock-data";
 import type { TrainingTrackState } from "@/lib/training-track";
 import { DEFAULT_TRAINING_TRACK } from "@/lib/training-track";
@@ -15,6 +16,9 @@ export type DashboardBundleCachePayload = {
   musculo: Enums<"subgrupo_muscular">;
   trainingTrack: TrainingTrackState;
   hasPersonalBond: boolean;
+  /** Persistidos para a UI não “apagar” degradação/assentamento no TTL. */
+  linhagemInactivity: LinhagemInactivitySyncResult | null;
+  thermalSettlement: ThermalGravitySettlementResult | null;
   fetchedAt: number;
 };
 
@@ -43,6 +47,12 @@ function readSessionStorage(key: string): DashboardBundleCachePayload | null {
     }
     if (typeof parsed.hasPersonalBond !== "boolean") {
       parsed.hasPersonalBond = Boolean(parsed.trainingTrack.bond);
+    }
+    if (parsed.linhagemInactivity === undefined) {
+      parsed.linhagemInactivity = null;
+    }
+    if (parsed.thermalSettlement === undefined) {
+      parsed.thermalSettlement = null;
     }
     if (Date.now() - parsed.fetchedAt > DASHBOARD_CACHE_TTL_MS) {
       window.sessionStorage.removeItem(key);

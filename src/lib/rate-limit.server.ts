@@ -119,13 +119,5 @@ export async function consumeRateLimitSlot(key: string, maxAttempts: number): Pr
 
 export async function clearRateLimit(key: string): Promise<void> {
   buckets.delete(key);
-
-  const upstash = resolveUpstashRestConfig();
-  if (!upstash) return;
-
-  const redis = new Redis({ url: upstash.url, token: upstash.token });
-  const keys = await redis.keys(`${RATE_LIMIT_PREFIX}:${key}*`);
-  if (keys.length > 0) {
-    await redis.del(...keys);
-  }
+  // Upstash sliding window expira sozinho — evita Redis KEYS (O(N)) em produção.
 }

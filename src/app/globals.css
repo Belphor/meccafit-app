@@ -117,6 +117,348 @@ body {
   animation: forge-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* Portal login — botão queima da esquerda para a direita antes de entrar */
+.portal-burn-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.portal-burn-btn__char,
+.portal-burn-btn__flame,
+.portal-burn-btn__light,
+.portal-burn-btn__embers {
+  pointer-events: none;
+}
+
+.portal-burn-btn__char {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  clip-path: inset(0 100% 0 0);
+  /* Área já queimada: cinza fosco, sem faixas */
+  background:
+    linear-gradient(
+      90deg,
+      rgba(42, 28, 18, 0.92) 0%,
+      rgba(28, 18, 12, 0.94) 55%,
+      rgba(18, 12, 8, 0.96) 100%
+    );
+  filter: saturate(0.45) brightness(0.72);
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.35);
+}
+
+.portal-burn-btn--forja .portal-burn-btn__char {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 40, 55, 0.92) 0%,
+    rgba(18, 26, 38, 0.94) 55%,
+    rgba(12, 16, 26, 0.96) 100%
+  );
+  filter: saturate(0.4) brightness(0.7);
+}
+
+.portal-burn-btn__flame {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  z-index: 3;
+  /* Faixa 16%: rastro + núcleo fundidos (sem fio branco separado) */
+  width: 16%;
+  opacity: 0;
+  transform-origin: right center;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 28%,
+    rgba(255, 70, 8, 0.22) 48%,
+    rgba(255, 110, 20, 0.55) 62%,
+    rgba(255, 150, 35, 0.82) 74%,
+    rgba(255, 190, 55, 0.95) 84%,
+    rgba(255, 230, 120, 1) 92%,
+    rgba(255, 248, 220, 1) 97%,
+    rgba(255, 255, 255, 1) 100%
+  );
+  filter: blur(1.6px) brightness(1.55) saturate(1.4);
+  mix-blend-mode: screen;
+  /* Glow colado no núcleo — sem halo que vira “linha” */
+  box-shadow:
+    -4px 0 10px rgba(255, 120, 30, 0.35),
+    0 0 6px rgba(255, 200, 80, 0.35);
+}
+
+.portal-burn-btn--forja .portal-burn-btn__flame {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 28%,
+    rgba(40, 100, 190, 0.22) 48%,
+    rgba(70, 140, 230, 0.55) 62%,
+    rgba(100, 170, 250, 0.82) 74%,
+    rgba(150, 200, 255, 0.95) 84%,
+    rgba(190, 230, 255, 1) 92%,
+    rgba(240, 248, 255, 1) 97%,
+    rgba(255, 255, 255, 1) 100%
+  );
+  filter: blur(1.6px) brightness(1.6) saturate(1.25);
+  box-shadow:
+    -4px 0 10px rgba(59, 130, 246, 0.35),
+    0 0 6px rgba(147, 197, 253, 0.35);
+}
+
+.portal-burn-btn__light {
+  position: absolute;
+  /* Brilho suave fundido no núcleo — sem aresta/linha solta */
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  z-index: 4;
+  width: 16%;
+  opacity: 0;
+  transform-origin: right center;
+  transform: translate3d(-100%, 0, 0);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 78%,
+    rgba(255, 255, 255, 0.15) 88%,
+    rgba(255, 255, 255, 0.45) 95%,
+    rgba(255, 255, 255, 0.75) 100%
+  );
+  filter: blur(2.2px) brightness(1.7);
+  mix-blend-mode: screen;
+  box-shadow: none;
+}
+
+.portal-burn-btn--forja .portal-burn-btn__light {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 78%,
+    rgba(255, 255, 255, 0.15) 88%,
+    rgba(255, 255, 255, 0.45) 95%,
+    rgba(255, 255, 255, 0.75) 100%
+  );
+  box-shadow: none;
+}
+
+.portal-burn-btn__embers {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  opacity: 0;
+}
+
+.portal-burn-btn__embers i {
+  position: absolute;
+  bottom: 18%;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #fff8e7;
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 1),
+    0 0 16px rgba(255, 200, 80, 1),
+    0 0 28px rgba(255, 140, 40, 0.95);
+  opacity: 0;
+}
+
+.portal-burn-btn--forja .portal-burn-btn__embers i {
+  background: #ffffff;
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 1),
+    0 0 16px rgba(186, 230, 253, 1),
+    0 0 28px rgba(96, 165, 250, 0.95);
+}
+
+.portal-burn-btn__embers i:nth-child(1) {
+  left: 10%;
+  bottom: 22%;
+}
+.portal-burn-btn__embers i:nth-child(2) {
+  left: 26%;
+  bottom: 38%;
+}
+.portal-burn-btn__embers i:nth-child(3) {
+  left: 42%;
+  bottom: 16%;
+}
+.portal-burn-btn__embers i:nth-child(4) {
+  left: 58%;
+  bottom: 44%;
+}
+.portal-burn-btn__embers i:nth-child(5) {
+  left: 74%;
+  bottom: 24%;
+}
+.portal-burn-btn__embers i:nth-child(6) {
+  left: 88%;
+  bottom: 36%;
+}
+
+.portal-burn-btn.is-burning {
+  transform: none;
+  box-shadow:
+    inset 0 0 36px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(255, 255, 255, 0.28),
+    0 0 22px rgba(255, 200, 80, 0.45),
+    0 0 40px rgba(249, 115, 22, 0.32);
+}
+
+.portal-burn-btn--forja.is-burning {
+  box-shadow:
+    inset 0 0 36px rgba(0, 0, 0, 0.28),
+    0 0 14px rgba(255, 255, 255, 0.32),
+    0 0 22px rgba(186, 230, 253, 0.45),
+    0 0 40px rgba(59, 130, 246, 0.28);
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__label {
+  animation: portal-burn-label 2.8s linear forwards;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__char {
+  /* Avanço contínuo — linear evita pausas entre keyframes */
+  animation: portal-burn-consume 2.8s linear forwards;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__flame {
+  animation: portal-burn-flame 2.8s linear forwards;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__light {
+  animation: portal-burn-light 2.8s linear forwards;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__embers {
+  opacity: 1;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__embers i {
+  animation: portal-burn-ember 0.9s linear infinite;
+}
+
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(1) {
+  animation-delay: 0s;
+}
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(4) {
+  animation-delay: 0.45s;
+}
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(5) {
+  animation-delay: 0.6s;
+}
+.portal-burn-btn.is-burning .portal-burn-btn__embers i:nth-child(6) {
+  animation-delay: 0.75s;
+}
+
+/* Frente em % do botão → translate da faixa 16%: T = (100/16)*P - 100
+   Só 0→100 + linear = avanço contínuo sem pausas nos stops */
+@keyframes portal-burn-consume {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes portal-burn-flame {
+  /* Sem scaleX: origem à direita esticava branco para trás do núcleo */
+  0% {
+    opacity: 1;
+    filter: blur(1.6px) brightness(1.5) saturate(1.35);
+    transform: translate3d(-100%, 0, 0) scaleY(1);
+  }
+  92% {
+    opacity: 1;
+    filter: blur(1.7px) brightness(1.58) saturate(1.4);
+    transform: translate3d(475%, 0, 0) scaleY(1.06);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(1.7px) brightness(1.58) saturate(1.4);
+    transform: translate3d(525%, 0, 0) scaleY(1.06);
+  }
+}
+
+@keyframes portal-burn-light {
+  /* Mesmo translate da chama — brilho fundido no núcleo, sem aresta */
+  0% {
+    opacity: 0.85;
+    filter: blur(2.2px) brightness(1.65);
+    transform: translate3d(-100%, 0, 0) scaleY(1);
+  }
+  92% {
+    opacity: 0.85;
+    filter: blur(2.4px) brightness(1.7);
+    transform: translate3d(475%, 0, 0) scaleY(1.06);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(2.4px) brightness(1.7);
+    transform: translate3d(525%, 0, 0) scaleY(1.06);
+  }
+}
+
+@keyframes portal-burn-label {
+  0% {
+    opacity: 1;
+    filter: none;
+    letter-spacing: 0.18em;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+  }
+  100% {
+    opacity: 0.28;
+    filter: brightness(0.55) saturate(0.4);
+    letter-spacing: 0.2em;
+    text-shadow: none;
+  }
+}
+
+@keyframes portal-burn-ember {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.55);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--ember-x, 8px), -36px, 0) scale(0.2);
+  }
+}
+
+.portal-burn-btn__embers i:nth-child(odd) {
+  --ember-x: 14px;
+}
+
+.portal-burn-btn__embers i:nth-child(even) {
+  --ember-x: 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-burn-btn.is-burning .portal-burn-btn__label,
+  .portal-burn-btn.is-burning .portal-burn-btn__char,
+  .portal-burn-btn.is-burning .portal-burn-btn__flame,
+  .portal-burn-btn.is-burning .portal-burn-btn__light {
+    animation-duration: 0.4s;
+  }
+
+  .portal-burn-btn.is-burning .portal-burn-btn__embers i {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 @keyframes solar-plasma-flow {
   0% {
     background-position: 0% 42%;
@@ -2216,7 +2558,7 @@ body {
   }
 }
 
-/* Anima Fênix — fireball trigger, glass balloons, exit ritual */
+/* ANYMA FÊNIX — fireball trigger, glass balloons, exit ritual */
 .anima-fireball {
   background: radial-gradient(
     circle at 36% 30%,

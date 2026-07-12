@@ -416,5 +416,37 @@ assert(
     resolveThermalSettlementTierAfterMiss(true, 4) === 4,
 );
 
+const dashboardConfigSource = readFileSync(
+  resolve(process.cwd(), "src/lib/dashboard-config.ts"),
+  "utf8",
+);
+const treinoDiaExplanationMatch = dashboardConfigSource.match(
+  /export const TREINO_DIA_CLIENT_EXPLANATION\s*=\s*\n?\s*"([^"]+)"/,
+);
+const treinoDiaExplanation = treinoDiaExplanationMatch?.[1] ?? "";
+assert(
+  "TREINO_DIA_CLIENT_EXPLANATION descreve trava diária (não semanal)",
+  treinoDiaExplanation.includes("dia civil") &&
+    treinoDiaExplanation.toLowerCase().includes("amanhã") &&
+    !treinoDiaExplanation.includes("uma vez por semana"),
+);
+
+const dayLockedGoalMatch = dashboardConfigSource.match(
+  /export const PHOENIX_INPUT_GOAL_DAY_LOCKED\s*=\s*\n?\s*"([^"]+)"/,
+);
+const dayLockedHintMatch = dashboardConfigSource.match(
+  /export const PHOENIX_INPUT_HINT_DAY_LOCKED\s*=\s*\n?\s*"([^"]+)"/,
+);
+const hintCompleteMatch = dashboardConfigSource.match(
+  /export const PHOENIX_INPUT_HINT_COMPLETE\s*=\s*\n?\s*"([^"]+)"/,
+);
+assert(
+  "PHOENIX day-lock tokens usam dia civil / amanhã",
+  Boolean(dayLockedGoalMatch?.[1]?.toLowerCase().includes("amanhã")) &&
+    Boolean(dayLockedHintMatch?.[1]?.includes("dia civil")) &&
+    Boolean(hintCompleteMatch?.[1]?.toLowerCase().includes("amanhã")) &&
+    !hintCompleteMatch?.[1]?.includes("próxima semana"),
+);
+
 console.log(`\nARGOS unit smoke: ${passed} pass · ${failed} fail\n`);
 process.exit(failed > 0 ? 4 : 0);

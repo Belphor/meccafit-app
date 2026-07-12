@@ -5,9 +5,9 @@ import { BraseiroPanel } from "@/components/dashboard/BraseiroPanel";
 import { TreinoTab } from "@/components/dashboard/TreinoTab";
 import { readAltarVtcSession, writeAltarVtcSession } from "@/lib/altar-vtc-session";
 import {
-  getWeekLockedMaxLoadsForDay,
-  isExerciseWeekLocked,
-  markExerciseWeekLocked,
+  getDayLockedMaxLoadsForDay,
+  isExerciseDayLocked,
+  markExerciseDayLocked,
 } from "@/lib/treino-week-lock";
 import {
   mergeSessionCompletedSets,
@@ -69,7 +69,7 @@ function resolveTreinoSessionHydration(
   subgroup: MuscleSubgroup,
 ) {
   const snapshot = readAltarVtcSession(sessionScope);
-  const weekLockedLoads = getWeekLockedMaxLoadsForDay(
+  const dayLockedLoads = getDayLockedMaxLoadsForDay(
     sessionScope.userId,
     sessionScope.trainingDay,
   );
@@ -78,10 +78,13 @@ function resolveTreinoSessionHydration(
     const maxLoadsByExerciseId: Record<number, number> = {};
     const registeredPrByExerciseId: Record<number, number> = {};
     for (const exercise of subgroup.exercises) {
-      const lockedContribution = weekLockedLoads[exercise.id];
+      const lockedContribution = dayLockedLoads[exercise.id];
       if (lockedContribution) {
         maxLoadsByExerciseId[exercise.id] = lockedContribution;
         registeredPrByExerciseId[exercise.id] = lockedContribution;
+      } else if (exercise.registeredToday && exercise.currentWeight > 0) {
+        maxLoadsByExerciseId[exercise.id] = exercise.currentWeight;
+        registeredPrByExerciseId[exercise.id] = exercise.currentWeight;
       }
     }
 
@@ -101,16 +104,21 @@ function resolveTreinoSessionHydration(
   );
   const reconciledMaxLoads = reconcileSessionMaxLoads(
     subgroup,
-    reconciledCompleted,
     snapshot.maxLoadsByExerciseId,
   );
   const mergedMaxLoads = { ...reconciledMaxLoads };
   const registeredPrByExerciseId = { ...(snapshot.registeredPrByExerciseId ?? {}) };
   for (const exercise of subgroup.exercises) {
-    const lockedContribution = weekLockedLoads[exercise.id];
+    const lockedContribution = dayLockedLoads[exercise.id];
     if (lockedContribution) {
       mergedMaxLoads[exercise.id] = lockedContribution;
       registeredPrByExerciseId[exercise.id] = lockedContribution;
+    } else if (exercise.registeredToday && exercise.currentWeight > 0) {
+      mergedMaxLoads[exercise.id] = Math.max(
+        mergedMaxLoads[exercise.id] ?? 0,
+        exercise.currentWeight,
+      );
+      registeredPrByExerciseId[exercise.id] = exercise.currentWeight;
     }
   }
   const reconciledVtc = sumSessionAltarVtc(subgroup, mergedMaxLoads);
@@ -287,13 +295,13 @@ export function DashboardTreinoWorkspace({
 
   const handleWeightSaved = useCallback(
     (exerciseId: number, value: number) => {
-      if (isExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId)) return;
+      if (isExerciseDayLocked(authUserId, activeTrainingDay, exerciseId)) return;
       if (registeredPrRef.current[exerciseId]) return;
 
       lastSavedWeightRef.current = value;
       registeredPrRef.current = { ...registeredPrRef.current, [exerciseId]: value };
       setRegisteredPrByExerciseId({ ...registeredPrRef.current });
-      markExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId, value);
+      markExerciseDayLocked(authUserId, activeTrainingDay, exerciseId, value);
 
       const exercise = mergedSubgroup.exercises.find((item) => item.id === exerciseId);
       const metricKind = exercise?.metricKind ?? resolveCatalogMetricKind(exerciseId);
@@ -333,7 +341,7 @@ export function DashboardTreinoWorkspace({
 
   const handleExerciseMaxLoad = useCallback(
     (exerciseId: number, maxLoadKg: number) => {
-      if (isExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId)) return;
+      if (isExerciseDayLocked(authUserId, activeTrainingDay, exerciseId)) return;
 
       const exercise = mergedSubgroup.exercises.find((item) => item.id === exerciseId);
       const metricKind = exercise?.metricKind ?? resolveCatalogMetricKind(exerciseId);
@@ -356,7 +364,7 @@ export function DashboardTreinoWorkspace({
       setBaseVtcTotal(total);
       setMaxLoadsByExerciseId({ ...maxLoadsRef.current });
       onAltarMetricsChange(total, lastSavedWeightRef.current);
-      markExerciseWeekLocked(authUserId, activeTrainingDay, exerciseId, maxLoadKg);
+      markExerciseDayLocked(authUserId, activeTrainingDay, exerciseId, maxLoadKg);
       if (sessionHydratedRef.current) {
         persistAltarSession(total, lastSavedWeightRef.current);
       }
@@ -476,7 +484,6 @@ export function DashboardTreinoWorkspace({
             onSuperacao={handleSuperacao}
             onPersistSuccess={handleExercisePersisted}
             onSetComplete={handleSetComplete}
-            maxLoadsByExerciseId={maxLoadsByExerciseId}
             registeredPrByExerciseId={registeredPrByExerciseId}
           />
         </div>
@@ -485,6 +492,7 @@ export function DashboardTreinoWorkspace({
           <BraseiroPanel
             className="w-full"
             profile={profile}
+            userId={authUserId}
             isIncubating={isIncubating}
             formattedVtcTotal={formattedVtcTotal}
             vtcTotal={finalVtcTotal}

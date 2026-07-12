@@ -1,5 +1,7 @@
 /**
- * Trava semanal de VTC — uma carga máxima por exercício/dia da planilha até a próxima semana.
+ * Trava de carga:
+ * - Input/superação: 1× por exercício no dia civil (SP) — libera amanhã.
+ * - ✓ da planilha: dia da semana permanece marcado até a próxima segunda.
  */
 
 import { resolveAltarContribution } from "@/lib/training-metric";
@@ -7,13 +9,24 @@ import { resolveCatalogMetricKind } from "@/lib/exercise-catalog";
 import { resolveTreinoDayKey, APP_DAY_TIMEZONE } from "@/lib/treino-day-key";
 import type { WeekdayIndex } from "@/lib/training-week";
 
-const STORAGE_PREFIX = "meccafit:treino-week-vtc";
-const SNAPSHOT_VERSION = 1 as const;
+const DAY_STORAGE_PREFIX = "meccafit:treino-day-vtc";
+const WEEK_STORAGE_PREFIX = "meccafit:treino-week-vtc";
+const DAY_SNAPSHOT_VERSION = 2 as const;
+const WEEK_SNAPSHOT_VERSION = 1 as const;
+
+type LoadMap = Partial<Record<WeekdayIndex, Record<string, number>>>;
+
+type DayVtcLockSnapshot = {
+  v: typeof DAY_SNAPSHOT_VERSION;
+  dayKey: string;
+  days: LoadMap;
+  updatedAt: string;
+};
 
 type WeekVtcLockSnapshot = {
-  v: typeof SNAPSHOT_VERSION;
+  v: typeof WEEK_SNAPSHOT_VERSION;
   weekKey: string;
-  days: Partial<Record<WeekdayIndex, Record<string, number>>>;
+  days: LoadMap;
   updatedAt: string;
 };
 
@@ -49,73 +62,95 @@ export function resolvePlanilhaWeekKey(now = new Date()): string {
   return addDaysToDayKey(today, -daysFromMonday);
 }
 
-function buildStorageKey(userId: string, weekKey: string): string {
-  return `${STORAGE_PREFIX}:${userId}:${weekKey}`;
-}
+function sanitizeLoadMap(source: unknown): LoadMap {
+  const days: LoadMap = {};
+  if (!source || typeof source !== "object") return days;
 
-function sanitizeSnapshot(raw: unknown, weekKey: string): WeekVtcLockSnapshot | null {
-  if (!raw || typeof raw !== "object") return null;
-  const data = raw as Partial<WeekVtcLockSnapshot>;
-  if (data.v !== SNAPSHOT_VERSION) return null;
-
-  const days: Partial<Record<WeekdayIndex, Record<string, number>>> = {};
-  const source = data.days;
-  if (source && typeof source === "object") {
-    for (const [dayKey, entries] of Object.entries(source)) {
-      const day = Number(dayKey) as WeekdayIndex;
-      if (day < 1 || day > 6 || !entries || typeof entries !== "object") continue;
-      const sanitized: Record<string, number> = {};
-      for (const [exerciseKey, value] of Object.entries(entries)) {
-        const exerciseId = Number.parseInt(exerciseKey, 10);
-        const contribution = typeof value === "number" ? value : Number(value);
-        if (!Number.isFinite(exerciseId) || exerciseId <= 0) continue;
-        if (!Number.isFinite(contribution) || contribution <= 0) continue;
-        sanitized[String(exerciseId)] = contribution;
-      }
-      if (Object.keys(sanitized).length > 0) {
-        days[day] = sanitized;
-      }
+  for (const [dayKeyRaw, entries] of Object.entries(source as Record<string, unknown>)) {
+    const day = Number(dayKeyRaw) as WeekdayIndex;
+    if (day < 1 || day > 6 || !entries || typeof entries !== "object") continue;
+    const sanitized: Record<string, number> = {};
+    for (const [exerciseKey, value] of Object.entries(entries as Record<string, unknown>)) {
+      const exerciseId = Number.parseInt(exerciseKey, 10);
+      const contribution = typeof value === "number" ? value : Number(value);
+      if (!Number.isFinite(exerciseId) || exerciseId <= 0) continue;
+      if (!Number.isFinite(contribution) || contribution <= 0) continue;
+      sanitized[String(exerciseId)] = contribution;
+    }
+    if (Object.keys(sanitized).length > 0) {
+      days[day] = sanitized;
     }
   }
+  return days;
+}
 
+function emptyDaySnapshot(dayKey: string): DayVtcLockSnapshot {
   return {
-    v: SNAPSHOT_VERSION,
-    weekKey,
-    days,
-    updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+    v: DAY_SNAPSHOT_VERSION,
+    dayKey,
+    days: {},
+    updatedAt: new Date().toISOString(),
   };
 }
 
-function readSnapshot(userId: string): WeekVtcLockSnapshot {
-  const weekKey = resolvePlanilhaWeekKey();
-  if (typeof window === "undefined" || !userId) {
-    return { v: SNAPSHOT_VERSION, weekKey, days: {}, updatedAt: new Date().toISOString() };
-  }
+function emptyWeekSnapshot(weekKey: string): WeekVtcLockSnapshot {
+  return {
+    v: WEEK_SNAPSHOT_VERSION,
+    weekKey,
+    days: {},
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function readDaySnapshot(userId: string): DayVtcLockSnapshot {
+  const dayKey = resolveTreinoDayKey();
+  if (typeof window === "undefined" || !userId) return emptyDaySnapshot(dayKey);
 
   try {
-    const raw = window.localStorage.getItem(buildStorageKey(userId, weekKey));
-    if (!raw) {
-      return { v: SNAPSHOT_VERSION, weekKey, days: {}, updatedAt: new Date().toISOString() };
+    const raw = window.localStorage.getItem(`${DAY_STORAGE_PREFIX}:${userId}:${dayKey}`);
+    if (!raw) return emptyDaySnapshot(dayKey);
+    const data = JSON.parse(raw) as Partial<DayVtcLockSnapshot>;
+    if (data.v !== DAY_SNAPSHOT_VERSION || data.dayKey !== dayKey) {
+      return emptyDaySnapshot(dayKey);
     }
-    return (
-      sanitizeSnapshot(JSON.parse(raw) as unknown, weekKey) ?? {
-        v: SNAPSHOT_VERSION,
-        weekKey,
-        days: {},
-        updatedAt: new Date().toISOString(),
-      }
-    );
+    return {
+      v: DAY_SNAPSHOT_VERSION,
+      dayKey,
+      days: sanitizeLoadMap(data.days),
+      updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+    };
   } catch {
-    return { v: SNAPSHOT_VERSION, weekKey, days: {}, updatedAt: new Date().toISOString() };
+    return emptyDaySnapshot(dayKey);
   }
 }
 
-function writeSnapshot(userId: string, snapshot: WeekVtcLockSnapshot): void {
-  if (typeof window === "undefined" || !userId) return;
+function readWeekSnapshot(userId: string): WeekVtcLockSnapshot {
+  const weekKey = resolvePlanilhaWeekKey();
+  if (typeof window === "undefined" || !userId) return emptyWeekSnapshot(weekKey);
 
   try {
+    const raw = window.localStorage.getItem(`${WEEK_STORAGE_PREFIX}:${userId}:${weekKey}`);
+    if (!raw) return emptyWeekSnapshot(weekKey);
+    const data = JSON.parse(raw) as Partial<WeekVtcLockSnapshot>;
+    if (data.v !== WEEK_SNAPSHOT_VERSION || data.weekKey !== weekKey) {
+      return emptyWeekSnapshot(weekKey);
+    }
+    return {
+      v: WEEK_SNAPSHOT_VERSION,
+      weekKey,
+      days: sanitizeLoadMap(data.days),
+      updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
+    };
+  } catch {
+    return emptyWeekSnapshot(weekKey);
+  }
+}
+
+function writeDaySnapshot(userId: string, snapshot: DayVtcLockSnapshot): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
     window.localStorage.setItem(
-      buildStorageKey(userId, snapshot.weekKey),
+      `${DAY_STORAGE_PREFIX}:${userId}:${snapshot.dayKey}`,
       JSON.stringify(snapshot),
     );
   } catch {
@@ -123,22 +158,38 @@ function writeSnapshot(userId: string, snapshot: WeekVtcLockSnapshot): void {
   }
 }
 
-export function isExerciseWeekLocked(
+function writeWeekSnapshot(userId: string, snapshot: WeekVtcLockSnapshot): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    window.localStorage.setItem(
+      `${WEEK_STORAGE_PREFIX}:${userId}:${snapshot.weekKey}`,
+      JSON.stringify(snapshot),
+    );
+  } catch {
+    // quota ou modo privado
+  }
+}
+
+/** Input/superação: trava só no dia civil atual (SP). */
+export function isExerciseDayLocked(
   userId: string,
   trainingDay: WeekdayIndex,
   exerciseId: number,
 ): boolean {
   if (!userId || exerciseId <= 0) return false;
-  const snapshot = readSnapshot(userId);
-  const dayEntries = snapshot.days[trainingDay];
-  return Boolean(dayEntries?.[String(exerciseId)]);
+  const snapshot = readDaySnapshot(userId);
+  return Boolean(snapshot.days[trainingDay]?.[String(exerciseId)]);
 }
 
-export function getWeekLockedMaxLoadsForDay(
+/** @deprecated Use isExerciseDayLocked */
+export const isExerciseWeekLocked = isExerciseDayLocked;
+
+/** Cargas seladas no dia civil atual — alimentam o altar da sessão. */
+export function getDayLockedMaxLoadsForDay(
   userId: string,
   trainingDay: WeekdayIndex,
 ): Record<number, number> {
-  const snapshot = readSnapshot(userId);
+  const snapshot = readDaySnapshot(userId);
   const dayEntries = snapshot.days[trainingDay];
   if (!dayEntries) return {};
 
@@ -152,27 +203,61 @@ export function getWeekLockedMaxLoadsForDay(
   return result;
 }
 
-export function markExerciseWeekLocked(
+/** @deprecated Use getDayLockedMaxLoadsForDay */
+export const getWeekLockedMaxLoadsForDay = getDayLockedMaxLoadsForDay;
+
+/**
+ * Sela o exercício no dia civil (input) e marca o slot da planilha na semana (✓).
+ * `metricValue` é o pico registado (kg / reps / segundos conforme o exercício).
+ */
+export function markExerciseDayLocked(
   userId: string,
   trainingDay: WeekdayIndex,
   exerciseId: number,
-  maxLoadKg: number,
+  metricValue: number,
 ): void {
-  if (!userId || exerciseId <= 0 || maxLoadKg <= 0) return;
+  if (!userId || exerciseId <= 0 || metricValue <= 0) return;
+
+  const metricKind = resolveCatalogMetricKind(exerciseId);
+  const contribution = resolveAltarContribution(metricKind, metricValue);
+  const nowIso = new Date().toISOString();
+
+  const dayKey = resolveTreinoDayKey();
+  const daySnapshot = readDaySnapshot(userId);
+  const dayEntries = { ...(daySnapshot.days[trainingDay] ?? {}) };
+  dayEntries[String(exerciseId)] = contribution;
+  writeDaySnapshot(userId, {
+    ...daySnapshot,
+    dayKey,
+    days: { ...daySnapshot.days, [trainingDay]: dayEntries },
+    updatedAt: nowIso,
+  });
 
   const weekKey = resolvePlanilhaWeekKey();
-  const snapshot = readSnapshot(userId);
-  const metricKind = resolveCatalogMetricKind(exerciseId);
-  const contribution = resolveAltarContribution(metricKind, maxLoadKg);
-  const dayEntries = { ...(snapshot.days[trainingDay] ?? {}) };
-  dayEntries[String(exerciseId)] = contribution;
-
-  writeSnapshot(userId, {
-    ...snapshot,
+  const weekSnapshot = readWeekSnapshot(userId);
+  const weekEntries = { ...(weekSnapshot.days[trainingDay] ?? {}) };
+  weekEntries[String(exerciseId)] = contribution;
+  writeWeekSnapshot(userId, {
+    ...weekSnapshot,
     weekKey,
-    days: { ...snapshot.days, [trainingDay]: dayEntries },
-    updatedAt: new Date().toISOString(),
+    days: { ...weekSnapshot.days, [trainingDay]: weekEntries },
+    updatedAt: nowIso,
   });
+}
+
+/** @deprecated Use markExerciseDayLocked */
+export const markExerciseWeekLocked = markExerciseDayLocked;
+
+function isTrainingDayFullyLockedInWeek(
+  userId: string,
+  trainingDay: WeekdayIndex,
+  exerciseIds: number[],
+): boolean {
+  if (!userId || exerciseIds.length === 0) return false;
+  const snapshot = readWeekSnapshot(userId);
+  const dayEntries = snapshot.days[trainingDay];
+  if (!dayEntries) return false;
+  return exerciseIds.every((id) => Boolean(dayEntries[String(id)]));
 }
 
 export function isTrainingDayFullyLocked(
@@ -180,10 +265,10 @@ export function isTrainingDayFullyLocked(
   trainingDay: WeekdayIndex,
   exerciseIds: number[],
 ): boolean {
-  if (!userId || exerciseIds.length === 0) return false;
-  return exerciseIds.every((id) => isExerciseWeekLocked(userId, trainingDay, id));
+  return isTrainingDayFullyLockedInWeek(userId, trainingDay, exerciseIds);
 }
 
+/** ✓ da planilha — dias com todos os exercícios registrados nesta semana. */
 export function listFullyLockedTrainingDays(
   userId: string,
   dayExerciseIds: Partial<Record<WeekdayIndex, number[]>>,
@@ -191,7 +276,7 @@ export function listFullyLockedTrainingDays(
   const locked: WeekdayIndex[] = [];
   for (const day of [1, 2, 3, 4, 5, 6] as const) {
     const ids = dayExerciseIds[day] ?? [];
-    if (ids.length > 0 && isTrainingDayFullyLocked(userId, day, ids)) {
+    if (ids.length > 0 && isTrainingDayFullyLockedInWeek(userId, day, ids)) {
       locked.push(day);
     }
   }

@@ -44,10 +44,9 @@ import {
   EXERCISE_SESSION_REGISTERED_LABEL,
   EXERCISE_SERIES_PROGRESS,
   EXERCISE_SERIES_SUPERACAO,
-  PHOENIX_INPUT_GOAL_COMPLETE,
-  PHOENIX_INPUT_GOAL_WEEK_LOCKED,
+  PHOENIX_INPUT_GOAL_DAY_LOCKED,
   PHOENIX_INPUT_GOAL_AWAITING_SETS,
-  PHOENIX_INPUT_HINT_WEEK_LOCKED,
+  PHOENIX_INPUT_HINT_DAY_LOCKED,
   EXERCISE_VIDEO_BUTTON,
   EXERCISE_VIDEO_BUTTON_IDLE,
 } from "@/lib/dashboard-config";
@@ -76,8 +75,8 @@ export type MonumentalExerciseCardProps = {
   ) => void;
   onPersistSuccess?: (exerciseId: number, detail: { vtcGenerated: number }) => void;
   onSetComplete?: (exerciseId: number) => void;
-  isMaxLoadRegistered?: boolean;
-  isWeekLocked?: boolean;
+  /** Pico já registado neste exercício no dia civil atual (SP). */
+  isDayLocked?: boolean;
 };
 
 export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
@@ -98,8 +97,7 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   onSuperacao,
   onPersistSuccess,
   onSetComplete,
-  isMaxLoadRegistered = false,
-  isWeekLocked = false,
+  isDayLocked = false,
 }: MonumentalExerciseCardProps) {
   const [baseVtc, setBaseVtc] = useState(0);
   const [restTimerToken, setRestTimerToken] = useState(0);
@@ -373,27 +371,23 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
             <PhoenixInput
               userId={userId}
               isExerciseActive={isActive}
-              isPrRegistered={isMaxLoadRegistered}
+              isPrRegistered={isDayLocked}
               allSetsComplete={isSeriesComplete}
               exercicioId={exercise.id}
               exercicioNome={exercise.name}
               fieldIdPrefix={`exercise-${exercise.id}-`}
               initialWeight={exercise.currentWeight}
-              hintCompleteText={
-                isWeekLocked ? PHOENIX_INPUT_HINT_WEEK_LOCKED : undefined
-              }
+              hintCompleteText={isDayLocked ? PHOENIX_INPUT_HINT_DAY_LOCKED : undefined}
               trainingGoalText={
-                isWeekLocked
-                  ? PHOENIX_INPUT_GOAL_WEEK_LOCKED
-                  : isMaxLoadRegistered
-                    ? PHOENIX_INPUT_GOAL_COMPLETE
-                    : !isSeriesComplete
-                      ? PHOENIX_INPUT_GOAL_AWAITING_SETS
-                      : exercise.metricKind === "duration_sec"
-                        ? `Registrar tempo máximo · ${exercise.targetSets} séries`
-                        : exercise.metricKind === "rep_max"
-                          ? `Registrar repetição máxima · ${exercise.targetSets} séries`
-                          : `Registrar carga máxima · ${exercise.targetSets} séries`
+                isDayLocked
+                  ? PHOENIX_INPUT_GOAL_DAY_LOCKED
+                  : !isSeriesComplete
+                    ? PHOENIX_INPUT_GOAL_AWAITING_SETS
+                    : exercise.metricKind === "duration_sec"
+                      ? `Registrar tempo máximo · ${exercise.targetSets} séries`
+                      : exercise.metricKind === "rep_max"
+                        ? `Registrar repetição máxima · ${exercise.targetSets} séries`
+                        : `Registrar carga máxima · ${exercise.targetSets} séries`
               }
               prescribedSeries={exercise.targetSets}
               musculo={musculo}

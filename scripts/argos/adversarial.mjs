@@ -6,6 +6,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
+import {
+  allocateFreshProbeExercicioId,
+  cleanupProbeWorkout,
+  createServiceAdmin,
+  uniqueProbeExercicioId,
+} from "./lib/probe-workout.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -79,7 +85,7 @@ const soberano = await signIn(registry.forjador_soberano?.email ?? "master@mecca
 await attack("Atacante registra treino em nome da vitima", async () => {
   const { error } = await atacante.client.rpc("registrar_treino_com_status", {
     p_user_id: vitima.userId,
-    p_exercicio_id: 88001,
+    p_exercicio_id: uniqueProbeExercicioId(88),
     p_peso_atual: 100,
     p_musculo: "peito",
     p_repeticoes: 1,
@@ -142,7 +148,8 @@ await attack("Atacante le historico da vitima", async () => {
 });
 
 await attack("Soberano NÃO publica no mural (superacao propria)", async () => {
-  const probeId = 88003;
+  const admin = createServiceAdmin();
+  const probeId = await allocateFreshProbeExercicioId(admin, soberano.userId, 88);
   await soberano.client.rpc("registrar_treino_com_status", {
     p_user_id: soberano.userId,
     p_exercicio_id: probeId,
@@ -156,6 +163,7 @@ await attack("Soberano NÃO publica no mural (superacao propria)", async () => {
   const { data } = await atacante.client.rpc("argos_fetch_mural_comunidade", { p_limit: 48 });
   const rows = Array.isArray(data) ? data : [];
   const leaked = rows.some((row) => row.atleta_nome === "Mestre Supremo");
+  await cleanupProbeWorkout(admin, soberano.userId, probeId);
   return !leaked;
 });
 

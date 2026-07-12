@@ -1,4 +1,17 @@
-import { ANYMA_VTC_PHRASE } from "@/lib/anyma-copy";
+import { ANYMA_VTC_PHRASE, ANYMA_VTC_SPOKEN } from "@/lib/anyma-copy";
+import { injectName } from "@/lib/profile-display-name";
+
+/**
+ * Fonética em inglês da marca FENYXIA para TTS pt-BR.
+ * A UI continua exibindo FENYXIA. Só a voz usa esta forma.
+ */
+export const FENYXIA_TTS_PHONETIC = "Fenicksia";
+
+/**
+ * Fonética em inglês de RANKINGS para TTS pt-BR.
+ * A UI pode exibir Rankings ou RANKINGS. A voz sempre soa em inglês.
+ */
+export const RANKINGS_TTS_PHONETIC = "Rénquings";
 
 function capitalizeFirstLetter(value: string): string {
   if (!value) return value;
@@ -18,12 +31,12 @@ function normalizeSentenceCase(text: string): string {
 }
 
 /**
- * Normaliza copy da ANYMA FÊNIX para leitura na UI e TTS.
+ * Normaliza copy da ANYMA FÊNIX para leitura na UI.
  * Travessões (—, –) e hífens duplos viram vírgula ou ponto.
  * Dois-pontos e ponto-e-vírgula viram pausa com frase bem formada.
- * Sigla VTC isolada vira Volume Total De Carga (VTC).
+ * Sigla VTC isolada vira Volume Total De Carga (VTC) no texto escrito.
  */
-export function formatAnimaSpeech(text: string): string {
+export function formatAnymaSpeech(text: string): string {
   const withVtc = text.includes(ANYMA_VTC_PHRASE)
     ? text
     : text.replace(/\bVTC\b/g, ANYMA_VTC_PHRASE);
@@ -43,3 +56,31 @@ export function formatAnimaSpeech(text: string): string {
 
   return normalizeSentenceCase(normalized);
 }
+
+/**
+ * Prepara texto já normalizado para síntese de voz.
+ * Mantém FENYXIA e (VTC) na UI, mas a fala usa fonética em inglês e
+ * pronuncia só "Volume Total De Carga", sem a sigla VTC.
+ */
+export function prepareAnymaSpeechForTts(text: string): string {
+  return text
+    .replace(/\bFENYXIA\b/gi, FENYXIA_TTS_PHONETIC)
+    .replace(/\bRANKINGS\b/gi, RANKINGS_TTS_PHONETIC)
+    .replace(/\bVolume Total De Carga\s*\(\s*VTC\s*\)/gi, ANYMA_VTC_SPOKEN)
+    .replace(/\bVolume de Carga Máxima\s*\(\s*VTC\s*\)/gi, "Volume de Carga Máxima")
+    .replace(/\(\s*VTC\s*\)/gi, "")
+    .replace(/\bVTC\b/g, ANYMA_VTC_SPOKEN)
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .trim();
+}
+
+/**
+ * Texto canônico para card e voz: injeta o nome (ou Nova Chama) e normaliza a fala.
+ */
+export function resolveAnymaSpeechText(speech: string, profileName: string): string {
+  return formatAnymaSpeech(injectName(speech, profileName));
+}
+
+/** @deprecated Use formatAnymaSpeech — marca canônica é ANYMA. */
+export const formatAnimaSpeech = formatAnymaSpeech;

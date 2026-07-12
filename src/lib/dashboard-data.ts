@@ -1,8 +1,9 @@
 import { isAccountSuspended, resolveProfileIsPunished } from "@/lib/account-access-status";
-import { LINHAGEM_PADRAO } from "@/lib/client-lore-copy";
+import { resolveLinhagemDisplay } from "@/lib/client-lore-copy";
 import { resolveSubgroupFromParam } from "@/lib/subgroup-routing";
 import { subgroupIdToMusculo } from "@/lib/subgroup-musculo";
 import { ARGOS_WEIGHT_MAX } from "@/lib/dashboard-config";
+import { isTimestampOnTreinoDay } from "@/lib/treino-day-key";
 import {
   invalidateDashboardBundleCache,
   readDashboardBundleCache,
@@ -97,13 +98,14 @@ export type HistoricoTreinoRow = Pick<
   | "repeticoes"
   | "status"
   | "registrado_em"
+  | "updated_at"
 >;
 
 const PROFILE_COLUMNS =
   "full_name, nome_linhagem, status_altar, data_nascimento, role, phase_tier, phase_setup_at, custom_preferences, sexo, perfil_identidade_confirmada, anima_portal_visto, ecossistema_tour_concluido" as const;
 
 const HISTORICO_COLUMNS =
-  "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em" as const;
+  "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em, updated_at" as const;
 
 function normalizeWeight(raw: number | string | null | undefined): number {
   const parsed = Number(raw);
@@ -135,14 +137,17 @@ function resolveBirthPhase(age: number): string {
   return "Fase Despertar";
 }
 
-export function mapProfileRowToClientProfile(row: DashboardProfileRow): ClientProfile {
+export function mapProfileRowToClientProfile(
+  row: DashboardProfileRow,
+  isVip = false,
+): ClientProfile {
   const age = computeAgeFromBirthDate(row.data_nascimento);
   const isCliente = row.role === "cliente";
   const suspended = isAccountSuspended(row.status_altar);
 
   return {
     name: row.full_name?.trim() || "Membro da Linhagem",
-    lineage: row.nome_linhagem?.trim() || LINHAGEM_PADRAO,
+    lineage: resolveLinhagemDisplay(row.nome_linhagem, isVip),
     status: suspended ? "Suspenso" : isCliente ? "Ativo" : row.status_altar?.trim() || "Ativo",
     birth: resolveBirthPhase(age),
     age,
@@ -168,13 +173,17 @@ export function applyHistoricoToSubgroup(
 
     const persistedWeight = normalizeWeight(historico.peso ?? historico.peso_atual);
     const historicalPrWeight = persistedWeight;
+    const registeredToday = isTimestampOnTreinoDay(
+      historico.updated_at ?? historico.registrado_em ?? null,
+    );
 
     return {
       ...exercise,
       ...(persistedWeight > 0 ? { currentWeight: persistedWeight } : null),
       historicalPrWeight: historicalPrWeight > 0 ? historicalPrWeight : exercise.historicalPrWeight,
+      registeredToday,
       // Conclusão do dia vem da sessão local (como cardio) — histórico só guarda PR/registro.
-      completedSets: 0,
+      completedSets: registeredToday ? exercise.targetSets : 0,
     };
   });
 
@@ -221,9 +230,9 @@ export function reconcileSessionCompletedSets(
   return next;
 }
 
+/** Mantém cargas de sessão válidas para o subgrupo corrente. */
 export function reconcileSessionMaxLoads(
   subgroup: MuscleSubgroup,
-  _completedSetsByExerciseId: Record<number, number>,
   maxLoadsByExerciseId: Record<number, number>,
 ): Record<number, number> {
   const next: Record<number, number> = {};
@@ -291,7 +300,7 @@ export function mapCommunityMuralRowsToPosts(rows: CommunityMuralRow[]): MuralPo
     athleteId: row.author_id ? String(row.author_id) : undefined,
     athleteAvatarPath: row.author_avatar_path ? String(row.author_avatar_path) : null,
     athleteName: row.atleta_nome?.trim() || "Membro da Linhagem",
-    lineageName: row.nome_linhagem?.trim() || LINHAGEM_PADRAO,
+    lineageName: resolveLinhagemDisplay(row.nome_linhagem),
     temCinturaoDuelo: Boolean(row.tem_cinturao_duelo ?? row.detem_cinturao_duelo),
     isReiDasChamas: Boolean(
       row.is_rei_chamas_superiores ?? row.is_rei_chamas_inferiores ?? row.is_rei_das_chamas,
@@ -603,7 +612,7 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
               thermalSettlement?.phase_tier ??
               bundle.profile?.phase_tier ??
               1,
-          }),
+          }, hasPersonalBond),
           profileRow: enrichedProfileRow,
           subgroup: applyHistoricoToSubgroup(baseSubgroup, historico),
           muralPosts: mapCommunityMuralRowsToPosts(bundle.mural ?? []),
@@ -676,7 +685,10 @@ async function fetchDashboardBundleDirect(subgroupParam: string | null): Promise
 
   return {
     data: {
-      profile: mapProfileRowToClientProfile(profileRowResult.data as DashboardProfileRow),
+      profile: mapProfileRowToClientProfile(
+        profileRowResult.data as DashboardProfileRow,
+        hasPersonalBond,
+      ),
       profileRow: enrichedProfileRow,
       subgroup: applyHistoricoToSubgroup(baseSubgroup, historico),
       muralPosts: muralResult.data ?? [],
@@ -718,16 +730,59 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
   const musculo = subgroupIdToMusculo(baseSubgroup.id);
   const cached = readDashboardBundleCache(session.user.id, musculo);
   if (cached) {
+    let linhagemInactivity = cached.linhagemInactivity ?? null;
+    let thermalSettlement = cached.thermalSettlement ?? null;
+    let profileRow = cached.profileRow ?? null;
+
+    // Side-effects idempotentes: nunca “apagar” inatividade/assentamento no cache hit.
+    try {
+      const settled = await withSupabaseRlsGuard(async () => {
+        const { data, error } = await supabase.rpc("argos_settle_thermal_gravity_monthly");
+        return { data, error };
+      });
+      const parsed = parseThermalGravitySettlement(settled.data);
+      if (parsed) {
+        thermalSettlement = parsed;
+        profileRow = {
+          ...(profileRow ?? {}),
+          phase_tier: parsed.phase_tier,
+        };
+      }
+    } catch {
+      // migration ausente
+    }
+
+    try {
+      const presence = await syncLinhagemPresence(supabase);
+      if (presence) {
+        linhagemInactivity = presence;
+        profileRow = {
+          ...(profileRow ?? {}),
+          phase_tier: presence.phase_tier,
+        };
+      }
+    } catch {
+      // migration ausente
+    }
+
+    writeDashboardBundleCache(session.user.id, {
+      ...cached,
+      profileRow,
+      linhagemInactivity,
+      thermalSettlement,
+      fetchedAt: Date.now(),
+    });
+
     return {
       data: {
         profile: cached.profile,
-        profileRow: cached.profileRow ?? null,
+        profileRow,
         subgroup: applyHistoricoToSubgroup(baseSubgroup, cached.historico),
         muralPosts: cached.muralPosts,
         trainingTrack: cached.trainingTrack ?? DEFAULT_TRAINING_TRACK,
         hasPersonalBond: cached.hasPersonalBond ?? Boolean(cached.trainingTrack?.bond),
-        linhagemInactivity: null,
-        thermalSettlement: null,
+        linhagemInactivity,
+        thermalSettlement,
       },
       error: null,
     };
@@ -751,6 +806,8 @@ export async function loadDashboardTrainingBundle(subgroupParam: string | null):
     musculo: resolved.data.musculo,
     trainingTrack: resolved.data.trainingTrack,
     hasPersonalBond: resolved.data.hasPersonalBond,
+    linhagemInactivity: resolved.data.linhagemInactivity ?? null,
+    thermalSettlement: resolved.data.thermalSettlement ?? null,
     fetchedAt: Date.now(),
   });
 

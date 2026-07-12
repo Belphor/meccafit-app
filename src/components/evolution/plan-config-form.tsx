@@ -21,6 +21,7 @@ import {
   resolveDaysUntilCycleResetSp,
 } from "@/lib/meta-sync-calendar";
 import { LoreEm } from "@/lib/lore-emphasis";
+import { publishPlanMetaSynced } from "@/lib/plan-meta-tour";
 import { VTC_DISPLAY_NAME, formatVtcKg } from "@/lib/vtc-labels";
 
 export const PLAN_SESSIONS_MIN = 4;
@@ -195,6 +196,7 @@ export function PlanConfigForm({
       setMetaSyncMes(mes);
       setSyncedBaseline(draft);
       setPhase("success");
+      publishPlanMetaSynced();
       setFeedback(
         syncedMeta > 0
           ? `Meta sincronizada para ${formatMonthLabelPt(mes.slice(0, 7))}: ${formatVtcKg(syncedMeta)}.`
@@ -254,7 +256,8 @@ export function PlanConfigForm({
           <p id="plan-sessions-label" className="text-sm leading-relaxed text-neutral-300">
             Dias de treino planejados: {draft.totalTreinosMensaisPlanejados}
             <span className="text-neutral-500">
-              {";"} cerca de {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana.
+              {" "}
+              (cerca de {daysPerWeekHint} {daysPerWeekHint === 1 ? "dia" : "dias"} por semana).
             </span>
           </p>
 
@@ -334,7 +337,12 @@ export function PlanConfigForm({
 
   if (embedded) {
     return (
-      <div className="px-4 pt-1 sm:px-5" aria-labelledby="plan-config-title">
+      <div
+        className="px-4 pt-1 sm:px-5"
+        aria-labelledby="plan-config-title"
+        data-tour-target="evolucao-meta"
+        data-meta-synced={syncedThisMonth ? "true" : "false"}
+      >
         {content}
       </div>
     );
@@ -346,6 +354,8 @@ export function PlanConfigForm({
       variant="treino"
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="plan-config-title"
+      data-tour-target="evolucao-meta"
+      data-meta-synced={syncedThisMonth ? "true" : "false"}
     >
       {content}
     </BrasaVivaCard>

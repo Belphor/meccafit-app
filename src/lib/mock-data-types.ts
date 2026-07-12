@@ -21,6 +21,8 @@ export interface Exercise {
   currentWeight: number;
   /** PR persistido no Supabase — prioridade sobre mock local. */
   historicalPrWeight?: number;
+  /** Já registrou carga neste exercício no dia civil atual (SP). */
+  registeredToday?: boolean;
   completedSets: number;
   video_url: string;
   subgroupId: string;

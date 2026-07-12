@@ -69,7 +69,7 @@ export function EvolutionChamaAcumuladaCard({
         <div className="min-w-0 flex-1">
           <h2 className={DASHBOARD_SECTION_TITLE}>Chama Acumulada da Linhagem</h2>
           <p className={EVOLUTION_SECTION_SUBTITLE}>
-            Volume dos últimos 30 dias; define sua fase e o anel do avatar.
+            Volume dos últimos trinta dias. Define sua fase e o anel do avatar.
           </p>
           <DashboardClientInfoBlock className="mt-3">{system.explanation}</DashboardClientInfoBlock>
 
@@ -81,16 +81,18 @@ export function EvolutionChamaAcumuladaCard({
                 <p className={`mt-1 ${EVOLUTION_STAT_VALUE}`}>{formatVtcKg(vtc30dKg)}</p>
               </div>
 
-              <EvolutionChamaProgressBar
-                progressPercent={progressPercent}
-                currentTier={phaseProgress.currentTier}
-                nextTier={phaseProgress.nextTier}
-                remainingKg={remainingKg}
-                vtc30dKg={progressKg}
-                ceilingKg={ceilingKg}
-                thermalState={thermalState}
-                monthBoundaryDegraded={monthBoundaryDegraded}
-              />
+              <div data-tour-target="evolucao-gravidade">
+                <EvolutionChamaProgressBar
+                  progressPercent={progressPercent}
+                  currentTier={phaseProgress.currentTier}
+                  nextTier={phaseProgress.nextTier}
+                  remainingKg={remainingKg}
+                  vtc30dKg={progressKg}
+                  ceilingKg={ceilingKg}
+                  thermalState={thermalState}
+                  monthBoundaryDegraded={monthBoundaryDegraded}
+                />
+              </div>
             </div>
           ) : (
             <div className="mt-5 space-y-3" aria-hidden>

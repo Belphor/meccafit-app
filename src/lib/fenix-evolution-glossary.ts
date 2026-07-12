@@ -56,7 +56,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "kg",
     period: "Últimos 30 dias · virada mensal civil",
     explanation:
-      `Soma do ${VTC_DISPLAY_NAME} dos últimos 30 dias. Define a fase da linhagem e o anel do avatar.`,
+      `Soma do ${VTC_DISPLAY_NAME} dos últimos trinta dias. Define a fase da linhagem e o anel do avatar.`,
     chip: `Chama Acumulada · ${VTC_DISPLAY_NAME} 30 dias`,
   },
   brasas_musculares: {
@@ -76,7 +76,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "%",
     period: "Últimos 30 dias",
     explanation:
-      `Mostra quanto do seu ${VTC_DISPLAY_NAME} dos últimos 30 dias já atingiu a meta mensal definida pelos dias planejados. Nos primeiros 20 dias da linhagem, o mapa mantém cores vivas. Depois, Ritmo abaixo de 50 por cento deixa o mapa mais suave.`,
+      `Mostra quanto do seu ${VTC_DISPLAY_NAME} dos últimos trinta dias já atingiu a meta mensal definida pelos dias planejados. Nos primeiros vinte dias da linhagem, o mapa mantém cores vivas. Depois, Ritmo abaixo de cinquenta por cento deixa o mapa mais suave.`,
     chip: `Ritmo da Fênix · meta ${VTC_DISPLAY_NAME}`,
   },
   gravidade_termica: {

@@ -7,7 +7,13 @@ import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { PhoenixCanvas } from "@/components/dashboard/PhoenixCanvas";
 import {
   ANYMA_BRAND,
+  ANYMA_ORB_GREETING,
 } from "@/lib/anyma-copy";
+import {
+  groupAnymaExplanationCards,
+  resolveAnymaExplanationCards,
+  type AnymaExplanationId,
+} from "@/lib/anyma-explanations";
 import {
   ONBOARDING_SPOTLIGHT_BEATS,
   clearSpotlightBeatProgress,
@@ -21,41 +27,51 @@ import {
   type PerfilIdentityTourFormState,
 } from "@/lib/anima-perfil-identity-form";
 import {
-  ANIMA_BALLOONS,
-  ANIMA_DEBT_SOFT_GREETING,
-  ANIMA_EXIT_COPY,
-  ANIMA_ONBOARDING_LOCK_MS,
-  ANIMA_ORB_GREETING,
+  ANYMA_DEBT_SOFT_GREETING,
+  ANYMA_EXIT_COPY,
+  ANYMA_ONBOARDING_LOCK_MS,
   markDebtSoftGreetingShown,
-  readAnimaOnboardingComplete,
-  shouldShowAnimaPortalOnboarding,
-  writeAnimaOnboardingComplete,
-  resolveIntentSummary,
+  readAnymaOnboardingComplete,
+  shouldShowAnymaPortalOnboarding,
+  writeAnymaOnboardingComplete,
   resolveOnboardingSpeech,
-  resolveOrbRevealGreeting,
   resolvePunishmentSpeech,
   shouldShowDebtSoftGreeting,
-  writeAnimaLastVisit,
+  writeAnymaLastVisit,
   PHOENIX_PUNISHMENT_LORE,
-  type AnimaBalloonAnchor,
-  type AnimaSpeechContext,
+  type AnymaSpeechContext,
 } from "@/lib/phoenix-lore";
-import { markAnimaPortalVisto } from "@/lib/profile-identity";
+import { markAnymaPortalVisto } from "@/lib/profile-identity";
 import {
   DASHBOARD_TAP_TARGET,
   THERMAL_GRAVITY_RESTORATION_FLASH_MS,
 } from "@/lib/dashboard-config";
-import { formatAnimaSpeech } from "@/lib/anima-speech";
-import { injectRegisteredName } from "@/lib/profile-display-name";
+import { resolveAnymaSpeechText } from "@/lib/anima-speech";
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
-const ANIMA_SPOTLIGHT_LOCK_MS = 8_000;
-const ANIMA_SPOTLIGHT_FIELD_LOCK_MS = 3_500;
+const ANYMA_SPOTLIGHT_LOCK_MS = 8_000;
+const ANYMA_SPOTLIGHT_FIELD_LOCK_MS = 3_500;
 
-const ANCHOR_TO_TAB: Record<AnimaBalloonAnchor, DashboardTabId> = {
-  treino: "treino",
-  evolucao: "evolucao",
-  perfil: "perfil",
+const EXPLANATION_SCROLL_TARGETS: Partial<Record<AnymaExplanationId, string>> = {
+  "treino-aba": '[data-tour-tab="treino"]',
+  "treino-voo": '[data-tour-target="treino-voo-cinzas"]',
+  "treino-calendario": '[data-tour-target="treino-calendario"]',
+  "treino-dia": '[data-tour-target="treino-dia"]',
+  "treino-chama-altar": '[data-tour-target="treino-chama-altar"]',
+  "evolucao-aba": '[data-tour-tab="evolucao"]',
+  "evolucao-ritmo": '[data-tour-target="evolucao-ritmo"]',
+  "evolucao-meta": '[data-tour-target="evolucao-meta"]',
+  "evolucao-brasas": '[data-tour-target="evolucao-brasas"]',
+  "evolucao-chama": '[data-tour-target="evolucao-chama"]',
+  "evolucao-gravidade": '[data-tour-target="evolucao-gravidade"]',
+  "evolucao-espelho": '[data-tour-target="evolucao-espelho"]',
+  "comunidade-aba": '[data-tour-tab="comunidade"]',
+  "comunidade-arena": '[data-tour-target="comunidade-arena"]',
+  "comunidade-titulos": '[data-tour-target="comunidade-titulos"]',
+  "comunidade-rankings": '[data-tour-target="comunidade-rankings"]',
+  "comunidade-mural": '[data-tour-target="comunidade-mural"]',
+  "dieta-plano": '[data-tour-target="dieta-plano"]',
+  "perfil-linhagem": '[data-tour-target="perfil-identidade"]',
 };
 
 type OnboardingPhase = "intro" | "spotlight" | null;
@@ -67,6 +83,7 @@ export type PhoenixHelperProps = {
   daysAbsent: number | null;
   isPunished?: boolean;
   animaPortalVisto?: boolean;
+  hasPersonalBond?: boolean;
   onTabChange: (tab: DashboardTabId, options?: { preserveVoice?: boolean }) => void;
   onOnboardingComplete?: () => void;
 };
@@ -83,17 +100,18 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   daysAbsent,
   isPunished = false,
   animaPortalVisto = false,
+  hasPersonalBond = false,
   onTabChange,
   onOnboardingComplete,
 }: PhoenixHelperProps) {
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [hudOpen, setHudOpen] = useState(false);
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>(null);
-  const [onboardingLockMs, setOnboardingLockMs] = useState(ANIMA_ONBOARDING_LOCK_MS);
-  const [spotlightLockMs, setSpotlightLockMs] = useState(ANIMA_SPOTLIGHT_LOCK_MS);
+  const [onboardingLockMs, setOnboardingLockMs] = useState(ANYMA_ONBOARDING_LOCK_MS);
+  const [spotlightLockMs, setSpotlightLockMs] = useState(ANYMA_SPOTLIGHT_LOCK_MS);
   const [spotlightBeat, setSpotlightBeat] = useState(0);
   const [exitDesaturate, setExitDesaturate] = useState(false);
-  const [highlightAnchor, setHighlightAnchor] = useState<AnimaBalloonAnchor | null>(null);
+  const [highlightExplanation, setHighlightExplanation] = useState<AnymaExplanationId | null>(null);
   const onboardingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const spotlightTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,7 +123,6 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const spotlightBootstrappedRef = useRef(false);
   const onboardingHasSpokenRef = useRef(false);
   const spotlightHasSpokenRef = useRef(false);
-  const skipNextRevealSpeechRef = useRef(false);
   const [onboardingNarrationDone, setOnboardingNarrationDone] = useState(!isSupported);
   const [spotlightNarrationDone, setSpotlightNarrationDone] = useState(!isSupported);
   const [spotlightTargetReady, setSpotlightTargetReady] = useState(false);
@@ -113,9 +130,14 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     readPerfilIdentityTourFormState(),
   );
 
-  const speechCtx = useMemo<AnimaSpeechContext>(
+  const speechCtx = useMemo<AnymaSpeechContext>(
     () => ({ profileName, phaseContext, daysAbsent }),
     [profileName, phaseContext, daysAbsent],
+  );
+
+  const explanationGroups = useMemo(
+    () => groupAnymaExplanationCards(resolveAnymaExplanationCards(hasPersonalBond)),
+    [hasPersonalBond],
   );
 
   const onboardingSpeech = useMemo(
@@ -127,13 +149,8 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     ONBOARDING_SPOTLIGHT_BEATS[Math.min(spotlightBeat, ONBOARDING_SPOTLIGHT_BEATS.length - 1)];
 
   const spotlightSpeech = useMemo(
-    () => formatAnimaSpeech(injectRegisteredName(spotlightBeatConfig.speech, profileName)),
+    () => resolveAnymaSpeechText(spotlightBeatConfig.speech, profileName),
     [profileName, spotlightBeatConfig.speech],
-  );
-
-  const tierGreetingCopy = useMemo(
-    () => resolveOrbRevealGreeting(profileName),
-    [profileName],
   );
 
   const punishmentSpeech = useMemo(
@@ -188,11 +205,11 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   useEffect(() => {
     if (isPunished) return;
 
-    if (animaPortalVisto && !readAnimaOnboardingComplete(userId)) {
-      writeAnimaOnboardingComplete(userId);
+    if (animaPortalVisto && !readAnymaOnboardingComplete(userId)) {
+      writeAnymaOnboardingComplete(userId);
     }
 
-    const needsOnboarding = shouldShowAnimaPortalOnboarding(userId, animaPortalVisto);
+    const needsOnboarding = shouldShowAnymaPortalOnboarding(userId, animaPortalVisto);
     if (needsOnboarding) {
       const savedBeat = readSpotlightBeatProgress(userId);
       if (savedBeat !== null) {
@@ -201,17 +218,17 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       } else {
         setOnboardingPhase("intro");
       }
-      setOnboardingLockMs(ANIMA_ONBOARDING_LOCK_MS);
-      setSpotlightLockMs(ANIMA_SPOTLIGHT_LOCK_MS);
+      setOnboardingLockMs(ANYMA_ONBOARDING_LOCK_MS);
+      setSpotlightLockMs(ANYMA_SPOTLIGHT_LOCK_MS);
       setOnboardingNarrationDone(!isSupported);
       setSpotlightNarrationDone(!isSupported);
-      writeAnimaLastVisit(userId);
+      writeAnymaLastVisit(userId);
       return;
     }
 
     clearSpotlightBeatProgress(userId);
     setOnboardingPhase(null);
-    writeAnimaLastVisit(userId);
+    writeAnymaLastVisit(userId);
   }, [animaPortalVisto, isSupported, userId, isPunished]);
 
   const guidedTabChange = useCallback(
@@ -222,42 +239,9 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   );
 
   const handlePhoenixRevealed = useCallback(() => {
-    if (isPunished) return;
-
-    if (onboardingPhase !== null) {
-      if (skipNextRevealSpeechRef.current) {
-        skipNextRevealSpeechRef.current = false;
-      }
-      return;
-    }
-
-    if (skipNextRevealSpeechRef.current) {
-      skipNextRevealSpeechRef.current = false;
-      return;
-    }
-
-    if (!debtGreetingFiredRef.current && shouldShowDebtSoftGreeting(userId, daysAbsent)) {
-      debtGreetingFiredRef.current = true;
-      markDebtSoftGreetingShown(userId);
-      window.setTimeout(
-        () =>
-          igniteVoice({
-            text: ANIMA_DEBT_SOFT_GREETING,
-            fullName: profileName,
-            tier: phaseContext.phaseTier,
-            allowIntroFallback: false,
-          }),
-        420,
-      );
-      return;
-    }
-
-    igniteVoice({
-      text: ANIMA_ORB_GREETING,
-      fullName: profileName,
-      allowIntroFallback: false,
-    });
-  }, [daysAbsent, igniteVoice, isPunished, onboardingPhase, phaseContext.phaseTier, profileName, userId]);
+    // Saudação falada ao abrir o painel (handleOpenHud). Aqui só o balão visual.
+    if (isPunished || onboardingPhase !== null) return;
+  }, [isPunished, onboardingPhase]);
 
   useEffect(() => {
     if (onboardingPhase !== "intro") return;
@@ -363,7 +347,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     spotlightNarrationFiredRef.current = false;
     setSpotlightNarrationDone(!isSupported);
     setSpotlightLockMs(
-      spotlightBeat === 0 ? ANIMA_SPOTLIGHT_LOCK_MS : ANIMA_SPOTLIGHT_FIELD_LOCK_MS,
+      spotlightBeat === 0 ? ANYMA_SPOTLIGHT_LOCK_MS : ANYMA_SPOTLIGHT_FIELD_LOCK_MS,
     );
   }, [isSupported, onboardingPhase, spotlightBeat]);
 
@@ -444,8 +428,39 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
   const handleOpenHud = useCallback(() => {
     if (onboardingPhase !== null) return;
+    if (hudOpen) return;
+
     setHudOpen(true);
-  }, [onboardingPhase]);
+
+    if (isPunished) return;
+
+    if (!debtGreetingFiredRef.current && shouldShowDebtSoftGreeting(userId, daysAbsent)) {
+      debtGreetingFiredRef.current = true;
+      markDebtSoftGreetingShown(userId);
+      igniteVoice({
+        text: ANYMA_DEBT_SOFT_GREETING,
+        fullName: profileName,
+        tier: phaseContext.phaseTier,
+        allowIntroFallback: false,
+      });
+      return;
+    }
+
+    igniteVoice({
+      text: ANYMA_ORB_GREETING,
+      fullName: profileName,
+      allowIntroFallback: false,
+    });
+  }, [
+    daysAbsent,
+    hudOpen,
+    igniteVoice,
+    isPunished,
+    onboardingPhase,
+    phaseContext.phaseTier,
+    profileName,
+    userId,
+  ]);
 
   const handleCloseHud = useCallback(() => {
     setHudOpen(false);
@@ -461,7 +476,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     }
 
     igniteVoice({
-      text: ANIMA_EXIT_COPY,
+      text: ANYMA_EXIT_COPY,
       fullName: profileName,
       tier: phaseContext.phaseTier,
       allowIntroFallback: false,
@@ -477,16 +492,15 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   }, [cancelVoice, clearOnboardingTimer, userId]);
 
   const completeSpotlight = useCallback(() => {
-    writeAnimaOnboardingComplete(userId);
+    writeAnymaOnboardingComplete(userId);
     clearSpotlightBeatProgress(userId);
-    void markAnimaPortalVisto().catch(() => {
+    void markAnymaPortalVisto().catch(() => {
       // portal flag opcional até migration aplicada
     });
     setOnboardingPhase(null);
     setSpotlightBeat(0);
     spotlightBootstrappedRef.current = false;
     clearSpotlightTimer();
-    skipNextRevealSpeechRef.current = true;
     onOnboardingComplete?.();
   }, [clearSpotlightTimer, onOnboardingComplete, userId]);
 
@@ -508,36 +522,48 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     setSpotlightBeat(nextBeat);
   }, [completeSpotlight, guidedTabChange, isSupported, spotlightBeat, userId]);
 
-  const handleBalloonClick = useCallback(
-    (anchor: AnimaBalloonAnchor) => {
+  const handleExplanationClick = useCallback(
+    (explanationId: AnymaExplanationId) => {
       if (isPunished) return;
 
-      const balloon = ANIMA_BALLOONS.find((item) => item.anchor === anchor);
-      if (!balloon) return;
+      const card = resolveAnymaExplanationCards(hasPersonalBond).find(
+        (item) => item.id === explanationId,
+      );
+      if (!card) return;
 
-      onTabChange(ANCHOR_TO_TAB[anchor]);
+      onTabChange(card.tab, { preserveVoice: true });
       igniteVoice({
-        text: resolveIntentSummary(balloon.intentId, speechCtx),
+        text: card.speech,
         fullName: profileName,
         tier: phaseContext.phaseTier,
         allowIntroFallback: false,
       });
 
-      setHighlightAnchor(anchor);
+      const selector = EXPLANATION_SCROLL_TARGETS[explanationId];
+      if (selector) {
+        window.setTimeout(() => {
+          const target = document.querySelector(selector);
+          if (target instanceof HTMLElement) {
+            target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+          }
+        }, 420);
+      }
+
+      setHighlightExplanation(explanationId);
       clearHighlightTimer();
       highlightTimerRef.current = setTimeout(() => {
-        setHighlightAnchor(null);
+        setHighlightExplanation(null);
         highlightTimerRef.current = null;
       }, 2000);
     },
     [
       clearHighlightTimer,
+      hasPersonalBond,
       igniteVoice,
       isPunished,
       onTabChange,
       phaseContext.phaseTier,
       profileName,
-      speechCtx,
     ],
   );
 
@@ -606,7 +632,11 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     }
 
     if (spotlightBeatConfig.completesTour) {
-      return "Quando estiver pronto, use o botão iluminado para selar ou toque em continuar.";
+      return "Toque em Inserir foto do dispositivo, se ainda não o fez. Depois continue para selar com Confirmar nome e gênero.";
+    }
+
+    if (spotlightBeatConfig.id === "perfil-foto") {
+      return "Toque em Inserir foto do dispositivo e, em seguida, continue.";
     }
 
     return "Leia a mensagem e toque em continuar quando estiver pronto.";
@@ -669,25 +699,27 @@ export const PhoenixHelper = memo(function PhoenixHelper({
             aria-label={`Apresentação da ${ANYMA_BRAND} no Portal`}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
-              {ANYMA_BRAND} · Selo da Linhagem · {spotlightBeat + 1}/{ONBOARDING_SPOTLIGHT_BEATS.length}
+              {ANYMA_BRAND} · Selo do Perfil · {spotlightBeat + 1}/{ONBOARDING_SPOTLIGHT_BEATS.length}
             </p>
             <h2 className="mt-2 text-base font-semibold text-amber-50">{spotlightBeatConfig.title}</h2>
             <p className="mt-3 max-h-[min(36vh,12rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
               {spotlightSpeech}
             </p>
             <p className="mt-3 text-[11px] text-neutral-400">{resolveSpotlightHint()}</p>
-            <button
-              type="button"
-              disabled={!canAdvanceSpotlight}
-              onClick={advanceSpotlight}
-              className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
-                canAdvanceSpotlight
-                  ? "anima-acender-linhagem-cta"
-                  : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
-              }`}
-            >
-              {canAdvanceSpotlight ? spotlightBeatConfig.continueLabel : "Apresentação em chamas…"}
-            </button>
+            {spotlightBeatConfig.hideContinueButton ? null : (
+              <button
+                type="button"
+                disabled={!canAdvanceSpotlight}
+                onClick={advanceSpotlight}
+                className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
+                  canAdvanceSpotlight
+                    ? "anima-acender-linhagem-cta"
+                    : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
+                }`}
+              >
+                {canAdvanceSpotlight ? spotlightBeatConfig.continueLabel : "Apresentação em chamas…"}
+              </button>
+            )}
           </div>
         </AnimaTourCallout>
       ) : null}
@@ -698,7 +730,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           isPunished={isPunished}
           isDeployed={hudOpen}
           isSpeaking={state === "speaking"}
-          greetingCopy={tierGreetingCopy}
+          greetingCopy=""
           onPhoenixRevealed={handlePhoenixRevealed}
           onEngage={handleOpenHud}
           ariaLabel={
@@ -723,17 +755,17 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           />
 
           <aside
-            className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-[max(4rem,env(safe-area-inset-top))] flex w-[min(40vw,22rem)] min-w-[16rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
+            className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-[max(4rem,env(safe-area-inset-top))] flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/85">
                   {ANYMA_BRAND}
                 </p>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {phaseContext.phaseLabel}
-                  {isSupported ? "" : " · Voz indisponível neste dispositivo"}
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  Toque em um card para ir até o altar e ouvir a explicação.
+                  {isSupported ? "" : " Voz indisponível neste dispositivo."}
                 </p>
               </div>
               <button
@@ -745,7 +777,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               </button>
             </div>
 
-            <div className="mt-4 flex flex-1 flex-col gap-3 overflow-y-auto">
+            <div className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
               {isPunished ? (
                 <div className="anima-glass-magma rounded-xl border border-neutral-700/50 px-4 py-3 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
@@ -754,25 +786,29 @@ export const PhoenixHelper = memo(function PhoenixHelper({
                   <p className="mt-2 text-xs leading-relaxed text-neutral-500">{punishmentSpeech}</p>
                 </div>
               ) : (
-                ANIMA_BALLOONS.map((balloon) => (
-                  <button
-                    key={balloon.anchor}
-                    type="button"
-                    data-anima-anchor={balloon.anchor}
-                    onClick={() => handleBalloonClick(balloon.anchor)}
-                    className={`${DASHBOARD_TAP_TARGET} anima-glass-magma w-full rounded-xl border px-4 py-3 text-left transition ${
-                      highlightAnchor === balloon.anchor
-                        ? "border-amber-400/50 ring-2 ring-amber-400/40"
-                        : "border-orange-500/20 hover:border-amber-400/35"
-                    }`}
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90">
-                      {balloon.label}
+                explanationGroups.map((group) => (
+                  <div key={group.group} className="space-y-2">
+                    <p className="sticky top-0 z-[1] bg-neutral-950/90 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 backdrop-blur-sm">
+                      {group.label}
                     </p>
-                    <p className="mt-1 text-xs text-neutral-400">
-                      Toque para ir a {balloon.tabLabel} e ouvir o resumo vibrante.
-                    </p>
-                  </button>
+                    {group.cards.map((card) => (
+                      <button
+                        key={card.id}
+                        type="button"
+                        data-anyma-explanation={card.id}
+                        onClick={() => handleExplanationClick(card.id)}
+                        className={`${DASHBOARD_TAP_TARGET} anima-glass-magma w-full rounded-xl border px-4 py-3 text-left transition ${
+                          highlightExplanation === card.id
+                            ? "border-amber-400/50 ring-2 ring-amber-400/40"
+                            : "border-orange-500/20 hover:border-amber-400/35"
+                        }`}
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90">
+                          {card.label}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
                 ))
               )}
             </div>

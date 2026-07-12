@@ -133,7 +133,7 @@ async function fetchBundleViaParallel(
     supabase
       .from("historico_treinos")
       .select(
-        "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em",
+        "id, exercicio_id, exercicio_nome, musculo, peso, peso_atual, series, repeticoes, status, registrado_em, updated_at",
       )
       .eq("cliente_id", userId)
       .eq("musculo", musculo)

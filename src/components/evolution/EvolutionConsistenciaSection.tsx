@@ -84,32 +84,36 @@ export function EvolutionConsistenciaSection({
 
       <div className="mx-4 border-t border-orange-500/12 sm:mx-5" aria-hidden />
 
-      <EvolutionRitmoPanel
-        indiceIgnicao={indiceIgnicao}
-        metaVtcMensalKg={metaVtcMensalKg}
-        vtc30dKg={vtc30dKg}
-        nivelTermicoGlobal={nivelTermicoGlobal}
-        computedNivelGlobal={computedNivelGlobal}
-        phaseSetupAt={phaseSetupAt}
-        ritmoGraceActive={ritmoGraceActive}
-        ritmoGraceDaysRemaining={ritmoGraceDaysRemaining}
-        loading={loading}
-      />
+      <div data-tour-target="evolucao-ritmo">
+        <EvolutionRitmoPanel
+          indiceIgnicao={indiceIgnicao}
+          metaVtcMensalKg={metaVtcMensalKg}
+          vtc30dKg={vtc30dKg}
+          nivelTermicoGlobal={nivelTermicoGlobal}
+          computedNivelGlobal={computedNivelGlobal}
+          phaseSetupAt={phaseSetupAt}
+          ritmoGraceActive={ritmoGraceActive}
+          ritmoGraceDaysRemaining={ritmoGraceDaysRemaining}
+          loading={loading}
+        />
+      </div>
 
-      <EvolutionBodyMapPanel
-        loading={loading}
-        refreshing={refreshing}
-        indiceIgnicao={indiceIgnicao}
-        calorRows={calorRows}
-        niveisTermicos={niveisTermicos}
-        congelamentoPorMembro={congelamentoPorMembro}
-        performanceMode={performanceMode}
-        activeMuscle={activeMuscle}
-        onMuscleSelect={onMuscleSelect}
-        onRefresh={onRefreshMap}
-        scopeError={scopeError}
-        purityPenaltyActive={purityPenaltyActive}
-      />
+      <div data-tour-target="evolucao-brasas">
+        <EvolutionBodyMapPanel
+          loading={loading}
+          refreshing={refreshing}
+          indiceIgnicao={indiceIgnicao}
+          calorRows={calorRows}
+          niveisTermicos={niveisTermicos}
+          congelamentoPorMembro={congelamentoPorMembro}
+          performanceMode={performanceMode}
+          activeMuscle={activeMuscle}
+          onMuscleSelect={onMuscleSelect}
+          onRefresh={onRefreshMap}
+          scopeError={scopeError}
+          purityPenaltyActive={purityPenaltyActive}
+        />
+      </div>
     </BrasaVivaCard>
   );
 }

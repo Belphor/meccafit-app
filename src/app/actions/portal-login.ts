@@ -1,17 +1,14 @@
 "use server";
 
 import { resolveLoginBlockMessage } from "@/lib/account-access-status";
-import { resolvePostLoginRoute } from "@/lib/internal-routes";
-import { mapAuthError } from "@/lib/portal-auth";
+import { isForjadorPanelRole, resolvePostLoginRoute } from "@/lib/internal-routes";
+import { mapAuthError } from "@/lib/portal-auth.server";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { getRequestClientKey } from "@/lib/request-client.server";
-import {
-  buildRateLimitKey,
-  clearRateLimit,
-  isRateLimited,
-  recordRateLimitAttempt,
-} from "@/lib/rate-limit.server";
+import { buildRateLimitKey, consumeRateLimitSlot } from "@/lib/rate-limit.server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+
+export type PortalLoginAudience = "cliente" | "forjador";
 
 export type PortalLoginResult =
   | { ok: true; userId: string; destination: string }
@@ -19,15 +16,19 @@ export type PortalLoginResult =
 
 const PORTAL_LOGIN_MAX_ATTEMPTS = 10;
 
-/** ARGOS — login com rate limit server-side (anti brute-force). */
+/** ARGOS — login com porta obrigatória (cliente × forjador). Sem default silencioso. */
 export async function signInPortal(
   email: string,
   password: string,
+  audience: PortalLoginAudience,
 ): Promise<PortalLoginResult> {
+  if (audience !== "cliente" && audience !== "forjador") {
+    return { ok: false, message: PORTAL_COPY.loginRoleUnauthorized };
+  }
   const clientKey = await getRequestClientKey();
-  const rateKey = buildRateLimitKey("portal-login", clientKey);
+  const rateKey = buildRateLimitKey(`portal-login:${audience}`, clientKey);
 
-  if (await isRateLimited(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS)) {
+  if (await consumeRateLimitSlot(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS)) {
     return {
       ok: false,
       message: PORTAL_COPY.loginRateLimited,
@@ -36,14 +37,20 @@ export async function signInPortal(
   }
 
   const normalizedEmail = email.trim().toLowerCase();
-  const normalizedPassword = password.trim();
+  const normalizedPassword = password;
 
   if (!normalizedEmail) {
     return { ok: false, message: "Informe o e-mail de acesso." };
   }
 
-  if (!normalizedPassword) {
-    return { ok: false, message: PORTAL_COPY.loginPasswordHint };
+  if (!normalizedPassword.trim()) {
+    return {
+      ok: false,
+      message:
+        audience === "forjador"
+          ? PORTAL_COPY.forjaLoginPasswordHint
+          : PORTAL_COPY.loginPasswordHint,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -53,12 +60,10 @@ export async function signInPortal(
   });
 
   if (error) {
-    await recordRateLimitAttempt(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS);
     return { ok: false, message: mapAuthError(error) };
   }
 
   if (!data.user) {
-    await recordRateLimitAttempt(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS);
     return { ok: false, message: PORTAL_COPY.loginSessionError };
   }
 
@@ -70,24 +75,42 @@ export async function signInPortal(
 
   if (profileError || !profile) {
     await supabase.auth.signOut();
-    await recordRateLimitAttempt(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS);
     return { ok: false, message: PORTAL_COPY.loginProfileMissing };
   }
 
-  const loginBlockMessage = resolveLoginBlockMessage(profile.status_altar);
-  if (profile.role === "cliente" && loginBlockMessage) {
-    await supabase.auth.signOut();
-    await recordRateLimitAttempt(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS);
-    return { ok: false, message: loginBlockMessage };
+  const role = String(profile.role ?? "");
+  const isForjador = isForjadorPanelRole(role);
+  const isCliente = role === "cliente";
+
+  if (audience === "cliente") {
+    if (!isCliente) {
+      await supabase.auth.signOut();
+      return {
+        ok: false,
+        message: PORTAL_COPY.loginWrongPortalForjador,
+      };
+    }
+
+    const loginBlockMessage = resolveLoginBlockMessage(profile.status_altar);
+    if (loginBlockMessage) {
+      await supabase.auth.signOut();
+      return { ok: false, message: loginBlockMessage };
+    }
+  } else if (audience === "forjador") {
+    if (!isForjador) {
+      await supabase.auth.signOut();
+      return {
+        ok: false,
+        message: PORTAL_COPY.loginWrongPortalCliente,
+      };
+    }
   }
 
-  const destination = resolvePostLoginRoute(profile.role);
+  const destination = resolvePostLoginRoute(role);
   if (!destination) {
     await supabase.auth.signOut();
-    await recordRateLimitAttempt(rateKey, PORTAL_LOGIN_MAX_ATTEMPTS);
     return { ok: false, message: PORTAL_COPY.loginRoleUnauthorized };
   }
 
-  await clearRateLimit(rateKey);
   return { ok: true, userId: data.user.id, destination };
 }

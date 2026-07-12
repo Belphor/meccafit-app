@@ -1,8 +1,11 @@
+"use client";
+
 import type { ClientProfile } from "@/lib/mock-data";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import { VtcMetricDisplay } from "@/components/dashboard/VtcMetricDisplay";
+import { useResolvedProfileName } from "@/hooks/useLocalProfileMedia";
 import {
   buildChamaAltarCardStyle,
   CHAMA_ALTAR_TIER_LABELS,
@@ -18,6 +21,7 @@ import {
 
 type BraseiroPanelProps = {
   profile: ClientProfile;
+  userId: string;
   isIncubating: boolean;
   formattedVtcTotal: string;
   vtcTotal: number;
@@ -27,15 +31,20 @@ type BraseiroPanelProps = {
   className?: string;
 };
 
-const PROFILE_ROWS = (profile: ClientProfile) =>
-  [
-    { label: "Cliente", value: profile.name },
-    { label: "Linhagem", value: profile.lineage },
-    { label: "Status", value: profile.status },
+function BraseiroProfileDetails({
+  displayName,
+  lineage,
+  status,
+}: {
+  displayName: string;
+  lineage: string;
+  status: string;
+}) {
+  const rows = [
+    { label: "Nome", value: displayName },
+    { label: "Linhagem", value: lineage },
+    { label: "Status", value: status },
   ] as const;
-
-function BraseiroProfileDetails({ profile }: { profile: ClientProfile }) {
-  const rows = PROFILE_ROWS(profile);
 
   return (
     <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mt-6 lg:grid-cols-1">
@@ -62,6 +71,7 @@ function BraseiroProfileDetails({ profile }: { profile: ClientProfile }) {
 
 export function BraseiroPanel({
   profile,
+  userId,
   isIncubating,
   formattedVtcTotal,
   vtcTotal,
@@ -70,6 +80,8 @@ export function BraseiroPanel({
   isChamaReativa,
   className = "",
 }: BraseiroPanelProps) {
+  const resolvedName = useResolvedProfileName(userId, profile.name);
+  const displayName = resolvedName.trim() || profile.name || "Membro da Linhagem";
   const chamaTier = resolveChamaAltarTier(vtcTotal);
   const chamaTierLabel = CHAMA_ALTAR_TIER_LABELS[chamaTier];
   const chamaIntensity = String(Math.min(1, resolveChamaAltarIntensity(vtcTotal)));
@@ -83,6 +95,7 @@ export function BraseiroPanel({
       style={cardStyle}
       overlay={chamaTier >= 1 ? <div className="chama-altar-ambient" aria-hidden /> : undefined}
       aria-labelledby="braseiro-title"
+      data-tour-target="treino-chama-altar"
     >
       <DashboardPanelHeader chip="Braseiro" meta="Chama do Altar · kg hoje" />
 
@@ -112,7 +125,11 @@ export function BraseiroPanel({
         showBiologicalBalance
       />
 
-      <BraseiroProfileDetails profile={profile} />
+      <BraseiroProfileDetails
+        displayName={displayName}
+        lineage={profile.lineage}
+        status={profile.status}
+      />
     </BrasaVivaCard>
   );
 }

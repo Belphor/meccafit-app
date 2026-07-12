@@ -96,6 +96,9 @@ export async function markAnimaPortalVisto(): Promise<void> {
   }
 }
 
+/** Alias de marca — RPC/coluna DB permanecem anima_portal_visto. */
+export const markAnymaPortalVisto = markAnimaPortalVisto;
+
 export function parseProfileSexo(value: unknown): ProfileSexo | null {
   if (value === "masculino" || value === "feminino") return value;
   return null;

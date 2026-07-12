@@ -2,6 +2,7 @@ import type { AnimaTourCalloutPlacement } from "@/components/dashboard/AnimaTour
 import {
   ANYMA_ORB_PRESENCE_SPEECH,
   ANYMA_PERFIL_CONFIRMA_SPEECH,
+  ANYMA_PERFIL_FOTO_SPEECH,
   ANYMA_PERFIL_GENERO_SPEECH,
   ANYMA_PERFIL_NOME_SPEECH,
   ANYMA_PERFIL_SEAL_SPEECH,
@@ -21,8 +22,10 @@ export type PerfilIdentityBeat = {
   waitForTarget?: boolean;
   /** Exige nome ou gênero preenchido antes de avançar. */
   advanceGate?: PerfilIdentityAdvanceGate;
-  /** Último passo — conclui o onboarding ao continuar. */
+  /** Último passo — conclui o onboarding ao continuar. Sem botão de continue no card. */
   completesTour?: boolean;
+  /** Oculta o botão Continuar e aponta só para o alvo iluminado. */
+  hideContinueButton?: boolean;
 };
 
 export const PERFIL_TAB_SELECTOR = '[data-tour-tab="perfil"]';
@@ -33,9 +36,9 @@ export const PERFIL_TAB_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_TAB_SPEECH,
   targetSelector: PERFIL_TAB_SELECTOR,
   highlightSelectors: [PERFIL_TAB_SELECTOR],
-  placement: "bottom",
+  placement: "auto",
   title: "Aba Perfil",
-  continueLabel: "Continuar · identidade",
+  continueLabel: "Continuar para identidade",
   waitForTarget: true,
 };
 
@@ -45,8 +48,8 @@ export const PERFIL_IDENTIDADE_BEAT: PerfilIdentityBeat = {
   targetSelector: PERFIL_IDENTIDADE_SELECTOR,
   highlightSelectors: [PERFIL_IDENTIDADE_SELECTOR],
   placement: "top",
-  title: "Identidade na linhagem",
-  continueLabel: "Continuar · nome",
+  title: "Identidade no Perfil",
+  continueLabel: "Continuar para o nome",
   waitForTarget: true,
 };
 
@@ -57,7 +60,7 @@ export const PERFIL_NOME_BEAT: PerfilIdentityBeat = {
   highlightSelectors: ['[data-tour-target="perfil-nome"]'],
   placement: "bottom",
   title: "Seu nome",
-  continueLabel: "Próximo · gênero",
+  continueLabel: "Continuar para o gênero",
   waitForTarget: true,
   advanceGate: "nome",
 };
@@ -67,11 +70,22 @@ export const PERFIL_GENERO_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_GENERO_SPEECH,
   targetSelector: '[data-tour-target="perfil-genero"]',
   highlightSelectors: ['[data-tour-target="perfil-genero"]'],
-  placement: "top",
+  placement: "bottom",
   title: "Gênero na arena",
-  continueLabel: "Próximo · confirmar",
+  continueLabel: "Continuar para a foto",
   waitForTarget: true,
   advanceGate: "genero",
+};
+
+export const PERFIL_FOTO_BEAT: PerfilIdentityBeat = {
+  id: "perfil-foto",
+  speech: ANYMA_PERFIL_FOTO_SPEECH,
+  targetSelector: '[data-tour-target="perfil-foto"]',
+  highlightSelectors: ['[data-tour-target="perfil-foto"]'],
+  placement: "top",
+  title: "Inserir foto do dispositivo",
+  continueLabel: "Continuar para selar",
+  waitForTarget: true,
 };
 
 export const PERFIL_CONFIRMA_BEAT: PerfilIdentityBeat = {
@@ -81,15 +95,17 @@ export const PERFIL_CONFIRMA_BEAT: PerfilIdentityBeat = {
   highlightSelectors: ['[data-tour-target="perfil-confirmar"]'],
   placement: "top",
   title: "Selar identidade",
-  continueLabel: "Entendi · selar agora",
+  continueLabel: "Confirmar nome e gênero",
   waitForTarget: true,
   completesTour: true,
+  hideContinueButton: true,
 };
 
 /** Beats dos campos — guia pós-onboarding (identidade ainda pendente). */
 export const PERFIL_IDENTITY_FIELD_BEATS: readonly PerfilIdentityBeat[] = [
   PERFIL_NOME_BEAT,
   PERFIL_GENERO_BEAT,
+  PERFIL_FOTO_BEAT,
   PERFIL_CONFIRMA_BEAT,
 ] as const;
 
@@ -100,15 +116,19 @@ export const ONBOARDING_SPOTLIGHT_BEATS: readonly PerfilIdentityBeat[] = [
     speech: ANYMA_ORB_PRESENCE_SPEECH,
     targetSelector: "[data-anima-phoenix-anchor]",
     highlightSelectors: ["[data-anima-phoenix-anchor]"],
-    placement: "top",
+    placement: "auto",
     title: "Onde eu permaneço",
-    continueLabel: "Continuar · aba Perfil",
+    continueLabel: "Continuar para a aba Perfil",
   },
   PERFIL_TAB_BEAT,
   PERFIL_IDENTIDADE_BEAT,
   PERFIL_NOME_BEAT,
   PERFIL_GENERO_BEAT,
-  PERFIL_CONFIRMA_BEAT,
+  {
+    ...PERFIL_FOTO_BEAT,
+    continueLabel: "Continuar para selar identidade",
+    completesTour: true,
+  },
 ] as const;
 
 export function resolvePerfilIdentityBeat(index: number): PerfilIdentityBeat {

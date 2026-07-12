@@ -117,10 +117,9 @@ export function evaluateThermalGravity(
     config,
   );
 
+  // Meta do ciclo civil: só VTC do mês (não misturar janela rolante 30d).
   const leveled_up_this_month =
-    monthly_goal_kg !== null &&
-    monthly_goal_kg > 0 &&
-    (vtc_month >= monthly_goal_kg || vtc_30d >= monthly_goal_kg);
+    monthly_goal_kg !== null && monthly_goal_kg > 0 && vtc_month >= monthly_goal_kg;
 
   const restoration_session_baseline_kg = restorationBaselineForPhase(phase_reached);
 
@@ -203,7 +202,7 @@ export function thermalGravityToProfileFields(state: ThermalGravityState): Recor
 
 export function resolveMonthlyLevelUpProgressPercent(state: ThermalGravityState): number | null {
   if (state.monthly_goal_kg === null || state.monthly_goal_kg <= 0) return null;
-  const progress = Math.max(state.vtc_month, state.vtc_30d);
+  const progress = state.vtc_month;
   return Math.min(150, Math.round((progress / state.monthly_goal_kg) * 100));
 }
 

@@ -7,7 +7,6 @@ import { createBrowserClient } from "@supabase/ssr";
 import { requireSupabasePublicEnv } from "@/lib/supabase-env";
 import { resolveHistoricoExercicioId } from "@/lib/exercise-rpc";
 import { markDailyPurityLog } from "@/lib/purity-log";
-import { recordHistoricoCarga } from "@/lib/historico-cargas";
 import type { Database, Enums } from "@/types/database.types";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
@@ -34,6 +33,7 @@ export type SupabaseGuardErrorCode =
   | "OWNER_MISMATCH"
   | "RLS_DENIED"
   | "SUPABASE_ERROR"
+  | "VALIDATION_ERROR"
   | "UNKNOWN_ERROR";
 
 export type SupabaseGuardError = {
@@ -244,7 +244,25 @@ export async function withProtectedSupabaseMutation<TableName extends ProtectedT
 export async function registrarTreinoComStatus(
   input: RegistrarTreinoInput,
 ): Promise<SupabaseGuardResult<RegistrarTreinoResult>> {
-  const musculo = input.musculo ?? "costas";
+  const musculoRaw = String(input.musculo ?? "").trim().toLowerCase();
+  const allowedMusculos: Enums<"subgrupo_muscular">[] = [
+    "peito",
+    "costas",
+    "pernas",
+    "ombros",
+    "bracos",
+    "abdomen",
+  ];
+  const musculo = allowedMusculos.find((item) => item === musculoRaw);
+  if (!musculo) {
+    return {
+      data: null,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Músculo inválido para registrar treino.",
+      },
+    };
+  }
   const repeticoes = input.repeticoes ?? 1;
   const series = input.series ?? 1;
   const exercicioNome = input.exercicioNome ?? "Treino geral";
@@ -292,15 +310,7 @@ export async function registrarTreinoComStatus(
   );
 
   if (result.data) {
-    await recordHistoricoCarga({
-      atletaId: input.clienteId,
-      musculo,
-      exercicioId,
-      exercicioNome,
-      peso: input.pesoAtual,
-      repeticoes,
-      series,
-    });
+    // historico_cargas já é gravado pela RPC registrar_treino_com_status (evita dupla escrita).
     await markDailyPurityLog(input.clienteId, { source: "treino_registrado" });
   }
 

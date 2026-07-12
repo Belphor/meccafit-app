@@ -200,15 +200,15 @@ export function ProfileLinhagemIdentity({
         <div className="w-full min-w-0 flex-1 space-y-4">
           {!confirmed ? (
             <p className={EVOLUTION_HINT}>
-              Antes de forjar nos duelos e nos rankings, declare quem você é. O{" "}
+              Antes de forjar nos duelos e nos RANKINGS, declare quem você é. O{" "}
               <LoreEm>nome deve ser único</LoreEm> na linhagem, e o{" "}
-              <LoreEm>gênero</LoreEm> define em qual arena mensal você compete: masculina ou
+              <LoreEm>gênero</LoreEm> define em qual arena mensal você compete, masculina ou
               feminina.
             </p>
           ) : (
             <p className={EVOLUTION_HINT}>
               Nome e foto ficam no seu dispositivo. O nome e uma miniatura vão ao servidor para
-              duelos, rankings e mural. O anel reflete a fase da{" "}
+              duelos, RANKINGS e mural. O anel reflete a fase da{" "}
               <LoreEm>Chama Acumulada</LoreEm>.
             </p>
           )}
@@ -252,6 +252,28 @@ export function ProfileLinhagemIdentity({
             </div>
           </fieldset>
 
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="sr-only"
+              onChange={(event) => void handlePhotoChange(event)}
+            />
+            <button
+              type="button"
+              data-tour-target="perfil-foto"
+              onClick={() => fileInputRef.current?.click()}
+              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-orange-500/25 bg-neutral-950/70 px-4 py-2 text-xs font-semibold text-amber-100`}
+            >
+              Inserir foto do dispositivo
+            </button>
+            {photoFeedback ? (
+              <p className="mt-2 text-[11px] text-emerald-200/85">{photoFeedback}</p>
+            ) : null}
+          </div>
+
           {!confirmed ? (
             <button
               type="button"
@@ -277,27 +299,6 @@ export function ProfileLinhagemIdentity({
               {identityFeedback.message}
             </p>
           ) : null}
-
-          <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="user"
-              className="sr-only"
-              onChange={(event) => void handlePhotoChange(event)}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-orange-500/25 bg-neutral-950/70 px-4 py-2 text-xs font-semibold text-amber-100`}
-            >
-              Inserir foto do dispositivo
-            </button>
-            {photoFeedback ? (
-              <p className="mt-2 text-[11px] text-emerald-200/85">{photoFeedback}</p>
-            ) : null}
-          </div>
         </div>
       </div>
     </BrasaVivaCard>

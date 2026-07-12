@@ -1,11 +1,9 @@
 /** Textos do mural — substitui copy legada gerada pela RPC antiga. */
 
-import {
-  formatMuralMetricSentence,
-} from "@/lib/mural-metric";
+import { formatMuralMetricSentence } from "@/lib/mural-metric";
 
 const LEGACY_MURAL_BODY =
-  "Superação registrada no Fórum Brasa-Viva. Volume validado por ARGOS.";
+  "Superação registrada no Fórum Brasa-Viva. Volume validado pela linhagem Fenyxia.";
 
 export function muralBodyForExercise(
   exerciseName: string,
@@ -26,7 +24,11 @@ export function resolveMuralTopicBody(
   exercicioId?: number | null,
 ): string {
   const trimmed = body?.trim() ?? "";
-  if (!trimmed || trimmed === LEGACY_MURAL_BODY || trimmed.toLowerCase().includes("validado por argos")) {
+  if (
+    !trimmed ||
+    trimmed === LEGACY_MURAL_BODY ||
+    trimmed.toLowerCase().includes("validado por argos")
+  ) {
     return muralBodyForExercise(exerciseTitle, weightKg, exercicioId);
   }
   return trimmed;

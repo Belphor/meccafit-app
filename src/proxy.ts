@@ -68,7 +68,7 @@ export async function proxy(request: NextRequest) {
 
   if (!user) {
     const loginUrl = securedRequest.nextUrl.clone();
-    loginUrl.pathname = "/";
+    loginUrl.pathname = isForjaRoute(pathname) ? "/forja" : "/";
     loginUrl.search = "";
     return secureResponse(NextResponse.redirect(loginUrl), nonce);
   }

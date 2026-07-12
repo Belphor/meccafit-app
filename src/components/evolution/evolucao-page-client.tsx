@@ -328,7 +328,12 @@ export function EvolucaoPageClient({
       ) : null}
 
       {/* 4. Espelho visual — comparativo opcional */}
-      <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
+      <BrasaVivaCard
+        as="section"
+        variant="treino"
+        className={DASHBOARD_PANEL_FRAME}
+        data-tour-target="evolucao-espelho"
+      >
         <DashboardPanelHeader chip="Espelho visual" meta="Comparação de ciclo" />
 
         <div className="mt-3 px-4 sm:px-5">

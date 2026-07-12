@@ -14,7 +14,7 @@ import {
   PHOENIX_REVEAL_TOTAL_S,
   PHOENIX_WING_CYCLE_S,
 } from "@/components/dashboard/PhoenixModel";
-import { ANIMA_ORB_GREETING } from "@/lib/phoenix-lore";
+import { ANYMA_ORB_GREETING } from "@/lib/phoenix-lore";
 
 type PhoenixOrbPhase = "orb" | "igniting" | "revealing" | "awake";
 
@@ -71,7 +71,7 @@ export type PhoenixCanvasProps = {
 export function PhoenixCanvas({
   isPunished = false,
   isDeployed: isHudOpen = false,
-  greetingCopy = ANIMA_ORB_GREETING,
+  greetingCopy = ANYMA_ORB_GREETING,
   onEngage,
   onPhoenixRevealed,
   ariaLabel = "Despertar ANYMA FÊNIX",
@@ -240,6 +240,9 @@ export function PhoenixCanvas({
       return;
     }
 
+    // Abre o painel e dispara a voz no gesto do toque (necessário para TTS no browser).
+    onEngage?.();
+
     setShowGreeting(false);
     revealCycleRef.current += 1;
     setModelEmerging(false);
@@ -252,7 +255,6 @@ export function PhoenixCanvas({
     }, PHOENIX_IGNITION_DURATION_S * 1000);
 
     queueTimer(() => {
-      onEngage?.();
       setPhase("awake");
     }, PHOENIX_REVEAL_TOTAL_S * 1000);
   }, [isHudOpen, onEngage, phase, queueTimer, resetFlashState]);

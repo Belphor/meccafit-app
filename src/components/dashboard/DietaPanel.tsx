@@ -213,7 +213,12 @@ export function DietaPanel({ userId }: DietaPanelProps) {
   }, [userId]);
 
   return (
-    <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
+    <BrasaVivaCard
+      as="section"
+      variant="treino"
+      className={DASHBOARD_PANEL_FRAME}
+      data-tour-target="dieta-plano"
+    >
       <DashboardPanelHeader chip="Nutrição" meta="Plano alimentar · VIP" />
 
       <DashboardClientInfoBlock className="mt-4">

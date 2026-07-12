@@ -29,7 +29,7 @@ import { DEFAULT_TRAINING_TRACK, type TrainingTrackState } from "@/lib/training-
 import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import { buildForjadorScheduleMap, buildScheduleMap } from "@/lib/training-week";
 import {
-  isExerciseWeekLocked,
+  isExerciseDayLocked,
   listFullyLockedTrainingDays,
 } from "@/lib/treino-week-lock";
 
@@ -60,7 +60,6 @@ type TreinoTabProps = {
   ) => void;
   onPersistSuccess?: (exerciseId: number, detail?: { vtcGenerated: number }) => void;
   onSetComplete?: (exerciseId: number) => void;
-  maxLoadsByExerciseId?: Record<number, number>;
   registeredPrByExerciseId?: Record<number, number>;
 };
 
@@ -165,6 +164,7 @@ export function TreinoTab({
           isTreinoSwitching ? "opacity-85" : "opacity-100"
         }`}
         aria-busy={isTreinoSwitching}
+        data-tour-target="treino-dia"
       >
         <MonumentalSubgroupTitle
           subgroup={subgroup}
@@ -197,11 +197,10 @@ export function TreinoTab({
             subgroup.exercises.map((exercise) => {
             const trainingMuscle = subgroupIdToTrainingMuscle(exercise.subgroupId);
             const musculo = subgroupIdToMusculo(exercise.subgroupId);
-            const isWeekLocked = Boolean(
-              userId && isExerciseWeekLocked(userId, activeTrainingDay, exercise.id),
-            );
-            const isMaxLoadRegistered =
-              Boolean(registeredPrByExerciseId[exercise.id]) || isWeekLocked;
+            const isDayLocked =
+              Boolean(userId && isExerciseDayLocked(userId, activeTrainingDay, exercise.id)) ||
+              Boolean(exercise.registeredToday) ||
+              Boolean(registeredPrByExerciseId[exercise.id]);
 
             return (
               <li key={exercise.id} className="min-w-0">
@@ -229,8 +228,7 @@ export function TreinoTab({
                   onSuperacao={onSuperacao}
                   onPersistSuccess={onPersistSuccess}
                   onSetComplete={onSetComplete}
-                  isMaxLoadRegistered={isMaxLoadRegistered}
-                  isWeekLocked={isWeekLocked}
+                  isDayLocked={isDayLocked}
                 />
               </li>
             );

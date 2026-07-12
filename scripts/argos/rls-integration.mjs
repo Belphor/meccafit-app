@@ -6,6 +6,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
+import {
+  allocateFreshProbeExercicioId,
+  cleanupProbeWorkout,
+  createServiceAdmin,
+  isDayLockError,
+} from "./lib/probe-workout.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -87,6 +93,10 @@ try {
 }
 const soberano = await signIn(ACCOUNTS[2].email, ACCOUNTS[2].password);
 const OTHER_USER_ID = vitima?.userId ?? FALLBACK_OTHER_USER_ID;
+const admin = createServiceAdmin();
+if (!admin) {
+  console.warn("SUPABASE_SERVICE_ROLE_KEY ausente — cleanup de probes limitado");
+}
 
 await record("cliente: SELECT profiles retorna só o próprio", async () => {
   const { data, error } = await cliente.client.from("profiles").select("id");
@@ -203,7 +213,7 @@ await record("cliente: INSERT mural fraud status bloqueado via policy", async ()
 });
 
 await record("cliente: RPC registrar_treino com próprio user_id permitido", async () => {
-  const probeId = 88882;
+  const probeId = await allocateFreshProbeExercicioId(admin, cliente.userId, 88);
   const { error: rpcError } = await cliente.client.rpc("registrar_treino_com_status", {
     p_user_id: cliente.userId,
     p_exercicio_id: probeId,
@@ -222,10 +232,48 @@ await record("cliente: RPC registrar_treino com próprio user_id permitido", asy
     .eq("exercicio_id", probeId)
     .maybeSingle();
 
-  if (error || !data?.id) return { ok: false, detail: error?.message ?? "registro ausente" };
+  if (error || !data?.id) {
+    await cleanupProbeWorkout(admin, cliente.userId, probeId);
+    return { ok: false, detail: error?.message ?? "registro ausente" };
+  }
 
-  await cliente.client.from("historico_treinos").delete().eq("id", data.id);
-  return { ok: true, detail: "rpc ok" };
+  await cleanupProbeWorkout(admin, cliente.userId, probeId);
+  return { ok: true, detail: `rpc ok · exercicio=${probeId}` };
+});
+
+await record("cliente: RPC registrar_treino trava diária no 2º registo do mesmo exercício", async () => {
+  const probeId = await allocateFreshProbeExercicioId(admin, cliente.userId, 89);
+  const args = {
+    p_user_id: cliente.userId,
+    p_exercicio_id: probeId,
+    p_exercicio_nome: "ARGOS day lock",
+    p_musculo: "peito",
+    p_peso_atual: 47,
+    p_repeticoes: 1,
+    p_series: 1,
+  };
+
+  const { error: firstError } = await cliente.client.rpc("registrar_treino_com_status", args);
+  if (firstError) {
+    await cleanupProbeWorkout(admin, cliente.userId, probeId);
+    return { ok: false, detail: `1º registo falhou: ${firstError.message}` };
+  }
+
+  const { error: secondError } = await cliente.client.rpc("registrar_treino_com_status", {
+    ...args,
+    p_peso_atual: 48,
+  });
+
+  await cleanupProbeWorkout(admin, cliente.userId, probeId);
+
+  if (!secondError) {
+    return { ok: false, detail: "2º registo permitido — trava diária ausente" };
+  }
+
+  return {
+    ok: isDayLockError(secondError.message),
+    detail: secondError.message,
+  };
 });
 
 await record("cliente: SELECT historico filtrado por musculo peito", async () => {

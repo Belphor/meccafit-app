@@ -13,6 +13,10 @@ import {
   resolveTourBeats,
   type EcossistemaTourStep,
 } from "@/lib/fenix-ecossistema-tour";
+import {
+  PLAN_META_SYNCED_EVENT,
+  readPlanMetaSyncedFromDom,
+} from "@/lib/plan-meta-tour";
 
 type FenixEcossistemaTourHostProps = {
   step: EcossistemaTourStep;
@@ -33,6 +37,7 @@ export function FenixEcossistemaTourHost({
 }: FenixEcossistemaTourHostProps) {
   const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [tabReadyKey, setTabReadyKey] = useState("");
+  const [metaSynced, setMetaSynced] = useState(false);
   const tabAligned = activeTab === step.tab;
   const tabReady = tabAligned && tabReadyKey === `${step.id}-${beatIndex}`;
 
@@ -49,6 +54,9 @@ export function FenixEcossistemaTourHost({
   );
 
   const narrationDone = !isSupported || (state === "idle" && tabReady && tabAligned);
+  const advanceGateMet = beat.advanceGate !== "meta-sync" || metaSynced;
+  const canContinue = tabAligned && tabReady && narrationDone && advanceGateMet;
+  const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
 
   useEffect(() => {
     if (!tabAligned) return;
@@ -73,8 +81,41 @@ export function FenixEcossistemaTourHost({
     tabReady,
   ]);
 
-  const canContinue = tabAligned && tabReady && narrationDone;
-  const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
+  useEffect(() => {
+    if (beat.advanceGate !== "meta-sync") {
+      setMetaSynced(true);
+      return;
+    }
+
+    const syncFromDom = () => setMetaSynced(readPlanMetaSyncedFromDom());
+    syncFromDom();
+
+    const onSynced = () => setMetaSynced(true);
+    window.addEventListener(PLAN_META_SYNCED_EVENT, onSynced);
+    const poll = window.setInterval(syncFromDom, 800);
+
+    return () => {
+      window.removeEventListener(PLAN_META_SYNCED_EVENT, onSynced);
+      window.clearInterval(poll);
+    };
+  }, [beat.advanceGate, beatIndex, step.id, tabReady]);
+
+  const resolveHint = (): string => {
+    if (!tabAligned) return `Abrindo ${eyebrowSuffix}.`;
+    if (!tabReady) return "Alinhando o altar destacado.";
+    if (isSupported && state === "speaking") {
+      return `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o que importa.`;
+    }
+    if (!narrationDone) {
+      return isSupported
+        ? `Aguarde a ${ANYMA_BRAND} concluir a orientação.`
+        : "Voz indisponível neste dispositivo. Leia e continue.";
+    }
+    if (beat.advanceGate === "meta-sync" && !metaSynced) {
+      return "Ajuste os dias planejados e toque em Sincronizar meta para seguir.";
+    }
+    return "Leia e avance quando estiver pronto.";
+  };
 
   return (
     <AnimaTourCallout
@@ -95,20 +136,10 @@ export function FenixEcossistemaTourHost({
           {beats.length > 1 ? ` · ${beatIndex + 1}/${beats.length}` : ""}
         </p>
         <h2 className="mt-2 text-base font-semibold text-amber-50">{beat.title}</h2>
-        <p className="mt-3 max-h-[min(36vh,12rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
+        <p className="mt-3 max-h-[min(32vh,11rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
           {resolvedSpeech}
         </p>
-        <p className="mt-3 text-[11px] text-neutral-400">
-          {!tabAligned
-            ? `Abrindo ${eyebrowSuffix}.`
-            : !tabReady
-              ? "Alinhando o altar destacado."
-              : isSupported
-                ? state === "speaking"
-                  ? `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o que importa.`
-                  : "Leia e avance quando estiver pronto."
-                : "Voz indisponível neste dispositivo. Leia e continue."}
-        </p>
+        <p className="mt-3 text-[11px] text-neutral-400">{resolveHint()}</p>
         <button
           type="button"
           disabled={!canContinue}
@@ -119,7 +150,11 @@ export function FenixEcossistemaTourHost({
               : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
           }`}
         >
-          {canContinue ? beat.continueLabel : "Narrativa em chamas…"}
+          {canContinue
+            ? beat.continueLabel
+            : beat.advanceGate === "meta-sync" && !metaSynced
+              ? "Sincronize a meta…"
+              : "Narrativa em chamas…"}
         </button>
       </div>
     </AnimaTourCallout>

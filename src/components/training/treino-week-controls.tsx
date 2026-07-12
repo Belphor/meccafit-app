@@ -173,7 +173,7 @@ export function TreinoWeekControls({
 
   return (
     <div className={`treino-execution treino-execution--${executionTone}`}>
-      <div className={TREINO_EXECUTION_HERO} data-tour-target="treino-dia">
+      <div className={TREINO_EXECUTION_HERO}>
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <p className={resolveExecutionLabelClass(executionTone)}>Execução</p>
           {isActiveDayLocked ? (

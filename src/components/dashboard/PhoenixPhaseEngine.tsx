@@ -153,7 +153,7 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
           aria-label="Progresso fase Cinzas"
         >
           <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-amber-500/80">
-            Fase Cinzas · calibração ARGOS
+            Fase Cinzas · linhagem Fenyxia
           </p>
           <p className="mt-1 text-[10px] leading-snug text-neutral-400">
             {payload.phase_progress.hours_elapsed}/{payload.phase_progress.hours_required}h ·{" "}
@@ -167,6 +167,6 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
   );
 });
 
-/** @deprecated Use PhoenixPhaseEngine — nome antigo confundia com Anima FENYXIA (IA). */
+/** @deprecated Use PhoenixPhaseEngine — nome antigo confundia com ANYMA FÊNIX (IA). */
 export const AnimaFenixEngine = PhoenixPhaseEngine;
 export type AnimaFenixRuntimeContext = PhoenixPhaseRuntimeContext;

@@ -1,28 +1,30 @@
+import { ANYMA_NAME_FALLBACK } from "@/lib/anyma-copy";
 import { supabase } from "@/lib/supabase";
 
 const DISPLAY_NAME_PREFIX = "meccafit:profile-display-name:";
 
-export const ANIMA_NAME_FALLBACK = "Nova Chama";
+export { ANYMA_NAME_FALLBACK };
 
-/** Primeiro nome de profiles.full_name — usado pela Anima Fênix (TTS natural). */
+/** @deprecated Use ANYMA_NAME_FALLBACK — marca canônica é ANYMA. */
+export const ANIMA_NAME_FALLBACK = ANYMA_NAME_FALLBACK;
+
+/** Primeiro nome de profiles.full_name — usado pela ANYMA FÊNIX (TTS e cards). */
 export function resolveProfileFirstName(fullName: string): string {
   const trimmed = fullName.trim();
-  return trimmed.length > 0 ? trimmed.split(/\s+/)[0] ?? trimmed : ANIMA_NAME_FALLBACK;
+  return trimmed.length > 0 ? trimmed.split(/\s+/)[0] ?? trimmed : ANYMA_NAME_FALLBACK;
 }
 
-/** Substitui [Nome] pelo primeiro nome cadastrado no perfil. */
+/** Substitui [Nome] pelo primeiro nome. Sem nome, usa Nova Chama. */
 export function injectName(text: string, fullName: string): string {
   return text.replaceAll("[Nome]", resolveProfileFirstName(fullName));
 }
 
 /**
- * Substitui [Nome] pelo nome registrado — sem fallback "Nova Chama".
- * Usado após a introdução do Portal de Brasa (tour, transmutação, balões).
+ * Mesma regra da voz e dos cards: [Nome] vira o primeiro nome ou Nova Chama.
+ * Mantém TTS e texto escrito sempre iguais.
  */
 export function injectRegisteredName(text: string, fullName: string): string {
-  const trimmed = fullName.trim();
-  const firstName = trimmed.length > 0 ? trimmed.split(/\s+/)[0] ?? trimmed : "";
-  return text.replaceAll("[Nome]", firstName);
+  return injectName(text, fullName);
 }
 
 export function readLocalProfileDisplayName(userId: string): string | null {

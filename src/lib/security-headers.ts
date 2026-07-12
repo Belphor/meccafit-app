@@ -6,20 +6,28 @@ export function createRequestNonce(): string {
 }
 
 export function buildContentSecurityPolicy(nonce: string): string {
+  const isProd = process.env.NODE_ENV === "production";
+  const scriptSrc = isProd
+    ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
+  const connectSrc = isProd
+    ? "connect-src 'self' https://*.supabase.co wss://*.supabase.co"
+    : "connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://127.0.0.1:* ws://localhost:* http://127.0.0.1:* http://localhost:*";
+
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    connectSrc,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",
   ];
 
-  if (process.env.NODE_ENV === "production") {
+  if (isProd) {
     directives.push("upgrade-insecure-requests");
   }
 

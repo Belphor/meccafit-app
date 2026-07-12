@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState, useRef, useCallback, useEffect, type FocusEvent } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { registrarTreinoComStatus } from "@/lib/supabase";
 import {
   ARGOS_WEIGHT_MAX,
@@ -10,6 +11,7 @@ import {
   PHOENIX_INPUT_SURFACE,
   PHOENIX_INPUT_META_COMPLETE,
   PHOENIX_INPUT_HINT_COMPLETE,
+  PHOENIX_INPUT_DAY_LOCKED_ERROR,
   PHOENIX_REGISTER_CARGA_ACTIVE,
   PHOENIX_REGISTER_CARGA_IDLE,
 } from "@/lib/dashboard-config";
@@ -38,7 +40,7 @@ export interface PhoenixInputProps {
   isExerciseActive?: boolean;
   /** @deprecated Use isPrRegistered */
   isSeriesComplete?: boolean;
-  /** PR já registrado nesta semana ou nesta sessão */
+  /** PR já registrado neste dia civil (SP) ou nesta sessão */
   isPrRegistered?: boolean;
   /** Todas as séries prescritas foram concluídas */
   allSetsComplete?: boolean;
@@ -84,8 +86,13 @@ function PhoenixInput({
   onPersistSuccess,
 }: PhoenixInputProps) {
   const isTouchPrimary = useTouchPrimaryDevice();
+  const reduceMotion = useReducedMotion();
   const registerOnBlur = !isTouchPrimary;
-  const isPrRegistered = isPrRegisteredProp ?? isSeriesComplete;
+  const [dayLockForced, setDayLockForced] = useState(false);
+  const [sealPulse, setSealPulse] = useState(false);
+  const wasSealedRef = useRef(false);
+
+  const isPrRegistered = dayLockForced || Boolean(isPrRegisteredProp ?? isSeriesComplete);
   const numericExerciseId =
     typeof exercicioId === "number"
       ? exercicioId
@@ -106,6 +113,7 @@ function PhoenixInput({
 
   const sessionTopWeightRef = useRef(initialWeight > 0 ? initialWeight : 0);
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [weight, setWeight] = useState(() => (initialWeight > 0 ? String(initialWeight) : ""));
   const initialDuration = splitDurationSeconds(initialWeight > 0 ? initialWeight : 0);
@@ -137,7 +145,37 @@ function PhoenixInput({
     pulseTimerRef.current = setTimeout(() => setInputPulse(false), INPUT_FEEDBACK_MS);
   }, [clearPulseTimer]);
 
-  useEffect(() => () => clearPulseTimer(), [clearPulseTimer]);
+  const triggerSealPulse = useCallback(() => {
+    if (reduceMotion) return;
+    if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+    setSealPulse(true);
+    sealTimerRef.current = setTimeout(() => {
+      setSealPulse(false);
+      sealTimerRef.current = null;
+    }, 520);
+  }, [reduceMotion]);
+
+  useEffect(() => () => {
+    clearPulseTimer();
+    if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+  }, [clearPulseTimer]);
+
+  useEffect(() => {
+    if (isPrRegisteredProp) {
+      setDayLockForced(false);
+      setError(null);
+    }
+  }, [isPrRegisteredProp]);
+
+  useEffect(() => {
+    if (isPrRegistered && !wasSealedRef.current) {
+      wasSealedRef.current = true;
+      triggerSealPulse();
+    }
+    if (!isPrRegistered) {
+      wasSealedRef.current = false;
+    }
+  }, [isPrRegistered, triggerSealPulse]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -196,6 +234,15 @@ function PhoenixInput({
         });
 
         if (supabaseError) {
+          const lockedToday =
+            /já registrado hoje|trava diária|já foi forjado hoje/i.test(
+              supabaseError.message ?? "",
+            );
+          if (lockedToday) {
+            setDayLockForced(true);
+            setError(PHOENIX_INPUT_DAY_LOCKED_ERROR);
+            return false;
+          }
           setError(supabaseError.message);
           return false;
         }
@@ -247,7 +294,9 @@ function PhoenixInput({
 
   const commitTopWeight = useCallback(
     async (topMetric: number) => {
-      if (!isExerciseActive || isPrRegistered || !allSetsComplete || isSaving || savingRef.current) return;
+      if (!isExerciseActive || isPrRegistered || !allSetsComplete || isSaving || savingRef.current) {
+        return;
+      }
 
       if (isRepMode) {
         if (!isValidRepValue(topMetric)) {
@@ -256,7 +305,9 @@ function PhoenixInput({
         }
       } else if (isDurationMode) {
         if (!isValidDurationSeconds(topMetric)) {
-          setError(`Tempo entre ${ARGOS_DURATION_SEC_MIN} s e ${Math.floor(ARGOS_DURATION_SEC_MAX / 60)} min.`);
+          setError(
+            `Tempo entre ${ARGOS_DURATION_SEC_MIN} s e ${Math.floor(ARGOS_DURATION_SEC_MAX / 60)} min.`,
+          );
           return;
         }
       } else if (topMetric <= 0 || topMetric < ARGOS_WEIGHT_MIN || topMetric > ARGOS_WEIGHT_MAX) {
@@ -265,8 +316,6 @@ function PhoenixInput({
       }
 
       setError(null);
-
-      if (isPrRegistered) return;
 
       const isNewPeak = topMetric > sessionTopWeightRef.current;
       if (isNewPeak) {
@@ -282,12 +331,21 @@ function PhoenixInput({
         setWeight(isRepMode ? String(Math.round(topMetric)) : String(topMetric));
       }
     },
-    [allSetsComplete, isDurationMode, isExerciseActive, isPrRegistered, isRepMode, isSaving, persistTopWeight, pulseInput],
+    [
+      allSetsComplete,
+      isDurationMode,
+      isExerciseActive,
+      isPrRegistered,
+      isRepMode,
+      isSaving,
+      persistTopWeight,
+      pulseInput,
+    ],
   );
 
   const commitFromScalarField = useCallback(
     async (rawValue: string) => {
-      if (!isExerciseActive) return;
+      if (!isExerciseActive || isPrRegistered) return;
       const parsed = isRepMode ? parseRepValue(rawValue) : parseTopWeight(rawValue);
       if (parsed === null) {
         if (rawValue.trim() !== "") {
@@ -297,11 +355,11 @@ function PhoenixInput({
       }
       await commitTopWeight(parsed);
     },
-    [commitTopWeight, isExerciseActive, isRepMode],
+    [commitTopWeight, isExerciseActive, isPrRegistered, isRepMode],
   );
 
   const commitFromDurationFields = useCallback(async () => {
-    if (!isExerciseActive) return;
+    if (!isExerciseActive || isPrRegistered) return;
     const parsed = parseDurationParts(durationMinutes, durationSeconds);
     if (parsed === null) {
       if (durationMinutes.trim() !== "" || durationSeconds.trim() !== "") {
@@ -310,17 +368,23 @@ function PhoenixInput({
       return;
     }
     await commitTopWeight(parsed);
-  }, [commitTopWeight, durationMinutes, durationSeconds, isExerciseActive]);
+  }, [
+    commitTopWeight,
+    durationMinutes,
+    durationSeconds,
+    isExerciseActive,
+    isPrRegistered,
+  ]);
 
   const handleFieldBlur = (event: FocusEvent<HTMLInputElement>) => {
     setIsFocused(false);
-    if (!registerOnBlur || !isExerciseActive) return;
+    if (!registerOnBlur || !isExerciseActive || isPrRegistered) return;
     void commitFromScalarField(event.target.value);
   };
 
   const handleDurationBlur = () => {
     setIsFocused(false);
-    if (!registerOnBlur || !isExerciseActive) return;
+    if (!registerOnBlur || !isExerciseActive || isPrRegistered) return;
     void commitFromDurationFields();
   };
 
@@ -329,14 +393,31 @@ function PhoenixInput({
   const inputLocked = disabled || !isExerciseActive || isPrRegistered || awaitingSets;
   const useBrasaoBorder =
     (isExerciseActive || isFocused || inputPulse) && !isPrRegistered && allSetsComplete;
-  const fieldTone = error ? PHOENIX_INPUT_SURFACE.fieldError : "";
-  const inputClass = [PHOENIX_INPUT_SURFACE.field, useBrasaoBorder ? PHOENIX_INPUT_SURFACE.fieldBrasao : "", fieldTone]
+  const fieldTone = error
+    ? PHOENIX_INPUT_SURFACE.fieldError
+    : isPrRegistered
+      ? PHOENIX_INPUT_SURFACE.fieldDaySealed
+      : "";
+  const inputClass = [
+    PHOENIX_INPUT_SURFACE.field,
+    useBrasaoBorder ? PHOENIX_INPUT_SURFACE.fieldBrasao : "",
+    fieldTone,
+  ]
     .filter(Boolean)
     .join(" ");
-  const registerButtonClass = isExerciseActive ? PHOENIX_REGISTER_CARGA_ACTIVE : PHOENIX_REGISTER_CARGA_IDLE;
+  const registerButtonClass = isExerciseActive
+    ? PHOENIX_REGISTER_CARGA_ACTIVE
+    : PHOENIX_REGISTER_CARGA_IDLE;
   const metaClass = isPrRegistered ? PHOENIX_INPUT_META_COMPLETE : PHOENIX_INPUT_SURFACE.meta;
+  const hintClass = isPrRegistered
+    ? PHOENIX_INPUT_SURFACE.hintSealed
+    : PHOENIX_INPUT_SURFACE.hint;
 
-  const fieldLabel = isDurationMode ? "Tempo máximo" : isRepMode ? "Repetição máxima" : "Carga máxima";
+  const fieldLabel = isDurationMode
+    ? "Tempo máximo"
+    : isRepMode
+      ? "Repetição máxima"
+      : "Carga máxima";
   const hintText = isPrRegistered
     ? hintCompleteText ?? PHOENIX_INPUT_HINT_COMPLETE
     : awaitingSets
@@ -352,15 +433,39 @@ function PhoenixInput({
           : isRepMode
             ? "Informe a repetição máxima após concluir as séries"
             : "Informe a carga máxima em kg após concluir as séries";
-  const registerLabel = isDurationMode ? "Registrar tempo" : isRepMode ? "Registrar repetições" : "Registrar carga";
+  const registerLabel = isDurationMode
+    ? "Registrar tempo"
+    : isRepMode
+      ? "Registrar repetições"
+      : "Registrar carga";
+
+  const fieldShellClass = isPrRegistered
+    ? PHOENIX_INPUT_SURFACE.sealShell
+    : useBrasaoBorder
+      ? PHOENIX_INPUT_BRASAO_SHELL
+      : "w-full";
 
   return (
-    <div className={PHOENIX_INPUT_SURFACE.wrapper}>
+    <motion.div
+      className={PHOENIX_INPUT_SURFACE.wrapper}
+      animate={
+        sealPulse
+          ? { opacity: [0.72, 1], scale: [0.985, 1] }
+          : { opacity: 1, scale: 1 }
+      }
+      transition={
+        sealPulse
+          ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] }
+          : { duration: 0.18 }
+      }
+    >
       <p className={`max-w-full text-center ${metaClass}`}>{trainingGoalText}</p>
 
-      <label className={`flex w-full flex-col items-center gap-2 text-center ${PHOENIX_INPUT_SURFACE.label}`}>
+      <label
+        className={`flex w-full flex-col items-center gap-2 text-center ${PHOENIX_INPUT_SURFACE.label}`}
+      >
         {fieldLabel}
-        <div className={useBrasaoBorder ? PHOENIX_INPUT_BRASAO_SHELL : "w-full"}>
+        <div className={fieldShellClass}>
           {isDurationMode ? (
             <div className="flex w-full items-center justify-center gap-2">
               <input
@@ -424,7 +529,7 @@ function PhoenixInput({
         </div>
       </label>
 
-      <p id={`${fieldIdPrefix}phoenix-hint`} className={PHOENIX_INPUT_SURFACE.hint}>
+      <p id={`${fieldIdPrefix}phoenix-hint`} className={hintClass}>
         {hintText}
       </p>
 
@@ -434,13 +539,14 @@ function PhoenixInput({
           data-exercise-interactive="true"
           onClick={(event) => {
             event.stopPropagation();
+            if (isPrRegistered || isSaving || savingRef.current) return;
             if (isDurationMode) {
               void commitFromDurationFields();
             } else {
               void commitFromScalarField(weight);
             }
           }}
-          disabled={disabled || isSaving}
+          disabled={disabled || isSaving || isPrRegistered}
           className={registerButtonClass}
         >
           {registerLabel}
@@ -449,9 +555,11 @@ function PhoenixInput({
 
       <div className="flex min-h-8 flex-col items-center gap-1">
         {isSaving ? <span className={PHOENIX_INPUT_SURFACE.saving}>Sincronizando...</span> : null}
-        {error ? <span className="max-w-xs text-center text-[11px] text-red-300">{error}</span> : null}
+        {error ? (
+          <span className="max-w-xs text-center text-[11px] text-red-300">{error}</span>
+        ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

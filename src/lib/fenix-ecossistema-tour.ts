@@ -1,12 +1,31 @@
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
-import { ANYMA_EYEBROW_PREFIX, ANYMA_VTC_PHRASE } from "@/lib/anyma-copy";
-import { formatAnimaSpeech } from "@/lib/anima-speech";
-import { injectRegisteredName } from "@/lib/profile-display-name";
+import { ANYMA_EYEBROW_PREFIX } from "@/lib/anyma-copy";
+import {
+  ANYMA_SPEECH_COMUNIDADE_ABA,
+  ANYMA_SPEECH_COMUNIDADE_ARENA,
+  ANYMA_SPEECH_COMUNIDADE_MURAL,
+  ANYMA_SPEECH_COMUNIDADE_RANKINGS,
+  ANYMA_SPEECH_COMUNIDADE_TITULOS,
+  ANYMA_SPEECH_DIETA_PLANO,
+  ANYMA_SPEECH_EVOLUCAO_ABA,
+  ANYMA_SPEECH_EVOLUCAO_BRASAS,
+  ANYMA_SPEECH_EVOLUCAO_CHAMA,
+  ANYMA_SPEECH_EVOLUCAO_ESPELHO,
+  ANYMA_SPEECH_EVOLUCAO_GRAVIDADE,
+  ANYMA_SPEECH_EVOLUCAO_META,
+  ANYMA_SPEECH_EVOLUCAO_RITMO,
+  ANYMA_SPEECH_TREINO_ABA,
+  ANYMA_SPEECH_TREINO_CALENDARIO,
+  ANYMA_SPEECH_TREINO_CHAMA_ALTAR,
+  ANYMA_SPEECH_TREINO_DIA,
+  ANYMA_SPEECH_TREINO_VOO,
+} from "@/lib/anyma-explanations";
+import { resolveAnymaSpeechText } from "@/lib/anima-speech";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import {
-  ANIMA_DEBT_SOFT_GREETING,
-  ANIMA_EXIT_COPY,
-  ANIMA_FENIX_SPOTLIGHT_SPEECH,
+  ANYMA_DEBT_SOFT_GREETING,
+  ANYMA_EXIT_COPY,
+  ANYMA_FENIX_SPOTLIGHT_SPEECH,
   CODIGO_DO_RENASCIMENTO,
   PHOENIX_PUNISHMENT_LORE,
   PHOENIX_TIER_META,
@@ -18,7 +37,7 @@ export const ECOSSISTEMA_TOUR_BEAT_PREFIX = "meccafit:ecossistema-tour-beat:v1:"
 /** Só true após selar identidade na 1ª vez — autoriza o tour nesta sessão ou reload imediato. */
 export const ECOSSISTEMA_TOUR_PENDING_PREFIX = "meccafit:ecossistema-tour-pending:v1:";
 
-export type EcossistemaTourStepId = "treino" | "evolucao" | "comunidade";
+export type EcossistemaTourStepId = "treino" | "evolucao" | "comunidade" | "dieta";
 
 export type EcossistemaTourBeat = {
   title: string;
@@ -27,6 +46,8 @@ export type EcossistemaTourBeat = {
   targetSelector: string;
   highlightSelectors?: readonly string[];
   calloutPlacement: "left" | "right" | "top" | "bottom" | "auto";
+  /** Exige meta de treino sincronizada no mês civil atual. */
+  advanceGate?: "meta-sync";
 };
 
 export type EcossistemaTourStep = {
@@ -41,39 +62,168 @@ export type EcossistemaTourStep = {
   calloutPlacement: "left" | "right" | "top" | "bottom" | "auto";
   /** Passos internos dentro da mesma aba — linha aponta cada altar guiado. */
   beats?: readonly EcossistemaTourBeat[];
+  /** Só entra no tour quando o atleta tem vínculo VIP (Dieta). */
+  requiresVip?: boolean;
 };
 
 const TREINO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
   {
-    title: "Voo de Cinzas",
-    speech:
-      "[Nome], o Voo de Cinzas aquece o altar energético. O cardio consciente do dia soma minutos validados e sincroniza sua chama antes do ferro.",
-    continueLabel: "Ver calendário",
-    targetSelector: '[data-tour-target="treino-voo-cinzas"]',
+    title: "Aba Treino",
+    speech: ANYMA_SPEECH_TREINO_ABA,
+    continueLabel: "Ver Voo de Cinzas",
+    targetSelector: '[data-tour-tab="treino"]',
     highlightSelectors: ['[data-tour-tab="treino"]'],
     calloutPlacement: "bottom",
   },
   {
+    title: "Voo de Cinzas",
+    speech: ANYMA_SPEECH_TREINO_VOO,
+    continueLabel: "Ver calendário",
+    targetSelector: '[data-tour-target="treino-voo-cinzas"]',
+    highlightSelectors: ['[data-tour-tab="treino"]'],
+    calloutPlacement: "auto",
+  },
+  {
     title: "Calendário da planilha",
-    speech:
-      "[Nome], o calendário de segunda a sábado mostra sua planilha semanal. Escolha o dia para ver qual grupo muscular será forjado naquela sessão.",
+    speech: ANYMA_SPEECH_TREINO_CALENDARIO,
     continueLabel: "Ver Treino do Dia",
     targetSelector: '[data-tour-target="treino-calendario"]',
     highlightSelectors: ['[data-tour-tab="treino"]'],
-    calloutPlacement: "top",
+    calloutPlacement: "auto",
   },
   {
     title: "Treino do Dia",
-    speech:
-      `[Nome], aqui vive o Treino do Dia. Cada série alimenta a Chama do Altar com ${ANYMA_VTC_PHRASE}. Registre o pico de cada exercício com verdade. Cada registro acende ascensões no mural e move toda a linhagem FENYXIA.`,
-    continueLabel: "Continuar para Evolução",
+    speech: ANYMA_SPEECH_TREINO_DIA,
+    continueLabel: "Ver Chama do Altar",
     targetSelector: '[data-tour-target="treino-dia"]',
-    highlightSelectors: ['[data-tour-target="treino-altar"]', '[data-tour-tab="treino"]'],
-    calloutPlacement: "right",
+    highlightSelectors: ['[data-tour-tab="treino"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Chama do Altar",
+    speech: ANYMA_SPEECH_TREINO_CHAMA_ALTAR,
+    continueLabel: "Continuar para Evolução",
+    targetSelector: '[data-tour-target="treino-chama-altar"]',
+    highlightSelectors: ['[data-tour-tab="treino"]'],
+    calloutPlacement: "auto",
   },
 ] as const;
 
-/** Ordem canônica após selar identidade: Treino → Evolução → Comunidade. */
+const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
+  {
+    title: "Aba Evolução",
+    speech: ANYMA_SPEECH_EVOLUCAO_ABA,
+    continueLabel: "Definir meta de treino",
+    targetSelector: '[data-tour-tab="evolucao"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "bottom",
+  },
+  {
+    title: "Defina sua meta de treino",
+    speech: ANYMA_SPEECH_EVOLUCAO_META,
+    continueLabel: "Ver Ritmo da Fênix",
+    targetSelector: '[data-tour-target="evolucao-meta"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "auto",
+    advanceGate: "meta-sync",
+  },
+  {
+    title: "Ritmo da Fênix",
+    speech: ANYMA_SPEECH_EVOLUCAO_RITMO,
+    continueLabel: "Ver Brasas Musculares",
+    targetSelector: '[data-tour-target="evolucao-ritmo"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Brasas Musculares",
+    speech: ANYMA_SPEECH_EVOLUCAO_BRASAS,
+    continueLabel: "Ver Chama Acumulada",
+    targetSelector: '[data-tour-target="evolucao-brasas"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Chama Acumulada",
+    speech: ANYMA_SPEECH_EVOLUCAO_CHAMA,
+    continueLabel: "Ver Gravidade Térmica",
+    targetSelector: '[data-tour-target="evolucao-chama"]',
+    highlightSelectors: ['[data-tour-target="evolucao-chama"]'],
+    calloutPlacement: "top",
+  },
+  {
+    title: "Gravidade Térmica",
+    speech: ANYMA_SPEECH_EVOLUCAO_GRAVIDADE,
+    continueLabel: "Ver Espelho do Ciclo",
+    targetSelector: '[data-tour-target="evolucao-gravidade"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Espelho do Ciclo",
+    speech: ANYMA_SPEECH_EVOLUCAO_ESPELHO,
+    continueLabel: "Continuar para Comunidade",
+    targetSelector: '[data-tour-target="evolucao-espelho"]',
+    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    calloutPlacement: "auto",
+  },
+] as const;
+
+const COMUNIDADE_TOUR_BEATS_BASE: readonly EcossistemaTourBeat[] = [
+  {
+    title: "Aba Comunidade",
+    speech: ANYMA_SPEECH_COMUNIDADE_ABA,
+    continueLabel: "Ver Arena e Termômetro",
+    targetSelector: '[data-tour-tab="comunidade"]',
+    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    calloutPlacement: "bottom",
+  },
+  {
+    title: "Arena e Termômetro",
+    speech: ANYMA_SPEECH_COMUNIDADE_ARENA,
+    continueLabel: "Ver Títulos",
+    targetSelector: '[data-tour-target="comunidade-arena"]',
+    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Títulos e Reis",
+    speech: ANYMA_SPEECH_COMUNIDADE_TITULOS,
+    continueLabel: "Ver RANKINGS",
+    targetSelector: '[data-tour-target="comunidade-titulos"]',
+    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "RANKINGS",
+    speech: ANYMA_SPEECH_COMUNIDADE_RANKINGS,
+    continueLabel: "Ver Mural",
+    targetSelector: '[data-tour-target="comunidade-rankings"]',
+    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    calloutPlacement: "auto",
+  },
+  {
+    title: "Mural de Ascensões",
+    speech: ANYMA_SPEECH_COMUNIDADE_MURAL,
+    continueLabel: "Entrar no Portal de Brasa",
+    targetSelector: '[data-tour-target="comunidade-mural"]',
+    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    calloutPlacement: "auto",
+  },
+] as const;
+
+const DIETA_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
+  {
+    title: "Aba Dieta",
+    speech: ANYMA_SPEECH_DIETA_PLANO,
+    continueLabel: "Entrar no Portal de Brasa",
+    targetSelector: '[data-tour-tab="dieta"]',
+    highlightSelectors: ['[data-tour-tab="dieta"]'],
+    calloutPlacement: "bottom",
+  },
+] as const;
+
+/** Ordem canônica após selar identidade: Treino → Evolução → Comunidade → Dieta (VIP). */
 export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
   {
     id: "treino",
@@ -84,7 +234,7 @@ export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
     continueLabel: "Continuar para Evolução",
     targetSelector: TREINO_TOUR_BEATS[0].targetSelector,
     navTargetSelector: '[data-tour-tab="treino"]',
-    calloutPlacement: "bottom",
+    calloutPlacement: "auto",
     beats: TREINO_TOUR_BEATS,
   },
   {
@@ -92,26 +242,66 @@ export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
     tab: "evolucao",
     eyebrow: `${ANYMA_EYEBROW_PREFIX}Evolução`,
     title: "Leitura da chama acumulada",
-    speech:
-      "[Nome], em Evolução você lê a Chama Acumulada, o Ritmo da Fênix, as Brasas Musculares e a Gravidade Térmica. Cada métrica revela se sua linhagem avança, mantém o fogo ou esfria, sem repetir o juramento das Cinzas.",
+    speech: EVOLUCAO_TOUR_BEATS[EVOLUCAO_TOUR_BEATS.length - 1].speech,
     continueLabel: "Continuar para Comunidade",
-    targetSelector: '[data-tour-target="evolucao-chama"]',
+    targetSelector: EVOLUCAO_TOUR_BEATS[0].targetSelector,
     navTargetSelector: '[data-tour-tab="evolucao"]',
-    calloutPlacement: "top",
+    calloutPlacement: "auto",
+    beats: EVOLUCAO_TOUR_BEATS,
   },
   {
     id: "comunidade",
     tab: "comunidade",
     eyebrow: `${ANYMA_EYEBROW_PREFIX}Comunidade`,
-    title: "Arena, duelos e rankings",
-    speech:
-      "[Nome], na Comunidade, duelos, rankings e o Mural celebram quem forja de verdade. Sua arena, masculina ou feminina, mostra quem lidera o mês. O termômetro coletivo une a linhagem em torno de uma meta comum.",
+    title: "Arena, duelos e RANKINGS",
+    speech: COMUNIDADE_TOUR_BEATS_BASE[COMUNIDADE_TOUR_BEATS_BASE.length - 1].speech,
     continueLabel: "Entrar no Portal de Brasa",
-    targetSelector: '[data-tour-target="comunidade-arena"]',
+    targetSelector: COMUNIDADE_TOUR_BEATS_BASE[0].targetSelector,
     navTargetSelector: '[data-tour-tab="comunidade"]',
-    calloutPlacement: "bottom",
+    calloutPlacement: "auto",
+    beats: COMUNIDADE_TOUR_BEATS_BASE,
+  },
+  {
+    id: "dieta",
+    tab: "dieta",
+    eyebrow: `${ANYMA_EYEBROW_PREFIX}Dieta`,
+    title: "Plano alimentar da linhagem",
+    speech: ANYMA_SPEECH_DIETA_PLANO,
+    continueLabel: "Entrar no Portal de Brasa",
+    targetSelector: DIETA_TOUR_BEATS[0].targetSelector,
+    navTargetSelector: '[data-tour-tab="dieta"]',
+    calloutPlacement: "auto",
+    beats: DIETA_TOUR_BEATS,
+    requiresVip: true,
   },
 ] as const;
+
+/** Resolve os passos do tour conforme vínculo VIP (Dieta). */
+export function resolveEcossistemaTourSteps(hasPersonalBond: boolean): EcossistemaTourStep[] {
+  const steps = ECOSSISTEMA_TOUR_STEPS.filter((step) => !step.requiresVip || hasPersonalBond);
+
+  return steps.map((step) => {
+    if (step.id !== "comunidade" || !step.beats?.length) return step;
+
+    const beats = step.beats.map((beat, index) => {
+      if (index < step.beats!.length - 1) return beat;
+      return {
+        ...beat,
+        continueLabel: hasPersonalBond
+          ? "Continuar para Dieta"
+          : "Entrar no Portal de Brasa",
+      };
+    });
+
+    return {
+      ...step,
+      beats,
+      continueLabel: hasPersonalBond
+        ? "Continuar para Dieta"
+        : "Entrar no Portal de Brasa",
+    };
+  });
+}
 
 /** Aguarda a aba destino renderizar antes da narrativa da ANYMA. */
 export const ECOSSISTEMA_TOUR_NAV_DELAY_MS = 720;
@@ -135,7 +325,7 @@ export const FENIX_NARRATIVE_CATALOG: readonly FenixNarrativeCatalogEntry[] = [
   {
     id: "onboarding-spotlight",
     label: "Apresentação da ANYMA",
-    speech: ANIMA_FENIX_SPOTLIGHT_SPEECH,
+    speech: ANYMA_FENIX_SPOTLIGHT_SPEECH,
     group: "onboarding",
   },
   {
@@ -147,13 +337,13 @@ export const FENIX_NARRATIVE_CATALOG: readonly FenixNarrativeCatalogEntry[] = [
   {
     id: "ritual-saida",
     label: "Ritual de encerramento",
-    speech: ANIMA_EXIT_COPY,
+    speech: ANYMA_EXIT_COPY,
     group: "ritual",
   },
   {
     id: "alerta-negligencia",
     label: "Alerta de negligência",
-    speech: ANIMA_DEBT_SOFT_GREETING,
+    speech: ANYMA_DEBT_SOFT_GREETING,
     group: "alerta",
   },
   ...ECOSSISTEMA_TOUR_STEPS.flatMap((step) => {
@@ -235,13 +425,16 @@ export function skipEcossistemaTourForReturningAccount(userId: string): void {
   clearEcossistemaTourPending(userId);
 }
 
-export function readEcossistemaTourStepIndex(userId: string): number | null {
+export function readEcossistemaTourStepIndex(
+  userId: string,
+  stepCount = ECOSSISTEMA_TOUR_STEPS.length,
+): number | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(`${ECOSSISTEMA_TOUR_STEP_PREFIX}${userId}`);
     if (raw === null) return null;
     const parsed = Number(raw);
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed >= ECOSSISTEMA_TOUR_STEPS.length) {
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed >= stepCount) {
       return null;
     }
     return parsed;
@@ -281,20 +474,28 @@ export function writeEcossistemaTourBeatIndex(userId: string, beatIndex: number)
 }
 
 export function resolveEcossistemaTourSpeech(speech: string, profileName: string): string {
-  return formatAnimaSpeech(injectRegisteredName(speech, profileName));
+  return resolveAnymaSpeechText(speech, profileName);
 }
 
-export function resolveAllowedTourTabs(stepIndex: number): DashboardTabId[] {
+export function resolveAllowedTourTabs(
+  stepIndex: number,
+  hasPersonalBond = false,
+): DashboardTabId[] {
+  const steps = resolveEcossistemaTourSteps(hasPersonalBond);
   const allowed: DashboardTabId[] = [];
-  for (let index = 0; index <= stepIndex && index < ECOSSISTEMA_TOUR_STEPS.length; index += 1) {
-    const tab = ECOSSISTEMA_TOUR_STEPS[index]?.tab;
+  for (let index = 0; index <= stepIndex && index < steps.length; index += 1) {
+    const tab = steps[index]?.tab;
     if (tab && !allowed.includes(tab)) allowed.push(tab);
   }
   return allowed;
 }
 
-export function isTabEnabledDuringTour(tab: DashboardTabId, stepIndex: number): boolean {
-  return resolveAllowedTourTabs(stepIndex).includes(tab);
+export function isTabEnabledDuringTour(
+  tab: DashboardTabId,
+  stepIndex: number,
+  hasPersonalBond = false,
+): boolean {
+  return resolveAllowedTourTabs(stepIndex, hasPersonalBond).includes(tab);
 }
 
 export function resolveDisabledTabsDuringTour(
@@ -302,7 +503,7 @@ export function resolveDisabledTabsDuringTour(
   hasPersonalBond: boolean,
 ): ReadonlySet<DashboardTabId> {
   const disabled = new Set<DashboardTabId>();
-  const allowed = new Set(resolveAllowedTourTabs(stepIndex));
+  const allowed = new Set(resolveAllowedTourTabs(stepIndex, hasPersonalBond));
 
   const allTabs: DashboardTabId[] = ["treino", "evolucao", "comunidade", "perfil"];
   if (hasPersonalBond) allTabs.push("dieta");

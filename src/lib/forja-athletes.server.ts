@@ -1,5 +1,6 @@
 import type { ForjaBondedAthlete } from "@/lib/forja-dashboard";
 import { filterVipAthletes } from "@/lib/forja-athlete-lists";
+import { resolveLinhagemDisplay } from "@/lib/client-lore-copy";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 function mapAthleteRow(input: {
@@ -86,7 +87,7 @@ export async function loadBondedAthletes(
         clientId: client.id,
         forgerId: vipBond?.forger_id ?? client.forjador_id ?? operatorId,
         displayName,
-        lineageName: client.nome_linhagem?.trim() || null,
+        lineageName: resolveLinhagemDisplay(client.nome_linhagem, Boolean(vipBond)),
         phaseTier: Math.min(5, Math.max(1, Number(client.phase_tier ?? 1))),
         bondedAt: vipBond?.created_at ?? client.updated_at ?? new Date().toISOString(),
         forgerName: client.forjador_id ? (forjadorById.get(client.forjador_id) ?? null) : null,
@@ -131,7 +132,7 @@ export async function loadBondedAthletes(
       clientId: client.id,
       forgerId: operatorId,
       displayName,
-      lineageName: client.nome_linhagem?.trim() || null,
+      lineageName: resolveLinhagemDisplay(client.nome_linhagem, Boolean(vipBond)),
       phaseTier: Math.min(5, Math.max(1, Number(client.phase_tier ?? 1))),
       bondedAt: vipBond?.created_at ?? client.updated_at ?? new Date().toISOString(),
       forgerName,
@@ -180,7 +181,10 @@ export async function loadMonitoringAthletes(
       clientId: String(row.clientId),
       forgerId: String(row.forgerId ?? operatorId),
       displayName: String(row.displayName ?? "Cliente"),
-      lineageName: row.lineageName ? String(row.lineageName) : null,
+      lineageName: resolveLinhagemDisplay(
+        row.lineageName ? String(row.lineageName) : null,
+        Boolean(row.hasVipBond),
+      ),
       phaseTier: Math.min(5, Math.max(1, Number(row.phaseTier ?? 1))),
       bondedAt: String(row.bondedAt ?? new Date().toISOString()),
       forgerName: row.forgerName ? String(row.forgerName) : null,

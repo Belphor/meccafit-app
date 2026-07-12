@@ -64,7 +64,7 @@ const SECTION_NAV = [
   { id: "comunidade-perfil", label: "Perfil" },
   { id: "comunidade-arena", label: "Arena" },
   { id: "comunidade-titulos", label: "Títulos" },
-  { id: "comunidade-rankings", label: "Rankings" },
+  { id: "comunidade-rankings", label: "RANKINGS" },
   { id: "comunidade-mural", label: "Mural" },
 ] as const;
 
@@ -190,7 +190,6 @@ export function ComunidadePageClient({
       variant="treino"
       className={`${DASHBOARD_PANEL_FRAME} min-w-0 max-w-full overflow-x-hidden`}
       aria-labelledby="comunidade-page-title"
-      data-tour-target="comunidade-arena"
     >
       <DashboardPanelHeader chip="Comunidade" meta="Arena cooperativa" />
 
@@ -239,8 +238,12 @@ export function ComunidadePageClient({
           </p>
         ) : null}
 
-        <div id="comunidade-arena" className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}>
-          <p className={COMUNIDADE_SECTION_LABEL}>Arena: termômetro coletivo e duelos</p>
+        <div
+          id="comunidade-arena"
+          data-tour-target="comunidade-arena"
+          className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}
+        >
+          <p className={COMUNIDADE_SECTION_LABEL}>Arena, termômetro coletivo e duelos</p>
           <div className="grid grid-cols-1 gap-3 xs:gap-4 lg:grid-cols-2 lg:items-start">
             <MetaColetivaTermometro
               meta={meta}
@@ -262,7 +265,11 @@ export function ComunidadePageClient({
           </div>
         </div>
 
-        <div id="comunidade-titulos" className={COMUNIDADE_SCROLL_MT}>
+        <div
+          id="comunidade-titulos"
+          data-tour-target="comunidade-titulos"
+          className={COMUNIDADE_SCROLL_MT}
+        >
           <ComunidadeTitulosPanel
             reisChamas={reisChamas}
             pilares={pilares}
@@ -273,7 +280,11 @@ export function ComunidadePageClient({
           />
         </div>
 
-        <div id="comunidade-rankings" className={COMUNIDADE_SCROLL_MT}>
+        <div
+          id="comunidade-rankings"
+          data-tour-target="comunidade-rankings"
+          className={COMUNIDADE_SCROLL_MT}
+        >
           <RankingsThothPanel
             rankings={rankings}
             userId={userId}
@@ -283,12 +294,14 @@ export function ComunidadePageClient({
           />
         </div>
 
-        <ComunidadeMuralPanel
-          userId={userId}
-          refreshKey={refreshToken}
-          phase={phase}
-          resolvePhotoUrl={resolvePhotoUrl}
-        />
+        <div data-tour-target="comunidade-mural">
+          <ComunidadeMuralPanel
+            userId={userId}
+            refreshKey={refreshToken}
+            phase={phase}
+            resolvePhotoUrl={resolvePhotoUrl}
+          />
+        </div>
       </div>
     </BrasaVivaCard>
   );

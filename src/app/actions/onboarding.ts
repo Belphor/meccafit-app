@@ -12,8 +12,6 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase-admin.server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
-export type { PrimeiroAcessoInput, PrimeiroAcessoResult };
-
 async function consumeInviteAfterSignup(userId: string, inviteToken: string): Promise<boolean> {
   const normalized = inviteToken.trim();
   if (isDevInviteToken(normalized)) {

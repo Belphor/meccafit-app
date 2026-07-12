@@ -111,9 +111,9 @@ import {
   type ForjaTreinoUpdateDetail,
 } from "@/lib/forja-treino-events";
 import {
-  bumpAnimaPortalEntryCount,
+  bumpAnymaPortalEntryCount,
   markSecondEntryTreinoRedirectDone,
-  readAnimaOnboardingComplete,
+  readAnymaOnboardingComplete,
   readSecondEntryTreinoRedirectDone,
 } from "@/lib/phoenix-lore";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
@@ -121,7 +121,6 @@ import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { parseProfileSexo, markEcossistemaTourComplete } from "@/lib/profile-identity";
 import {
-  ECOSSISTEMA_TOUR_STEPS,
   isTabEnabledDuringTour,
   markEcossistemaTourPending,
   readEcossistemaTourComplete,
@@ -129,6 +128,7 @@ import {
   readEcossistemaTourBeatIndex,
   readEcossistemaTourStepIndex,
   resolveDisabledTabsDuringTour,
+  resolveEcossistemaTourSteps,
   resolveTourBeats,
   skipEcossistemaTourForReturningAccount,
   writeEcossistemaTourBeatIndex,
@@ -775,13 +775,18 @@ export function DashboardClient({
     tourStepIndex !== null &&
     !profile?.is_punished;
 
+  const tourSteps = useMemo(
+    () => resolveEcossistemaTourSteps(hasPersonalBond),
+    [hasPersonalBond],
+  );
+
   const disabledTourTabIds = useMemo(() => {
     if (!tourActive || tourStepIndex === null) return undefined;
     return resolveDisabledTabsDuringTour(tourStepIndex, hasPersonalBond);
   }, [hasPersonalBond, tourActive, tourStepIndex]);
 
   const applyDashboardTab = useCallback(
-    (tab: DashboardTabId) => {
+    (tab: DashboardTabId, options?: { tourStepIndexOverride?: number }) => {
       if (profile?.is_punished && tab !== activeTab) {
         return;
       }
@@ -790,14 +795,16 @@ export function DashboardClient({
         return;
       }
 
+      const effectiveTourStepIndex = options?.tourStepIndexOverride ?? tourStepIndex;
+
       if (
         profile?.role === "cliente" &&
         perfilIdentidadeConfirmada &&
         !ecossistemaTourConcluido &&
         tourPendingFirstRun &&
-        tourStepIndex !== null &&
+        effectiveTourStepIndex !== null &&
         !profile?.is_punished &&
-        !isTabEnabledDuringTour(tab, tourStepIndex)
+        !isTabEnabledDuringTour(tab, effectiveTourStepIndex, hasPersonalBond)
       ) {
         return;
       }
@@ -885,7 +892,8 @@ export function DashboardClient({
 
   const handleTourContinue = useCallback(() => {
     const currentStep = tourStepIndex ?? 0;
-    const stepDef = ECOSSISTEMA_TOUR_STEPS[currentStep];
+    const stepDef = tourSteps[currentStep];
+    if (!stepDef) return;
     const beats = resolveTourBeats(stepDef);
 
     if (tourBeatIndex < beats.length - 1) {
@@ -897,7 +905,7 @@ export function DashboardClient({
 
     const nextStep = currentStep + 1;
 
-    if (nextStep >= ECOSSISTEMA_TOUR_STEPS.length) {
+    if (nextStep >= tourSteps.length) {
       setTourStepIndex(null);
       setTourBeatIndex(0);
       writeEcossistemaTourComplete(userId);
@@ -909,19 +917,27 @@ export function DashboardClient({
       return;
     }
 
-    const nextTab = ECOSSISTEMA_TOUR_STEPS[nextStep].tab;
+    const nextTab = tourSteps[nextStep].tab;
     setTourStepIndex(nextStep);
     setTourBeatIndex(0);
     writeEcossistemaTourStepIndex(userId, nextStep);
     writeEcossistemaTourBeatIndex(userId, 0);
-    applyDashboardTab(nextTab);
+    applyDashboardTab(nextTab, { tourStepIndexOverride: nextStep });
     syncDashboardTabToUrl(nextTab, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
       const next = new Set(current);
       next.add(nextTab);
       return next;
     });
-  }, [applyDashboardTab, showPortalToast, subgroupParam, tourBeatIndex, tourStepIndex, userId]);
+  }, [
+    applyDashboardTab,
+    showPortalToast,
+    subgroupParam,
+    tourBeatIndex,
+    tourStepIndex,
+    tourSteps,
+    userId,
+  ]);
 
   useEffect(() => {
     if (!dataReady || tabBootstrappedRef.current) return;
@@ -934,8 +950,8 @@ export function DashboardClient({
       !profile?.is_punished &&
       perfilIdentidadeConfirmada
     ) {
-      const entryCount = bumpAnimaPortalEntryCount(userId);
-      const portalVisto = animaPortalVisto || readAnimaOnboardingComplete(userId);
+      const entryCount = bumpAnymaPortalEntryCount(userId);
+      const portalVisto = animaPortalVisto || readAnymaOnboardingComplete(userId);
 
       if (
         entryCount === 2 &&
@@ -1006,7 +1022,7 @@ export function DashboardClient({
     if (tourBootstrappedRef.current) return;
 
     tourBootstrappedRef.current = true;
-    const savedStep = readEcossistemaTourStepIndex(userId);
+    const savedStep = readEcossistemaTourStepIndex(userId, tourSteps.length);
     const step = savedStep ?? 0;
     setTourStepIndex(step);
     setTourBeatIndex(readEcossistemaTourBeatIndex(userId));
@@ -1015,7 +1031,7 @@ export function DashboardClient({
       return;
     }
 
-    const tab = ECOSSISTEMA_TOUR_STEPS[step]?.tab ?? "treino";
+    const tab = tourSteps[step]?.tab ?? "treino";
     applyDashboardTab(tab);
     syncDashboardTabToUrl(tab, { subgrupo: subgroupParam, dispatch: false });
     setVisitedTabs((current) => {
@@ -1032,6 +1048,7 @@ export function DashboardClient({
     profile?.is_punished,
     profile?.role,
     subgroupParam,
+    tourSteps,
     userId,
   ]);
 
@@ -1373,6 +1390,7 @@ export function DashboardClient({
                 daysAbsent={linhagemDaysAbsent}
                 isPunished={Boolean(profile.is_punished)}
                 animaPortalVisto={animaPortalVisto}
+                hasPersonalBond={hasPersonalBond}
                 onTabChange={handleTabChange}
                 onOnboardingComplete={handleOnboardingComplete}
               />
@@ -1386,9 +1404,9 @@ export function DashboardClient({
               />
             ) : null}
 
-            {tourActive && tourStepIndex !== null ? (
+            {tourActive && tourStepIndex !== null && tourSteps[tourStepIndex] ? (
               <FenixEcossistemaTourHost
-                step={ECOSSISTEMA_TOUR_STEPS[tourStepIndex]}
+                step={tourSteps[tourStepIndex]}
                 beatIndex={tourBeatIndex}
                 activeTab={activeTab}
                 profileName={resolvedProfileName}
@@ -1468,7 +1486,7 @@ export function DashboardClient({
                     <div className="mt-4 rounded-2xl border border-orange-500/20 bg-orange-950/10 px-4 py-3 text-center">
                       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/90">
                         Revelação do ecossistema · passo {(tourStepIndex ?? 0) + 1} de{" "}
-                        {ECOSSISTEMA_TOUR_STEPS.length}
+                        {tourSteps.length}
                       </p>
                       <p className="mt-2 text-xs leading-relaxed text-amber-50/85">
                         A ANYMA FÊNIX apresenta cada altar. Ouça, leia e avance quando estiver pronto.

@@ -5,6 +5,13 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import {
+  allocateFreshProbeExercicioId,
+  cleanupProbeWorkout,
+  createServiceAdmin,
+  isDayLockError,
+  uniqueProbeExercicioId,
+} from "./lib/probe-workout.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -79,6 +86,7 @@ try {
 } catch {
   console.warn("atleta2 ausente — rode: node scripts/seed-test-users.mjs");
 }
+const admin = createServiceAdmin();
 
 await check("tabela balanco_termico_diario existe", async () => {
   const { error } = await cliente.client.from("balanco_termico_diario").select("user_id").limit(1);
@@ -86,7 +94,7 @@ await check("tabela balanco_termico_diario existe", async () => {
 });
 
 await check("RPC registrar_treino grava VTC no balanco diario", async () => {
-  const probeId = 77001;
+  const probeId = await allocateFreshProbeExercicioId(admin, cliente.userId, 77);
   const { error: rpcError } = await cliente.client.rpc("registrar_treino_com_status", {
     p_user_id: cliente.userId,
     p_exercicio_id: probeId,
@@ -96,31 +104,22 @@ await check("RPC registrar_treino grava VTC no balanco diario", async () => {
     p_repeticoes: 10,
     p_series: 4,
   });
-  if (rpcError) return false;
+  if (rpcError) {
+    await cleanupProbeWorkout(admin, cliente.userId, probeId);
+    return false;
+  }
 
   const { data: vtcToday, error: vtcErr } = await cliente.client.rpc("argos_compute_session_vtc_today", {
     p_user_id: cliente.userId,
   });
-  if (vtcErr) return false;
+  if (vtcErr) {
+    await cleanupProbeWorkout(admin, cliente.userId, probeId);
+    return false;
+  }
 
   const expectedMin = 50;
   const ok = Number(vtcToday) >= expectedMin;
-
-  const { data: hist } = await cliente.client
-    .from("historico_treinos")
-    .select("id")
-    .eq("cliente_id", cliente.userId)
-    .eq("exercicio_id", probeId)
-    .maybeSingle();
-  if (hist?.id) {
-    await cliente.client.from("historico_treinos").delete().eq("id", hist.id);
-  }
-  await cliente.client
-    .from("historico_cargas")
-    .delete()
-    .eq("atleta_id", cliente.userId)
-    .eq("exercicio_id", String(probeId));
-
+  await cleanupProbeWorkout(admin, cliente.userId, probeId);
   return ok;
 });
 
@@ -157,7 +156,7 @@ await check("fetch_dashboard_bundle responde autenticado", async () => {
 await check("peso invalido (0) rejeitado na RPC", async () => {
   const { error } = await cliente.client.rpc("registrar_treino_com_status", {
     p_user_id: cliente.userId,
-    p_exercicio_id: 77002,
+    p_exercicio_id: uniqueProbeExercicioId(77),
     p_peso_atual: 0,
     p_musculo: "peito",
     p_repeticoes: 1,
@@ -169,13 +168,42 @@ await check("peso invalido (0) rejeitado na RPC", async () => {
 await check("peso invalido (99999) rejeitado na RPC", async () => {
   const { error } = await cliente.client.rpc("registrar_treino_com_status", {
     p_user_id: cliente.userId,
-    p_exercicio_id: 77003,
+    p_exercicio_id: uniqueProbeExercicioId(77),
     p_peso_atual: 99999,
     p_musculo: "peito",
     p_repeticoes: 1,
     p_series: 1,
   });
   return Boolean(error);
+});
+
+await check("RPC trava diária bloqueia 2º registo do mesmo exercício", async () => {
+  const probeId = await allocateFreshProbeExercicioId(admin, cliente.userId, 76);
+  const args = {
+    p_user_id: cliente.userId,
+    p_exercicio_id: probeId,
+    p_exercicio_nome: "ARGOS SQL day lock",
+    p_musculo: "ombro",
+    p_peso_atual: 30,
+    p_repeticoes: 1,
+    p_series: 1,
+  };
+
+  // músculo inválido "ombro" — use ombros
+  args.p_musculo = "ombros";
+
+  const { error: firstError } = await cliente.client.rpc("registrar_treino_com_status", args);
+  if (firstError) {
+    await cleanupProbeWorkout(admin, cliente.userId, probeId);
+    return false;
+  }
+
+  const { error: secondError } = await cliente.client.rpc("registrar_treino_com_status", {
+    ...args,
+    p_peso_atual: 31,
+  });
+  await cleanupProbeWorkout(admin, cliente.userId, probeId);
+  return Boolean(secondError) && isDayLockError(secondError.message);
 });
 
 await check("RPC argos_fetch_forum_brasa_viva responde para cliente", async () => {

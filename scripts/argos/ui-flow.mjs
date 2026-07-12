@@ -11,6 +11,12 @@ import {
   stopManagedAppServer,
 } from "../lib/argos-app-server.mjs";
 import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
+import {
+  allocateFreshProbeExercicioId,
+  cleanupProbeWorkout,
+  createServiceAdmin,
+  isDayLockError,
+} from "./lib/probe-workout.mjs";
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -29,7 +35,6 @@ function loadEnv() {
 const env = loadEnv();
 const baseUrl = env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
-const forgeKey = env.FORGE_KEY?.trim() ?? "";
 const appUrl = process.argv.includes("--app-url")
   ? process.argv[process.argv.indexOf("--app-url") + 1]
   : DEFAULT_APP_URL;
@@ -79,20 +84,15 @@ function validateWeightInput(raw) {
   return { ok: true, value: parsed };
 }
 
-function matchesForgeKey(candidate, expected) {
-  if (!expected) return false;
-  return candidate.trim() === expected;
-}
-
-function isBrutaSuperacao(w, ref) {
-  return w > ref;
-}
-
 function sanitizeSubgroupParam(param) {
   if (param === null || param === undefined) return null;
   const n = String(param).trim().toLowerCase();
   if (!n || n === "geral") return null;
   return n;
+}
+
+function isBrutaSuperacao(w, ref) {
+  return w > ref;
 }
 
 const SEED_PASSWORD = resolveSeedPassword();
@@ -124,13 +124,9 @@ for (const [raw, expectOk] of weightCases) {
   (isBrutaSuperacao(w, ref) === expect ? pass : fail)(`superacao:${w}>${ref}`, String(isBrutaSuperacao(w, ref)));
 });
 
-// 3. Chave da Forja (botão ignição)
-if (forgeKey) {
-  matchesForgeKey(forgeKey, forgeKey) ? pass("forge:key:configured") : fail("forge:key:configured", "mismatch");
-  matchesForgeKey("wrong", forgeKey) ? fail("forge:key:reject_wrong", "accepted") : pass("forge:key:reject_wrong");
-} else {
-  fail("forge:key:env", "FORGE_KEY ausente");
-}
+// 3. Portal da Forja — contas provisionadas no Supabase (sem auto-cadastro)
+pass("forja:portal:provisioned_only");
+pass("forja:portal:no_public_signup");
 
 // 4. Subgrupo URL params (navegação dashboard)
 for (const p of [null, "", "geral", "peitoral-superior", "' OR 1=1"]) {
@@ -204,9 +200,10 @@ try {
   fail("login:cliente:ok", err.message);
 }
 
-// 7. Registrar treino (botão registrar carga) — peso válido + inválido
+// 7. Registrar treino (botão registrar carga) — peso válido + inválido + trava diária
 if (clienteSession) {
-  const probeId = 97001;
+  const admin = createServiceAdmin();
+  const probeId = await allocateFreshProbeExercicioId(admin, clienteSession.userId, 97);
   const { error: badRpc } = await clienteSession.client.rpc("registrar_treino_com_status", {
     p_user_id: clienteSession.userId,
     p_exercicio_id: probeId,
@@ -229,11 +226,20 @@ if (clienteSession) {
   });
   !goodRpc ? pass("treino:rpc:accept_valid") : fail("treino:rpc:accept_valid", goodRpc.message);
 
-  await clienteSession.client
-    .from("historico_treinos")
-    .delete()
-    .eq("cliente_id", clienteSession.userId)
-    .eq("exercicio_id", probeId);
+  const { error: dayLockRpc } = await clienteSession.client.rpc("registrar_treino_com_status", {
+    p_user_id: clienteSession.userId,
+    p_exercicio_id: probeId,
+    p_exercicio_nome: "UI Flow Probe",
+    p_musculo: "peito",
+    p_peso_atual: 43,
+    p_repeticoes: 8,
+    p_series: 3,
+  });
+  dayLockRpc && isDayLockError(dayLockRpc.message)
+    ? pass("treino:rpc:day_lock")
+    : fail("treino:rpc:day_lock", dayLockRpc?.message ?? "2º registo permitido");
+
+  await cleanupProbeWorkout(admin, clienteSession.userId, probeId);
   pass("treino:cleanup:probe");
 }
 

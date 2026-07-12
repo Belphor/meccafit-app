@@ -423,7 +423,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
 
       {storageStatus === "blocked" ? (
         <p className="text-[9px] uppercase tracking-[0.14em] text-amber-500/70" role="alert">
-          Modo privado ou quota cheia · exibindo placeholders HUD (ARGOS fallback)
+          Modo privado ou quota cheia · exibindo placeholders HUD
         </p>
       ) : null}
     </section>

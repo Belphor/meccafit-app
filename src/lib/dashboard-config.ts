@@ -147,25 +147,36 @@ export const VTC_SESSION_EXPLANATION =
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  `Chama do Altar soma o ${VTC_DISPLAY_NAME} do dia em quilogramas. Cada exercício concluído contribui com sua carga máxima. Mesma unidade da Chama Acumulada, Brasas Musculares e termômetro da Comunidade.`;
+  `A Chama do Altar soma o ${VTC_DISPLAY_NAME} do dia em quilogramas. Cada exercício concluído contribui com sua carga máxima. É a mesma unidade da Chama Acumulada, das Brasas Musculares e do termômetro da Comunidade.`;
 
 /** Rotina do dia — painel Treino */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Exercícios prescritos para o dia escolhido. Conclua todas as séries de cada movimento antes de registrar carga, repetição ou tempo máximo. Cada registro vale uma vez por semana neste dia.";
+  "Exercícios prescritos para o dia escolhido. Conclua todas as séries de cada movimento antes de registrar carga, repetição ou tempo máximo. Cada exercício aceita um único registro por dia civil. Amanhã o campo renasce.";
 
 /** Execução — painel de escolha do dia */
 export const TREINO_EXECUTION_CLIENT_EXPLANATION =
-  "Escolha qual dia da planilha semanal você vai executar hoje. Seu forjador define os grupos de cada dia. Dias concluídos nesta semana aparecem com ✓.";
+  "Escolha qual dia da planilha semanal você vai executar hoje. Seu forjador define os grupos de cada dia. Dias concluídos nesta semana aparecem marcados.";
 
-export const PHOENIX_INPUT_GOAL_WEEK_LOCKED =
-  "Travado até o próximo treino deste dia";
+/** Input selado pelo dia civil (SP) — 1× por exercício até amanhã */
+export const PHOENIX_INPUT_GOAL_DAY_LOCKED =
+  "Já forjado hoje — volte amanhã neste exercício";
 
-export const PHOENIX_INPUT_HINT_WEEK_LOCKED =
-  "Recorde já registrado nesta semana. Volte na próxima semana, conclua as séries e tente superar.";
+export const PHOENIX_INPUT_HINT_DAY_LOCKED =
+  "Pico selado neste dia. O campo permanece travado até o próximo dia civil.";
+
+/** @deprecated Alias — use PHOENIX_INPUT_GOAL_DAY_LOCKED */
+export const PHOENIX_INPUT_GOAL_WEEK_LOCKED = PHOENIX_INPUT_GOAL_DAY_LOCKED;
+
+/** @deprecated Alias — use PHOENIX_INPUT_HINT_DAY_LOCKED */
+export const PHOENIX_INPUT_HINT_WEEK_LOCKED = PHOENIX_INPUT_HINT_DAY_LOCKED;
+
+export const PHOENIX_INPUT_DAY_LOCKED_ERROR =
+  "Este exercício já foi forjado hoje. Só é possível registrar uma vez por dia.";
 
 export const PHOENIX_INPUT_GOAL_AWAITING_SETS =
   "Conclua todas as séries para liberar o registro";
 
+/** Badge quando o dia activo da planilha está forjado nesta semana (✓). */
 export const TREINO_DIA_CONCLUIDO_LABEL = "Semana concluída";
 
 /** Painel Execução — verde contextual (separado do Treino do dia) */
@@ -276,15 +287,15 @@ export const CARDIO_VOO_EXPLANATION_TEXT =
 
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =
-  "Cardio consciente do dia. Seu forjador define a meta em minutos. Acumule tempo validado e confirme a cada 10 minutos que continua ativo. Pausas não apagam o progresso. Ao bater a meta, o altar energético sincroniza.";
+  "Cardio consciente do dia. Pode ser feito antes ou depois do treino com ferro. Seu forjador define a meta em minutos. Acumule tempo validado e confirme a cada dez minutos que continua ativo. Pausas não apagam o progresso. Ao bater a meta, o altar energético sincroniza.";
 
 /** Brasas Musculares (Evolução) — VTC por grupo */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "Brasas Musculares somam o Volume de Carga Máxima (VTC) por grupo muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
+  "Brasas Musculares somam o Volume de Carga Máxima (VTC) por grupo muscular nos últimos quatorze dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
 
 /** Ritmo da Fênix (Evolução) — consistência de VTC */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "Ritmo da Fênix mede quanto da sua meta mensal de Volume de Carga Máxima (VTC) você já acumulou, em percentual. A meta nasce dos dias de treino planejados: 16 treinos usam o limiar Faísca da academia como referência. Abaixo de 50%, após o acolhimento, as cores do mapa ficam mais suaves.";
+  "Ritmo da Fênix mede quanto da sua meta mensal de Volume de Carga Máxima (VTC) você já acumulou, em percentual. A meta nasce dos dias de treino planejados. Dezesseis treinos usam o limiar Faísca da academia como referência. Abaixo de cinquenta por cento, após o acolhimento, as cores do mapa ficam mais suaves.";
 
 /** Ascensão (Superação) — celebração de recorde no treino */
 export const ASCENSAO_CLIENT_EXPLANATION =
@@ -296,11 +307,11 @@ export const DIETA_CLIENT_EXPLANATION =
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
-  "Espelho visual do ciclo mensal. Capture selfies nos dias 1, 15 e 30 com a mesma pose e luz. Com o dia 1 e o dia 30 gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo, nada vai para a nuvem.";
+  "Espelho visual do ciclo mensal. Capture selfies nos dias um, quinze e trinta com a mesma pose e luz. Com o dia um e o dia trinta gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo. Nada vai para a nuvem.";
 
 /** Comunidade — arena cooperativa */
 export const COMUNIDADE_CLIENT_EXPLANATION =
-  "Três formas de se destacar: contribua no termômetro coletivo da academia, suba no ranking mensal para ser Rei das Chamas ou dispute duelos pelo cinturão.";
+  "Três formas de se destacar. Contribua no termômetro coletivo da academia, suba nos RANKINGS mensais para ser Rei das Chamas ou dispute duelos pelo cinturão.";
 
 export const VTC_METRIC_FRAME =
   "relative overflow-hidden rounded-2xl border border-orange-500/12 bg-black/35 px-4 py-3 backdrop-blur-sm";
@@ -388,9 +399,10 @@ export const TREINO_MINIMIZE_TOGGLE = `${DASHBOARD_SECTION_CHIP} min-h-11 gap-1.
 export const PHOENIX_INPUT_META_COMPLETE =
   "text-[10px] font-bold uppercase tracking-[0.28em] text-[#FFD700]/80";
 
-export const PHOENIX_INPUT_GOAL_COMPLETE = "Recorde registrado neste treino";
+export const PHOENIX_INPUT_GOAL_COMPLETE = "Pico forjado neste dia";
 
-export const PHOENIX_INPUT_HINT_COMPLETE = "Valor salvo. Só poderá registrar de novo na próxima semana neste dia.";
+export const PHOENIX_INPUT_HINT_COMPLETE =
+  "Valor selado. Só poderá registrar de novo amanhã neste exercício.";
 
 export const EXERCISE_SESSION_REGISTERED_LABEL = "Sessão registrada";
 
@@ -649,10 +661,15 @@ export const PHOENIX_INPUT_SURFACE = {
     "min-h-11 w-full rounded-xl border border-orange-500/20 bg-black px-4 py-3 text-center font-serif text-lg tracking-wide text-amber-400 outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-orange-500/35 disabled:cursor-not-allowed disabled:opacity-50 sm:text-xl",
   fieldBrasao:
     "rounded-[11px] border-transparent bg-black shadow-none focus:border-transparent focus:shadow-none focus-visible:ring-0",
+  fieldDaySealed:
+    "border-[#FFB800]/35 bg-neutral-950/80 text-[#FFB800]/90 opacity-90 shadow-[inset_0_1px_0_rgba(255,184,0,0.08)]",
   fieldPulse: "",
   fieldError: "border-red-500/60",
   label: "text-[10px] font-bold uppercase tracking-[0.32em] text-amber-400/85",
   meta: "text-[10px] font-bold uppercase tracking-[0.28em] text-orange-600",
   hint: "text-center text-[10px] uppercase tracking-[0.16em] text-neutral-700",
+  hintSealed: "text-center text-[10px] uppercase tracking-[0.16em] text-amber-200/55",
   saving: "text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-400/70",
+  sealShell:
+    "w-full rounded-xl border border-[#FFB800]/18 bg-gradient-to-b from-neutral-950/90 via-black/80 to-black/95 p-0.5 shadow-[inset_0_1px_0_rgba(255,184,0,0.06)]",
 } as const;

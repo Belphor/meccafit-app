@@ -8,4 +8,14 @@ export function resolveTreinoDayKey(now: Date = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: TREINO_DAY_TIMEZONE }).format(now);
 }
 
+export function isTimestampOnTreinoDay(
+  iso: string | null | undefined,
+  dayKey: string = resolveTreinoDayKey(),
+): boolean {
+  if (!iso) return false;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return resolveTreinoDayKey(parsed) === dayKey;
+}
+
 export const resolveAppDayKey = resolveTreinoDayKey;

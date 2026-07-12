@@ -10,7 +10,7 @@ export const PORTAL_COPY = {
   loadError: "Não foi possível carregar o altar.",
   profileUnavailable: "Perfil indisponível.",
   loginIdle: "Aproxime-se do altar para reacender sua jornada.",
-  loginAltarAccess: "Cliente, administrador ou Dono Supremo acessam pelo altar principal.",
+  loginAltarAccess: "Clientes VIP e comuns acessam pelo Portal de Brasa.",
   loginPasswordHint:
     process.env.NODE_ENV === "development"
       ? "Informe a senha de teste. Use senha123 para os usuários criados no Supabase."
@@ -25,9 +25,29 @@ export const PORTAL_COPY = {
     "Muitas tentativas de acesso. Aguarde um minuto e tente novamente.",
   loginRoleUnauthorized:
     "Este altar não reconhece o seu papel de acesso. Utilize o portal correto da sua linhagem.",
+  loginWrongPortalForjador:
+    "Esta conta é de Forjador. Acesse pelo portal da Forja.",
+  loginWrongPortalCliente:
+    "Esta conta é de Cliente. Acesse pelo Portal de Brasa.",
   loginDbError: "Falha ao validar o login no banco de dados. Tente novamente.",
+  loginActionFailedCliente:
+    "Não foi possível abrir o Portal de Brasa agora. Recarregue a página e tente novamente.",
+  loginActionFailedForja:
+    "Não foi possível abrir o Portal da Forja agora. Recarregue a página e tente novamente.",
   loginAccountSuspended: CONTA_SUSPENSA,
   loginSubtitle: "Pronto para queimar os velhos hábitos?",
+  forjaLoginTitle: "Portal da",
+  forjaLoginHighlight: "Forja.",
+  forjaLoginSubtitle: "Acesso exclusivo de Forjadores e Soberanos.",
+  forjaLoginIdle: "Entre com a conta provisionada no altar da Forja.",
+  forjaLoginPasswordHint: "Informe a senha da sua conta de Forjador.",
+  forjaLoginOpening: "Abrindo o Portal da Forja...",
+  forjaLoginConfirmed: "Forja reconhecida. Entrando no painel...",
+  forjaLoginCta: "Sou um Forjador. Entrar na Forja",
+  forjaBackToCliente: "Voltar ao Portal de Brasa",
+  submitForjaLogin: "ENTRAR NA FORJA",
+  loginBurning: "Sua chama está reacendendo...",
+  forjaLoginBurning: "A forja está acendendo...",
   onboardingTitle: "Primeiro Acesso Fenyxia",
   onboardingSubtitle: "Chave QR incandescente detectada. Forje sua identidade no altar.",
   onboardingInviteBanner:
@@ -45,24 +65,6 @@ export const PORTAL_COPY = {
   onboardingInviteUnavailable: "Validação de convite indisponível. Tente novamente em instantes.",
   onboardingAlreadyHaveAccount: "Já possuo conta. Ir para login",
   submitOnboarding: "ACENDER MINHA LINHAGEM",
-  forgeSubtitle: "A Forja responde apenas à chave correta.",
-  forgeActivateTitle: "Ative a sua",
-  forgeActivateHighlight: "Forja.",
-  forgeKeyPrompt: "Insira a Chave de Ignição da Forja",
-  forgeKeyPlaceholder: "Chave de ignição da Forja",
-  forgeValidating: "Validando chave no servidor...",
-  forgeActivated: "Forja ativada. Informe os dados da sua Linhagem.",
-  forgeNotConfigured: "Chave da Forja não configurada no servidor.",
-  forgeKeyInvalid: "Digite a Chave de Ignição correta para liberar o cadastro.",
-  forgeRegisterIncomplete: "Preencha Nome, E-mail Corporativo e Nome da Linhagem.",
-  forgeRegisterLoading: "Iniciando ingestão segura no Supabase...",
-  forgeRegisterSuccess:
-    "Ingestão iniciada. Verifique o e-mail corporativo para concluir a ativação.",
-  forgeRegisterError: "Falha inesperada ao iniciar o cadastro da Forja.",
-  forgeBackToAltar: "← Voltar para o Altar",
-  forgeCta: "Sou um Forjador (Ativar Minha Forja)",
   submitProcessing: "PROCESSANDO...",
-  submitRegister: "Iniciar Inscrição",
   submitLogin: "REACENDER MINHA CHAMA",
-  submitValidateForge: "VALIDAR CHAVE DA FORJA",
 } as const;
