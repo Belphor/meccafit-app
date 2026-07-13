@@ -13,11 +13,12 @@ import {
   resolveChamaAltarTier,
 } from "@/lib/chama-altar-visual";
 import {
-  CHAMA_ALTAR_CLIENT_EXPLANATION,
   DASHBOARD_META_CHIP,
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_SECTION_TITLE,
 } from "@/lib/dashboard-config";
+import { LoreEm } from "@/lib/lore-emphasis";
+import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
 
 type BraseiroPanelProps = {
   profile: ClientProfile;
@@ -111,7 +112,8 @@ export function BraseiroPanel({
       </div>
 
       <DashboardClientInfoBlock className="mt-3">
-        {CHAMA_ALTAR_CLIENT_EXPLANATION}
+        Soma o <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do dia. Cada exercício concluído entra com sua{" "}
+        <LoreEm>carga máxima</LoreEm>.
       </DashboardClientInfoBlock>
 
       <VtcMetricDisplay

@@ -216,8 +216,18 @@ export function FenixEvolutionAvatar({
         {buildEvolutionAvatarRing(tier, avatarInner)}
       </div>
 
-      <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-100 sm:text-right">
-        {PHASE_TIER_LABELS[tier]}
+      <p className="mt-2 flex max-w-[14rem] flex-wrap items-baseline justify-center gap-x-1.5 gap-y-0.5 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-100 sm:max-w-none sm:justify-end sm:text-right">
+        {profileName?.trim() ? (
+          <>
+            <span className="max-w-[9rem] truncate normal-case tracking-normal text-amber-50/95">
+              {profileName.trim()}
+            </span>
+            <span className="font-normal text-neutral-600" aria-hidden>
+              ·
+            </span>
+          </>
+        ) : null}
+        <span>{PHASE_TIER_LABELS[tier]}</span>
       </p>
       <p className="mt-0.5 text-center font-mono text-[10px] tabular-nums text-neutral-300 sm:text-right">
         {Math.round(vtc30dKg).toLocaleString("pt-BR")} kg · últimos 30 dias

@@ -4,6 +4,11 @@ import {
   applySecurityHeaders,
   createRequestNonce,
 } from "@/lib/security-headers";
+import {
+  hasAcceptedTerms,
+  isOnboardingPath,
+  ONBOARDING_ROUTE,
+} from "@/lib/onboarding-terms";
 import { createMiddlewareClient } from "@/lib/supabase-middleware";
 
 const PROTECTED_PREFIXES = [
@@ -36,6 +41,21 @@ function isForjaRoute(pathname: string): boolean {
   );
 }
 
+function isClienteDashboardSurface(pathname: string): boolean {
+  return (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/evolucao" ||
+    pathname.startsWith("/evolucao/") ||
+    pathname === "/treino" ||
+    pathname.startsWith("/treino/") ||
+    pathname === "/comunidade" ||
+    pathname.startsWith("/comunidade/") ||
+    pathname === "/perfil" ||
+    pathname.startsWith("/perfil/")
+  );
+}
+
 function secureResponse(response: NextResponse, nonce: string): NextResponse {
   applySecurityHeaders(response, nonce);
   response.headers.set("x-nonce", nonce);
@@ -46,6 +66,7 @@ export async function proxy(request: NextRequest) {
   const nonce = createRequestNonce();
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
   const securedRequest = new NextRequest(request.url, {
     headers: requestHeaders,
@@ -99,6 +120,26 @@ export async function proxy(request: NextRequest) {
     const forjaUrl = securedRequest.nextUrl.clone();
     forjaUrl.pathname = "/dashboard/forja";
     return secureResponse(NextResponse.redirect(forjaUrl), nonce);
+  }
+
+  // Gate de termos — clientes autenticados não acessam o altar sem aceite.
+  if (
+    profile?.role === "cliente" &&
+    isClienteDashboardSurface(pathname) &&
+    !isForjaRoute(pathname)
+  ) {
+    const accepted = hasAcceptedTerms(
+      user.user_metadata as Record<string, unknown> | undefined,
+    );
+    const onOnboarding = isOnboardingPath(pathname);
+
+    // Sem aceite: bloqueia o altar. Com aceite: cerimônia (logo + manifesto) ainda é permitida.
+    if (!accepted && !onOnboarding) {
+      const onboardingUrl = securedRequest.nextUrl.clone();
+      onboardingUrl.pathname = ONBOARDING_ROUTE;
+      onboardingUrl.search = "";
+      return secureResponse(NextResponse.redirect(onboardingUrl), nonce);
+    }
   }
 
   return secureResponse(response, nonce);

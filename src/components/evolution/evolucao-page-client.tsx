@@ -338,7 +338,8 @@ export function EvolucaoPageClient({
 
         <div className="mt-3 px-4 sm:px-5">
           <p className={EVOLUTION_HINT}>
-            Compare selfies do dia 1 e do dia 30 para ver sua evolução física no ciclo.
+            Compare selfies do primeiro dia e do último dia do mês para ver sua evolução física no
+            ciclo.
           </p>
 
           <button

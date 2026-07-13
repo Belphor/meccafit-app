@@ -304,7 +304,7 @@ export function resolveEcossistemaTourSteps(hasPersonalBond: boolean): Ecossiste
 }
 
 /** Aguarda a aba destino renderizar antes da narrativa da ANYMA. */
-export const ECOSSISTEMA_TOUR_NAV_DELAY_MS = 720;
+export const ECOSSISTEMA_TOUR_NAV_DELAY_MS = 420;
 
 export type FenixNarrativeCatalogEntry = {
   id: string;

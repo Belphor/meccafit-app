@@ -69,7 +69,7 @@ export function EvolutionBodyMapPanel({
             <p className={EVOLUTION_SECTION_SUBTITLE}>
               Onde você mais carregou nos últimos 14 dias. As cores nascem das{" "}
               <LoreEm>Brasas Musculares</LoreEm> e respeitam o <LoreEm>Ritmo da Fênix</LoreEm>
-              {ritmoBaixo ? "; abaixo de 50%, o mapa fica mais suave." : "."}
+              {ritmoBaixo ? ". Abaixo de 50%, o mapa fica mais suave." : "."}
             </p>
           </div>
           {hasMapData ? (
@@ -84,10 +84,9 @@ export function EvolutionBodyMapPanel({
           ) : null}
         </div>
         <DashboardClientInfoBlock className="mt-3">
-          <LoreEm>Brasas Musculares</LoreEm> somam o <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> por grupo
-          muscular nos últimos 14 dias. Cada região do corpo muda de cor conforme o volume acumulado.
-          Quando o <LoreEm>Ritmo da Fênix</LoreEm> cai abaixo de 50% após o acolhimento, a Fênix preserva
-          os dados, mas suaviza as cores para mostrar que a consistência precisa reacender.
+          <LoreEm>Brasas Musculares</LoreEm> somam o <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> por grupo nos
+          últimos <strong className="text-amber-50">14 dias</strong>. As cores mostram onde você mais
+          carregou. Ritmo baixo, após o acolhimento, suaviza o mapa.
         </DashboardClientInfoBlock>
       </header>
 

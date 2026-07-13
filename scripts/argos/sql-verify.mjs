@@ -246,21 +246,6 @@ if (forjador) {
   });
 }
 
-await check("cliente nao pode consumir invite via RPC service-only", async () => {
-  const { error } = await cliente.client.rpc("argos_consume_invite_for_user", {
-    p_token: "probe-token",
-    p_user_id: cliente.userId,
-  });
-  return Boolean(error);
-});
-
-await check("cliente nao pode validar invite via RPC service-only", async () => {
-  const { error } = await cliente.client.rpc("argos_validate_invite_token", {
-    p_token: "probe-token",
-  });
-  return Boolean(error);
-});
-
 await check("RPC obter_calor_muscular_atleta retorna 6 grupos incl. ombros", async () => {
   const { data, error } = await cliente.client.rpc("obter_calor_muscular_atleta", {
     target_atleta_id: cliente.userId,

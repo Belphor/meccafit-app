@@ -366,6 +366,24 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
           </div>
 
           <div className="sm:col-span-2">
+            <label htmlFor="forja-video-url" className={FORJA_LABEL}>
+              {FORJA_COPY.prescription.videoUrl}
+            </label>
+            <input
+              id="forja-video-url"
+              type="url"
+              inputMode="url"
+              value={prescription.videoUrl}
+              onChange={handleFieldChange("videoUrl")}
+              placeholder="https://www.youtube.com/watch?v=…"
+              className={FORJA_INPUT}
+              autoComplete="off"
+              disabled={isSyncing}
+            />
+            <p className={`${FORJA_META} mt-1.5`}>{FORJA_COPY.prescription.videoUrlHint}</p>
+          </div>
+
+          <div className="sm:col-span-2">
             <label htmlFor="forja-grupo" className={FORJA_LABEL}>
               {FORJA_COPY.prescription.muscleGroup}
             </label>

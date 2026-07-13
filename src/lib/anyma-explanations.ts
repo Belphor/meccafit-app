@@ -1,6 +1,7 @@
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
 import { ANYMA_VTC_PHRASE } from "@/lib/anyma-copy";
 import { resolveAnymaSpeechText } from "@/lib/anima-speech";
+import { FENYXIA_SUPORTE_ANYMA_LABEL } from "@/lib/client-lore-copy";
 
 /**
  * Catálogo canônico de explicações da ANYMA FÊNIX.
@@ -14,7 +15,8 @@ export type AnymaExplanationGroup =
   | "evolucao"
   | "comunidade"
   | "dieta"
-  | "perfil";
+  | "perfil"
+  | "suporte";
 
 export type AnymaExplanationId =
   | "treino-aba"
@@ -36,7 +38,8 @@ export type AnymaExplanationId =
   | "comunidade-rankings"
   | "comunidade-mural"
   | "dieta-plano"
-  | "perfil-linhagem";
+  | "perfil-linhagem"
+  | "perfil-suporte";
 
 export type AnymaExplanationCard = {
   id: AnymaExplanationId;
@@ -47,6 +50,10 @@ export type AnymaExplanationCard = {
   speech: string;
   summary: string;
   requiresVip?: boolean;
+  /** Navega até o alvo no altar sem narrar explicação. */
+  redirectOnly?: boolean;
+  /** Paleta visual do card no painel da ANYMA. */
+  accent?: "magma" | "suporte";
 };
 
 export const ANYMA_EXPLANATION_GROUP_ORDER: readonly AnymaExplanationGroup[] = [
@@ -55,6 +62,7 @@ export const ANYMA_EXPLANATION_GROUP_ORDER: readonly AnymaExplanationGroup[] = [
   "comunidade",
   "dieta",
   "perfil",
+  "suporte",
 ] as const;
 
 export const ANYMA_EXPLANATION_GROUP_LABELS: Record<AnymaExplanationGroup, string> = {
@@ -63,6 +71,7 @@ export const ANYMA_EXPLANATION_GROUP_LABELS: Record<AnymaExplanationGroup, strin
   comunidade: "Comunidade",
   dieta: "Dieta",
   perfil: "Perfil",
+  suporte: "Suporte",
 };
 
 /** Aba Treino. */
@@ -115,7 +124,7 @@ export const ANYMA_SPEECH_EVOLUCAO_GRAVIDADE =
 
 /** Espelho do ciclo. */
 export const ANYMA_SPEECH_EVOLUCAO_ESPELHO =
-  "O Espelho Visual guarda selfies do ciclo nos dias um, quinze e trinta. Use a mesma pose e a mesma luz. Com o primeiro e o último dia gravados, compare o progresso. As fotos ficam só no seu dispositivo.";
+  "O Espelho Visual guarda selfies do ciclo no primeiro dia, no meio do mês e no último dia do mês atual. Use a mesma pose e a mesma luz. Com o primeiro e o último dia gravados, compare o progresso. As fotos ficam só no seu dispositivo.";
 
 /** Aba Comunidade. */
 export const ANYMA_SPEECH_COMUNIDADE_ABA =
@@ -326,6 +335,17 @@ export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
     tab: "perfil",
     speech: ANYMA_SPEECH_PERFIL_LINHAGEM,
     summary: "Nome, gênero, arena e classes do ecossistema.",
+  },
+  {
+    id: "perfil-suporte",
+    group: "suporte",
+    groupLabel: ANYMA_EXPLANATION_GROUP_LABELS.suporte,
+    label: FENYXIA_SUPORTE_ANYMA_LABEL,
+    tab: "perfil",
+    speech: "",
+    summary: "",
+    redirectOnly: true,
+    accent: "suporte",
   },
 ] as const;
 

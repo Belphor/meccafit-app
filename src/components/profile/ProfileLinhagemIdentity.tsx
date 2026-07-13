@@ -25,8 +25,14 @@ import {
   parseProfileSexo,
   type ProfileSexo,
 } from "@/lib/profile-identity";
-import { publishPerfilIdentityTourInput } from "@/lib/anima-perfil-identity-form";
-import { saveLocalAvatar } from "@/services/local-storage";
+import {
+  PERFIL_IDENTITY_FIELD_UNLOCK_EVENT,
+  publishPerfilIdentityTourInput,
+  readUnlockedPerfilIdentityFields,
+  unlockAllPerfilIdentityFields,
+  type PerfilIdentityFieldId,
+} from "@/lib/anima-perfil-identity-form";
+import { getLocalAvatarPath, saveLocalAvatar } from "@/services/local-storage";
 import { syncComunidadeAvatarFromFile } from "@/lib/comunidade-avatar";
 
 type ProfileLinhagemIdentityProps = {
@@ -66,11 +72,33 @@ export function ProfileLinhagemIdentity({
   const [phaseTier, setPhaseTier] = useState<PhaseTier>(1);
   const [vtc30dKg, setVtc30dKg] = useState(0);
   const [photoFeedback, setPhotoFeedback] = useState<string | null>(null);
+  const [hasPhoto, setHasPhoto] = useState(false);
+  const [unlockedFields, setUnlockedFields] = useState(() =>
+    confirmed
+      ? new Set<PerfilIdentityFieldId>(["nome", "genero", "foto"])
+      : new Set(readUnlockedPerfilIdentityFields()),
+  );
   const [identityFeedback, setIdentityFeedback] = useState<{
     message: string;
     tone: "success" | "error";
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (confirmed) {
+      unlockAllPerfilIdentityFields();
+      setUnlockedFields(new Set(["nome", "genero", "foto"]));
+    }
+  }, [confirmed]);
+
+  useEffect(() => {
+    const syncUnlock = () => {
+      setUnlockedFields(new Set(readUnlockedPerfilIdentityFields()));
+    };
+    syncUnlock();
+    window.addEventListener(PERFIL_IDENTITY_FIELD_UNLOCK_EVENT, syncUnlock);
+    return () => window.removeEventListener(PERFIL_IDENTITY_FIELD_UNLOCK_EVENT, syncUnlock);
+  }, []);
 
   useEffect(() => {
     const onNameUpdate = () => {
@@ -79,6 +107,21 @@ export function ProfileLinhagemIdentity({
     window.addEventListener(PROFILE_DISPLAY_NAME_UPDATED_EVENT, onNameUpdate);
     return () => window.removeEventListener(PROFILE_DISPLAY_NAME_UPDATED_EVENT, onNameUpdate);
   }, [serverName, userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const localPath = await getLocalAvatarPath(userId);
+        if (!cancelled) setHasPhoto(Boolean(localPath));
+      } catch {
+        if (!cancelled) setHasPhoto(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,14 +147,18 @@ export function ProfileLinhagemIdentity({
     };
   }, [initialCalorRows, initialIgnicao]);
 
-  const resolvedName = useMemo(
-    () => displayName.trim() || serverName?.trim() || "Membro da Linhagem",
+  const insertedName = useMemo(
+    () => displayName.trim() || serverName?.trim() || null,
     [displayName, serverName],
   );
 
   useEffect(() => {
-    publishPerfilIdentityTourInput({ displayName, sexo });
-  }, [displayName, sexo]);
+    publishPerfilIdentityTourInput({ displayName, sexo, hasPhoto });
+  }, [displayName, hasPhoto, sexo]);
+
+  const nomeUnlocked = confirmed || unlockedFields.has("nome");
+  const generoUnlocked = confirmed || unlockedFields.has("genero");
+  const fotoUnlocked = confirmed || unlockedFields.has("foto");
 
   const handleDisplayNameChange = useCallback((value: string) => {
     setDisplayName(value);
@@ -125,10 +172,11 @@ export function ProfileLinhagemIdentity({
     !confirmed &&
     displayName.trim().length >= 2 &&
     Boolean(sexo) &&
+    hasPhoto &&
     !isSubmitting;
 
   const handleConfirmIdentity = useCallback(async () => {
-    if (!sexo || confirmed) return;
+    if (!sexo || confirmed || !hasPhoto) return;
 
     setIsSubmitting(true);
     setIdentityFeedback(null);
@@ -151,7 +199,7 @@ export function ProfileLinhagemIdentity({
     } finally {
       setIsSubmitting(false);
     }
-  }, [confirmed, displayName, onIdentityConfirmed, sexo, userId]);
+  }, [confirmed, displayName, hasPhoto, onIdentityConfirmed, sexo, userId]);
 
   const handlePhotoChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +210,7 @@ export function ProfileLinhagemIdentity({
       setPhotoFeedback(null);
       try {
         await saveLocalAvatar(userId, file);
+        setHasPhoto(true);
         const sync = await syncComunidadeAvatarFromFile(userId, file);
         if (sync.error) {
           setPhotoFeedback(
@@ -176,6 +225,12 @@ export function ProfileLinhagemIdentity({
     },
     [userId],
   );
+
+  const photoButtonLabel = hasPhoto
+    ? "Trocar foto"
+    : confirmed
+      ? "Inserir foto do dispositivo"
+      : "Aperta aqui";
 
   return (
     <BrasaVivaCard
@@ -193,7 +248,7 @@ export function ProfileLinhagemIdentity({
           calorRows={calorRows}
           phaseTier={phaseTier}
           vtc30dKg={vtc30dKg}
-          profileName={resolvedName}
+          profileName={insertedName}
           className="mx-auto sm:mx-0"
         />
 
@@ -220,10 +275,15 @@ export function ProfileLinhagemIdentity({
               value={displayName}
               onChange={(event) => handleDisplayNameChange(event.target.value)}
               placeholder={serverName?.trim() || "Seu nome na linhagem"}
-              className="mt-2 w-full rounded-xl border border-orange-500/20 bg-black/50 px-3 py-2.5 text-sm text-amber-50 outline-none transition focus:border-amber-500/35"
+              className="mt-2 w-full rounded-xl border border-orange-500/20 bg-black/50 px-3 py-2.5 text-sm text-amber-50 outline-none transition focus:border-amber-500/35 disabled:cursor-not-allowed disabled:opacity-45"
               maxLength={48}
-              disabled={confirmed}
+              disabled={confirmed || !nomeUnlocked}
             />
+            {!confirmed && !nomeUnlocked ? (
+              <p className="mt-1.5 text-[10px] text-neutral-500">
+                Aguarde a ANYMA explicar o nome para liberar este campo.
+              </p>
+            ) : null}
           </label>
 
           <fieldset className="block" data-tour-target="perfil-genero">
@@ -236,13 +296,13 @@ export function ProfileLinhagemIdentity({
                     key={option.value}
                     type="button"
                     data-sexo={option.value}
-                    disabled={confirmed}
+                    disabled={confirmed || !generoUnlocked}
                     onClick={() => handleSexoPick(option.value)}
                     className={`${DASHBOARD_TAP_TARGET} rounded-full border px-4 py-2 text-xs font-semibold transition ${
                       selected
                         ? "border-amber-400/45 bg-amber-950/40 text-amber-100"
                         : "border-orange-500/20 bg-neutral-950/70 text-neutral-400 hover:border-amber-500/30"
-                    } ${confirmed ? "cursor-default opacity-70" : ""}`}
+                    } ${confirmed || !generoUnlocked ? "cursor-not-allowed opacity-45" : ""}`}
                     aria-pressed={selected}
                   >
                     {option.label}
@@ -250,6 +310,11 @@ export function ProfileLinhagemIdentity({
                 );
               })}
             </div>
+            {!confirmed && !generoUnlocked ? (
+              <p className="mt-1.5 text-[10px] text-neutral-500">
+                Aguarde a ANYMA explicar o gênero para liberar esta escolha.
+              </p>
+            ) : null}
           </fieldset>
 
           <div>
@@ -264,11 +329,18 @@ export function ProfileLinhagemIdentity({
             <button
               type="button"
               data-tour-target="perfil-foto"
+              data-foto-pronta={hasPhoto ? "true" : "false"}
+              disabled={!confirmed && !fotoUnlocked}
               onClick={() => fileInputRef.current?.click()}
-              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-orange-500/25 bg-neutral-950/70 px-4 py-2 text-xs font-semibold text-amber-100`}
+              className={`${DASHBOARD_TAP_TARGET} rounded-full border border-orange-500/25 bg-neutral-950/70 px-4 py-2 text-xs font-semibold text-amber-100 disabled:cursor-not-allowed disabled:opacity-45`}
             >
-              Inserir foto do dispositivo
+              {photoButtonLabel}
             </button>
+            {!confirmed && !fotoUnlocked ? (
+              <p className="mt-1.5 text-[10px] text-neutral-500">
+                Aguarde a ANYMA explicar a foto para liberar este botão.
+              </p>
+            ) : null}
             {photoFeedback ? (
               <p className="mt-2 text-[11px] text-emerald-200/85">{photoFeedback}</p>
             ) : null}

@@ -9,7 +9,7 @@ import {
   ANYMA_PERFIL_TAB_SPEECH,
 } from "@/lib/anyma-copy";
 
-export type PerfilIdentityAdvanceGate = "nome" | "genero";
+export type PerfilIdentityAdvanceGate = "nome" | "genero" | "foto";
 
 export type PerfilIdentityBeat = {
   id: string;
@@ -86,6 +86,7 @@ export const PERFIL_FOTO_BEAT: PerfilIdentityBeat = {
   title: "Inserir foto do dispositivo",
   continueLabel: "Continuar para selar",
   waitForTarget: true,
+  advanceGate: "foto",
 };
 
 export const PERFIL_CONFIRMA_BEAT: PerfilIdentityBeat = {
@@ -126,7 +127,6 @@ export const ONBOARDING_SPOTLIGHT_BEATS: readonly PerfilIdentityBeat[] = [
   PERFIL_GENERO_BEAT,
   {
     ...PERFIL_FOTO_BEAT,
-    continueLabel: "Continuar para selar identidade",
     completesTour: true,
   },
 ] as const;

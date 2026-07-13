@@ -1,7 +1,5 @@
 "use server";
 
-import { validateInviteToken } from "@/app/actions/invite-onboarding";
-import { isDevInviteToken } from "@/lib/invite-config.server";
 import { mapAuthError } from "@/lib/portal-auth.server";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import {
@@ -9,25 +7,7 @@ import {
   type PrimeiroAcessoInput,
   type PrimeiroAcessoResult,
 } from "@/lib/portal-onboarding";
-import { createServiceRoleClient } from "@/lib/supabase-admin.server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-
-async function consumeInviteAfterSignup(userId: string, inviteToken: string): Promise<boolean> {
-  const normalized = inviteToken.trim();
-  if (isDevInviteToken(normalized)) {
-    return true;
-  }
-
-  const admin = createServiceRoleClient();
-  if (!admin) return false;
-
-  const { data, error } = await admin.rpc("argos_consume_invite_for_user", {
-    p_token: normalized,
-    p_user_id: userId,
-  });
-
-  return !error && data === true;
-}
 
 async function fetchProfileById(userId: string) {
   const supabase = await createSupabaseServerClient();
@@ -60,22 +40,16 @@ async function waitForServerProfile(userId: string) {
   return null;
 }
 
-export async function registerPrimeiroAcesso(
-  inviteToken: string,
+/** Cadastro público de cliente (sem convite). */
+export async function registerCliente(
   input: PrimeiroAcessoInput,
 ): Promise<PrimeiroAcessoResult> {
   const validation = validatePrimeiroAcesso(input);
   if (!validation.ok) return validation;
 
-  const inviteCheck = await validateInviteToken(inviteToken);
-  if (!inviteCheck.valid) {
-    return { ok: false, message: inviteCheck.message ?? PORTAL_COPY.onboardingInviteInvalid };
-  }
-
   const email = input.email.trim().toLowerCase();
   const fullName = input.fullName.trim();
   const birthDate = input.birthDate.trim();
-  const normalizedInvite = inviteToken.trim();
 
   try {
     const supabase = await createSupabaseServerClient();
@@ -87,7 +61,7 @@ export async function registerPrimeiroAcesso(
           full_name: fullName,
           data_nascimento: birthDate,
           role: "cliente",
-          invite_token: normalizedInvite,
+          has_accepted_terms: false,
         },
       },
     });
@@ -110,12 +84,6 @@ export async function registerPrimeiroAcesso(
         return { ok: false, message: PORTAL_COPY.onboardingConfirmEmail };
       }
 
-      const consumed = await consumeInviteAfterSignup(signInData.user.id, normalizedInvite);
-      if (!consumed) {
-        await supabase.auth.signOut();
-        return { ok: false, message: PORTAL_COPY.onboardingInviteInvalid };
-      }
-
       const profile = await waitForServerProfile(signInData.user.id);
       if (!profile) {
         await supabase.auth.signOut();
@@ -123,12 +91,6 @@ export async function registerPrimeiroAcesso(
       }
 
       return { ok: true };
-    }
-
-    const consumed = await consumeInviteAfterSignup(data.user.id, normalizedInvite);
-    if (!consumed) {
-      await supabase.auth.signOut();
-      return { ok: false, message: PORTAL_COPY.onboardingInviteInvalid };
     }
 
     const profile = await waitForServerProfile(data.user.id);

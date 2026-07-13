@@ -11,9 +11,12 @@ type CreateMiddlewareClientResult = {
 /**
  * Cliente Supabase para middleware (HERMES).
  * Equivalente moderno ao createMiddlewareClient — valida JWT via cookies de sessão.
+ * Preserva headers customizados do request (ex.: x-pathname, x-nonce) para o layout SSR.
  */
 export function createMiddlewareClient(request: NextRequest): CreateMiddlewareClientResult {
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
 
   const { url: supabaseUrl, publicKey: supabaseAnonKey } = requireSupabasePublicEnv();
 
@@ -26,7 +29,9 @@ export function createMiddlewareClient(request: NextRequest): CreateMiddlewareCl
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
         });
-        response = NextResponse.next({ request });
+        response = NextResponse.next({
+          request: { headers: request.headers },
+        });
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });

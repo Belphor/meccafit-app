@@ -2,7 +2,6 @@
 
 import type { ChangeEvent } from "react";
 import { PORTAL_INPUT, PORTAL_LABEL } from "@/lib/portal-theme";
-import { PORTAL_COPY } from "@/lib/portal-copy";
 
 export type PrimeiroAcessoFormState = {
   email: string;
@@ -33,10 +32,6 @@ export function PrimeiroAcessoFenyxiaPanel({
 
   return (
     <div className="mt-8 flex w-full flex-col gap-4 text-left">
-      <p className="rounded-2xl border border-orange-500/15 bg-orange-950/10 p-3 text-center text-xs leading-5 text-orange-200/85">
-        {PORTAL_COPY.onboardingInviteBanner}
-      </p>
-
       <div className="w-full">
         <label htmlFor="onboarding-full-name" className={PORTAL_LABEL}>
           Nome completo
@@ -84,7 +79,7 @@ export function PrimeiroAcessoFenyxiaPanel({
           onFocus={onFocus}
           onBlur={onBlur}
           disabled={disabled}
-          placeholder="seu@email.com"
+          placeholder="Digite seu email"
           className={PORTAL_INPUT}
           autoComplete="email"
         />
@@ -92,7 +87,7 @@ export function PrimeiroAcessoFenyxiaPanel({
 
       <div className="w-full">
         <label htmlFor="onboarding-password" className={PORTAL_LABEL}>
-          Senha desejada
+          Senha de acesso
         </label>
         <input
           id="onboarding-password"
@@ -102,7 +97,7 @@ export function PrimeiroAcessoFenyxiaPanel({
           onFocus={onFocus}
           onBlur={onBlur}
           disabled={disabled}
-          placeholder="Mínimo 6 caracteres"
+          placeholder="Digite sua senha"
           className={PORTAL_INPUT}
           autoComplete="new-password"
           minLength={6}

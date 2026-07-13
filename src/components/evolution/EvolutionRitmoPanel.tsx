@@ -21,7 +21,6 @@ import {
   buildRitmoGraceActiveHint,
   buildRitmoGraceEndedAlert,
   isRitmoPurityPenaltyActive,
-  RITMO_GRACE_DAYS,
   resolveRitmoGraceState,
 } from "@/lib/ritmo-grace-period";
 
@@ -81,35 +80,9 @@ export function EvolutionRitmoPanel({
         <DashboardClientInfoBlock className="mt-3">
           <p className="text-xs font-semibold text-amber-100">Como funciona</p>
           <p className="mt-2 text-xs leading-relaxed text-neutral-300">
-            O <LoreEm>Ritmo da Fênix</LoreEm> mostra se o volume real da sua forja acompanha o plano que
-            você declarou para o mês. Ele sempre olha os{" "}
-            <strong className="text-amber-50">últimos 30 dias</strong> de treino.
-          </p>
-          <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed text-neutral-300">
-            <li>
-              <strong className="text-amber-50">Você define os dias planejados</strong>. Esse número vira
-              a meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>; 16 treinos usam o limiar Faísca da
-              academia como referência.
-            </li>
-            <li>
-              <strong className="text-amber-50">A cada treino validado</strong>, somamos o melhor peso
-              registrado em cada exercício. Esse total do dia é o seu{" "}
-              <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> diário.
-            </li>
-            <li>
-              <strong className="text-amber-50">O Ritmo é a porcentagem</strong> do acumulado de 30 dias
-              em relação à sua meta mensal. No painel, ele aparece com teto de 100%.
-            </li>
-          </ol>
-          <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-            <strong className="text-neutral-300">Exemplo:</strong> se a meta do plano for 5.000 kg e o
-            acumulado dos últimos 30 dias for 2.500 kg, o Ritmo fica em 50%.
-          </p>
-          <p className="mt-3 text-xs leading-relaxed text-neutral-400">
-            Nos primeiros <strong className="text-neutral-300">{RITMO_GRACE_DAYS} dias</strong> da
-            linhagem, o mapa corporal mantém cores vivas enquanto você constrói o ritmo. Depois desse
-            prazo, se o Ritmo ficar <strong className="text-neutral-300">abaixo de 50%</strong>, o mapa
-            fica mais suave até você reaquecer o volume.
+            O <LoreEm>Ritmo da Fênix</LoreEm> compara o volume forjado com a meta dos{" "}
+            <LoreEm>dias planejados</LoreEm>. Olha os{" "}
+            <strong className="text-amber-50">últimos 30 dias</strong>.
           </p>
         </DashboardClientInfoBlock>
       </header>

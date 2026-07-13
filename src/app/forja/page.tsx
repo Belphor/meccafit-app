@@ -21,6 +21,11 @@ import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import { signInPortal } from "@/app/actions/portal-login";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import {
+  clearRememberedCredentials,
+  loadRememberedCredentials,
+  saveRememberedCredentials,
+} from "@/lib/portal-remember-credentials";
+import {
   modeAtmosphere,
   PORTAL_BRAND_HEADER,
   PORTAL_BRAND_TO_CARD_GAP,
@@ -42,6 +47,7 @@ export default function ForjaLoginPage() {
   const atmosphere = modeAtmosphere.forja;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberCredentials, setRememberCredentials] = useState(false);
   const [focused, setFocused] = useState(false);
   const [feedback, setFeedback] = useState<{ status: PortalStatus; message: string }>({
     status: "idle",
@@ -67,6 +73,14 @@ export default function ForjaLoginPage() {
     window.history.replaceState({}, "", "/forja");
   }, []);
 
+  useEffect(() => {
+    const saved = loadRememberedCredentials("forja");
+    if (!saved) return;
+    setEmail(saved.email);
+    setPassword(saved.password);
+    setRememberCredentials(true);
+  }, []);
+
   async function performLogin() {
     const normalizedEmail = email.trim();
     if (!normalizedEmail) {
@@ -87,13 +101,18 @@ export default function ForjaLoginPage() {
     const burnPromise = waitPortalBurn();
 
     try {
-      // audience fixo "forjador" — clientes são rejeitados no servidor
       const result = await signInPortal(normalizedEmail, password, "forjador");
       if (!result.ok) {
         setIsBurning(false);
         setFeedback({ status: "idle", message: PORTAL_COPY.forjaLoginIdle });
         showToast(result.message);
         return;
+      }
+
+      if (rememberCredentials) {
+        saveRememberedCredentials("forja", { email: normalizedEmail, password });
+      } else {
+        clearRememberedCredentials("forja");
       }
 
       await burnPromise;
@@ -169,7 +188,7 @@ export default function ForjaLoginPage() {
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
                   disabled={isLoading}
-                  placeholder="forjador@meccafit.com"
+                  placeholder="Digite seu email"
                   className={PORTAL_INPUT}
                   autoComplete="email"
                 />
@@ -193,6 +212,20 @@ export default function ForjaLoginPage() {
                   autoComplete="current-password"
                 />
               </div>
+              <label className="flex cursor-pointer items-center gap-3 text-left text-xs text-neutral-400">
+                <input
+                  type="checkbox"
+                  checked={rememberCredentials}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    const checked = event.target.checked;
+                    setRememberCredentials(checked);
+                    if (!checked) clearRememberedCredentials("forja");
+                  }}
+                  disabled={isLoading}
+                  className="h-4 w-4 rounded border-neutral-700 bg-black accent-blue-300"
+                />
+                <span>{PORTAL_COPY.rememberCredentials}</span>
+              </label>
             </div>
 
             <PortalBurnSubmitButton

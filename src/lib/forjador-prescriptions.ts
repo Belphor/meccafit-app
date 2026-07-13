@@ -30,6 +30,7 @@ export type ForjadorPrescriptionRow = {
   progressao_alternativas: PrescriptionProgressionId[];
   repeticoes_por_serie: PrescriptionRepValue[];
   observacoes: string | null;
+  video_url: string | null;
 };
 
 export const DEFAULT_FORJADOR_TREINO_CONFIG: ForjadorTreinoConfig = {
@@ -122,6 +123,10 @@ export function parseForjadorPrescriptionRows(rows: unknown[]): ForjadorPrescrip
         progressao_alternativas: parseProgressionAlternatives(row.progressao_alternativas),
         repeticoes_por_serie: resolvedRepsPerSet,
         observacoes: typeof row.observacoes === "string" ? row.observacoes : null,
+        video_url:
+          typeof row.video_url === "string" && row.video_url.trim().length > 0
+            ? row.video_url.trim()
+            : null,
       },
     ];
   });
@@ -201,7 +206,7 @@ export async function fetchForjadorPrescriptionsClient(
   const { data, error } = await supabase
     .from("prescricoes_treino_forjador")
     .select(
-      "id, atleta_id, forjador_id, dia_semana, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, progressao_alternativas, repeticoes_por_serie, observacoes",
+      "id, atleta_id, forjador_id, dia_semana, grupo_muscular, exercicio_id, ordem, series_alvo, repeticoes_alvo, peso_prescrito, descanso_segundos, progressao_alternativas, repeticoes_por_serie, observacoes, video_url",
     )
     .eq("atleta_id", userId)
     .order("dia_semana")

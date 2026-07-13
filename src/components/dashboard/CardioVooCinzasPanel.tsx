@@ -29,8 +29,8 @@ import {
   CARDIO_VOO_TITLE_ELITE,
   CARDIO_VOO_TITLE_IDLE,
   CARDIO_VOO_TITLE_LIVE,
-  VOO_CINZAS_CLIENT_EXPLANATION,
 } from "@/lib/dashboard-config";
+import { LoreEm } from "@/lib/lore-emphasis";
 import type { CardioSessionStatus } from "@/lib/cardio-voo-cinzas";
 
 type CardioVooCinzasPanelProps = {
@@ -172,7 +172,11 @@ export function CardioVooCinzasPanel({
         {visualContext === "idle" ? (
           <div className={`mt-4 ${CARDIO_VOO_EXPLANATION_SUBTLE}`} role="note">
             <p className={CARDIO_VOO_EXPLANATION_LABEL}>Como funciona</p>
-            <p className={CARDIO_VOO_EXPLANATION_TEXT}>{VOO_CINZAS_CLIENT_EXPLANATION}</p>
+            <p className={CARDIO_VOO_EXPLANATION_TEXT}>
+              Cardio consciente do dia, antes ou depois do ferro. Seu forjador define a{" "}
+              <LoreEm>meta em minutos</LoreEm>. Confirme a cada dez minutos. Pausas não apagam o
+              progresso.
+            </p>
           </div>
         ) : null}
 

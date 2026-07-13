@@ -9,6 +9,7 @@ import { ForjaVtcPhaseReferencePanel } from "@/app/dashboard/forja/ForjaVtcPhase
 import { ForjaAthleteSidebar } from "@/components/forjador/forja-athlete-sidebar";
 import { ForjaMonitorSegmentFilter } from "@/components/forjador/forja-monitor-segment-filter";
 import { ForjaMonitorStatsBar } from "@/components/forjador/forja-monitor-stats-bar";
+import { ForjaVipBondPanel } from "@/components/forjador/forja-vip-bond-panel";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
 import {
@@ -217,6 +218,13 @@ export function MonitoramentoPageClient({ payload }: MonitoramentoPageClientProp
 
           <div className={`${FORJA_COMMAND_PANEL} space-y-4`}>
             <ForjaVtcPhaseReferencePanel />
+
+            <ForjaVipBondPanel
+              athlete={selectedAthlete}
+              operatorId={payload.operator.userId}
+              isSovereign={payload.operator.isSovereign}
+              onChanged={handleMonitorRefresh}
+            />
 
             <ForjaVtcFeedPanel
               selectedClientId={selectedClientId}

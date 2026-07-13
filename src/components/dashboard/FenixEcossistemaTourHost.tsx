@@ -35,9 +35,10 @@ export function FenixEcossistemaTourHost({
   phaseTier,
   onContinue,
 }: FenixEcossistemaTourHostProps) {
-  const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
+  const { igniteVoice, prepareVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [tabReadyKey, setTabReadyKey] = useState("");
   const [metaSynced, setMetaSynced] = useState(false);
+  const [hasSpoken, setHasSpoken] = useState(false);
   const tabAligned = activeTab === step.tab;
   const tabReady = tabAligned && tabReadyKey === `${step.id}-${beatIndex}`;
 
@@ -53,10 +54,19 @@ export function FenixEcossistemaTourHost({
     [beat.speech, profileName],
   );
 
-  const narrationDone = !isSupported || (state === "idle" && tabReady && tabAligned);
+  const narrationDone =
+    !isSupported || (hasSpoken && state === "idle" && tabReady && tabAligned);
   const advanceGateMet = beat.advanceGate !== "meta-sync" || metaSynced;
   const canContinue = tabAligned && tabReady && narrationDone && advanceGateMet;
   const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
+
+  useEffect(() => {
+    setHasSpoken(false);
+  }, [beatIndex, step.id]);
+
+  useEffect(() => {
+    if (state === "speaking") setHasSpoken(true);
+  }, [state]);
 
   useEffect(() => {
     if (!tabAligned) return;
@@ -65,6 +75,15 @@ export function FenixEcossistemaTourHost({
     const timer = window.setTimeout(() => setTabReadyKey(readyKey), ECOSSISTEMA_TOUR_NAV_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [beatIndex, step.id, tabAligned]);
+
+  useEffect(() => {
+    prepareVoice({
+      text: beat.speech,
+      fullName: profileName,
+      tier: phaseTier,
+      allowIntroFallback: false,
+    });
+  }, [beat.speech, beatIndex, phaseTier, prepareVoice, profileName, step.id]);
 
   useEffect(() => {
     if (!tabReady || !tabAligned) return;

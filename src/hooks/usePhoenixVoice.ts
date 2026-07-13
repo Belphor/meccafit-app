@@ -7,11 +7,20 @@ import {
   type DashboardTabChangeDetail,
 } from "@/lib/dashboard-tab-navigation";
 import { formatAnymaSpeech, prepareAnymaSpeechForTts } from "@/lib/anima-speech";
+import {
+  isAnimaAudioSupported,
+  playAnimaTts,
+  prefetchAnimaTts,
+} from "@/lib/anima-audio-controller";
 import { injectName } from "@/lib/profile-display-name";
 import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
 
 export { injectName, injectRegisteredName } from "@/lib/profile-display-name";
 
+/**
+ * Specs legadas do SpeechSynthesis (mantidas para tipagem / debug).
+ * A voz real usa Edge TTS: pt-BR-AntonioNeural, rate -5%, pitch -10Hz.
+ */
 export const PHOENYX_VOICE_SPECS = {
   rate: 0.86,
   pitch: 1.04,
@@ -37,182 +46,10 @@ type VoiceModulation = {
   isPunished?: boolean;
 };
 
-const PHOENYX_VOICE_LANG = "pt-BR" as const;
-
-let synthesisSingleton: SpeechSynthesis | null = null;
-let voicesReady = false;
-let cachedPhoenixVoice: SpeechSynthesisVoice | null = null;
-const voiceWaiters = new Set<() => void>();
-
-type VoiceMatcher = (voice: SpeechSynthesisVoice) => boolean;
-
-const PHOENIX_VOICE_PRIORITY: readonly VoiceMatcher[] = [
-  (voice) => {
-    const name = voice.name.toLowerCase();
-    const lang = voice.lang.toLowerCase();
-    return (
-      lang.includes("pt-br") &&
-      name.includes("francisca") &&
-      (name.includes("neural") || name.includes("natural") || name.includes("online"))
-    );
-  },
-  (voice) => {
-    const name = voice.name.toLowerCase();
-    const lang = voice.lang.toLowerCase();
-    return lang.includes("pt-br") && name.includes("google") && name.includes("maria");
-  },
-  (voice) => {
-    const name = voice.name.toLowerCase();
-    const lang = voice.lang.toLowerCase();
-    return lang.includes("pt-br") && name.includes("francisca");
-  },
-  (voice) => {
-    const name = voice.name.toLowerCase();
-    const lang = voice.lang.toLowerCase();
-    return (
-      lang.includes("pt-br") && (name.includes("neural") || name.includes("natural"))
-    );
-  },
-];
-
-function getSynthesis(): SpeechSynthesis | null {
-  if (typeof window === "undefined") return null;
-  if (!synthesisSingleton) {
-    synthesisSingleton = window.speechSynthesis;
-  }
-  return synthesisSingleton;
-}
-
-function notifyVoiceWaiters(): void {
-  voicesReady = true;
-  for (const waiter of voiceWaiters) {
-    waiter();
-  }
-  voiceWaiters.clear();
-}
-
-function scorePtBrVoice(voice: SpeechSynthesisVoice): number {
-  const name = voice.name.toLowerCase();
-  const lang = voice.lang.toLowerCase();
-  let score = 0;
-
-  if (lang.includes("pt-br")) score += 6;
-  else if (lang === "pt") score += 4;
-  else if (lang.includes("pt")) score += 2;
-
-  if (name.includes("francisca")) score += 14;
-  if (name.includes("neural")) score += 10;
-  if (name.includes("premium")) score += 8;
-  if (name.includes("natural")) score += 5;
-  if (name.includes("google")) score += 3;
-  if (name.includes("microsoft")) score += 2;
-  if (name.includes("portuguese") || name.includes("brasil")) score += 1;
-  if (voice.localService) score += 1;
-
-  return score;
-}
-
-function resolveHighestQualityPtBrVoice(
-  voices: SpeechSynthesisVoice[],
-): SpeechSynthesisVoice | null {
-  const ptBrVoices = voices.filter((voice) => voice.lang.toLowerCase().includes("pt-br"));
-  const ptVoices = voices.filter((voice) => voice.lang.toLowerCase().includes("pt"));
-  const pool = ptBrVoices.length > 0 ? ptBrVoices : ptVoices.length > 0 ? ptVoices : voices;
-
-  return pool.reduce<SpeechSynthesisVoice | null>((best, voice) => {
-    if (!best) return voice;
-    return scorePtBrVoice(voice) > scorePtBrVoice(best) ? voice : best;
-  }, null);
-}
-
-function resolvePhoenixVoice(synthesis: SpeechSynthesis): SpeechSynthesisVoice | null {
-  const voices = synthesis.getVoices();
-  if (voices.length === 0) return null;
-
-  for (const matcher of PHOENIX_VOICE_PRIORITY) {
-    const match = voices.find(matcher);
-    if (match) return match;
-  }
-
-  return resolveHighestQualityPtBrVoice(voices);
-}
-
-export function getResolvedPhoenixVoiceLabel(): string | null {
-  const synthesis = getSynthesis();
-  if (!synthesis) return null;
-  const voice = cachedPhoenixVoice ?? resolvePhoenixVoice(synthesis);
-  return voice?.name ?? null;
-}
-
-function refreshCachedVoice(): SpeechSynthesisVoice | null {
-  const synthesis = getSynthesis();
-  if (!synthesis) return null;
-  cachedPhoenixVoice = resolvePhoenixVoice(synthesis);
-  return cachedPhoenixVoice;
-}
-
-function ensureVoicesLoaded(): Promise<void> {
-  const synthesis = getSynthesis();
-  if (!synthesis) return Promise.resolve();
-
-  const voices = synthesis.getVoices();
-  if (voices.length > 0) {
-    voicesReady = true;
-    refreshCachedVoice();
-    return Promise.resolve();
-  }
-
-  return new Promise((resolve) => {
-    const onReady = () => {
-      synthesis.removeEventListener("voiceschanged", onReady);
-      notifyVoiceWaiters();
-      refreshCachedVoice();
-      resolve();
-    };
-    voiceWaiters.add(onReady);
-    synthesis.addEventListener("voiceschanged", onReady);
-    window.setTimeout(() => {
-      if (!voicesReady && synthesis.getVoices().length > 0) {
-        synthesis.removeEventListener("voiceschanged", onReady);
-        notifyVoiceWaiters();
-        refreshCachedVoice();
-        resolve();
-      }
-    }, 400);
-  });
-}
-
-function resolveModulatedSpecs(modulation: VoiceModulation): { rate: number; pitch: number } {
-  let rate = PHOENYX_VOICE_SPECS.rate;
-  let pitch = PHOENYX_VOICE_SPECS.pitch;
-
-  if (modulation.isPunished) {
-    rate *= 1.02;
-    pitch *= 0.92;
-  } else if (modulation.tier !== undefined) {
-    if (modulation.tier <= 2) {
-      pitch *= 0.98;
-    } else if (modulation.tier >= 5) {
-      rate *= 0.94;
-      pitch *= 1.06;
-    }
-  }
-
-  return { rate, pitch };
-}
-
-function applyPhoenixVoiceSpecs(
-  utterance: SpeechSynthesisUtterance,
-  modulation: VoiceModulation,
-): void {
-  const specs = resolveModulatedSpecs(modulation);
-  utterance.lang = PHOENYX_VOICE_LANG;
-  utterance.rate = specs.rate;
-  utterance.pitch = specs.pitch;
-  utterance.volume = PHOENYX_VOICE_SPECS.volume;
-}
-
-function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulation: VoiceModulation } {
+export function resolveIgnitePayload(input: IgniteVoiceInput): {
+  text: string;
+  modulation: VoiceModulation;
+} {
   if (typeof input === "string") {
     return {
       text: prepareAnymaSpeechForTts(formatAnymaSpeech(input.trim())),
@@ -247,84 +84,122 @@ function resolveIgnitePayload(input: IgniteVoiceInput): { text: string; modulati
   return { text: "", modulation: {} };
 }
 
+/** Label estável para QA / painéis — voz Edge Neural Antonio. */
+export function getResolvedPhoenixVoiceLabel(): string | null {
+  if (!isAnimaAudioSupported()) return null;
+  return "pt-BR-AntonioNeural (Edge TTS)";
+}
+
+/**
+ * Hook de voz da ANYMA FÊNIX.
+ * Sintetiza via `/api/anima/tts` (edge-tts) e expõe `amplitude` para IRIS/magma.
+ * Use `prepareVoice` para pré-aquecer o áudio antes do card aparecer.
+ */
 export function usePhoenixVoice() {
   const [state, setState] = useState<PhoenixVoiceState>(() =>
-    getSynthesis() ? "loading-voices" : "unsupported",
+    isAnimaAudioSupported() ? "idle" : "unsupported",
   );
-  const pendingRef = useRef<string | null>(null);
+  const [amplitude, setAmplitude] = useState(0);
+
+  const pendingTokenRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const prefetchAbortRef = useRef<AbortController | null>(null);
+  const stopPlaybackRef = useRef<(() => void) | null>(null);
   const cancelVoiceRef = useRef<(() => void) | null>(null);
 
   const isSupported = state !== "unsupported";
+  const isPriming = state === "loading-voices";
+  const isSpeaking = state === "speaking";
 
   const cancelVoice = useCallback(() => {
-    const synthesis = getSynthesis();
-    synthesis?.cancel();
-    pendingRef.current = null;
-    setState(isSupported ? "idle" : "unsupported");
-  }, [isSupported]);
+    pendingTokenRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    stopPlaybackRef.current?.();
+    stopPlaybackRef.current = null;
+    setAmplitude(0);
+    setState(isAnimaAudioSupported() ? "idle" : "unsupported");
+  }, []);
 
   useEffect(() => {
     cancelVoiceRef.current = cancelVoice;
   }, [cancelVoice]);
 
-  const igniteVoice = useCallback((input: IgniteVoiceInput) => {
-    const { text, modulation } = resolveIgnitePayload(input);
+  /** Pré-síntese em paralelo ao alinhamento do tour/card. */
+  const prepareVoice = useCallback((input: IgniteVoiceInput) => {
+    if (!isAnimaAudioSupported()) return;
+
+    const { text } = resolveIgnitePayload(input);
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    const synthesis = getSynthesis();
-    if (!synthesis) {
+    prefetchAbortRef.current?.abort();
+    const abort = new AbortController();
+    prefetchAbortRef.current = abort;
+    prefetchAnimaTts(trimmed, abort.signal);
+  }, []);
+
+  const igniteVoice = useCallback((input: IgniteVoiceInput) => {
+    if (!isAnimaAudioSupported()) {
       setState("unsupported");
       return;
     }
 
-    window.speechSynthesis.cancel();
+    const { text } = resolveIgnitePayload(input);
+    const trimmed = text.trim();
+    if (!trimmed) return;
 
-    pendingRef.current = trimmed;
+    // Cancela síntese/reprodução anterior (mantém prefetch do mesmo texto).
+    pendingTokenRef.current += 1;
+    const token = pendingTokenRef.current;
+    abortRef.current?.abort();
+    stopPlaybackRef.current?.();
+    stopPlaybackRef.current = null;
+
+    const abort = new AbortController();
+    abortRef.current = abort;
+    setAmplitude(0);
     setState("loading-voices");
 
-    void ensureVoicesLoaded().then(() => {
-      if (pendingRef.current !== trimmed) return;
-      pendingRef.current = null;
+    void (async () => {
+      try {
+        const playback = await playAnimaTts(trimmed, {
+          signal: abort.signal,
+          onSpeaking: () => {
+            if (pendingTokenRef.current !== token) return;
+            setState("speaking");
+          },
+          onAmplitude: (value) => {
+            if (pendingTokenRef.current !== token) return;
+            setAmplitude(value);
+          },
+        });
 
-      window.speechSynthesis.cancel();
+        if (pendingTokenRef.current !== token) {
+          playback.stop();
+          return;
+        }
 
-      const utterance = new SpeechSynthesisUtterance(trimmed);
-      applyPhoenixVoiceSpecs(utterance, modulation);
+        stopPlaybackRef.current = playback.stop;
+        await playback.ended;
 
-      const voice = cachedPhoenixVoice ?? refreshCachedVoice();
-      if (voice) utterance.voice = voice;
-
-      utterance.onstart = () => setState("speaking");
-      utterance.onend = () => setState("idle");
-      utterance.onerror = () => setState("idle");
-
-      synthesis.speak(utterance);
-    });
-  }, []);
-
-  useEffect((): (() => void) | void => {
-    const synthesis = getSynthesis();
-    if (!synthesis) {
-      return;
-    }
-
-    const onVoicesChanged = (): void => {
-      refreshCachedVoice();
-      notifyVoiceWaiters();
-    };
-
-    synthesis.addEventListener("voiceschanged", onVoicesChanged);
-
-    void ensureVoicesLoaded().then(() => {
-      setState((current) => (current === "unsupported" ? current : "idle"));
-    });
-
-    return (): void => {
-      synthesis.removeEventListener("voiceschanged", onVoicesChanged);
-      window.speechSynthesis.cancel();
-      pendingRef.current = null;
-    };
+        if (pendingTokenRef.current === token) {
+          stopPlaybackRef.current = null;
+          abortRef.current = null;
+          setAmplitude(0);
+          setState("idle");
+        }
+      } catch {
+        if (pendingTokenRef.current !== token) return;
+        if (abort.signal.aborted) {
+          setAmplitude(0);
+          setState("idle");
+          return;
+        }
+        setAmplitude(0);
+        setState("idle");
+      }
+    })();
   }, []);
 
   useEffect((): (() => void) => {
@@ -352,13 +227,20 @@ export function usePhoenixVoice() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
       window.removeEventListener("popstate", onPopState);
+      prefetchAbortRef.current?.abort();
+      cancelVoiceRef.current?.();
     };
   }, []);
 
   return {
     igniteVoice,
+    prepareVoice,
     cancelVoice,
     isSupported,
+    isPriming,
+    isSpeaking,
     state,
+    /** 0–1 — amplitude da voz para pulso de magma IRIS. */
+    amplitude,
   } as const;
 }

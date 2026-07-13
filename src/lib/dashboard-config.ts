@@ -147,15 +147,15 @@ export const VTC_SESSION_EXPLANATION =
 
 /** Chama do Altar — texto orientativo para o cliente */
 export const CHAMA_ALTAR_CLIENT_EXPLANATION =
-  `A Chama do Altar soma o ${VTC_DISPLAY_NAME} do dia em quilogramas. Cada exercício concluído contribui com sua carga máxima. É a mesma unidade da Chama Acumulada, das Brasas Musculares e do termômetro da Comunidade.`;
+  `Soma o ${VTC_DISPLAY_NAME} do dia. Cada exercício concluído entra com sua carga máxima.`;
 
 /** Rotina do dia — painel Treino */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Exercícios prescritos para o dia escolhido. Conclua todas as séries de cada movimento antes de registrar carga, repetição ou tempo máximo. Cada exercício aceita um único registro por dia civil. Amanhã o campo renasce.";
+  "Exercícios do dia escolhido. Conclua as séries e registre a carga máxima uma vez por dia.";
 
 /** Execução — painel de escolha do dia */
 export const TREINO_EXECUTION_CLIENT_EXPLANATION =
-  "Escolha qual dia da planilha semanal você vai executar hoje. Seu forjador define os grupos de cada dia. Dias concluídos nesta semana aparecem marcados.";
+  "Escolha o dia da planilha. O forjador define os grupos. Dias concluídos aparecem marcados.";
 
 /** Input selado pelo dia civil (SP) — 1× por exercício até amanhã */
 export const PHOENIX_INPUT_GOAL_DAY_LOCKED =
@@ -287,19 +287,19 @@ export const CARDIO_VOO_EXPLANATION_TEXT =
 
 /** Voo de Cinzas — texto orientativo para o cliente */
 export const VOO_CINZAS_CLIENT_EXPLANATION =
-  "Cardio consciente do dia. Pode ser feito antes ou depois do treino com ferro. Seu forjador define a meta em minutos. Acumule tempo validado e confirme a cada dez minutos que continua ativo. Pausas não apagam o progresso. Ao bater a meta, o altar energético sincroniza.";
+  "Cardio consciente do dia, antes ou depois do ferro. Seu forjador define a meta em minutos. Confirme a cada dez minutos. Pausas não apagam o progresso.";
 
 /** Brasas Musculares (Evolução) — VTC por grupo */
 export const MAPA_TERMICO_CLIENT_EXPLANATION =
-  "Brasas Musculares somam o Volume de Carga Máxima (VTC) por grupo muscular nos últimos quatorze dias. Cada região do corpo muda de cor conforme o volume acumulado. Toque no mapa para ver detalhes e quanto falta para o próximo nível térmico.";
+  "Brasas Musculares somam o Volume de Carga Máxima por grupo nos últimos quatorze dias. As cores do mapa mostram onde você mais carregou.";
 
 /** Ritmo da Fênix (Evolução) — consistência de VTC */
 export const FENIX_PUREZA_CLIENT_EXPLANATION =
-  "Ritmo da Fênix mede quanto da sua meta mensal de Volume de Carga Máxima (VTC) você já acumulou, em percentual. A meta nasce dos dias de treino planejados. Dezesseis treinos usam o limiar Faísca da academia como referência. Abaixo de cinquenta por cento, após o acolhimento, as cores do mapa ficam mais suaves.";
+  "Ritmo da Fênix mostra, em percentual, quanto da meta mensal de Volume de Carga Máxima você já acumulou. A meta nasce dos dias planejados.";
 
 /** Ascensão (Superação) — celebração de recorde no treino */
 export const ASCENSAO_CLIENT_EXPLANATION =
-  `Ascensão celebra quando você supera seu recorde pessoal de ${VTC_DISPLAY_NAME} naquele exercício. É um momento visual. Não altera fase, mapa nem Ritmo da Fênix.`;
+  `Ascensão celebra um novo recorde de ${VTC_DISPLAY_NAME} naquele exercício. É só visual. Não altera fase, mapa nem Ritmo.`;
 
 /** Nutrição VIP — plano alimentar de longo prazo */
 export const DIETA_CLIENT_EXPLANATION =
@@ -307,7 +307,7 @@ export const DIETA_CLIENT_EXPLANATION =
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
-  "Espelho visual do ciclo mensal. Capture selfies nos dias um, quinze e trinta com a mesma pose e luz. Com o dia um e o dia trinta gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo. Nada vai para a nuvem.";
+  "Espelho do ciclo mensal. Capture no primeiro dia, no meio do mês e no último dia do mês, com a mesma pose e luz. Com o primeiro e o último dia gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo.";
 
 /** Comunidade — arena cooperativa */
 export const COMUNIDADE_CLIENT_EXPLANATION =

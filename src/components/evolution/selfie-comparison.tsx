@@ -10,8 +10,10 @@ import {
 } from "react";
 import {
   CYCLE_SELFIE_DAY_IDS,
+  CYCLE_SELFIE_SLOTS,
   dataUrlToFile,
   getCycleSelfiePathById,
+  resolveCycleSelfieDayLabel,
   saveCycleSelfie,
   type CycleSelfieDay,
 } from "@/services/local-storage";
@@ -24,10 +26,10 @@ import {
   stopMediaStream,
 } from "@/lib/camera-capture";
 import {
-  CICLO_COMPARACAO_CLIENT_EXPLANATION,
   DASHBOARD_INNER_FRAME,
   DASHBOARD_TAP_TARGET,
 } from "@/lib/dashboard-config";
+import { LoreEm } from "@/lib/lore-emphasis";
 
 type CycleSlotState = Record<CycleSelfieDay, string | null>;
 
@@ -37,12 +39,6 @@ const DEFAULT_SLOT_STATE: CycleSlotState = {
   1: null,
   15: null,
   30: null,
-};
-
-const DAY_LABELS: Record<CycleSelfieDay, string> = {
-  1: "Dia 1",
-  15: "Dia 15",
-  30: "Dia 30",
 };
 
 function HudSelfiePlaceholder({ label, animate }: { label: string; animate?: boolean }) {
@@ -132,9 +128,18 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   const [captureBusy, setCaptureBusy] = useState<CycleSelfieDay | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  const dayStartLabel = resolveCycleSelfieDayLabel(1);
+  const dayMidLabel = resolveCycleSelfieDayLabel(15);
+  const dayEndLabel = resolveCycleSelfieDayLabel(30);
+  const dayLabels: Record<CycleSelfieDay, string> = {
+    1: dayStartLabel,
+    15: dayMidLabel,
+    30: dayEndLabel,
+  };
+
   const day1Src = slots[1];
-  const day30Src = slots[30];
-  const canCompare = Boolean(day1Src && day30Src) && storageStatus !== "blocked";
+  const dayEndSrc = slots[30];
+  const canCompare = Boolean(day1Src && dayEndSrc) && storageStatus !== "blocked";
   const showPlaceholders = storageStatus === "blocked" || !canCompare;
 
   const refreshSlots = useCallback(async () => {
@@ -213,7 +218,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
         const src = await getCycleSelfiePathById(id);
         setSlots((prev) => ({ ...prev, [day]: src }));
         setStorageStatus("ready");
-        setFeedback(`${DAY_LABELS[day]} gravado no disco local.`);
+        setFeedback(`${resolveCycleSelfieDayLabel(day)} gravado no disco local.`);
       } catch {
         setStorageStatus("blocked");
         setFeedback("Armazenamento local indisponível. Use o modo normal do navegador.");
@@ -286,12 +291,15 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
             ? "IndexedDB bloqueado"
             : canCompare
               ? "Arraste o divisor"
-              : "Capture Dia 1 e Dia 30"}
+              : `Capture ${dayStartLabel} e ${dayEndLabel}`}
         </p>
       </div>
 
       <DashboardClientInfoBlock label="Como comparar">
-        {CICLO_COMPARACAO_CLIENT_EXPLANATION}
+        Espelho do ciclo mensal. Capture no <LoreEm>primeiro dia</LoreEm>, no{" "}
+        <LoreEm>meio do mês</LoreEm> e no <LoreEm>último dia do mês</LoreEm>, com a mesma pose e
+        luz. Com o primeiro e o último dia gravados, arraste o divisor para comparar. As fotos
+        ficam só no seu dispositivo.
       </DashboardClientInfoBlock>
 
       <div
@@ -303,17 +311,17 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
         {showPlaceholders ? (
           <div className="grid h-full w-full grid-cols-2">
             <div className="border-r border-cyan-500/10">
-              <HudSelfiePlaceholder label="Dia 1" animate={storageStatus === "loading"} />
+              <HudSelfiePlaceholder label={dayStartLabel} animate={storageStatus === "loading"} />
             </div>
-            <HudSelfiePlaceholder label="Dia 30" animate={storageStatus === "loading"} />
+            <HudSelfiePlaceholder label={dayEndLabel} animate={storageStatus === "loading"} />
           </div>
         ) : (
           <>
-            {/* Base · Dia 30 (direita) */}
+            {/* Base · último dia do mês (direita) */}
             {/* eslint-disable-next-line @next/next/no-img-element -- src local blob:// capacitor:// */}
             <img
-              src={day30Src ?? undefined}
-              alt="Selfie Dia 30"
+              src={dayEndSrc ?? undefined}
+              alt={`Selfie ${dayEndLabel}`}
               className="absolute inset-0 h-full w-full object-cover"
               draggable={false}
             />
@@ -326,7 +334,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={day1Src ?? undefined}
-                alt="Selfie Dia 1"
+                alt={`Selfie ${dayStartLabel}`}
                 className="h-full w-full object-cover"
                 draggable={false}
               />
@@ -357,10 +365,10 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
 
             <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between p-3">
               <span className="rounded-full border border-emerald-500/25 bg-black/45 px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-emerald-200/90 backdrop-blur-md">
-                Dia 1
+                {dayStartLabel}
               </span>
               <span className="rounded-full border border-cyan-500/25 bg-black/45 px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-cyan-200/90 backdrop-blur-md">
-                Dia 30
+                {dayEndLabel}
               </span>
             </div>
           </>
@@ -368,9 +376,10 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {([1, 15, 30] as const satisfies readonly CycleSelfieDay[]).map((day) => {
+        {CYCLE_SELFIE_SLOTS.map((day) => {
           const hasPhoto = Boolean(slots[day]);
           const busy = captureBusy === day;
+          const label = dayLabels[day];
 
           return (
             <div
@@ -378,7 +387,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               className="rounded-xl border border-orange-500/10 bg-neutral-950/50 p-3 backdrop-blur-sm"
             >
               <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-neutral-500">
-                {DAY_LABELS[day]}
+                {label}
               </p>
               <p className="mt-0.5 truncate font-mono text-[8px] text-neutral-600">
                 {CYCLE_SELFIE_DAY_IDS[day]}.webp
@@ -392,7 +401,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
                 {busy ? "Gravando…" : hasPhoto ? "Recapturar" : "Capturar"}
               </button>
               <label className="mt-2 block">
-                <span className="sr-only">Importar foto {DAY_LABELS[day]}</span>
+                <span className="sr-only">Importar foto {label}</span>
                 <input
                   type="file"
                   accept="image/*"

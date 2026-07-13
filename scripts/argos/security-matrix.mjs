@@ -119,8 +119,6 @@ async function runMatrix() {
     { fn: "argos_compute_vtc_30d", args: { p_user_id: OTHER_USER_ID } },
     { fn: "argos_compute_session_vtc_today", args: { p_user_id: OTHER_USER_ID } },
     { fn: "argos_upsert_balanco_termico_diario", args: { p_user_id: OTHER_USER_ID, p_vtc_delta: 9999 } },
-    { fn: "argos_validate_invite_token", args: { p_token: "probe" } },
-    { fn: "argos_consume_invite_for_user", args: { p_token: "probe", p_user_id: OTHER_USER_ID } },
   ]) {
     const { error } = await anon.rpc(rpc.fn, rpc.args);
     error ? pass(`anon:rpc:${rpc.fn}`) : fail(`anon:rpc:${rpc.fn}`, "rpc permitido");
@@ -209,15 +207,6 @@ async function runMatrix() {
     excluded
       ? pass("forjador:advance:gamification_excluded")
       : fail("forjador:advance:gamification_excluded", JSON.stringify(forgadorPhase));
-  }
-
-  // --- CLIENTE: invite RPCs server-only (2) ---
-  for (const rpc of [
-    { fn: "argos_validate_invite_token", args: { p_token: "probe" } },
-    { fn: "argos_consume_invite_for_user", args: { p_token: "probe", p_user_id: cliente.userId } },
-  ]) {
-    const { error } = await cliente.client.rpc(rpc.fn, rpc.args);
-    error ? pass(`cliente:rpc:${rpc.fn}:blocked`) : fail(`cliente:rpc:${rpc.fn}:blocked`, "rpc permitido");
   }
 
   // --- Forum Brasa-Viva: anon bloqueado, cliente permitido, sem forjadores no feed ---

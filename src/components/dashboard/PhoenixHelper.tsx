@@ -23,7 +23,9 @@ import {
 } from "@/lib/anima-perfil-identity-beats";
 import {
   PERFIL_IDENTITY_TOUR_INPUT_EVENT,
+  publishPerfilIdentityFieldUnlock,
   readPerfilIdentityTourFormState,
+  resolveFieldIdFromBeatId,
   type PerfilIdentityTourFormState,
 } from "@/lib/anima-perfil-identity-form";
 import {
@@ -72,6 +74,7 @@ const EXPLANATION_SCROLL_TARGETS: Partial<Record<AnymaExplanationId, string>> = 
   "comunidade-mural": '[data-tour-target="comunidade-mural"]',
   "dieta-plano": '[data-tour-target="dieta-plano"]',
   "perfil-linhagem": '[data-tour-target="perfil-identidade"]',
+  "perfil-suporte": '[data-tour-target="fenyxia-suporte"]',
 };
 
 type OnboardingPhase = "intro" | "spotlight" | null;
@@ -104,7 +107,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   onTabChange,
   onOnboardingComplete,
 }: PhoenixHelperProps) {
-  const { igniteVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
+  const { igniteVoice, prepareVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [hudOpen, setHudOpen] = useState(false);
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>(null);
   const [onboardingLockMs, setOnboardingLockMs] = useState(ANYMA_ONBOARDING_LOCK_MS);
@@ -187,6 +190,16 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   }, []);
 
   useEffect(() => {
+    if (!isPunished) return;
+    prepareVoice({
+      text: PHOENIX_PUNISHMENT_LORE,
+      fullName: profileName,
+      isPunished: true,
+      allowIntroFallback: false,
+    });
+  }, [isPunished, prepareVoice, profileName]);
+
+  useEffect(() => {
     if (!isPunished || penaltySpeechFiredRef.current) return;
     penaltySpeechFiredRef.current = true;
     const timer = window.setTimeout(
@@ -197,7 +210,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           isPunished: true,
           allowIntroFallback: false,
         }),
-      900,
+      120,
     );
     return () => window.clearTimeout(timer);
   }, [igniteVoice, isPunished, profileName]);
@@ -270,6 +283,15 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   }, [onboardingLockMs, onboardingNarrationDone, onboardingPhase, isSupported, state]);
 
   useEffect(() => {
+    if (onboardingPhase !== "intro" || isPunished) return;
+    prepareVoice({
+      tier: 1,
+      fullName: profileName,
+      allowIntroFallback: true,
+    });
+  }, [isPunished, onboardingPhase, prepareVoice, profileName]);
+
+  useEffect(() => {
     if (onboardingPhase !== "intro" || isPunished || onboardingNarrationFiredRef.current) return;
 
     onboardingNarrationFiredRef.current = true;
@@ -280,7 +302,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           fullName: profileName,
           allowIntroFallback: true,
         }),
-      480,
+      80,
     );
 
     return () => window.clearTimeout(timer);
@@ -352,23 +374,30 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   }, [isSupported, onboardingPhase, spotlightBeat]);
 
   useEffect(() => {
+    if (onboardingPhase !== "spotlight" || isPunished) return;
+    prepareVoice({
+      text: spotlightBeatConfig.speech,
+      fullName: profileName,
+      allowIntroFallback: true,
+    });
+  }, [
+    isPunished,
+    onboardingPhase,
+    prepareVoice,
+    profileName,
+    spotlightBeat,
+    spotlightBeatConfig.speech,
+  ]);
+
+  useEffect(() => {
     if (onboardingPhase !== "spotlight" || isPunished || !spotlightTargetReady) return;
 
-    let cancelled = false;
-    const speechTimer = window.setTimeout(() => {
-      if (cancelled) return;
-      spotlightNarrationFiredRef.current = true;
-      igniteVoice({
-        text: spotlightBeatConfig.speech,
-        fullName: profileName,
-        allowIntroFallback: true,
-      });
-    }, 320);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(speechTimer);
-    };
+    spotlightNarrationFiredRef.current = true;
+    igniteVoice({
+      text: spotlightBeatConfig.speech,
+      fullName: profileName,
+      allowIntroFallback: true,
+    });
   }, [
     igniteVoice,
     isPunished,
@@ -425,6 +454,15 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     },
     [cancelVoice, clearExitTimer, clearHighlightTimer, clearOnboardingTimer, clearSpotlightTimer],
   );
+
+  useEffect(() => {
+    if (isPunished || onboardingPhase !== null) return;
+    prepareVoice({
+      text: ANYMA_ORB_GREETING,
+      fullName: profileName,
+      allowIntroFallback: false,
+    });
+  }, [isPunished, onboardingPhase, prepareVoice, profileName]);
 
   const handleOpenHud = useCallback(() => {
     if (onboardingPhase !== null) return;
@@ -531,6 +569,29 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       );
       if (!card) return;
 
+      const selector = EXPLANATION_SCROLL_TARGETS[explanationId];
+
+      if (card.redirectOnly) {
+        cancelVoice();
+        setHudOpen(false);
+        onTabChange(card.tab);
+
+        if (selector) {
+          window.setTimeout(() => {
+            const target = document.querySelector(selector);
+            if (target instanceof HTMLElement) {
+              target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+              target.classList.add("anyma-destination-highlight");
+              window.setTimeout(() => {
+                target.classList.remove("anyma-destination-highlight");
+              }, 2000);
+            }
+          }, 420);
+        }
+
+        return;
+      }
+
       onTabChange(card.tab, { preserveVoice: true });
       igniteVoice({
         text: card.speech,
@@ -539,7 +600,6 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         allowIntroFallback: false,
       });
 
-      const selector = EXPLANATION_SCROLL_TARGETS[explanationId];
       if (selector) {
         window.setTimeout(() => {
           const target = document.querySelector(selector);
@@ -557,6 +617,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       }, 2000);
     },
     [
+      cancelVoice,
       clearHighlightTimer,
       hasPersonalBond,
       igniteVoice,
@@ -572,19 +633,29 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const canAcenderLinhagem = onboardingLockReleased && onboardingNarrationDone;
 
   const spotlightSecondsLeft = Math.ceil(spotlightLockMs / 1000);
-  const spotlightLockReleased = spotlightBeat === 0 ? spotlightLockMs <= 0 : true;
+  const spotlightLockReleased = spotlightLockMs <= 0;
+  const fieldUnlockReady =
+    spotlightTargetReady && spotlightNarrationDone && spotlightLockReleased;
+
+  useEffect(() => {
+    if (onboardingPhase !== "spotlight" || !fieldUnlockReady) return;
+    const field = resolveFieldIdFromBeatId(spotlightBeatConfig.id);
+    if (field) publishPerfilIdentityFieldUnlock(field);
+  }, [fieldUnlockReady, onboardingPhase, spotlightBeatConfig.id]);
 
   const advanceGateMet = useMemo(() => {
     if (spotlightBeatConfig.advanceGate === "nome") return identityForm.hasName;
     if (spotlightBeatConfig.advanceGate === "genero") return identityForm.hasGenero;
+    if (spotlightBeatConfig.advanceGate === "foto") return identityForm.hasPhoto;
     return true;
-  }, [identityForm.hasGenero, identityForm.hasName, spotlightBeatConfig.advanceGate]);
+  }, [
+    identityForm.hasGenero,
+    identityForm.hasName,
+    identityForm.hasPhoto,
+    spotlightBeatConfig.advanceGate,
+  ]);
 
-  const canAdvanceSpotlight =
-    spotlightTargetReady &&
-    spotlightNarrationDone &&
-    spotlightLockReleased &&
-    advanceGateMet;
+  const canAdvanceSpotlight = fieldUnlockReady && advanceGateMet;
 
   const resolveOnboardingHint = (): string => {
     if (!onboardingLockReleased) {
@@ -611,16 +682,18 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       return "Localizando o passo na aba Perfil…";
     }
 
-    if (spotlightBeat === 0 && !spotlightLockReleased) {
+    if (!spotlightLockReleased) {
       return state === "speaking"
-        ? "A linha aponta a esfera âmbar. Ouça com atenção."
-        : `Aguarde ${spotlightSecondsLeft}s para continuar.`;
+        ? spotlightBeat === 0
+          ? "A linha aponta a esfera âmbar. Ouça com atenção."
+          : `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o campo.`
+        : `Aguarde ${spotlightSecondsLeft}s. O campo libera após a explicação.`;
     }
 
     if (!spotlightNarrationDone) {
       return isSupported
         ? `Aguarde a ${ANYMA_BRAND} concluir a orientação.`
-        : "Leia a instrução e avance quando estiver pronto.";
+        : "Leia a instrução. O campo libera em seguida.";
     }
 
     if (spotlightBeatConfig.advanceGate === "nome" && !identityForm.hasName) {
@@ -631,12 +704,12 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       return "Selecione masculino ou feminino no campo iluminado e toque em continuar.";
     }
 
-    if (spotlightBeatConfig.completesTour) {
-      return "Toque em Inserir foto do dispositivo, se ainda não o fez. Depois continue para selar com Confirmar nome e gênero.";
+    if (spotlightBeatConfig.advanceGate === "foto" && !identityForm.hasPhoto) {
+      return "Toque em Aperta aqui para inserir a foto. Depois o botão Continuar para selar libera.";
     }
 
-    if (spotlightBeatConfig.id === "perfil-foto") {
-      return "Toque em Inserir foto do dispositivo e, em seguida, continue.";
+    if (spotlightBeatConfig.completesTour) {
+      return "Foto pronta. Continue para selar com Confirmar nome e gênero.";
     }
 
     return "Leia a mensagem e toque em continuar quando estiver pronto.";
@@ -755,7 +828,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           />
 
           <aside
-            className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] top-[max(4rem,env(safe-area-inset-top))] flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
+            className="anima-hud-panel absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(4rem,env(safe-area-inset-top))] flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -777,7 +850,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               </button>
             </div>
 
-            <div className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+            <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain pb-2 pr-1">
               {isPunished ? (
                 <div className="anima-glass-magma rounded-xl border border-neutral-700/50 px-4 py-3 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
@@ -791,23 +864,42 @@ export const PhoenixHelper = memo(function PhoenixHelper({
                     <p className="sticky top-0 z-[1] bg-neutral-950/90 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 backdrop-blur-sm">
                       {group.label}
                     </p>
-                    {group.cards.map((card) => (
+                    {group.cards.map((card) => {
+                      const isSuporteAccent = card.accent === "suporte";
+
+                      return (
                       <button
                         key={card.id}
                         type="button"
                         data-anyma-explanation={card.id}
                         onClick={() => handleExplanationClick(card.id)}
-                        className={`${DASHBOARD_TAP_TARGET} anima-glass-magma w-full rounded-xl border px-4 py-3 text-left transition ${
+                        aria-label={
+                          card.redirectOnly
+                            ? `Ir para ${card.label} na aba Perfil`
+                            : `Ouvir explicação: ${card.label}`
+                        }
+                        className={`${DASHBOARD_TAP_TARGET} w-full shrink-0 rounded-xl border px-4 py-2.5 text-left transition ${
+                          isSuporteAccent
+                            ? "anima-glass-suporte border-emerald-500/40 hover:border-emerald-400/55"
+                            : "anima-glass-magma border-orange-500/20 hover:border-amber-400/35"
+                        } ${
                           highlightExplanation === card.id
-                            ? "border-amber-400/50 ring-2 ring-amber-400/40"
-                            : "border-orange-500/20 hover:border-amber-400/35"
+                            ? isSuporteAccent
+                              ? "border-emerald-300/55 ring-2 ring-emerald-400/40"
+                              : "border-amber-400/50 ring-2 ring-amber-400/40"
+                            : ""
                         }`}
                       >
-                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200/90">
+                        <p
+                          className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+                            isSuporteAccent ? "text-emerald-100/90" : "text-amber-200/90"
+                          }`}
+                        >
                           {card.label}
                         </p>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 ))
               )}

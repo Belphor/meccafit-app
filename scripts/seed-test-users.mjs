@@ -37,6 +37,7 @@ const TEST_USERS = [
       data_nascimento: "1990-01-01",
       role: "cliente",
       nome_linhagem: "Linhagem Meccafit",
+      has_accepted_terms: true,
     },
   },
   {
@@ -48,6 +49,7 @@ const TEST_USERS = [
       data_nascimento: "1992-06-15",
       role: "cliente",
       nome_linhagem: "Linhagem Argos B",
+      has_accepted_terms: true,
     },
   },
   {
@@ -59,6 +61,7 @@ const TEST_USERS = [
       data_nascimento: "1988-03-20",
       role: "cliente",
       nome_linhagem: "Linhagem Argos C",
+      has_accepted_terms: true,
     },
   },
   {
@@ -70,6 +73,7 @@ const TEST_USERS = [
       data_nascimento: "1995-11-08",
       role: "cliente",
       nome_linhagem: "Linhagem Argos D",
+      has_accepted_terms: true,
     },
   },
   {
@@ -81,6 +85,7 @@ const TEST_USERS = [
       data_nascimento: "1994-02-14",
       role: "cliente",
       nome_linhagem: "Linhagem Argos E",
+      has_accepted_terms: true,
     },
   },
   {
@@ -92,6 +97,7 @@ const TEST_USERS = [
       data_nascimento: "1991-09-03",
       role: "cliente",
       nome_linhagem: "Linhagem Argos F",
+      has_accepted_terms: true,
     },
   },
   {
@@ -103,6 +109,7 @@ const TEST_USERS = [
       data_nascimento: "1996-04-22",
       role: "cliente",
       nome_linhagem: "Linhagem Argos G",
+      has_accepted_terms: true,
     },
   },
   {
@@ -114,6 +121,7 @@ const TEST_USERS = [
       data_nascimento: "1989-12-11",
       role: "cliente",
       nome_linhagem: "Linhagem Argos H",
+      has_accepted_terms: true,
     },
   },
   {
@@ -125,6 +133,7 @@ const TEST_USERS = [
       data_nascimento: "1997-08-30",
       role: "cliente",
       nome_linhagem: "Linhagem Argos I",
+      has_accepted_terms: true,
     },
   },
   {
@@ -136,6 +145,7 @@ const TEST_USERS = [
       data_nascimento: "1993-05-17",
       role: "cliente",
       nome_linhagem: "Linhagem Argos J",
+      has_accepted_terms: true,
     },
   },
   {

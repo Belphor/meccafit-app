@@ -46,7 +46,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "kg",
     period: "Hoje, zera à meia-noite em São Paulo",
     explanation:
-      `Soma do ${VTC_DISPLAY_NAME} de cada exercício concluído hoje. Mede só o seu treino individual.`,
+      `Soma o ${VTC_DISPLAY_NAME} de cada exercício concluído hoje. Mede só o seu treino.`,
     chip: `Chama do Altar · ${VTC_DISPLAY_NAME} hoje`,
   },
   chama_acumulada: {
@@ -56,7 +56,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "kg",
     period: "Últimos 30 dias · virada mensal civil",
     explanation:
-      `Soma do ${VTC_DISPLAY_NAME} dos últimos trinta dias. Define a fase da linhagem e o anel do avatar.`,
+      `Soma o ${VTC_DISPLAY_NAME} dos últimos trinta dias. Define a fase da linhagem e o anel do avatar.`,
     chip: `Chama Acumulada · ${VTC_DISPLAY_NAME} 30 dias`,
   },
   brasas_musculares: {
@@ -66,7 +66,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "kg",
     period: "Últimos 14 dias",
     explanation:
-      `Mesmo ${VTC_DISPLAY_NAME}, filtrado por músculo. Define a cor de cada região no mapa corporal.`,
+      `O mesmo ${VTC_DISPLAY_NAME}, filtrado por músculo. Define a cor de cada região no mapa.`,
     chip: `Brasas Musculares · ${VTC_DISPLAY_NAME} 14 dias`,
   },
   ritmo_fenix: {
@@ -76,7 +76,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "%",
     period: "Últimos 30 dias",
     explanation:
-      `Mostra quanto do seu ${VTC_DISPLAY_NAME} dos últimos trinta dias já atingiu a meta mensal definida pelos dias planejados. Nos primeiros vinte dias da linhagem, o mapa mantém cores vivas. Depois, Ritmo abaixo de cinquenta por cento deixa o mapa mais suave.`,
+      `Compara o ${VTC_DISPLAY_NAME} dos últimos trinta dias com a meta dos dias planejados. Ritmo baixo, após o acolhimento, suaviza o mapa.`,
     chip: `Ritmo da Fênix · meta ${VTC_DISPLAY_NAME}`,
   },
   gravidade_termica: {
@@ -85,7 +85,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     metricName: `${VTC_DISPLAY_NAME} do mês civil`,
     unit: "kg",
     period: "Virada mensal civil · Brasília",
-    explanation: "Suba de fase até a virada do mês ou desça um nível na linhagem.",
+    explanation: "Até a virada do mês, a linhagem sobe de fase ou desce um nível.",
     chip: "Gravidade Térmica · prova mensal",
   },
   ascensao: {
@@ -95,7 +95,7 @@ export const FENIX_EVOLUTION_SYSTEMS: Record<FenixEvolutionSystemId, FenixEvolut
     unit: "kg",
     period: "No instante do registro",
     explanation:
-      `Celebração quando você supera seu próprio ${VTC_DISPLAY_NAME} naquele exercício. Não altera fase, mapa nem Ritmo.`,
+      `Celebra um novo ${VTC_DISPLAY_NAME} naquele exercício. Não altera fase, mapa nem Ritmo.`,
     chip: `Ascensão · recorde ${VTC_DISPLAY_NAME}`,
   },
 };

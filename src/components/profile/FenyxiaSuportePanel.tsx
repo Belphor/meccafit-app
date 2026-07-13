@@ -61,6 +61,7 @@ export function FenyxiaSuportePanel() {
     <BrasaVivaCard
       as="section"
       variant="treino"
+      data-tour-target="fenyxia-suporte"
       className={`${DASHBOARD_PANEL_FRAME} border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-950/35 via-black/85 to-black/90 shadow-[0_0_40px_rgba(16,185,129,0.16)]`}
       aria-labelledby="fenyxia-suporte-title"
     >

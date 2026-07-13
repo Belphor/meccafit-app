@@ -1,6 +1,6 @@
-dia_semana;grupo_muscular;exercicio;peso;repeticoes;series;descanso_segundos;tecnica;meta_cardio
-1;PEITO;Supino Reto Halteres;80;10;4;90;Progressão de carga;30
-1;PEITO;Crucifixo Inclinado;65;12;3;75;Drop sets;30
-2;COSTAS;Puxada Frontal Polia;70;12;4;90;Rest pause;30
-3;PERNAS;Agachamento Livre;100;8;4;120;Aumento de repetições;30
-3;PERNAS;Leg Press 45°;180;12;3;60;Cadência e controle;30
+dia_semana;grupo_muscular;exercicio;video_url;peso;repeticoes;series;descanso_segundos;tecnica;meta_cardio
+1;PEITO;Supino Reto Halteres;https://www.youtube.com/watch?v=example;80;10;4;90;Progressão de carga;30
+1;PEITO;Crucifixo Inclinado;;65;12;3;75;Drop sets;30
+2;COSTAS;Puxada Frontal Polia;https://www.youtube.com/watch?v=example2;70;12;4;90;Rest pause;30
+3;PERNAS;Agachamento Livre;;100;8;4;120;Aumento de repetições;30
+3;PERNAS;Leg Press 45°;;180;12;3;60;Cadência e controle;30

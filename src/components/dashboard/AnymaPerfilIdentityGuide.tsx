@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimaTourCallout } from "@/components/dashboard/AnimaTourCallout";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
 import { ANYMA_BRAND } from "@/lib/anyma-copy";
@@ -11,7 +11,9 @@ import {
 } from "@/lib/anima-perfil-identity-beats";
 import {
   PERFIL_IDENTITY_TOUR_INPUT_EVENT,
+  publishPerfilIdentityFieldUnlock,
   readPerfilIdentityTourFormState,
+  resolveFieldIdFromBeatId,
   type PerfilIdentityTourFormState,
 } from "@/lib/anima-perfil-identity-form";
 import { resolveAnymaSpeechText } from "@/lib/anima-speech";
@@ -26,8 +28,12 @@ type AnymaPerfilIdentityGuideProps = {
 
 /** Após o spotlight, só os campos restantes. Não reinicia aba Perfil nem identidade. */
 const RETURNING_GUIDE_BEATS = [...PERFIL_IDENTITY_FIELD_BEATS];
+const GUIDE_FIELD_LOCK_MS = 3_500;
 
 function resolveInitialReturningBeatIndex(form: PerfilIdentityTourFormState): number {
+  if (form.hasName && form.hasGenero && form.hasPhoto) {
+    return Math.min(3, RETURNING_GUIDE_BEATS.length - 1);
+  }
   if (form.hasName && form.hasGenero) return Math.min(2, RETURNING_GUIDE_BEATS.length - 1);
   if (form.hasName) return Math.min(1, RETURNING_GUIDE_BEATS.length - 1);
   return 0;
@@ -39,7 +45,7 @@ export function AnymaPerfilIdentityGuide({
   profileName,
   onEnsurePerfilTab,
 }: AnymaPerfilIdentityGuideProps) {
-  const { igniteVoice, isSupported, state } = usePhoenixVoice();
+  const { igniteVoice, prepareVoice, isSupported, state } = usePhoenixVoice();
   const [identityForm, setIdentityForm] = useState<PerfilIdentityTourFormState>(() =>
     readPerfilIdentityTourFormState(),
   );
@@ -49,6 +55,11 @@ export function AnymaPerfilIdentityGuide({
   const [readyBeatIndex, setReadyBeatIndex] = useState<number | null>(null);
   const targetReady = readyBeatIndex === beatIndex;
   const [guideComplete, setGuideComplete] = useState(false);
+  const [narrationDone, setNarrationDone] = useState(!isSupported);
+  const [fieldLockMs, setFieldLockMs] = useState(GUIDE_FIELD_LOCK_MS);
+  const hasSpokenRef = useRef(false);
+  const narrationFiredRef = useRef(false);
+  const fieldLockTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onPerfil = activeTab === "perfil";
 
   const beat = RETURNING_GUIDE_BEATS[Math.min(beatIndex, RETURNING_GUIDE_BEATS.length - 1)];
@@ -61,10 +72,21 @@ export function AnymaPerfilIdentityGuide({
   const advanceGateMet = useMemo(() => {
     if (beat.advanceGate === "nome") return identityForm.hasName;
     if (beat.advanceGate === "genero") return identityForm.hasGenero;
+    if (beat.advanceGate === "foto") return identityForm.hasPhoto;
     return true;
-  }, [beat.advanceGate, identityForm.hasGenero, identityForm.hasName]);
+  }, [
+    beat.advanceGate,
+    identityForm.hasGenero,
+    identityForm.hasName,
+    identityForm.hasPhoto,
+  ]);
 
-  const narrationDone = !isSupported || (state === "idle" && targetReady && onPerfil);
+  const clearFieldLockTimer = useCallback(() => {
+    if (fieldLockTimerRef.current) {
+      clearInterval(fieldLockTimerRef.current);
+      fieldLockTimerRef.current = null;
+    }
+  }, []);
 
   const advanceBeat = useCallback(() => {
     if (beatIndex >= RETURNING_GUIDE_BEATS.length - 1) {
@@ -104,23 +126,77 @@ export function AnymaPerfilIdentityGuide({
   }, [beat.targetSelector, beat.waitForTarget, beatIndex, guideComplete, onPerfil]);
 
   useEffect(() => {
+    hasSpokenRef.current = false;
+    narrationFiredRef.current = false;
+    setNarrationDone(!isSupported);
+    setFieldLockMs(GUIDE_FIELD_LOCK_MS);
+  }, [beatIndex, isSupported]);
+
+  useEffect(() => {
+    if (!onPerfil || guideComplete) {
+      clearFieldLockTimer();
+      return;
+    }
+
+    clearFieldLockTimer();
+    fieldLockTimerRef.current = setInterval(() => {
+      setFieldLockMs((ms) => {
+        if (ms <= 100) {
+          clearFieldLockTimer();
+          return 0;
+        }
+        return ms - 100;
+      });
+    }, 100);
+
+    return clearFieldLockTimer;
+  }, [beatIndex, clearFieldLockTimer, guideComplete, onPerfil]);
+
+  useEffect(() => {
+    if (!onPerfil || guideComplete) return;
+    prepareVoice({
+      text: beat.speech,
+      fullName: profileName,
+      allowIntroFallback: true,
+    });
+  }, [beat.speech, beatIndex, guideComplete, onPerfil, prepareVoice, profileName]);
+
+  useEffect(() => {
     if (!targetReady || !onPerfil || guideComplete) return;
 
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      if (cancelled) return;
-      igniteVoice({
-        text: beat.speech,
-        fullName: profileName,
-        allowIntroFallback: true,
-      });
-    }, 320);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
+    narrationFiredRef.current = true;
+    igniteVoice({
+      text: beat.speech,
+      fullName: profileName,
+      allowIntroFallback: true,
+    });
   }, [beat.speech, beatIndex, guideComplete, igniteVoice, onPerfil, profileName, targetReady]);
+
+  useEffect(() => {
+    if (!isSupported || !onPerfil || guideComplete) return;
+    if (state === "speaking") {
+      hasSpokenRef.current = true;
+    }
+    if (narrationFiredRef.current && hasSpokenRef.current && state === "idle") {
+      setNarrationDone(true);
+    }
+  }, [guideComplete, isSupported, onPerfil, state]);
+
+  useEffect(() => {
+    if (!isSupported || narrationDone || !onPerfil || guideComplete) return;
+    if (fieldLockMs > 0 || !narrationFiredRef.current || hasSpokenRef.current) return;
+    const timer = window.setTimeout(() => setNarrationDone(true), 1200);
+    return () => window.clearTimeout(timer);
+  }, [fieldLockMs, guideComplete, isSupported, narrationDone, onPerfil, state, targetReady]);
+
+  const fieldLockReleased = fieldLockMs <= 0;
+  const fieldUnlockReady = targetReady && narrationDone && fieldLockReleased;
+
+  useEffect(() => {
+    if (!fieldUnlockReady || !onPerfil || guideComplete) return;
+    const field = resolveFieldIdFromBeatId(beat.id);
+    if (field) publishPerfilIdentityFieldUnlock(field);
+  }, [beat.id, fieldUnlockReady, guideComplete, onPerfil]);
 
   if (guideComplete) return null;
 
@@ -152,10 +228,16 @@ export function AnymaPerfilIdentityGuide({
     );
   }
 
-  const canContinue = targetReady && narrationDone && advanceGateMet;
+  const canContinue = fieldUnlockReady && advanceGateMet;
+  const fieldLockSecondsLeft = Math.ceil(fieldLockMs / 1000);
 
   const resolveHint = (): string => {
     if (!targetReady) return "Localizando o passo na aba Perfil…";
+    if (!fieldLockReleased) {
+      return state === "speaking"
+        ? `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o campo.`
+        : `Aguarde ${fieldLockSecondsLeft}s. O campo libera após a explicação.`;
+    }
     if (isSupported && state === "speaking") {
       return `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o campo.`;
     }
@@ -166,11 +248,11 @@ export function AnymaPerfilIdentityGuide({
     if (beat.advanceGate === "genero" && !identityForm.hasGenero) {
       return "Selecione masculino ou feminino no campo iluminado.";
     }
+    if (beat.advanceGate === "foto" && !identityForm.hasPhoto) {
+      return "Toque em Aperta aqui para inserir a foto. Depois Continuar para selar libera.";
+    }
     if (beat.completesTour) {
       return "Use o botão iluminado Confirmar nome e gênero para selar sua identidade.";
-    }
-    if (beat.id === "perfil-foto") {
-      return "Toque em Inserir foto do dispositivo e, em seguida, continue.";
     }
     return "Toque em continuar quando estiver pronto.";
   };

@@ -48,7 +48,7 @@ export const ANYMA_PERFIL_GENERO_SPEECH =
 
 /** Passo 3. Foto no dispositivo. */
 export const ANYMA_PERFIL_FOTO_SPEECH =
-  "Antes de selar, toque em Inserir foto do dispositivo. Sua imagem fica no aparelho e uma miniatura sobe para duelos, RANKINGS e mural.";
+  "Antes de selar, toque em Aperta aqui para inserir a foto do dispositivo. Sua imagem fica no aparelho e uma miniatura sobe para duelos, RANKINGS e mural.";
 
 /** Passo 4. Confirmação. */
 export const ANYMA_PERFIL_CONFIRMA_SPEECH =

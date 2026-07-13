@@ -59,6 +59,8 @@ export type ForjaPrescriptionDraft = {
   /** Grupos musculares activos neste dia (planilha semanal do cliente). */
   musculosDoDia: TrainingMuscleGroup[];
   exercicio: string;
+  /** URL externa do vídeo (YouTube, Vimeo, etc.) — opcional. */
+  videoUrl: string;
   grupoMuscular: string;
   /** Uma entrada por série — número ou "FALHA". */
   repeticoesPorSerie: string[];
@@ -76,6 +78,7 @@ export const EMPTY_PRESCRIPTION_DRAFT: ForjaPrescriptionDraft = {
   diaSemana: 1,
   musculosDoDia: [],
   exercicio: "",
+  videoUrl: "",
   grupoMuscular: "PEITO",
   repeticoesPorSerie: ["12", "12", "12"],
   series: "3",

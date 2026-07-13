@@ -48,7 +48,22 @@ async function main() {
     process.exit(1);
   }
 
+  let termsReset = 0;
+  for (const profile of profiles ?? []) {
+    const { data: authUser, error: getError } = await client.auth.admin.getUserById(profile.id);
+    if (getError || !authUser.user) continue;
+
+    const metadata = { ...(authUser.user.user_metadata ?? {}) };
+    metadata.has_accepted_terms = false;
+
+    const { error: metaError } = await client.auth.admin.updateUserById(profile.id, {
+      user_metadata: metadata,
+    });
+    if (!metaError) termsReset += 1;
+  }
+
   console.log(`reset-onboarding: OK — ${count} conta(s) cliente reiniciada(s) para 1ª visita.`);
+  console.log(`reset-onboarding: has_accepted_terms limpo em ${termsReset} conta(s).`);
   console.log("");
   console.log("No navegador (F12 → Console), em cada aparelho de teste:");
   console.log(
@@ -57,7 +72,9 @@ async function main() {
   console.log(
     "  Object.keys(sessionStorage).filter(k=>k.startsWith('meccafit:')).forEach(k=>sessionStorage.removeItem(k));",
   );
-  console.log("Depois: Ctrl+F5 e login. O fluxo ANYMA recomeça do Juramento das Cinzas.");
+  console.log(
+    "Depois: Ctrl+F5 e login. Diretrizes só na 1ª vez; logo + manifesto em todo login.",
+  );
 }
 
 main().catch((error) => {

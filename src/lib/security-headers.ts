@@ -21,6 +21,9 @@ export function buildContentSecurityPolicy(nonce: string): string {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     connectSrc,
+    // Vídeos de execução prescritos (YouTube / Vimeo) no modal do cliente.
+    "frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com",
+    "media-src 'self' blob: https:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

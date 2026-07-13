@@ -2,6 +2,7 @@
 
 import { resolveLoginBlockMessage } from "@/lib/account-access-status";
 import { isForjadorPanelRole, resolvePostLoginRoute } from "@/lib/internal-routes";
+import { ONBOARDING_ROUTE } from "@/lib/onboarding-terms";
 import { mapAuthError } from "@/lib/portal-auth.server";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { getRequestClientKey } from "@/lib/request-client.server";
@@ -112,5 +113,10 @@ export async function signInPortal(
     return { ok: false, message: PORTAL_COPY.loginRoleUnauthorized };
   }
 
-  return { ok: true, userId: data.user.id, destination };
+  // Clientes sempre passam pela cerimônia (logo + manifesto). Diretrizes só na 1ª vez.
+  return {
+    ok: true,
+    userId: data.user.id,
+    destination: isCliente ? ONBOARDING_ROUTE : destination,
+  };
 }

@@ -507,6 +507,7 @@ export type Database = {
           progressao_alternativas: unknown;
           repeticoes_por_serie: unknown;
           observacoes: string | null;
+          video_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -525,6 +526,7 @@ export type Database = {
           progressao_alternativas?: unknown;
           repeticoes_por_serie?: unknown;
           observacoes?: string | null;
+          video_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -543,6 +545,7 @@ export type Database = {
           progressao_alternativas?: unknown;
           repeticoes_por_serie?: unknown;
           observacoes?: string | null;
+          video_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -881,51 +884,6 @@ export type Database = {
           },
         ];
       };
-      invite_tokens: {
-        Row: {
-          id: string;
-          token_hash: string;
-          forjador_id: string | null;
-          expires_at: string;
-          used_at: string | null;
-          used_by: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          token_hash: string;
-          forjador_id?: string | null;
-          expires_at: string;
-          used_at?: string | null;
-          used_by?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          token_hash?: string;
-          forjador_id?: string | null;
-          expires_at?: string;
-          used_at?: string | null;
-          used_by?: string | null;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "invite_tokens_forjador_id_fkey";
-            columns: ["forjador_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "invite_tokens_used_by_fkey";
-            columns: ["used_by"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       planos_semanais: {
         Row: {
           id: number;
@@ -1057,13 +1015,6 @@ export type Database = {
         };
         Returns: Json;
       };
-      argos_consume_invite_for_user: {
-        Args: {
-          p_token: string;
-          p_user_id: string;
-        };
-        Returns: boolean;
-      };
       fetch_dashboard_bundle: {
         Args: {
           p_musculo?: Database["public"]["Enums"]["subgrupo_muscular"];
@@ -1112,18 +1063,6 @@ export type Database = {
           p_user_id: string;
         };
         Returns: number;
-      };
-      argos_validate_invite_token: {
-        Args: {
-          p_token: string;
-        };
-        Returns: boolean;
-      };
-      argos_consume_invite_token: {
-        Args: {
-          p_token: string;
-        };
-        Returns: boolean;
       };
       argos_forja_upsert_prescricao_treino: {
         Args: {

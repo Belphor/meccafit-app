@@ -4,11 +4,13 @@ import {
 } from "@/lib/prescription-progression";
 import type { TrainingMuscleGroup, WeekdayIndex } from "@/lib/training-week";
 import { TRAINING_MUSCLE_GROUPS } from "@/lib/training-week";
+import { toPlayableVideoUrl } from "@/lib/video-source";
 
 export type TreinoPlanilhaImportRow = {
   diaSemana: WeekdayIndex;
   grupoMuscular: TrainingMuscleGroup;
   exercicio: string;
+  videoUrl: string | null;
   pesoPrescrito: number | null;
   repeticoes: number;
   series: number;
@@ -73,6 +75,13 @@ export function parseTreinoPlanilhaMatrix(
   const grupoIdx = findColumnIndex(headers, ["grupo_muscular", "grupo", "musculo"]);
   const diaIdx = findColumnIndex(headers, ["dia_semana", "dia", "day"]);
   const exercicioIdx = findColumnIndex(headers, ["exercicio", "exercise", "movimento"]);
+  const videoIdx = findColumnIndex(headers, [
+    "video_url",
+    "video",
+    "link_video",
+    "url_video",
+    "link",
+  ]);
   const pesoIdx = findColumnIndex(headers, ["peso", "peso_kg", "carga"]);
   const repsIdx = findColumnIndex(headers, ["repeticoes", "reps", "rep"]);
   const seriesIdx = findColumnIndex(headers, ["series", "sets", "serie"]);
@@ -95,7 +104,7 @@ export function parseTreinoPlanilhaMatrix(
     return {
       ok: false,
       message:
-        "Colunas obrigatórias: dia_semana (1 a 6), grupo_muscular, exercicio, repeticoes, series. Opcional: peso, descanso_segundos, tecnica, meta_cardio.",
+        "Colunas obrigatórias: dia_semana (1 a 6), grupo_muscular, exercicio, repeticoes, series. Opcional: video_url, peso, descanso_segundos, tecnica, meta_cardio.",
     };
   }
 
@@ -106,6 +115,7 @@ export function parseTreinoPlanilhaMatrix(
   for (const [index, row] of dataRows.entries()) {
     const grupo = parseMuscle(cellValue(row, grupoIdx));
     const exercicio = cellValue(row, exercicioIdx);
+    const videoRaw = videoIdx >= 0 ? cellValue(row, videoIdx) : "";
     const peso = pesoIdx >= 0 ? parseNumber(cellValue(row, pesoIdx)) : null;
     const repeticoes = parseNumber(cellValue(row, repsIdx));
     const series = parseNumber(cellValue(row, seriesIdx));
@@ -124,6 +134,15 @@ export function parseTreinoPlanilhaMatrix(
         warnings.push(`Linha ${index + 2} ignorada (grupo ou exercício inválido).`);
       }
       continue;
+    }
+
+    let videoUrl: string | null = null;
+    if (videoRaw) {
+      if (/^https?:\/\//i.test(videoRaw) && videoRaw.length <= 2000) {
+        videoUrl = toPlayableVideoUrl(videoRaw) || videoRaw;
+      } else {
+        warnings.push(`Linha ${index + 2}: video_url ignorado (use http:// ou https://).`);
+      }
     }
 
     const pesoPrescrito =
@@ -163,6 +182,7 @@ export function parseTreinoPlanilhaMatrix(
       diaSemana,
       grupoMuscular: grupo,
       exercicio,
+      videoUrl,
       pesoPrescrito,
       repeticoes: Math.round(repeticoes),
       series: Math.round(series),

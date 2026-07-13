@@ -11,6 +11,7 @@ import { TRAINING_MUSCLE_GROUPS, type TrainingMuscleGroup, type WeekdayIndex } f
 import { batchUpsertPlanilhasForjador } from "@/lib/forja-sovereign-actions";
 import type { PlanilhaImportRow } from "@/lib/forja-planilha-import";
 import { publishForjaTreinoUpdate } from "@/lib/forja-treino-events";
+import { toPlayableVideoUrl } from "@/lib/video-source";
 
 export type ForjaPrescriptionSyncResult =
   | { ok: true; prescriptionId: string }
@@ -38,6 +39,19 @@ function parseRestSeconds(raw: string, label: string): { ok: true; value: number
   }
 
   return { ok: true, value };
+}
+
+function parseVideoUrl(raw: string): { ok: true; value: string | null } | { ok: false; message: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { ok: true, value: null };
+  if (trimmed.length > 2000) {
+    return { ok: false, message: "Link do vídeo muito longo." };
+  }
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return { ok: false, message: "Informe um link válido começando com http:// ou https://." };
+  }
+  const playable = toPlayableVideoUrl(trimmed);
+  return { ok: true, value: playable || trimmed };
 }
 
 function parseCardioMinutes(raw: string): { ok: true; value: number | null } | { ok: false; message: string } {
@@ -73,6 +87,7 @@ export function parsePrescriptionDraft(
     progressaoAlternativas: PrescriptionProgressionId[];
     series: number;
     label: string;
+    videoUrl: string | null;
     descansoSegundos: number | null;
     descansoPadraoSeg: number | null;
     cardioMetaMinutos: number | null;
@@ -110,6 +125,9 @@ export function parsePrescriptionDraft(
     return { ok: false, message: "Defina repetições para cada série." };
   }
 
+  const videoUrl = parseVideoUrl(draft.videoUrl);
+  if (!videoUrl.ok) return videoUrl;
+
   const descansoExercicio = parseRestSeconds(draft.descansoSegundos, "Descanso do exercício");
   if (!descansoExercicio.ok) return descansoExercicio;
 
@@ -131,6 +149,7 @@ export function parsePrescriptionDraft(
       progressaoAlternativas: draft.progressaoAlternativas,
       series,
       label,
+      videoUrl: videoUrl.value,
       descansoSegundos: descansoExercicio.value,
       descansoPadraoSeg: descansoPadrao.value,
       cardioMetaMinutos: cardioMeta.value,
@@ -196,6 +215,7 @@ function buildPrescriptionRpcPayload(
     progressaoAlternativas: PrescriptionProgressionId[];
     series: number;
     label: string;
+    videoUrl?: string | null;
     descansoSegundos: number | null;
     pesoPrescrito?: number | null;
   },
@@ -214,6 +234,7 @@ function buildPrescriptionRpcPayload(
       value === "FALHA" ? "FALHA" : value,
     ),
     observacoes: payload.label,
+    video_url: payload.videoUrl ?? null,
     ordem,
   };
 }
@@ -436,6 +457,7 @@ export async function batchSyncTreinoPrescriptionsFromPlanilha(
     diaSemana: WeekdayIndex;
     grupoMuscular: TrainingMuscleGroup;
     exercicio: string;
+    videoUrl?: string | null;
     pesoPrescrito?: number | null;
     repeticoes: number;
     repeticoesPorSerie?: PrescriptionRepValue[];
@@ -511,6 +533,7 @@ export async function batchSyncTreinoPrescriptionsFromPlanilha(
             progressaoAlternativas: row.progressaoAlternativas ?? [],
             series: row.series,
             label: row.exercicio.trim(),
+            videoUrl: row.videoUrl ?? null,
             descansoSegundos: row.descansoSegundos,
             pesoPrescrito: row.pesoPrescrito ?? null,
           },

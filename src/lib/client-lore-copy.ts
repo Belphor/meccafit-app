@@ -49,6 +49,7 @@ export const DIETA_VIP_WAITING =
 
 /** Fenyxia Suporte · canal único no Perfil */
 export const FENYXIA_SUPORTE_CHIP = "Fenyxia Suporte";
+export const FENYXIA_SUPORTE_ANYMA_LABEL = "Suporte Fenyxia";
 export const FENYXIA_SUPORTE_META = "Canal de suporte";
 export const FENYXIA_SUPORTE_BADGE = "Canal de suporte";
 

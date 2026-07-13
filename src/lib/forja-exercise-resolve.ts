@@ -118,6 +118,7 @@ export function applyPrescriptionRowToSubgroup(
     targetReps: row.repeticoes_alvo,
     repsPerSet: row.repeticoes_por_serie,
     progressionAlternatives: row.progressao_alternativas,
+    video_url: row.video_url?.trim() || base.video_url || "",
     ...(row.peso_prescrito && row.peso_prescrito > 0
       ? { currentWeight: row.peso_prescrito, historicalPrWeight: row.peso_prescrito }
       : null),

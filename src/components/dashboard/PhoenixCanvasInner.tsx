@@ -23,7 +23,7 @@ export function PhoenixCanvasInner({
     <Canvas
       frameloop={isVisible ? "always" : "demand"}
       className="phoenix-model-canvas"
-      camera={{ position: [0, 0.08, 4], fov: 40, near: 0.1, far: 100 }}
+      camera={{ position: [0, 0.14, 3.55], fov: 38, near: 0.1, far: 100 }}
       gl={{
         alpha: true,
         premultipliedAlpha: false,
@@ -36,11 +36,11 @@ export function PhoenixCanvasInner({
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = isPunished ? 0.92 : isOpenOrb ? 1.26 : 1.28;
+        gl.toneMappingExposure = isPunished ? 0.9 : isOpenOrb ? 1.18 : 1.2;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
-      <ambientLight intensity={isPunished ? 0.38 : isOpenOrb ? 0.36 : 0.48} />
+      <ambientLight intensity={isPunished ? 0.36 : isOpenOrb ? 0.3 : 0.4} />
       <PhoenixModel
         isPunished={isPunished}
         isVisible={isVisible}
