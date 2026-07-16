@@ -15,8 +15,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { resolvePlanilhaDiaSp } from "./lib/probe-workout.mjs";
 
 const SEED_PASSWORD = "senha123";
+const PLANILHA_DIA_HOJE = resolvePlanilhaDiaSp();
 const MECCA_SINGLETON_ID = "00000000-0000-4000-8000-000000000001";
 const CONCURRENT_RPC_CALLS = 10;
 
@@ -356,6 +358,7 @@ await record("1.3 · registrar_treino_com_status + incremento Mecca", async () =
     p_peso_atual: peso,
     p_repeticoes: repeticoes,
     p_series: series,
+    p_dia_planilha: PLANILHA_DIA_HOJE,
   });
 
   if (error) {
@@ -528,6 +531,7 @@ await record("3.1 · Integridade Mecca sob concorrência (Promise.all)", async (
         p_peso_atual: peso,
         p_repeticoes: repeticoes,
         p_series: series,
+        p_dia_planilha: PLANILHA_DIA_HOJE,
       }),
     ),
   );

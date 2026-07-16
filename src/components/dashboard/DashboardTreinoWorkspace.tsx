@@ -25,6 +25,10 @@ import {
   SUPERACAO_MURAL_MS,
   SUPERACAO_OVERLAY_MS,
 } from "@/lib/dashboard-config";
+import {
+  isLinhagemTransmutationActive,
+  runAfterLinhagemTransmutation,
+} from "@/lib/linhagem-transmutation-coordinator";
 import type { PlanilhaDayRow, WeekdayIndex } from "@/lib/training-week";
 import type { TrainingTrackState } from "@/lib/training-track";
 import type { ForjadorPrescriptionRow, ForjadorTreinoConfig } from "@/lib/forjador-prescriptions";
@@ -43,6 +47,8 @@ export type DashboardTreinoWorkspaceProps = {
   initialWeekSchedule?: PlanilhaDayRow[];
   useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
+  /** Dia civil autoritativo de Brasília (servidor). */
+  calendarToday: WeekdayIndex;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
   isTreinoSwitching: boolean;
@@ -146,6 +152,7 @@ export function DashboardTreinoWorkspace({
   initialWeekSchedule,
   useForjadorSchedule = false,
   activeTrainingDay,
+  calendarToday,
   forjadorConfig,
   forjadorPrescriptions,
   isTreinoSwitching,
@@ -184,7 +191,7 @@ export function DashboardTreinoWorkspace({
   const [completedSetsByExerciseId, setCompletedSetsByExerciseId] = useState<
     Record<number, number>
   >(sessionHydration.completedSetsByExerciseId);
-  const [maxLoadsByExerciseId, setMaxLoadsByExerciseId] = useState<Record<number, number>>(
+  const [, setMaxLoadsByExerciseId] = useState<Record<number, number>>(
     sessionHydration.maxLoadsByExerciseId,
   );
   const [registeredPrByExerciseId, setRegisteredPrByExerciseId] = useState<Record<number, number>>(
@@ -378,12 +385,16 @@ export function DashboardTreinoWorkspace({
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
 
       setSuperacaoExerciseId(exerciseId);
-      onSuperacaoFlashChange(true);
 
-      flashTimerRef.current = setTimeout(() => {
-        onSuperacaoFlashChange(false);
-        flashTimerRef.current = null;
-      }, SUPERACAO_OVERLAY_MS);
+      // Se o level-up (transmutação) está tocando junto, a ascensão não aparece:
+      // só o ritual da transmutação é exibido, seguido do direcionamento ao mural.
+      if (!isLinhagemTransmutationActive()) {
+        onSuperacaoFlashChange(true);
+        flashTimerRef.current = setTimeout(() => {
+          onSuperacaoFlashChange(false);
+          flashTimerRef.current = null;
+        }, SUPERACAO_OVERLAY_MS);
+      }
 
       flameTimerRef.current = setTimeout(() => {
         setSuperacaoExerciseId(null);
@@ -402,7 +413,8 @@ export function DashboardTreinoWorkspace({
 
       if (muralTimerRef.current) clearTimeout(muralTimerRef.current);
       muralTimerRef.current = setTimeout(() => {
-        onSuperacaoMural(exercise.name, payload);
+        // Com transmutação ativa, o mural espera o fim do ritual (fala da ANYMA).
+        runAfterLinhagemTransmutation(() => onSuperacaoMural(exercise.name, payload));
         muralTimerRef.current = null;
       }, SUPERACAO_MURAL_MS);
     },
@@ -467,6 +479,7 @@ export function DashboardTreinoWorkspace({
             initialWeekSchedule={initialWeekSchedule}
             useForjadorSchedule={useForjadorSchedule}
             activeTrainingDay={activeTrainingDay}
+            calendarToday={calendarToday}
             isTreinoSwitching={isTreinoSwitching}
             forjadorConfig={forjadorConfig}
             forjadorPrescriptions={forjadorPrescriptions}

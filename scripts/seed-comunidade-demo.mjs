@@ -14,6 +14,15 @@ import { createClient } from "@supabase/supabase-js";
 const SEED_TAG = "comunidade-demo-v2";
 const DEMO_PASSWORD = "senha123";
 
+/** Dia da planilha (1=Seg … 6=Sáb) alinhado ao calendário civil de Brasília. */
+function resolvePlanilhaDiaSp() {
+  const spNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const dow = spNow.getDay();
+  return dow === 0 ? 1 : dow === 6 ? 6 : dow;
+}
+
+const planilhaDiaHoje = resolvePlanilhaDiaSp();
+
 const ALL_CLIENT_EMAILS = [
   "cliente@meccafit.com",
   "atleta2@meccafit.com",
@@ -214,6 +223,7 @@ async function seedSuperacaoViaRpc(seed) {
     p_peso_atual: seed.peso,
     p_repeticoes: seed.reps,
     p_series: seed.series,
+    p_dia_planilha: planilhaDiaHoje,
   });
 
   await client.auth.signOut();

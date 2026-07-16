@@ -45,6 +45,8 @@ type TreinoTabProps = {
   initialWeekSchedule?: PlanilhaDayRow[];
   useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
+  /** Dia civil autoritativo de Brasília (servidor). */
+  calendarToday: WeekdayIndex;
   isTreinoSwitching: boolean;
   forjadorConfig: ForjadorTreinoConfig;
   forjadorPrescriptions: ForjadorPrescriptionRow[];
@@ -73,6 +75,7 @@ export function TreinoTab({
   initialWeekSchedule,
   useForjadorSchedule = false,
   activeTrainingDay,
+  calendarToday,
   isTreinoSwitching,
   forjadorConfig,
   forjadorPrescriptions,
@@ -150,6 +153,7 @@ export function TreinoTab({
             initialSchedule={initialWeekSchedule}
             useForjadorSchedule={useForjadorSchedule}
             activeTrainingDay={activeTrainingDay}
+            calendarToday={calendarToday}
             isTreinoSwitching={isTreinoSwitching}
             hasForjadorPlan={hasForjadorPlan}
             forjadorConfig={forjadorConfig}
@@ -201,6 +205,7 @@ export function TreinoTab({
               Boolean(userId && isExerciseDayLocked(userId, activeTrainingDay, exercise.id)) ||
               Boolean(exercise.registeredToday) ||
               Boolean(registeredPrByExerciseId[exercise.id]);
+            const isCalendarDayMatched = activeTrainingDay === calendarToday;
 
             return (
               <li key={exercise.id} className="min-w-0">
@@ -229,6 +234,8 @@ export function TreinoTab({
                   onPersistSuccess={onPersistSuccess}
                   onSetComplete={onSetComplete}
                   isDayLocked={isDayLocked}
+                  isCalendarDayMatched={isCalendarDayMatched}
+                  trainingDay={activeTrainingDay}
                 />
               </li>
             );

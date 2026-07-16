@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   PHOENIX_CORE_FLASH_BLOOM_MS,
   PHOENIX_DEPLOY_DURATION_S,
@@ -15,6 +16,13 @@ import {
   PHOENIX_WING_CYCLE_S,
 } from "@/components/dashboard/PhoenixModel";
 import { ANYMA_ORB_GREETING } from "@/lib/phoenix-lore";
+
+const PHOENIX_ANCHOR_STYLE = {
+  position: "fixed",
+  top: "auto",
+  left: "auto",
+  zIndex: 60,
+} as const;
 
 type PhoenixOrbPhase = "orb" | "igniting" | "revealing" | "awake";
 
@@ -77,6 +85,7 @@ export function PhoenixCanvas({
   ariaLabel = "Despertar ANYMA FÊNIX",
   className = "",
 }: PhoenixCanvasProps) {
+  const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<PhoenixOrbPhase>("orb");
   const [modelReady, setModelReady] = useState(false);
   const [modelEmerging, setModelEmerging] = useState(false);
@@ -108,6 +117,12 @@ export function PhoenixCanvas({
       window.clearTimeout(timer);
     }
     timersRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    // Guarda de hidratação SSR: só marca montado no cliente (canvas 3D não renderiza no servidor).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
   }, []);
 
   const queueTimer = useCallback((fn: () => void, delayMs: number) => {
@@ -278,8 +293,16 @@ export function PhoenixCanvas({
     return classes.join(" ");
   };
 
-  return (
-    <div className={`phoenix-anchor ${className}`} data-anima-phoenix-anchor>
+  if (!mounted) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      className={`phoenix-anchor ${className}`}
+      data-anima-phoenix-anchor
+      style={PHOENIX_ANCHOR_STYLE}
+    >
       {showGreeting && greetingCopy ? (
         <div
           className="phoenix-orb-greeting phoenix-orb-greeting--revealed pointer-events-none absolute z-[70]"
@@ -428,6 +451,7 @@ export function PhoenixCanvas({
           />
         ) : null}
       </button>
-    </div>
+    </div>,
+    document.body,
   );
 }

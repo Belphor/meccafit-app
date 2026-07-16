@@ -18,9 +18,28 @@ export const ANYMA_DEBT_SOFT_DAYS = 5;
 /** Lock da narrativa de onboarding da ANYMA no Portal. */
 export const ANYMA_ONBOARDING_LOCK_MS = 15_000;
 
+/** Ritual de volume nas diretrizes (1ª vez) — frase curta para prova de audição. */
+export const ANYMA_TERMS_VOLUME_SPEECH =
+  "Eu sou a ANYMA FÊNIX. Antes de entrar no altar, deixe o celular com pelo menos setenta por cento do volume. Minha voz guia a forja, e volume baixo apaga o sentido do que você precisa ouvir.";
+
 /** Saudação ao abrir a esfera da ANYMA. Só voz. Sem card visual. */
 export const ANYMA_ORB_GREETING =
   "O que a ANYMA FÊNIX pode te explicar hoje?";
+
+/**
+ * Saudação automática a partir da 2ª entrada do cliente no Portal.
+ * Só voz. Sem card visual. Beats com pausa de 1s entre frases.
+ */
+export const ANYMA_RETURNING_LOGIN_PAUSE_MS = 1_000;
+
+export const ANYMA_RETURNING_LOGIN_BEATS = [
+  "Bem-vindo, [Nome].",
+  "Pronto para queimar seus velhos hábitos?",
+  "Se precisar de alguma explicação, estou ancorada no canto inferior direito.",
+] as const;
+
+/** Texto contínuo (legado / catálogo). A voz usa ANYMA_RETURNING_LOGIN_BEATS. */
+export const ANYMA_RETURNING_LOGIN_SPEECH = ANYMA_RETURNING_LOGIN_BEATS.join(" ");
 
 /** Alerta suave por ausência. Voz da ANYMA. */
 export const ANYMA_DEBT_SOFT_GREETING =
@@ -48,7 +67,7 @@ export const ANYMA_PERFIL_GENERO_SPEECH =
 
 /** Passo 3. Foto no dispositivo. */
 export const ANYMA_PERFIL_FOTO_SPEECH =
-  "Antes de selar, toque em Aperta aqui para inserir a foto do dispositivo. Sua imagem fica no aparelho e uma miniatura sobe para duelos, RANKINGS e mural.";
+  "Antes de selar, toque no botão destacado para inserir a foto do dispositivo. Sua imagem fica no aparelho e uma miniatura sobe para duelos, rankings e mural.";
 
 /** Passo 4. Confirmação. */
 export const ANYMA_PERFIL_CONFIRMA_SPEECH =

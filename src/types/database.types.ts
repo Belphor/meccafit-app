@@ -955,6 +955,7 @@ export type Database = {
           p_repeticoes?: number;
           p_series?: number;
           p_exercicio_nome?: string;
+          p_dia_planilha: number;
         };
         Returns: {
           status: string;
@@ -1041,8 +1042,12 @@ export type Database = {
         Returns: number;
       };
       argos_sync_linhagem_presence: {
-        Args: Record<string, never>;
+        Args: { p_skip_degradation?: boolean };
         Returns: Json;
+      };
+      argos_resolve_monthly_maintenance_goal_kg: {
+        Args: { p_tier: number };
+        Returns: number;
       };
       argos_settle_thermal_gravity_monthly: {
         Args: Record<string, never>;
@@ -1160,6 +1165,25 @@ export type Database = {
       };
       client_submit_feedback: {
         Args: { p_categoria: string; p_mensagem: string };
+        Returns: Json;
+      };
+      client_update_display_name: {
+        Args: { p_full_name: string };
+        Returns: Json;
+      };
+      client_confirm_profile_identity: {
+        Args: {
+          p_full_name: string;
+          p_sexo: Database["public"]["Enums"]["profile_sexo"];
+        };
+        Returns: Json;
+      };
+      client_complete_ecossistema_tour: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      client_mark_anima_portal_visto: {
+        Args: Record<string, never>;
         Returns: Json;
       };
     };

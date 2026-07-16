@@ -12,11 +12,14 @@ import {
   PHOENIX_INPUT_META_COMPLETE,
   PHOENIX_INPUT_HINT_COMPLETE,
   PHOENIX_INPUT_DAY_LOCKED_ERROR,
+  PHOENIX_INPUT_CALENDAR_LOCKED_ERROR,
+  PHOENIX_INPUT_HINT_AWAITING_CALENDAR,
   PHOENIX_REGISTER_CARGA_ACTIVE,
   PHOENIX_REGISTER_CARGA_IDLE,
 } from "@/lib/dashboard-config";
 import type { Enums } from "@/types/database.types";
 import type { ExerciseMetricKind } from "@/lib/mock-data-types";
+import type { WeekdayIndex } from "@/lib/training-week";
 import {
   ARGOS_DURATION_SEC_MAX,
   ARGOS_DURATION_SEC_MIN,
@@ -44,6 +47,10 @@ export interface PhoenixInputProps {
   isPrRegistered?: boolean;
   /** Todas as séries prescritas foram concluídas */
   allSetsComplete?: boolean;
+  /** Dia da planilha coincide com o calendário civil de Brasília */
+  isCalendarDayMatched?: boolean;
+  /** Dia da planilha (1–6) enviado à RPC anti-burla */
+  trainingDay?: WeekdayIndex;
   exercicioId?: number | string | null;
   exercicioNome?: string;
   initialWeight?: number;
@@ -80,6 +87,8 @@ function PhoenixInput({
   isSeriesComplete = false,
   isPrRegistered: isPrRegisteredProp,
   allSetsComplete = false,
+  isCalendarDayMatched = true,
+  trainingDay,
   onWeightSaved,
   onVolumeCommitted,
   onSuperacao,
@@ -162,8 +171,11 @@ function PhoenixInput({
 
   useEffect(() => {
     if (isPrRegisteredProp) {
+      // Reset intencional ao servidor confirmar o PR do dia (sincroniza estado com a prop).
+      /* eslint-disable react-hooks/set-state-in-effect */
       setDayLockForced(false);
       setError(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [isPrRegisteredProp]);
 
@@ -202,11 +214,18 @@ function PhoenixInput({
 
   const persistTopWeight = useCallback(
     async (topMetric: number) => {
-      if (isPrRegistered || !allSetsComplete || savingRef.current) return false;
+      if (isPrRegistered || !allSetsComplete || !isCalendarDayMatched || savingRef.current) {
+        return false;
+      }
 
       const uid = String(userId || "").trim();
       if (!uid || uid.length < 20) {
         setError("Sessão inválida. Faça login novamente.");
+        return false;
+      }
+
+      if (!trainingDay) {
+        setError(PHOENIX_INPUT_CALENDAR_LOCKED_ERROR);
         return false;
       }
 
@@ -231,6 +250,7 @@ function PhoenixInput({
           series: payload.series,
           repeticoes: payload.repeticoes,
           exercicioNome: exercicioNome ?? "Treino geral",
+          diaPlanilha: trainingDay,
         });
 
         if (supabaseError) {
@@ -238,9 +258,15 @@ function PhoenixInput({
             /já registrado hoje|trava diária|já foi forjado hoje/i.test(
               supabaseError.message ?? "",
             );
+          const calendarBlocked =
+            /calendário de Brasília|dia da planilha/i.test(supabaseError.message ?? "");
           if (lockedToday) {
             setDayLockForced(true);
             setError(PHOENIX_INPUT_DAY_LOCKED_ERROR);
+            return false;
+          }
+          if (calendarBlocked) {
+            setError(PHOENIX_INPUT_CALENDAR_LOCKED_ERROR);
             return false;
           }
           setError(supabaseError.message);
@@ -277,24 +303,33 @@ function PhoenixInput({
     },
     [
       userId,
-      exercicioId,
-      exercicioNome,
-      musculo,
-      metricKind,
-      numericExerciseId,
-      prescribedSeries,
       isPrRegistered,
       allSetsComplete,
+      isCalendarDayMatched,
+      trainingDay,
+      metricKind,
+      musculo,
+      numericExerciseId,
+      prescribedSeries,
+      exercicioId,
+      exercicioNome,
+      onWeightSaved,
+      onVolumeCommitted,
       onPersistSuccess,
       onSuperacao,
-      onVolumeCommitted,
-      onWeightSaved,
     ],
   );
 
   const commitTopWeight = useCallback(
     async (topMetric: number) => {
-      if (!isExerciseActive || isPrRegistered || !allSetsComplete || isSaving || savingRef.current) {
+      if (
+        !isExerciseActive ||
+        isPrRegistered ||
+        !allSetsComplete ||
+        !isCalendarDayMatched ||
+        isSaving ||
+        savingRef.current
+      ) {
         return;
       }
 
@@ -333,6 +368,7 @@ function PhoenixInput({
     },
     [
       allSetsComplete,
+      isCalendarDayMatched,
       isDurationMode,
       isExerciseActive,
       isPrRegistered,
@@ -389,10 +425,15 @@ function PhoenixInput({
   };
 
   const disabled = !userId || userId === "undefined";
-  const awaitingSets = !allSetsComplete && !isPrRegistered;
-  const inputLocked = disabled || !isExerciseActive || isPrRegistered || awaitingSets;
+  const awaitingCalendar = !isCalendarDayMatched && !isPrRegistered;
+  const awaitingSets = isCalendarDayMatched && !allSetsComplete && !isPrRegistered;
+  const inputLocked =
+    disabled || !isExerciseActive || isPrRegistered || awaitingSets || awaitingCalendar;
   const useBrasaoBorder =
-    (isExerciseActive || isFocused || inputPulse) && !isPrRegistered && allSetsComplete;
+    (isExerciseActive || isFocused || inputPulse) &&
+    !isPrRegistered &&
+    allSetsComplete &&
+    isCalendarDayMatched;
   const fieldTone = error
     ? PHOENIX_INPUT_SURFACE.fieldError
     : isPrRegistered
@@ -420,19 +461,21 @@ function PhoenixInput({
       : "Carga máxima";
   const hintText = isPrRegistered
     ? hintCompleteText ?? PHOENIX_INPUT_HINT_COMPLETE
-    : awaitingSets
-      ? "Conclua todas as séries antes de registrar o recorde"
-      : isTouchPrimary && isExerciseActive
-        ? isDurationMode
-          ? "Informe o tempo e toque em Registrar"
-          : isRepMode
-            ? "Informe as repetições e toque em Registrar"
-            : "Informe a carga e toque em Registrar"
-        : isDurationMode
-          ? "Informe o tempo máximo após concluir as séries"
-          : isRepMode
-            ? "Informe a repetição máxima após concluir as séries"
-            : "Informe a carga máxima em kg após concluir as séries";
+    : awaitingCalendar
+      ? PHOENIX_INPUT_HINT_AWAITING_CALENDAR
+      : awaitingSets
+        ? "Conclua todas as séries antes de registrar o recorde"
+        : isTouchPrimary && isExerciseActive
+          ? isDurationMode
+            ? "Informe o tempo e toque em Registrar"
+            : isRepMode
+              ? "Informe as repetições e toque em Registrar"
+              : "Informe a carga e toque em Registrar"
+          : isDurationMode
+            ? "Informe o tempo máximo após concluir as séries"
+            : isRepMode
+              ? "Informe a repetição máxima após concluir as séries"
+              : "Informe a carga máxima em kg após concluir as séries";
   const registerLabel = isDurationMode
     ? "Registrar tempo"
     : isRepMode
@@ -533,7 +576,7 @@ function PhoenixInput({
         {hintText}
       </p>
 
-      {!isPrRegistered && allSetsComplete && isTouchPrimary && isExerciseActive ? (
+      {!isPrRegistered && allSetsComplete && isCalendarDayMatched && isTouchPrimary && isExerciseActive ? (
         <button
           type="button"
           data-exercise-interactive="true"

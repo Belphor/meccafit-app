@@ -21,7 +21,16 @@ type PhaseTransmutationProps = {
   onDismiss: () => void;
   subline?: string;
   copy?: string;
+  /** Narração da ANYMA FÊNIX (Código do Renascimento) exibida durante o ritual. */
+  animaSpeech?: string;
   ariaLabel?: string;
+  /**
+   * Quando `true`, o ritual segura no ato "hold" e só inicia o fade quando a fala
+   * da ANYMA terminar (`voiceSettled`), em vez de encerrar no timer fixo.
+   */
+  holdForVoice?: boolean;
+  /** A narração da ANYMA terminou (ou falhou/foi cancelada). */
+  voiceSettled?: boolean;
 };
 
 type TransmutationAct = "pulse" | "reveal" | "hold" | "fade";
@@ -340,10 +349,15 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
   onDismiss,
   subline = PHASE_TRANSMUTATION_SUBLINE,
   copy = PHASE_TRANSMUTATION_COPY,
+  animaSpeech,
   ariaLabel = "Transmutação da linhagem",
+  holdForVoice = false,
+  voiceSettled = false,
 }: PhaseTransmutationProps) {
   const [act, setAct] = useState<TransmutationAct>("pulse");
   const [canSkip, setCanSkip] = useState(false);
+  /** Coreografia mínima concluída (pulse → reveal → hold), garante o ritual completo. */
+  const [choreographyDone, setChoreographyDone] = useState(false);
   const dismissedRef = useRef(false);
   const tierLabel = PHASE_TIER_LABELS[phaseTier] ?? PHASE_TIER_LABELS[1];
 
@@ -356,18 +370,38 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
   useEffect(() => {
     const revealAt = PHASE_TRANSMUTATION_IRIS.awakenMs;
     const holdAt = revealAt + PHASE_TRANSMUTATION_REVEAL_MS;
-    const fadeAt = holdAt + PHASE_TRANSMUTATION_HOLD_MS;
+    const choreographyAt = holdAt + PHASE_TRANSMUTATION_HOLD_MS;
 
     const timers = [
       window.setTimeout(() => setAct("reveal"), revealAt),
       window.setTimeout(() => setAct("hold"), holdAt),
-      window.setTimeout(() => setAct("fade"), fadeAt),
-      window.setTimeout(() => dismiss(), PHASE_TRANSMUTATION_MS),
+      window.setTimeout(() => setChoreographyDone(true), choreographyAt),
       window.setTimeout(() => setCanSkip(true), PHASE_TRANSMUTATION_SKIP_AFTER_MS),
     ];
 
+    // Sem voz (TTS indisponível): mantém o encerramento clássico por timer fixo.
+    if (!holdForVoice) {
+      timers.push(window.setTimeout(() => setAct("fade"), choreographyAt));
+      timers.push(window.setTimeout(() => dismiss(), PHASE_TRANSMUTATION_MS));
+    }
+
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [dismiss]);
+  }, [dismiss, holdForVoice]);
+
+  /**
+   * Com voz ativa, o fade só dispara quando a ANYMA termina a narração e a
+   * coreografia mínima já rodou — assim o ritual dura exatamente até a fala acabar.
+   */
+  useEffect(() => {
+    if (!holdForVoice) return;
+    if (!voiceSettled || !choreographyDone) return;
+
+    // Coreografia do ritual: o fade só dispara quando voz + coreografia terminam.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAct("fade");
+    const timer = window.setTimeout(() => dismiss(), PHASE_TRANSMUTATION_FADE_MS);
+    return () => window.clearTimeout(timer);
+  }, [holdForVoice, voiceSettled, choreographyDone, dismiss]);
 
   const showCopy = act === "reveal" || act === "hold" || act === "fade";
 
@@ -406,6 +440,16 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
         <p className="phase-transmutation-copy mt-2 max-w-2xl text-center font-serif text-[clamp(0.62rem,2.2vw,0.82rem)] font-semibold uppercase leading-relaxed tracking-[0.2em] text-amber-100/90 sm:tracking-[0.26em]">
           {copy}
         </p>
+        {animaSpeech ? (
+          <>
+            <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.34em] text-amber-500/70">
+              ANYMA FÊNIX
+            </p>
+            <p className="phase-transmutation-anima pointer-events-auto mt-1 max-h-[38dvh] max-w-xl overflow-y-auto text-center font-serif text-[clamp(0.72rem,2.6vw,0.95rem)] font-medium normal-case leading-relaxed tracking-[0.02em] text-amber-50/90">
+              {animaSpeech}
+            </p>
+          </>
+        ) : null}
       </div>
 
       <div

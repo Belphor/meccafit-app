@@ -32,6 +32,9 @@ export function useOnboarding() {
         return { ok: false, message };
       }
 
+      // Garante JWT/metadata frescos para o gate do proxy/layout.
+      await supabase.auth.refreshSession();
+
       return { ok: true };
     } catch (cause) {
       const message =

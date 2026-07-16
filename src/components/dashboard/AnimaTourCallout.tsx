@@ -435,6 +435,23 @@ export function AnimaTourCallout({
     if (!active) return;
 
     const target = resolveTourTargetElement(targetSelector);
+    const interactiveTargets: HTMLElement[] = [];
+
+    const elevate = (node: Element | null) => {
+      if (!(node instanceof HTMLElement)) return;
+      interactiveTargets.push(node);
+      node.dataset.animaTourInteractive = "true";
+      node.style.setProperty("position", node.style.position || "relative");
+      node.style.setProperty("z-index", String(zIndex + 2));
+      node.style.setProperty("pointer-events", "auto");
+    };
+
+    elevate(target);
+    for (const selector of highlightKey.split("|").filter(Boolean)) {
+      const node = resolveTourTargetElement(selector);
+      if (node && node !== target) elevate(node);
+    }
+
     if (target instanceof HTMLElement) {
       target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
     }
@@ -473,8 +490,13 @@ export function AnimaTourCallout({
       window.removeEventListener("resize", scheduleSync);
       window.removeEventListener("scroll", scheduleSync, true);
       observer.disconnect();
+      for (const node of interactiveTargets) {
+        delete node.dataset.animaTourInteractive;
+        node.style.removeProperty("z-index");
+        node.style.removeProperty("pointer-events");
+      }
     };
-  }, [active, highlightKey, syncGeometry, targetSelector]);
+  }, [active, highlightKey, syncGeometry, targetSelector, zIndex]);
 
   if (!active) return null;
 

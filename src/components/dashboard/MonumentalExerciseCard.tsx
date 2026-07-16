@@ -46,6 +46,7 @@ import {
   EXERCISE_SERIES_SUPERACAO,
   PHOENIX_INPUT_GOAL_DAY_LOCKED,
   PHOENIX_INPUT_GOAL_AWAITING_SETS,
+  PHOENIX_INPUT_GOAL_AWAITING_CALENDAR,
   PHOENIX_INPUT_HINT_DAY_LOCKED,
   EXERCISE_VIDEO_BUTTON,
   EXERCISE_VIDEO_BUTTON_IDLE,
@@ -77,6 +78,10 @@ export type MonumentalExerciseCardProps = {
   onSetComplete?: (exerciseId: number) => void;
   /** Pico já registado neste exercício no dia civil atual (SP). */
   isDayLocked?: boolean;
+  /** Dia da planilha coincide com o calendário civil de Brasília. */
+  isCalendarDayMatched?: boolean;
+  /** Dia da planilha activo (1–6) para a RPC anti-burla. */
+  trainingDay?: 1 | 2 | 3 | 4 | 5 | 6;
 };
 
 export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
@@ -98,6 +103,8 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
   onPersistSuccess,
   onSetComplete,
   isDayLocked = false,
+  isCalendarDayMatched = true,
+  trainingDay,
 }: MonumentalExerciseCardProps) {
   const [baseVtc, setBaseVtc] = useState(0);
   const [restTimerToken, setRestTimerToken] = useState(0);
@@ -373,6 +380,8 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
               isExerciseActive={isActive}
               isPrRegistered={isDayLocked}
               allSetsComplete={isSeriesComplete}
+              isCalendarDayMatched={isCalendarDayMatched}
+              trainingDay={trainingDay}
               exercicioId={exercise.id}
               exercicioNome={exercise.name}
               fieldIdPrefix={`exercise-${exercise.id}-`}
@@ -381,13 +390,15 @@ export const MonumentalExerciseCard = memo(function MonumentalExerciseCard({
               trainingGoalText={
                 isDayLocked
                   ? PHOENIX_INPUT_GOAL_DAY_LOCKED
-                  : !isSeriesComplete
-                    ? PHOENIX_INPUT_GOAL_AWAITING_SETS
-                    : exercise.metricKind === "duration_sec"
-                      ? `Registrar tempo máximo · ${exercise.targetSets} séries`
-                      : exercise.metricKind === "rep_max"
-                        ? `Registrar repetição máxima · ${exercise.targetSets} séries`
-                        : `Registrar carga máxima · ${exercise.targetSets} séries`
+                  : !isCalendarDayMatched
+                    ? PHOENIX_INPUT_GOAL_AWAITING_CALENDAR
+                    : !isSeriesComplete
+                      ? PHOENIX_INPUT_GOAL_AWAITING_SETS
+                      : exercise.metricKind === "duration_sec"
+                        ? `Registrar tempo máximo · ${exercise.targetSets} séries`
+                        : exercise.metricKind === "rep_max"
+                          ? `Registrar repetição máxima · ${exercise.targetSets} séries`
+                          : `Registrar carga máxima · ${exercise.targetSets} séries`
               }
               prescribedSeries={exercise.targetSets}
               musculo={musculo}

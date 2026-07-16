@@ -36,6 +36,11 @@ export const ECOSSISTEMA_TOUR_STEP_PREFIX = "meccafit:ecossistema-tour-step:v1:"
 export const ECOSSISTEMA_TOUR_BEAT_PREFIX = "meccafit:ecossistema-tour-beat:v1:";
 /** Só true após selar identidade na 1ª vez — autoriza o tour nesta sessão ou reload imediato. */
 export const ECOSSISTEMA_TOUR_PENDING_PREFIX = "meccafit:ecossistema-tour-pending:v1:";
+/**
+ * Tour reduzido "só meta" — após "Pular apresentação" e selar identidade,
+ * mostra apenas "Defina sua meta de treino" e conclui. Persiste até o fim.
+ */
+export const ECOSSISTEMA_TOUR_META_ONLY_PREFIX = "meccafit:ecossistema-tour-meta-only:v1:";
 
 export type EcossistemaTourStepId = "treino" | "evolucao" | "comunidade" | "dieta";
 
@@ -189,13 +194,13 @@ const COMUNIDADE_TOUR_BEATS_BASE: readonly EcossistemaTourBeat[] = [
   {
     title: "Títulos e Reis",
     speech: ANYMA_SPEECH_COMUNIDADE_TITULOS,
-    continueLabel: "Ver RANKINGS",
+    continueLabel: "Ver rankings",
     targetSelector: '[data-tour-target="comunidade-titulos"]',
     highlightSelectors: ['[data-tour-tab="comunidade"]'],
     calloutPlacement: "auto",
   },
   {
-    title: "RANKINGS",
+    title: "rankings",
     speech: ANYMA_SPEECH_COMUNIDADE_RANKINGS,
     continueLabel: "Ver Mural",
     targetSelector: '[data-tour-target="comunidade-rankings"]',
@@ -253,7 +258,7 @@ export const ECOSSISTEMA_TOUR_STEPS: readonly EcossistemaTourStep[] = [
     id: "comunidade",
     tab: "comunidade",
     eyebrow: `${ANYMA_EYEBROW_PREFIX}Comunidade`,
-    title: "Arena, duelos e RANKINGS",
+    title: "Arena, duelos e rankings",
     speech: COMUNIDADE_TOUR_BEATS_BASE[COMUNIDADE_TOUR_BEATS_BASE.length - 1].speech,
     continueLabel: "Entrar no Portal de Brasa",
     targetSelector: COMUNIDADE_TOUR_BEATS_BASE[0].targetSelector,
@@ -301,6 +306,30 @@ export function resolveEcossistemaTourSteps(hasPersonalBond: boolean): Ecossiste
         : "Entrar no Portal de Brasa",
     };
   });
+}
+
+/**
+ * Tour reduzido de "Pular apresentação": só o beat "Defina sua meta de treino"
+ * na aba Evolução. Ao concluir, o ecossistema é liberado sem o tour completo.
+ */
+export function resolveMetaOnlyTourSteps(): EcossistemaTourStep[] {
+  const evolucaoStep = ECOSSISTEMA_TOUR_STEPS.find((step) => step.id === "evolucao");
+  const metaBeat = evolucaoStep?.beats?.find((beat) => beat.advanceGate === "meta-sync");
+
+  if (!evolucaoStep || !metaBeat) return [];
+
+  const beat: EcossistemaTourBeat = { ...metaBeat, continueLabel: "Concluir" };
+
+  return [
+    {
+      ...evolucaoStep,
+      title: beat.title,
+      speech: beat.speech,
+      continueLabel: beat.continueLabel,
+      targetSelector: beat.targetSelector,
+      beats: [beat],
+    },
+  ];
 }
 
 /** Aguarda a aba destino renderizar antes da narrativa da ANYMA. */
@@ -387,6 +416,37 @@ export function writeEcossistemaTourComplete(userId: string): void {
     window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_STEP_PREFIX}${userId}`);
     window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_BEAT_PREFIX}${userId}`);
     window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_META_ONLY_PREFIX}${userId}`);
+  } catch {
+    // quota / private mode
+  }
+}
+
+/** Ativa o tour reduzido "só meta" — Evolução → Defina sua meta → concluir. */
+export function markEcossistemaTourMetaOnly(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${ECOSSISTEMA_TOUR_META_ONLY_PREFIX}${userId}`, "1");
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function readEcossistemaTourMetaOnly(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return (
+      window.localStorage.getItem(`${ECOSSISTEMA_TOUR_META_ONLY_PREFIX}${userId}`) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function clearEcossistemaTourMetaOnly(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_META_ONLY_PREFIX}${userId}`);
   } catch {
     // quota / private mode
   }
@@ -423,6 +483,20 @@ export function clearEcossistemaTourPending(userId: string): void {
 export function skipEcossistemaTourForReturningAccount(userId: string): void {
   writeEcossistemaTourComplete(userId);
   clearEcossistemaTourPending(userId);
+}
+
+/** Remove todo progresso local do tour — 1º login / reteste. */
+export function clearEcossistemaTourLocalState(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_STORAGE_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_STEP_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_BEAT_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_PENDING_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ECOSSISTEMA_TOUR_META_ONLY_PREFIX}${userId}`);
+  } catch {
+    // quota / private mode
+  }
 }
 
 export function readEcossistemaTourStepIndex(
@@ -480,8 +554,9 @@ export function resolveEcossistemaTourSpeech(speech: string, profileName: string
 export function resolveAllowedTourTabs(
   stepIndex: number,
   hasPersonalBond = false,
+  stepsOverride?: readonly EcossistemaTourStep[],
 ): DashboardTabId[] {
-  const steps = resolveEcossistemaTourSteps(hasPersonalBond);
+  const steps = stepsOverride ?? resolveEcossistemaTourSteps(hasPersonalBond);
   const allowed: DashboardTabId[] = [];
   for (let index = 0; index <= stepIndex && index < steps.length; index += 1) {
     const tab = steps[index]?.tab;
@@ -494,16 +569,18 @@ export function isTabEnabledDuringTour(
   tab: DashboardTabId,
   stepIndex: number,
   hasPersonalBond = false,
+  stepsOverride?: readonly EcossistemaTourStep[],
 ): boolean {
-  return resolveAllowedTourTabs(stepIndex, hasPersonalBond).includes(tab);
+  return resolveAllowedTourTabs(stepIndex, hasPersonalBond, stepsOverride).includes(tab);
 }
 
 export function resolveDisabledTabsDuringTour(
   stepIndex: number,
   hasPersonalBond: boolean,
+  stepsOverride?: readonly EcossistemaTourStep[],
 ): ReadonlySet<DashboardTabId> {
   const disabled = new Set<DashboardTabId>();
-  const allowed = new Set(resolveAllowedTourTabs(stepIndex, hasPersonalBond));
+  const allowed = new Set(resolveAllowedTourTabs(stepIndex, hasPersonalBond, stepsOverride));
 
   const allTabs: DashboardTabId[] = ["treino", "evolucao", "comunidade", "perfil"];
   if (hasPersonalBond) allTabs.push("dieta");

@@ -1,4 +1,5 @@
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
+import { ANYMA_SPEECH_ALQUIMIA_MANIFESTO } from "@/lib/alquimia-manifesto";
 import { ANYMA_VTC_PHRASE } from "@/lib/anyma-copy";
 import { resolveAnymaSpeechText } from "@/lib/anima-speech";
 import { FENYXIA_SUPORTE_ANYMA_LABEL } from "@/lib/client-lore-copy";
@@ -39,6 +40,7 @@ export type AnymaExplanationId =
   | "comunidade-mural"
   | "dieta-plano"
   | "perfil-linhagem"
+  | "perfil-historia"
   | "perfil-suporte";
 
 export type AnymaExplanationCard = {
@@ -128,7 +130,7 @@ export const ANYMA_SPEECH_EVOLUCAO_ESPELHO =
 
 /** Aba Comunidade. */
 export const ANYMA_SPEECH_COMUNIDADE_ABA =
-  "[Nome], esta é a aba Comunidade. Aqui a linhagem FENYXIA se encontra. Arena, títulos, RANKINGS e mural mostram o esforço coletivo, os duelos e as ascensões forjadas com verdade no altar.";
+  "[Nome], esta é a aba Comunidade. Aqui a linhagem FENYXIA se encontra. Arena, títulos, rankings e mural mostram o esforço coletivo, os duelos e as ascensões forjadas com verdade no altar.";
 
 /** Arena e termômetro. */
 export const ANYMA_SPEECH_COMUNIDADE_ARENA =
@@ -138,9 +140,9 @@ export const ANYMA_SPEECH_COMUNIDADE_ARENA =
 export const ANYMA_SPEECH_COMUNIDADE_TITULOS =
   "Os títulos celebram quem lidera o mês. Rei das Chamas e pilares cooperativos mostram quem sustentou a forja com disciplina. Sua arena, masculina ou feminina, define onde você compete.";
 
-/** RANKINGS (sempre falado em inglês). */
+/** rankings (sempre falado em inglês). */
 export const ANYMA_SPEECH_COMUNIDADE_RANKINGS =
-  `Os RANKINGS ordenam a linhagem pelo ${ANYMA_VTC_PHRASE} forjado de verdade. Suba com sessões honestas. O altar valida cada quilo antes de aparecer aqui.`;
+  `Os rankings ordenam a linhagem pelo ${ANYMA_VTC_PHRASE} forjado de verdade. Suba com sessões honestas. O altar valida cada quilo antes de aparecer aqui.`;
 
 /** Mural. */
 export const ANYMA_SPEECH_COMUNIDADE_MURAL =
@@ -153,6 +155,9 @@ export const ANYMA_SPEECH_DIETA_PLANO =
 /** Perfil (aba). */
 export const ANYMA_SPEECH_PERFIL_LINHAGEM =
   "[Nome], esta é a aba Perfil. Aqui você sela nome e gênero na linhagem FENYXIA. O gênero define sua arena mensal. No ecossistema existem atleta, Forjador, níveis superiores de forja e Soberano. O Perfil garante que cada um só vê o que lhe cabe.";
+
+/** História · Manifesto Primordial (narração completa na overlay). */
+export const ANYMA_SPEECH_PERFIL_HISTORIA = ANYMA_SPEECH_ALQUIMIA_MANIFESTO;
 
 export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
   {
@@ -279,7 +284,7 @@ export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
     label: "Aba Comunidade",
     tab: "comunidade",
     speech: ANYMA_SPEECH_COMUNIDADE_ABA,
-    summary: "Arena, títulos, RANKINGS e mural da linhagem.",
+    summary: "Arena, títulos, rankings e mural da linhagem.",
   },
   {
     id: "comunidade-arena",
@@ -303,7 +308,7 @@ export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
     id: "comunidade-rankings",
     group: "comunidade",
     groupLabel: ANYMA_EXPLANATION_GROUP_LABELS.comunidade,
-    label: "RANKINGS",
+    label: "rankings",
     tab: "comunidade",
     speech: ANYMA_SPEECH_COMUNIDADE_RANKINGS,
     summary: "Ordem da linhagem pelo Volume Total De Carga (VTC).",
@@ -335,6 +340,15 @@ export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
     tab: "perfil",
     speech: ANYMA_SPEECH_PERFIL_LINHAGEM,
     summary: "Nome, gênero, arena e classes do ecossistema.",
+  },
+  {
+    id: "perfil-historia",
+    group: "perfil",
+    groupLabel: ANYMA_EXPLANATION_GROUP_LABELS.perfil,
+    label: "História",
+    tab: "perfil",
+    speech: ANYMA_SPEECH_PERFIL_HISTORIA,
+    summary: "Manifesto Primordial: A Alquimia do Ferro e das Cinzas.",
   },
   {
     id: "perfil-suporte",

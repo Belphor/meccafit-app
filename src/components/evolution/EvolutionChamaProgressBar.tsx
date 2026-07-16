@@ -26,19 +26,15 @@ function PhaseName({ tier, className = "" }: { tier: PhaseTier; className?: stri
 }
 
 function MonthlyGoalLabel({ state }: { state: ThermalGravityState }) {
-  if (state.leveled_up_this_month) {
-    return <>Gravidade Térmica de {state.month_label} cumprida.</>;
-  }
-  if (state.next_tier) {
-    return (
-      <>
-        Alcance <PhaseName tier={state.next_tier} /> antes da virada do mês.
-      </>
-    );
+  if (state.maintained_this_month) {
+    if (state.leveled_up_this_month) {
+      return <>Gravidade Térmica de {state.month_label} cumprida. Fase protegida e evoluindo.</>;
+    }
+    return <>Gravidade Térmica de {state.month_label} cumprida. Fase protegida neste ciclo.</>;
   }
   return (
     <>
-      Renove <PhaseName tier={5} /> antes da virada do mês.
+      Mantenha <PhaseName tier={state.effective_tier} /> antes da virada do mês.
     </>
   );
 }
@@ -69,8 +65,8 @@ function resolveTone(
   state: ThermalGravityState,
   progressPct: number,
 ): ThermalGravityTone {
-  if (state.leveled_up_this_month) return "ok";
-  if (state.days_remaining <= 7 && progressPct < 70) return "risk";
+  if (state.maintained_this_month) return "ok";
+  if (state.days_remaining <= 7 && progressPct < 100) return "risk";
   return "neutral";
 }
 
@@ -79,7 +75,7 @@ function resolveStatusChip(
   state: ThermalGravityState,
   progressPct: number,
 ): { label: string; className: string } | null {
-  if (state.leveled_up_this_month) {
+  if (state.maintained_this_month) {
     return {
       label: "Prova em dia",
       className: "border-emerald-400/40 bg-emerald-950/45 text-emerald-100",
@@ -168,7 +164,7 @@ export function EvolutionChamaProgressBar({
         <p className={`shrink-0 ${EVOLUTION_STAT_VALUE}`}>{Math.round(clampedPercent)}%</p>
       </div>
 
-      {showThermal && thermalState && !thermalState.leveled_up_this_month ? (
+      {showThermal && thermalState && !thermalState.maintained_this_month ? (
         <div className="flex flex-wrap items-stretch gap-3 rounded-lg border border-orange-500/25 bg-black/35 px-3 py-2.5">
           <div className="flex min-w-[4.5rem] flex-col items-center justify-center text-center">
             <span className="text-2xl font-bold tabular-nums leading-none text-amber-50">
@@ -262,7 +258,7 @@ export function EvolutionChamaProgressBar({
         ) : null}
       </div>
 
-      {thermalState.leveled_up_this_month ? (
+      {thermalState.maintained_this_month ? (
         <p className="mb-3 text-sm text-emerald-50/95">
           <MonthlyGoalLabel state={thermalState} />
         </p>

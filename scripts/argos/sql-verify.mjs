@@ -10,6 +10,7 @@ import {
   cleanupProbeWorkout,
   createServiceAdmin,
   isDayLockError,
+  resolvePlanilhaDiaSp,
   uniqueProbeExercicioId,
 } from "./lib/probe-workout.mjs";
 
@@ -64,6 +65,8 @@ async function check(name, fn) {
   }
 }
 
+const planilhaDiaHoje = resolvePlanilhaDiaSp();
+
 async function signIn(email, password) {
   const client = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -103,6 +106,7 @@ await check("RPC registrar_treino grava VTC no balanco diario", async () => {
     p_peso_atual: 50,
     p_repeticoes: 10,
     p_series: 4,
+    p_dia_planilha: planilhaDiaHoje,
   });
   if (rpcError) {
     await cleanupProbeWorkout(admin, cliente.userId, probeId);
@@ -187,6 +191,7 @@ await check("RPC trava diária bloqueia 2º registo do mesmo exercício", async 
     p_peso_atual: 30,
     p_repeticoes: 1,
     p_series: 1,
+    p_dia_planilha: planilhaDiaHoje,
   };
 
   // músculo inválido "ombro" — use ombros

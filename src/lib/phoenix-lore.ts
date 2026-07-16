@@ -11,7 +11,11 @@ import {
   ANYMA_FENIX_SPOTLIGHT_SPEECH,
   ANYMA_ONBOARDING_LOCK_MS,
   ANYMA_ORB_GREETING,
+  ANYMA_RETURNING_LOGIN_BEATS,
+  ANYMA_RETURNING_LOGIN_PAUSE_MS,
+  ANYMA_RETURNING_LOGIN_SPEECH,
 } from "@/lib/anyma-copy";
+import { clearSpotlightBeatProgress } from "@/lib/anima-perfil-identity-beats";
 import { formatAnymaSpeech } from "@/lib/anima-speech";
 import { injectName, injectRegisteredName } from "@/lib/profile-display-name";
 
@@ -21,6 +25,9 @@ export {
   ANYMA_FENIX_SPOTLIGHT_SPEECH,
   ANYMA_ONBOARDING_LOCK_MS,
   ANYMA_ORB_GREETING,
+  ANYMA_RETURNING_LOGIN_BEATS,
+  ANYMA_RETURNING_LOGIN_PAUSE_MS,
+  ANYMA_RETURNING_LOGIN_SPEECH,
 };
 
 /** @deprecated Use ANYMA_* — marca canônica é ANYMA. */
@@ -31,6 +38,10 @@ export const ANIMA_DEBT_SOFT_DAYS = ANYMA_DEBT_SOFT_DAYS;
 export const ANIMA_ONBOARDING_LOCK_MS = ANYMA_ONBOARDING_LOCK_MS;
 /** @deprecated Use ANYMA_ORB_GREETING */
 export const ANIMA_ORB_GREETING = ANYMA_ORB_GREETING;
+/** @deprecated Use ANYMA_RETURNING_LOGIN_SPEECH */
+export const ANIMA_RETURNING_LOGIN_SPEECH = ANYMA_RETURNING_LOGIN_SPEECH;
+/** @deprecated Use ANYMA_RETURNING_LOGIN_BEATS */
+export const ANIMA_RETURNING_LOGIN_BEATS = ANYMA_RETURNING_LOGIN_BEATS;
 /** @deprecated Use ANYMA_DEBT_SOFT_GREETING */
 export const ANIMA_DEBT_SOFT_GREETING = ANYMA_DEBT_SOFT_GREETING;
 
@@ -41,6 +52,18 @@ export const ANIMA_DEBT_SOFT_GREETING = ANYMA_DEBT_SOFT_GREETING;
 export const ANYMA_ONBOARDING_STORAGE_PREFIX = "meccafit:anima-onboarding:v1:";
 export const ANYMA_LAST_VISIT_STORAGE_PREFIX = "meccafit:anima-last-visit:";
 export const ANYMA_GREETING_SESSION_PREFIX = "meccafit:anima-greeting-session:";
+export const ANYMA_RETURNING_LOGIN_SESSION_PREFIX =
+  "meccafit:anima-returning-login-session:v5:";
+export const ANYMA_RETURNING_LOGIN_PENDING_PREFIX =
+  "meccafit:anima-returning-login-pending:v1:";
+/**
+ * Número de entrada FIXADO para a sessão de login atual (sessionStorage).
+ * Estabiliza o "Bem-vindo": reload/navegação reaproveitam o mesmo número e não
+ * retocam a saudação; logout limpa e o próximo login recebe um número novo.
+ */
+export const ANYMA_RETURNING_LOGIN_ACTIVE_PREFIX =
+  "meccafit:anima-returning-login-active:v1:";
+export const ANYMA_RETURNING_LOGIN_EVENT = "meccafit:anyma-returning-login";
 /** @deprecated Use ANYMA_ONBOARDING_STORAGE_PREFIX */
 export const ANIMA_ONBOARDING_STORAGE_PREFIX = ANYMA_ONBOARDING_STORAGE_PREFIX;
 /** @deprecated Use ANYMA_LAST_VISIT_STORAGE_PREFIX */
@@ -133,27 +156,6 @@ export const CODIGO_DO_RENASCIMENTO: Record<PhaseTier, string> = {
   5: "A combustão é total. Você não carrega mais o sol, [Nome]. Você se tornou o sol. O Universo FENYXIA se curva à sua vontade soberana. O ferro tornou-se etéreo diante da sua força. Renascido. Invencível. Eterno. Você atingiu o ápice da linhagem. Brilhe e incendeie o caminho para os outros.",
 };
 
-export type FenixPhaseLoreLabEntry = {
-  tier: PhaseTier;
-  icon: string;
-  name: string;
-  epithet: string;
-  visual3d: string;
-  speech: string;
-};
-
-/** Laboratório Cinzas → Fogo Cósmico — todas as narrativas de fase para QA e conferência. */
-export const FENIX_PHASE_LORE_LAB: readonly FenixPhaseLoreLabEntry[] = (
-  [1, 2, 3, 4, 5] as const
-).map((tier) => ({
-  tier,
-  icon: ({ 1: "🪨", 2: "⚡", 3: "🔥", 4: "☄️", 5: "☀️" } as const)[tier],
-  name: PHOENIX_TIER_META[tier].name,
-  epithet: PHOENIX_TIER_META[tier].epithet,
-  visual3d: PHOENIX_TIER_META[tier].visual3d,
-  speech: CODIGO_DO_RENASCIMENTO[tier],
-}));
-
 export const PHOENIX_TIER_LORE = CODIGO_DO_RENASCIMENTO;
 
 function formatKg(value: number): string {
@@ -216,7 +218,7 @@ export function resolveIntentSummary(intentId: AnymaIntentId, ctx: AnymaSpeechCo
   const phaseLabel = phaseContext.phaseLabel;
   const phaseReached = thermal?.phase_reached ?? "CINZAS";
   const activeLayout = thermal?.active_phase_layout ?? phaseReached;
-  const maintenanceKg = thermal?.monthly_goal_kg;
+  const maintenanceKg = thermal?.monthly_maintenance_goal_kg ?? thermal?.monthly_goal_kg;
   const restorationBaseline = resolveRestorationBaseline(activeLayout);
 
   switch (intentId) {
@@ -364,6 +366,15 @@ export const writeAnimaOnboardingComplete = writeAnymaOnboardingComplete;
 /** Strings de storage legadas — não alterar. */
 export const ANYMA_PORTAL_ENTRY_COUNT_PREFIX = "meccafit:anima-portal-entry-count:v1:";
 export const ANYMA_SECOND_ENTRY_TREINO_PREFIX = "meccafit:anima-second-entry-treino:v1:";
+/** Silencia "Bem-vindo" na entrada após "Pular apresentação" (até limpar no dashboard). */
+export const ANYMA_PRESENTATION_SKIP_SILENT_PREFIX =
+  "meccafit:anima-presentation-skip-silent:v1:";
+/**
+ * Após "Pular apresentação": Juramento → perfil (nome/gênero/foto/confirmar), sem tour.
+ * Persiste até o selo — cobre reload antes de confirmar.
+ */
+export const ANYMA_PRESENTATION_SKIP_IDENTITY_ONLY_PREFIX =
+  "meccafit:anima-presentation-skip-identity-only:v1:";
 /** @deprecated Use ANYMA_PORTAL_ENTRY_COUNT_PREFIX */
 export const ANIMA_PORTAL_ENTRY_COUNT_PREFIX = ANYMA_PORTAL_ENTRY_COUNT_PREFIX;
 /** @deprecated Use ANYMA_SECOND_ENTRY_TREINO_PREFIX */
@@ -396,6 +407,114 @@ export function bumpAnymaPortalEntryCount(userId: string): number {
 }
 /** @deprecated Use bumpAnymaPortalEntryCount */
 export const bumpAnimaPortalEntryCount = bumpAnymaPortalEntryCount;
+
+/**
+ * Pular apresentação (1ª vez): logo + manifesto + Juramento das Cinzas, depois
+ * perfil (nome → gênero → foto → confirmar). Sem spotlight/tour do Portal.
+ * Saudação "Bem-vindo" silenciada nesta entrada.
+ */
+export function seedPresentationSkipCeremonyFlow(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      `${ANYMA_PRESENTATION_SKIP_SILENT_PREFIX}${userId}`,
+      "1",
+    );
+    window.localStorage.setItem(
+      `${ANYMA_PRESENTATION_SKIP_IDENTITY_ONLY_PREFIX}${userId}`,
+      "1",
+    );
+  } catch {
+    // quota / private mode
+  }
+}
+
+/**
+ * @deprecated Use seedPresentationSkipCeremonyFlow — não força mais contador de entrada.
+ */
+export function seedAnymaPortalEntryCountForPresentationSkip(userId: string): void {
+  seedPresentationSkipCeremonyFlow(userId);
+}
+
+/** Skip ativo: altar sem tour — só selar nome/gênero/foto. */
+export function readPresentationSkipIdentityOnly(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return (
+      window.localStorage.getItem(
+        `${ANYMA_PRESENTATION_SKIP_IDENTITY_ONLY_PREFIX}${userId}`,
+      ) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Limpa o modo skip após o selo (ou se a conta já estava selada). */
+export function clearPresentationSkipIdentityOnly(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(
+      `${ANYMA_PRESENTATION_SKIP_IDENTITY_ONLY_PREFIX}${userId}`,
+    );
+  } catch {
+    // quota / private mode
+  }
+}
+
+/**
+ * Zera o estado local do Portal/onboarding — simula 1º login no aparelho.
+ * Usar ao reabrir as diretrizes (aceite resetado no Auth).
+ */
+export function resetClientFirstLoginLocalState(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(`${ANYMA_ONBOARDING_STORAGE_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ANYMA_PORTAL_ENTRY_COUNT_PREFIX}${userId}`);
+    window.localStorage.removeItem(`${ANYMA_SECOND_ENTRY_TREINO_PREFIX}${userId}`);
+    window.localStorage.removeItem(
+      `${ANYMA_PRESENTATION_SKIP_IDENTITY_ONLY_PREFIX}${userId}`,
+    );
+    window.sessionStorage.removeItem(
+      `${ANYMA_PRESENTATION_SKIP_SILENT_PREFIX}${userId}`,
+    );
+    window.localStorage.removeItem(`${ANYMA_LAST_VISIT_STORAGE_PREFIX}${userId}`);
+    window.sessionStorage.removeItem(`${ANYMA_GREETING_SESSION_PREFIX}${userId}`);
+  } catch {
+    // quota / private mode
+  }
+  clearReturningLoginGreetingShown(userId);
+  clearReturningLoginGreetingPending(userId);
+  clearSpotlightBeatProgress(userId);
+}
+
+/**
+ * Após "Pular apresentação": sem "Bem-vindo" nesta entrada de sessão.
+ * Limpa com clearPresentationSkipSilentEntry (após marcar a saudação como ouvida).
+ */
+export function isPresentationSkipSilentEntry(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return (
+      window.sessionStorage.getItem(
+        `${ANYMA_PRESENTATION_SKIP_SILENT_PREFIX}${userId}`,
+      ) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function clearPresentationSkipSilentEntry(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(
+      `${ANYMA_PRESENTATION_SKIP_SILENT_PREFIX}${userId}`,
+    );
+  } catch {
+    // private mode
+  }
+}
 
 export function readSecondEntryTreinoRedirectDone(userId: string): boolean {
   if (typeof window === "undefined") return true;
@@ -480,4 +599,148 @@ export function markDebtSoftGreetingShown(userId: string): void {
   } catch {
     // private mode
   }
+}
+
+/**
+ * Saudação de retorno: uma vez por entrada no Portal (cada login/sessão de dashboard).
+ * `entryCount` evita silêncio após logout/login na mesma aba.
+ */
+export function shouldPlayReturningLoginGreeting(
+  userId: string,
+  portalReady: boolean,
+  entryCount = 0,
+): boolean {
+  if (!portalReady) return false;
+  if (entryCount < 1) return false;
+  if (typeof window === "undefined") return false;
+  try {
+    const sessionKey = `${ANYMA_RETURNING_LOGIN_SESSION_PREFIX}${userId}`;
+    const heardForEntry = window.sessionStorage.getItem(sessionKey);
+    if (heardForEntry === String(entryCount)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function markReturningLoginGreetingShown(
+  userId: string,
+  entryCount: number,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      `${ANYMA_RETURNING_LOGIN_SESSION_PREFIX}${userId}`,
+      String(entryCount),
+    );
+  } catch {
+    // private mode
+  }
+}
+
+export function clearReturningLoginGreetingShown(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(
+      `${ANYMA_RETURNING_LOGIN_SESSION_PREFIX}${userId}`,
+    );
+    // Encerra a sessão de login atual — próximo login recebe entrada nova.
+    window.sessionStorage.removeItem(
+      `${ANYMA_RETURNING_LOGIN_ACTIVE_PREFIX}${userId}`,
+    );
+  } catch {
+    // private mode
+  }
+}
+
+/**
+ * Número de entrada da saudação para ESTA sessão de login.
+ * Fixa o valor no sessionStorage na primeira montagem do login: reload e
+ * navegação de rota reaproveitam o mesmo número (não retocam "Bem-vindo").
+ * Logout/reset limpam a marca (clearReturningLoginGreetingShown), então o
+ * próximo login recebe o `bumpedEntryCount` novo e a saudação toca de novo.
+ */
+export function resolveReturningLoginSessionEntry(
+  userId: string,
+  bumpedEntryCount: number,
+): number {
+  if (typeof window === "undefined") return bumpedEntryCount;
+  try {
+    const key = `${ANYMA_RETURNING_LOGIN_ACTIVE_PREFIX}${userId}`;
+    const existing = window.sessionStorage.getItem(key);
+    if (existing !== null) {
+      const parsed = Number(existing);
+      if (Number.isFinite(parsed) && parsed >= 1) return parsed;
+    }
+    window.sessionStorage.setItem(key, String(bumpedEntryCount));
+    return bumpedEntryCount;
+  } catch {
+    return bumpedEntryCount;
+  }
+}
+
+/** Abre chance de fala em toda nova entrada (logout → login na mesma aba). */
+export function beginReturningLoginGreetingEntry(
+  userId: string,
+  entryCount: number,
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    const sessionKey = `${ANYMA_RETURNING_LOGIN_SESSION_PREFIX}${userId}`;
+    const heardForEntry = window.sessionStorage.getItem(sessionKey);
+    // Só limpa se for uma entrada nova — não apaga o "já falou" desta mesma entrada.
+    if (heardForEntry !== null && heardForEntry !== String(entryCount)) {
+      // entrada nova: deixa shouldPlay comparar e liberar
+    }
+    window.sessionStorage.setItem(
+      `${ANYMA_RETURNING_LOGIN_PENDING_PREFIX}${userId}`,
+      String(entryCount),
+    );
+  } catch {
+    // private mode
+  }
+  window.dispatchEvent(
+    new CustomEvent(ANYMA_RETURNING_LOGIN_EVENT, {
+      detail: { userId, entryCount },
+    }),
+  );
+}
+
+/** @deprecated Use beginReturningLoginGreetingEntry */
+export function publishReturningLoginGreetingRequest(userId: string): void {
+  beginReturningLoginGreetingEntry(userId, Date.now());
+}
+
+export function hasReturningLoginGreetingPending(userId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return Boolean(
+      window.sessionStorage.getItem(
+        `${ANYMA_RETURNING_LOGIN_PENDING_PREFIX}${userId}`,
+      ),
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function clearReturningLoginGreetingPending(userId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(
+      `${ANYMA_RETURNING_LOGIN_PENDING_PREFIX}${userId}`,
+    );
+  } catch {
+    // private mode
+  }
+}
+
+export function resolveReturningLoginSpeech(profileName: string): string {
+  return withAnymaSpeech(injectName(ANYMA_RETURNING_LOGIN_SPEECH, profileName));
+}
+
+export function resolveReturningLoginBeats(profileName: string): string[] {
+  return ANYMA_RETURNING_LOGIN_BEATS.map((beat) =>
+    withAnymaSpeech(injectName(beat, profileName)),
+  );
 }

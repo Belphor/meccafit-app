@@ -14,16 +14,24 @@ export type PlayAnimaTtsOptions = {
   onAmplitude?: (value: number) => void;
   /** Dispara no instante em que o áudio começa de fato a tocar. */
   onSpeaking?: () => void;
+  /**
+   * Sem Web Audio / Analyser — só HTMLAudioElement.
+   * Mais confiável para saudação automática pós-login (autoplay).
+   */
+  simplePlayback?: boolean;
 };
 
 type AnimaAudioAnalyserHandle = {
   getAmplitude: () => number;
   dispose: () => void;
+  /** Garante AudioContext running antes de audio.play() — evita NotAllowedError silencioso. */
+  ensureRunning: () => Promise<void>;
 };
 
 const CACHE_LIMIT = 16;
 const audioCache = new Map<string, Blob>();
 const inflightPrefetch = new Map<string, Promise<Blob>>();
+const TTS_CACHE_BUCKET = "anyma-tts-v1";
 
 const MPEG_MSE_MIME = "audio/mpeg";
 
@@ -44,6 +52,88 @@ function getCachedBlob(text: string): Blob | undefined {
   return hit;
 }
 
+function ttsCacheRequest(text: string): Request {
+  // Chave estável só para Cache Storage (não é URL real de rede).
+  return new Request(`https://anyma.local/tts/${encodeURIComponent(text)}`, {
+    method: "GET",
+  });
+}
+
+async function readPersistentTtsBlob(text: string): Promise<Blob | null> {
+  if (typeof caches === "undefined") return null;
+  try {
+    const cache = await caches.open(TTS_CACHE_BUCKET);
+    const hit = await cache.match(ttsCacheRequest(text));
+    if (!hit) return null;
+    const blob = await hit.blob();
+    return blob.size > 0 ? blob : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writePersistentTtsBlob(text: string, blob: Blob): Promise<void> {
+  if (typeof caches === "undefined") return;
+  try {
+    const cache = await caches.open(TTS_CACHE_BUCKET);
+    await cache.put(
+      ttsCacheRequest(text),
+      new Response(blob, {
+        headers: { "Content-Type": "audio/mpeg", "Cache-Control": "max-age=31536000" },
+      }),
+    );
+  } catch {
+    // quota / private mode
+  }
+}
+
+async function fetchAnimaTtsBlob(text: string, signal?: AbortSignal): Promise<Blob> {
+  const cached = getCachedBlob(text);
+  if (cached) return cached;
+
+  const inflight = inflightPrefetch.get(text);
+  if (inflight) {
+    return inflight;
+  }
+
+  const request = (async () => {
+    const persistent = await readPersistentTtsBlob(text);
+    if (persistent) {
+      touchCache(text, persistent);
+      return persistent;
+    }
+
+    const response = await fetch("/api/anima/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "audio/mpeg" },
+      credentials: "same-origin",
+      body: JSON.stringify({ text }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      throw new Error(`ANIMA_TTS_HTTP_${response.status}${errBody ? `: ${errBody}` : ""}`);
+    }
+
+    const blob = await response.blob();
+    if (blob.size === 0) {
+      throw new Error("ANIMA_TTS_EMPTY_AUDIO");
+    }
+
+    touchCache(text, blob);
+    void writePersistentTtsBlob(text, blob);
+    return blob;
+  })();
+
+  inflightPrefetch.set(text, request);
+  try {
+    return await request;
+  } finally {
+    inflightPrefetch.delete(text);
+  }
+}
+
 function canUseMpegMediaSource(): boolean {
   if (typeof MediaSource === "undefined") return false;
   try {
@@ -62,6 +152,7 @@ function createAnalyserFromElement(audio: HTMLAudioElement): AnimaAudioAnalyserH
     return {
       getAmplitude: () => 0,
       dispose: () => undefined,
+      ensureRunning: async () => undefined,
     };
   }
 
@@ -96,49 +187,19 @@ function createAnalyserFromElement(audio: HTMLAudioElement): AnimaAudioAnalyserH
     void ctx.close().catch(() => undefined);
   };
 
-  void ctx.resume().catch(() => undefined);
-
-  return { getAmplitude, dispose };
-}
-
-async function fetchAnimaTtsBlob(text: string, signal?: AbortSignal): Promise<Blob> {
-  const cached = getCachedBlob(text);
-  if (cached) return cached;
-
-  const inflight = inflightPrefetch.get(text);
-  if (inflight) {
-    return inflight;
-  }
-
-  const request = (async () => {
-    const response = await fetch("/api/anima/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "audio/mpeg" },
-      credentials: "same-origin",
-      body: JSON.stringify({ text }),
-      signal,
-    });
-
-    if (!response.ok) {
-      const errBody = await response.text().catch(() => "");
-      throw new Error(`ANIMA_TTS_HTTP_${response.status}${errBody ? `: ${errBody}` : ""}`);
+  const ensureRunning = async (): Promise<void> => {
+    if (ctx.state === "suspended") {
+      try {
+        await ctx.resume();
+      } catch {
+        // autoplay / gesture still required by the browser
+      }
     }
+  };
 
-    const blob = await response.blob();
-    if (blob.size === 0) {
-      throw new Error("ANIMA_TTS_EMPTY_AUDIO");
-    }
+  void ensureRunning();
 
-    touchCache(text, blob);
-    return blob;
-  })();
-
-  inflightPrefetch.set(text, request);
-  try {
-    return await request;
-  } finally {
-    inflightPrefetch.delete(text);
-  }
+  return { getAmplitude, dispose, ensureRunning };
 }
 
 /**
@@ -165,8 +226,22 @@ function playFromBlob(blob: Blob, options?: PlayAnimaTtsOptions): AnimaAudioPlay
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
   audio.preload = "auto";
+  audio.volume = 1;
+  try {
+    audio.setAttribute("playsinline", "true");
+  } catch {
+    // ignore
+  }
 
-  const analyser = createAnalyserFromElement(audio);
+  const useSimple = Boolean(options?.simplePlayback);
+  const analyser = useSimple
+    ? {
+        getAmplitude: () => 0,
+        dispose: () => undefined,
+        ensureRunning: async () => undefined,
+      }
+    : createAnalyserFromElement(audio);
+
   let rafId = 0;
   let settled = false;
   let finishPlayback: (() => void) | null = null;
@@ -218,13 +293,22 @@ function playFromBlob(blob: Blob, options?: PlayAnimaTtsOptions): AnimaAudioPlay
       signal.addEventListener("abort", onAbort);
     }
 
-    void audio.play().then(
-      () => {
+    void (async () => {
+      try {
+        await analyser.ensureRunning();
+        if (settled || signal?.aborted) {
+          finish();
+          return;
+        }
+        await audio.play();
         notifySpeaking();
-        if (!settled) rafId = window.requestAnimationFrame(tick);
-      },
-      () => finish(),
-    );
+        if (!settled && !useSimple) {
+          rafId = window.requestAnimationFrame(tick);
+        }
+      } catch {
+        finish();
+      }
+    })();
   });
 
   return {
@@ -402,6 +486,12 @@ export async function playAnimaTts(
     return playFromBlob(blob, options);
   }
 
+  // Saudação automática: blob simples, sem MSE/WebAudio — autoplay mais estável.
+  if (options?.simplePlayback) {
+    const blob = await fetchAnimaTtsBlob(trimmed, signal);
+    return playFromBlob(blob, options);
+  }
+
   // Sem cache: stream progressivo via MSE quando o browser permitir.
   if (canUseMpegMediaSource()) {
     const response = await fetch("/api/anima/tts", {
@@ -428,4 +518,49 @@ export async function playAnimaTts(
 
 export function isAnimaAudioSupported(): boolean {
   return typeof window !== "undefined" && typeof Audio !== "undefined" && typeof fetch === "function";
+}
+
+/**
+ * Desbloqueia HTMLAudioElement no gesto do usuário (login / toque).
+ * Sem isso, a saudação automática pós-redirect costuma falhar em silêncio.
+ */
+export function unlockAnimaAudioPlayback(): void {
+  if (!isAnimaAudioSupported()) return;
+
+  try {
+    const silent = new Audio(
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=",
+    );
+    silent.volume = 0.01;
+    void silent.play().then(
+      () => {
+        silent.pause();
+        silent.removeAttribute("src");
+        silent.load();
+      },
+      () => undefined,
+    );
+  } catch {
+    // private mode / unsupported
+  }
+
+  try {
+    const AudioCtx =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    void ctx.resume().then(() => {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+      window.setTimeout(() => {
+        void ctx.close().catch(() => undefined);
+      }, 80);
+    });
+  } catch {
+    // unsupported
+  }
 }

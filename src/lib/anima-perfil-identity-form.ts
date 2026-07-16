@@ -2,8 +2,9 @@
 
 export const PERFIL_IDENTITY_TOUR_INPUT_EVENT = "meccafit:perfil-identity-tour-input";
 export const PERFIL_IDENTITY_FIELD_UNLOCK_EVENT = "meccafit:perfil-identity-field-unlock";
+export const PERFIL_IDENTITY_CONFIRM_REQUEST_EVENT = "meccafit:perfil-identity-confirm-request";
 
-export type PerfilIdentityFieldId = "nome" | "genero" | "foto";
+export type PerfilIdentityFieldId = "nome" | "genero" | "foto" | "confirmar";
 
 export type PerfilIdentityTourInputDetail = {
   displayName: string;
@@ -26,7 +27,12 @@ export type PerfilIdentityFieldUnlockDetail = {
 const NOME_MIN = 2;
 const UNLOCK_STORAGE_KEY = "meccafit:perfil-identity-unlocked-fields";
 
-const FIELD_ORDER: readonly PerfilIdentityFieldId[] = ["nome", "genero", "foto"];
+const FIELD_ORDER: readonly PerfilIdentityFieldId[] = [
+  "nome",
+  "genero",
+  "foto",
+  "confirmar",
+];
 
 function loadUnlockedFields(): Set<PerfilIdentityFieldId> {
   const fields = new Set<PerfilIdentityFieldId>();
@@ -37,7 +43,7 @@ function loadUnlockedFields(): Set<PerfilIdentityFieldId> {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return fields;
     for (const item of parsed) {
-      if (item === "nome" || item === "genero" || item === "foto") {
+      if (item === "nome" || item === "genero" || item === "foto" || item === "confirmar") {
         fields.add(item);
       }
     }
@@ -75,8 +81,35 @@ export function isPerfilIdentityFieldUnlocked(field: PerfilIdentityFieldId): boo
   return unlockedFields.has(field);
 }
 
-/** Desbloqueia o campo e todos os anteriores (para retomada segura do tour). */
+function dispatchUnlockEvent(field: PerfilIdentityFieldId): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<PerfilIdentityFieldUnlockDetail>(PERFIL_IDENTITY_FIELD_UNLOCK_EVENT, {
+      detail: { field },
+    }),
+  );
+}
+
+/** Desbloqueia somente o campo indicado (sem cascata). */
 export function publishPerfilIdentityFieldUnlock(field: PerfilIdentityFieldId): void {
+  if (typeof window === "undefined") return;
+  ensureUnlockHydrated();
+
+  if (!FIELD_ORDER.includes(field)) return;
+
+  if (!unlockedFields.has(field)) {
+    unlockedFields.add(field);
+    persistUnlockedFields(unlockedFields);
+  }
+
+  dispatchUnlockEvent(field);
+}
+
+/**
+ * Relocka o campo e todos os posteriores.
+ * Usado ao entrar na explicação de um passo para garantir que só libera depois.
+ */
+export function revokePerfilIdentityFieldsFrom(field: PerfilIdentityFieldId): void {
   if (typeof window === "undefined") return;
   ensureUnlockHydrated();
 
@@ -84,21 +117,39 @@ export function publishPerfilIdentityFieldUnlock(field: PerfilIdentityFieldId): 
   if (index < 0) return;
 
   let changed = false;
-  for (let i = 0; i <= index; i += 1) {
+  for (let i = index; i < FIELD_ORDER.length; i += 1) {
     const next = FIELD_ORDER[i];
-    if (!unlockedFields.has(next)) {
-      unlockedFields.add(next);
+    if (unlockedFields.has(next)) {
+      unlockedFields.delete(next);
       changed = true;
     }
   }
 
-  if (changed) persistUnlockedFields(unlockedFields);
+  if (!changed) return;
+  persistUnlockedFields(unlockedFields);
+  dispatchUnlockEvent(field);
+}
 
-  window.dispatchEvent(
-    new CustomEvent<PerfilIdentityFieldUnlockDetail>(PERFIL_IDENTITY_FIELD_UNLOCK_EVENT, {
-      detail: { field },
-    }),
-  );
+/** Índice do primeiro passo ainda não liberado (retomada do guia). */
+export function resolvePerfilIdentityGuideBeatIndex(): number {
+  ensureUnlockHydrated();
+  if (!unlockedFields.has("nome")) return 0;
+  if (!unlockedFields.has("genero")) return 1;
+  if (!unlockedFields.has("foto")) return 2;
+  return 3;
+}
+
+export function clearPerfilIdentityFieldUnlocks(): void {
+  ensureUnlockHydrated();
+  unlockedFields = new Set();
+  if (typeof window !== "undefined") {
+    try {
+      window.sessionStorage.removeItem(UNLOCK_STORAGE_KEY);
+    } catch {
+      // private mode / quota
+    }
+    dispatchUnlockEvent("nome");
+  }
 }
 
 export function unlockAllPerfilIdentityFields(): void {
@@ -107,12 +158,7 @@ export function unlockAllPerfilIdentityFields(): void {
     unlockedFields.add(field);
   }
   persistUnlockedFields(unlockedFields);
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent<PerfilIdentityFieldUnlockDetail>(PERFIL_IDENTITY_FIELD_UNLOCK_EVENT, {
-      detail: { field: "foto" },
-    }),
-  );
+  dispatchUnlockEvent("confirmar");
 }
 
 export function readPerfilIdentityTourFormState(): PerfilIdentityTourFormState {
@@ -151,9 +197,16 @@ export function publishPerfilIdentityTourInput(detail: PerfilIdentityTourInputDe
   );
 }
 
+/** Pedido do card da ANYMA para selar identidade no botão real do Perfil. */
+export function publishPerfilIdentityConfirmRequest(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(PERFIL_IDENTITY_CONFIRM_REQUEST_EVENT));
+}
+
 export function resolveFieldIdFromBeatId(beatId: string): PerfilIdentityFieldId | null {
   if (beatId === "perfil-nome") return "nome";
   if (beatId === "perfil-genero") return "genero";
   if (beatId === "perfil-foto") return "foto";
+  if (beatId === "perfil-confirmar") return "confirmar";
   return null;
 }

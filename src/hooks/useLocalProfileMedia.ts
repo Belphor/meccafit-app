@@ -11,6 +11,15 @@ import {
   readLocalProfileDisplayName,
 } from "@/lib/profile-display-name";
 
+/** Placeholder do map de perfil — não é nome real para a ANYMA. */
+const SERVER_NAME_PLACEHOLDER = "Membro da Linhagem";
+
+function normalizeServerDisplayName(serverName: string | null | undefined): string {
+  const trimmed = serverName?.trim() ?? "";
+  if (!trimmed || trimmed === SERVER_NAME_PLACEHOLDER) return "";
+  return trimmed;
+}
+
 export function useLocalProfileAvatar(userId: string | undefined): string | null {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
@@ -42,25 +51,37 @@ export function useLocalProfileAvatar(userId: string | undefined): string | null
   return userId ? photoUrl : null;
 }
 
+/**
+ * Nome para UI e voz da ANYMA: localStorage (selo) → full_name do servidor.
+ * Derivado no render para não armar "Bem-vindo, Nova Chama" antes do perfil carregar.
+ */
 export function useResolvedProfileName(
   userId: string | undefined,
   serverName: string | null | undefined,
 ): string {
-  const [name, setName] = useState(() => {
-    if (!userId) return serverName?.trim() ?? "";
-    return readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "";
+  const normalizedServer = normalizeServerDisplayName(serverName);
+  const [localName, setLocalName] = useState<string | null>(() => {
+    if (!userId || typeof window === "undefined") return null;
+    return readLocalProfileDisplayName(userId);
   });
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalName(null);
+      return;
+    }
 
     const refresh = () => {
-      setName(readLocalProfileDisplayName(userId) ?? serverName?.trim() ?? "");
+      setLocalName(readLocalProfileDisplayName(userId));
     };
 
+    // Sincroniza o nome local (selo) com o localStorage do dispositivo — leitura client-only.
+    refresh();
     window.addEventListener(PROFILE_DISPLAY_NAME_UPDATED_EVENT, refresh);
     return () => window.removeEventListener(PROFILE_DISPLAY_NAME_UPDATED_EVENT, refresh);
-  }, [serverName, userId]);
+  }, [userId]);
 
-  return userId ? name : serverName?.trim() ?? "";
+  if (!userId) return normalizedServer;
+  return localName?.trim() || normalizedServer;
 }

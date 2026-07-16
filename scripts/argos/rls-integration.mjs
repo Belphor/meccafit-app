@@ -11,7 +11,10 @@ import {
   cleanupProbeWorkout,
   createServiceAdmin,
   isDayLockError,
+  resolvePlanilhaDiaSp,
 } from "./lib/probe-workout.mjs";
+
+const planilhaDiaHoje = resolvePlanilhaDiaSp();
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -222,6 +225,7 @@ await record("cliente: RPC registrar_treino com próprio user_id permitido", asy
     p_peso_atual: 46,
     p_repeticoes: 1,
     p_series: 1,
+    p_dia_planilha: planilhaDiaHoje,
   });
   if (rpcError) return { ok: false, detail: rpcError.message };
 
@@ -251,6 +255,7 @@ await record("cliente: RPC registrar_treino trava diária no 2º registo do mesm
     p_peso_atual: 47,
     p_repeticoes: 1,
     p_series: 1,
+    p_dia_planilha: planilhaDiaHoje,
   };
 
   const { error: firstError } = await cliente.client.rpc("registrar_treino_com_status", args);

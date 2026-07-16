@@ -9,10 +9,12 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import ReactDOM from "react-dom";
 import {
   PortalBurnSubmitButton,
   waitPortalBurn,
 } from "@/components/portal/PortalBurnSubmitButton";
+import { FENYXIA_LOGO_SRC } from "@/components/onboarding/LogoSplashStep";
 import { PortalEmberCurtain } from "@/components/portal/PortalEmberCurtain";
 import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
 import { PrimeiroAcessoFenyxiaPanel } from "@/components/portal/PrimeiroAcessoFenyxiaPanel";
@@ -39,6 +41,7 @@ import {
   PORTAL_SHELL,
 } from "@/lib/portal-theme";
 import { ONBOARDING_ROUTE } from "@/lib/onboarding-terms";
+import { unlockAnimaAudioPlayback } from "@/lib/anima-audio-controller";
 import { supabase } from "@/lib/supabase";
 
 type PortalMode = "login_cliente" | "criar_conta";
@@ -96,11 +99,15 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
   }, []);
 
   useEffect(() => {
+    // Credenciais lembradas só existem no cliente; aplicar após montar evita
+    // divergência de hidratação com o HTML renderizado no servidor (campos vazios).
     const saved = loadRememberedCredentials("cliente");
     if (!saved) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setEmail(saved.email);
     setPassword(saved.password);
     setRememberCredentials(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   useEffect(() => {
@@ -179,6 +186,11 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
     setIsBurning(true);
     setFeedback({ status: "loading", message: PORTAL_COPY.loginBurning });
     setToast(null);
+    // A barra de brasa dura ~2.8s: aproveita para pré-carregar o logo da
+    // cerimônia (LogoSplashStep) e evitar o flash quando o splash monta.
+    ReactDOM.preload(FENYXIA_LOGO_SRC, { as: "image" });
+    // Libera HTMLAudio no gesto do login — a saudação do dashboard usa isso.
+    unlockAnimaAudioPlayback();
 
     const burnPromise = waitPortalBurn();
 

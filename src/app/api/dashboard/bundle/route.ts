@@ -122,7 +122,12 @@ async function fetchBundleViaParallel(
   userId: string,
   musculo: Enums<"subgrupo_muscular">,
 ) {
-  const [profileRes, historicoRes, muralRes, phaseRes, inactivityRes, thermalSettleRes] = await Promise.all([
+  // Penalidade única: liquida a virada do mês primeiro; se rebaixou, a inatividade não rebaixa de novo.
+  const thermalSettleRes = await supabase.rpc("argos_settle_thermal_gravity_monthly");
+  const settleDegraded =
+    (thermalSettleRes.data as Record<string, unknown> | null)?.degraded === true;
+
+  const [profileRes, historicoRes, muralRes, phaseRes, inactivityRes] = await Promise.all([
     supabase
       .from("profiles")
       .select(
@@ -140,8 +145,7 @@ async function fetchBundleViaParallel(
       .order("registrado_em", { ascending: false }),
     supabase.rpc("argos_fetch_mural_comunidade", { p_limit: MURAL_BUNDLE_LIMIT }),
     supabase.rpc("argos_advance_phase_if_eligible", { p_user_id: userId }),
-    supabase.rpc("argos_sync_linhagem_presence"),
-    supabase.rpc("argos_settle_thermal_gravity_monthly"),
+    supabase.rpc("argos_sync_linhagem_presence", { p_skip_degradation: settleDegraded }),
   ]);
 
   if (profileRes.error || !profileRes.data) {

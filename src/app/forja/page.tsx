@@ -74,11 +74,15 @@ export default function ForjaLoginPage() {
   }, []);
 
   useEffect(() => {
+    // Credenciais lembradas só existem no cliente; aplicar após montar evita
+    // divergência de hidratação com o HTML renderizado no servidor (campos vazios).
     const saved = loadRememberedCredentials("forja");
     if (!saved) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setEmail(saved.email);
     setPassword(saved.password);
     setRememberCredentials(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
   async function performLogin() {

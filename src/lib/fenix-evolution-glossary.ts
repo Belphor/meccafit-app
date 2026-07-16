@@ -17,6 +17,8 @@ import {
   VTC_DEFINITION,
   VTC_DISPLAY_NAME,
 } from "@/lib/vtc-labels";
+import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
+import { injectName } from "@/lib/profile-display-name";
 
 export { VTC_DEFINITION, VTC_DISPLAY_NAME, EVOLUTION_AVATAR_NOTE };
 
@@ -133,6 +135,15 @@ export function resolveLinhagemTransmutationCopy(tier: PhaseTier): {
     subline: `DESPERTOU O NÍVEL ${tierLabel}`,
     copy: tierCopy.headline,
   };
+}
+
+/**
+ * Fala da ANYMA FÊNIX exibida no card de transmutação. Usa a mesma fonte da voz
+ * (o Código do Renascimento do tier), então o texto na tela é exatamente o que a
+ * atleta ouve durante o ritual.
+ */
+export function resolveTierLore(tier: PhaseTier, fullName: string): string {
+  return injectName(CODIGO_DO_RENASCIMENTO[tier], fullName);
 }
 
 export const EVOLUTION_SYSTEMS_OVERVIEW =

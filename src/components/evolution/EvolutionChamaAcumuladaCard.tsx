@@ -20,7 +20,7 @@ import {
   resolvePhaseVtcProgress,
 } from "@/lib/fenix-evolution-glossary";
 import type { ThermalGravityState } from "@/lib/thermal-gravity";
-import { resolveMonthlyLevelUpProgressPercent } from "@/lib/thermal-gravity";
+import { resolveMonthlyMaintenanceProgressPercent } from "@/lib/thermal-gravity";
 import { formatVtcKg } from "@/lib/vtc-labels";
 
 type EvolutionChamaAcumuladaCardProps = {
@@ -56,12 +56,15 @@ export function EvolutionChamaAcumuladaCard({
   const phaseProgress = resolvePhaseVtcProgress(vtc30dKg, undefined, activeTier);
 
   const progressKg = Math.max(vtc30dKg, thermalState.vtc_month, thermalState.vtc_30d);
-  const thermalProgressPct = resolveMonthlyLevelUpProgressPercent(thermalState);
+  const thermalProgressPct = resolveMonthlyMaintenanceProgressPercent(thermalState);
   const progressPercent =
     thermalProgressPct !== null ? thermalProgressPct : phaseProgress.progressPercent;
-  const ceilingKg = phaseProgress.ceilingKg ?? thermalState.monthly_goal_kg;
+  // Barra da "Prova mensal": teto é a meta de MANUTENÇÃO (o que protege a fase da queda).
+  const ceilingKg = thermalState.monthly_maintenance_goal_kg ?? phaseProgress.ceilingKg;
   const remainingKg =
-    ceilingKg !== null ? Math.max(0, ceilingKg - progressKg) : phaseProgress.remainingKg;
+    ceilingKg !== null && ceilingKg > 0
+      ? Math.max(0, ceilingKg - thermalState.vtc_month)
+      : phaseProgress.remainingKg;
 
   return (
     <div className={`${DASHBOARD_INNER_FRAME} mt-4 space-y-4 p-4 sm:p-5`}>

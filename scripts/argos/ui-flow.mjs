@@ -16,7 +16,10 @@ import {
   cleanupProbeWorkout,
   createServiceAdmin,
   isDayLockError,
+  resolvePlanilhaDiaSp,
 } from "./lib/probe-workout.mjs";
+
+const planilhaDiaHoje = resolvePlanilhaDiaSp();
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");
@@ -223,6 +226,7 @@ if (clienteSession) {
     p_peso_atual: 42,
     p_repeticoes: 8,
     p_series: 3,
+    p_dia_planilha: planilhaDiaHoje,
   });
   !goodRpc ? pass("treino:rpc:accept_valid") : fail("treino:rpc:accept_valid", goodRpc.message);
 
@@ -234,6 +238,7 @@ if (clienteSession) {
     p_peso_atual: 43,
     p_repeticoes: 8,
     p_series: 3,
+    p_dia_planilha: planilhaDiaHoje,
   });
   dayLockRpc && isDayLockError(dayLockRpc.message)
     ? pass("treino:rpc:day_lock")

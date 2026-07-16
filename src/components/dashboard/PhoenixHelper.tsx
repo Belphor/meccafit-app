@@ -23,17 +23,22 @@ import {
 } from "@/lib/anima-perfil-identity-beats";
 import {
   PERFIL_IDENTITY_TOUR_INPUT_EVENT,
+  clearPerfilIdentityFieldUnlocks,
   publishPerfilIdentityFieldUnlock,
   readPerfilIdentityTourFormState,
   resolveFieldIdFromBeatId,
+  revokePerfilIdentityFieldsFrom,
   type PerfilIdentityTourFormState,
 } from "@/lib/anima-perfil-identity-form";
 import {
   ANYMA_DEBT_SOFT_GREETING,
   ANYMA_EXIT_COPY,
   ANYMA_ONBOARDING_LOCK_MS,
+  clearReturningLoginGreetingPending,
   markDebtSoftGreetingShown,
+  markReturningLoginGreetingShown,
   readAnymaOnboardingComplete,
+  readPresentationSkipIdentityOnly,
   shouldShowAnymaPortalOnboarding,
   writeAnymaOnboardingComplete,
   resolveOnboardingSpeech,
@@ -43,12 +48,14 @@ import {
   PHOENIX_PUNISHMENT_LORE,
   type AnymaSpeechContext,
 } from "@/lib/phoenix-lore";
+import { triggerReturningLoginGreeting } from "@/lib/anyma-returning-greeting";
 import { markAnymaPortalVisto } from "@/lib/profile-identity";
 import {
   DASHBOARD_TAP_TARGET,
   THERMAL_GRAVITY_RESTORATION_FLASH_MS,
 } from "@/lib/dashboard-config";
 import { resolveAnymaSpeechText } from "@/lib/anima-speech";
+import { openAlquimiaManifesto } from "@/lib/alquimia-manifesto-events";
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
 const ANYMA_SPOTLIGHT_LOCK_MS = 8_000;
@@ -74,6 +81,7 @@ const EXPLANATION_SCROLL_TARGETS: Partial<Record<AnymaExplanationId, string>> = 
   "comunidade-mural": '[data-tour-target="comunidade-mural"]',
   "dieta-plano": '[data-tour-target="dieta-plano"]',
   "perfil-linhagem": '[data-tour-target="perfil-identidade"]',
+  "perfil-historia": '[data-tour-target="perfil-historia"]',
   "perfil-suporte": '[data-tour-target="fenyxia-suporte"]',
 };
 
@@ -87,6 +95,8 @@ export type PhoenixHelperProps = {
   isPunished?: boolean;
   animaPortalVisto?: boolean;
   hasPersonalBond?: boolean;
+  /** Entradas do Portal após bump (clientes). Saudação de retorno a partir de 2. */
+  portalEntryCount?: number;
   onTabChange: (tab: DashboardTabId, options?: { preserveVoice?: boolean }) => void;
   onOnboardingComplete?: () => void;
 };
@@ -104,6 +114,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   isPunished = false,
   animaPortalVisto = false,
   hasPersonalBond = false,
+  portalEntryCount = 0,
   onTabChange,
   onOnboardingComplete,
 }: PhoenixHelperProps) {
@@ -243,6 +254,17 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     setOnboardingPhase(null);
     writeAnymaLastVisit(userId);
   }, [animaPortalVisto, isSupported, userId, isPunished]);
+
+  /**
+   * "Bem-vindo" só no arm do DashboardClient (início de cada login).
+   * Não rearmar aqui após Juramento/spotlight — evita falar no meio das explicações.
+   */
+  useEffect(() => {
+    if (isPunished || onboardingPhase === null) return;
+    if (portalEntryCount < 1) return;
+    markReturningLoginGreetingShown(userId, portalEntryCount);
+    clearReturningLoginGreetingPending(userId);
+  }, [isPunished, onboardingPhase, portalEntryCount, userId]);
 
   const guidedTabChange = useCallback(
     (tab: DashboardTabId) => {
@@ -468,9 +490,17 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     if (onboardingPhase !== null) return;
     if (hudOpen) return;
 
-    setHudOpen(true);
+    if (isPunished) {
+      setHudOpen(true);
+      return;
+    }
 
-    if (isPunished) return;
+    // Saudação de retorno: só voz. Sem abrir o painel / card.
+    if (triggerReturningLoginGreeting()) {
+      return;
+    }
+
+    setHudOpen(true);
 
     if (!debtGreetingFiredRef.current && shouldShowDebtSoftGreeting(userId, daysAbsent)) {
       debtGreetingFiredRef.current = true;
@@ -521,17 +551,13 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     });
   }, [cancelVoice, clearExitTimer, igniteVoice, phaseContext.phaseTier, profileName]);
 
-  const completeIntro = useCallback(() => {
-    clearOnboardingTimer();
-    cancelVoice();
-    writeSpotlightBeatProgress(userId, 0);
-    setSpotlightBeat(0);
-    setOnboardingPhase("spotlight");
-  }, [cancelVoice, clearOnboardingTimer, userId]);
-
-  const completeSpotlight = useCallback(() => {
+  const finishPortalOnboarding = useCallback(() => {
     writeAnymaOnboardingComplete(userId);
     clearSpotlightBeatProgress(userId);
+    if (portalEntryCount >= 1) {
+      markReturningLoginGreetingShown(userId, portalEntryCount);
+      clearReturningLoginGreetingPending(userId);
+    }
     void markAnymaPortalVisto().catch(() => {
       // portal flag opcional até migration aplicada
     });
@@ -540,7 +566,35 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     spotlightBootstrappedRef.current = false;
     clearSpotlightTimer();
     onOnboardingComplete?.();
-  }, [clearSpotlightTimer, onOnboardingComplete, userId]);
+  }, [clearSpotlightTimer, onOnboardingComplete, portalEntryCount, userId]);
+
+  const completeIntro = useCallback(() => {
+    clearOnboardingTimer();
+    cancelVoice();
+
+    // "Pular apresentação": após Juramento das Cinzas → perfil, sem spotlight.
+    if (readPresentationSkipIdentityOnly(userId)) {
+      clearPerfilIdentityFieldUnlocks();
+      finishPortalOnboarding();
+      guidedTabChange("perfil");
+      return;
+    }
+
+    clearPerfilIdentityFieldUnlocks();
+    writeSpotlightBeatProgress(userId, 0);
+    setSpotlightBeat(0);
+    setOnboardingPhase("spotlight");
+  }, [
+    cancelVoice,
+    clearOnboardingTimer,
+    finishPortalOnboarding,
+    guidedTabChange,
+    userId,
+  ]);
+
+  const completeSpotlight = useCallback(() => {
+    finishPortalOnboarding();
+  }, [finishPortalOnboarding]);
 
   const advanceSpotlight = useCallback(() => {
     const lastBeat = ONBOARDING_SPOTLIGHT_BEATS.length - 1;
@@ -570,6 +624,14 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       if (!card) return;
 
       const selector = EXPLANATION_SCROLL_TARGETS[explanationId];
+
+      if (explanationId === "perfil-historia") {
+        cancelVoice();
+        setHudOpen(false);
+        onTabChange(card.tab);
+        openAlquimiaManifesto({ narrate: true });
+        return;
+      }
 
       if (card.redirectOnly) {
         cancelVoice();
@@ -638,6 +700,14 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     spotlightTargetReady && spotlightNarrationDone && spotlightLockReleased;
 
   useEffect(() => {
+    if (onboardingPhase !== "spotlight") return;
+    const field = resolveFieldIdFromBeatId(spotlightBeatConfig.id);
+    if (!field) return;
+    // Relocka nome/gênero/foto ao entrar na explicação do passo.
+    revokePerfilIdentityFieldsFrom(field);
+  }, [onboardingPhase, spotlightBeatConfig.id]);
+
+  useEffect(() => {
     if (onboardingPhase !== "spotlight" || !fieldUnlockReady) return;
     const field = resolveFieldIdFromBeatId(spotlightBeatConfig.id);
     if (field) publishPerfilIdentityFieldUnlock(field);
@@ -668,13 +738,13 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         ? `Aguarde a ${ANYMA_BRAND} concluir a narrativa sagrada.`
         : "Sua linhagem está pronta para continuar.";
     }
-    return "As Cinzas falaram. Agora a ANYMA mostrará onde permanece no Portal.";
+    return "As Cinzas falaram. Aceite o juramento para seguir.";
   };
 
   const resolveAcenderButtonLabel = (): string => {
     if (!onboardingLockReleased) return `Forja em ${onboardingSecondsLeft}s`;
     if (!onboardingNarrationDone) return "Narrativa em chamas…";
-    return `Conhecer a ${ANYMA_BRAND}`;
+    return "Aceito o Juramento";
   };
 
   const resolveSpotlightHint = (): string => {
@@ -705,7 +775,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     }
 
     if (spotlightBeatConfig.advanceGate === "foto" && !identityForm.hasPhoto) {
-      return "Toque em Aperta aqui para inserir a foto. Depois o botão Continuar para selar libera.";
+      return "Toque no botão destacado para inserir a foto. Depois o botão Continuar para selar libera.";
     }
 
     if (spotlightBeatConfig.completesTour) {
@@ -731,7 +801,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 px-5 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
-          aria-label={`Introdução da ${ANYMA_BRAND}`}
+          aria-label="Juramento das Cinzas"
         >
           <div className="max-w-lg rounded-2xl border border-orange-500/20 bg-neutral-950/80 p-6 text-center shadow-[0_0_40px_rgba(249,115,22,0.15)] backdrop-blur-xl">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-300/80">
@@ -828,7 +898,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           />
 
           <aside
-            className="anima-hud-panel absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(4rem,env(safe-area-inset-top))] flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
+            className="anima-hud-panel flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">

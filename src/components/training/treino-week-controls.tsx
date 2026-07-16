@@ -6,7 +6,6 @@ import {
   buildScheduleMap,
   formatScheduleDayLabel,
   parsePlanilhaDayRows,
-  resolveCalendarWeekdayIndex,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT_LABELS,
   type PlanilhaDayRow,
@@ -18,13 +17,18 @@ import {
   TREINO_DIA_CONCLUIDO_LABEL,
   TREINO_DAY_BUTTON,
   TREINO_DAY_PICKER_LABEL,
+  TREINO_EXECUTION_CLIENT_EXPLANATION,
   TREINO_EXECUTION_DAY_TITLE,
+  TREINO_EXECUTION_EXPLANATION_LABEL,
+  TREINO_EXECUTION_EXPLANATION_TEXT,
+  TREINO_EXECUTION_EXPLANATION_ZONE,
   TREINO_EXECUTION_HERO,
   TREINO_EXECUTION_LABEL,
   TREINO_EXECUTION_META,
   TREINO_EXECUTION_MUSCLES,
   TREINO_EXECUTION_PICKER,
 } from "@/lib/dashboard-config";
+import { LoreEm } from "@/lib/lore-emphasis";
 import { supabase } from "@/lib/supabase";
 
 const WEEKDAY_INDICES: WeekdayIndex[] = [1, 2, 3, 4, 5, 6];
@@ -36,6 +40,8 @@ export type TreinoWeekControlsProps = {
   initialSchedule?: PlanilhaDayRow[];
   useForjadorSchedule?: boolean;
   activeTrainingDay: WeekdayIndex;
+  /** Dia civil autoritativo de Brasília (servidor). */
+  calendarToday: WeekdayIndex;
   isTreinoSwitching: boolean;
   hasForjadorPlan: boolean;
   forjadorConfig: ForjadorTreinoConfig;
@@ -102,6 +108,7 @@ export function TreinoWeekControls({
   initialSchedule,
   useForjadorSchedule = false,
   activeTrainingDay,
+  calendarToday,
   isTreinoSwitching,
   hasForjadorPlan,
   forjadorConfig,
@@ -112,7 +119,6 @@ export function TreinoWeekControls({
     () => resolveInitialSchedule(initialSchedule, useForjadorSchedule),
     [initialSchedule, useForjadorSchedule],
   );
-  const calendarToday = useMemo(() => resolveCalendarWeekdayIndex(), []);
   const lockedDaySet = useMemo(() => new Set(weekLockedDays), [weekLockedDays]);
 
   const [loadedSchedule, setLoadedSchedule] = useState(bootSchedule);
@@ -173,13 +179,24 @@ export function TreinoWeekControls({
 
   return (
     <div className={`treino-execution treino-execution--${executionTone}`}>
+      <div className={TREINO_EXECUTION_EXPLANATION_ZONE}>
+        <p className={TREINO_EXECUTION_EXPLANATION_LABEL}>Disciplina do calendário</p>
+        <p className={TREINO_EXECUTION_EXPLANATION_TEXT}>
+          Só os mais disciplinados entram no ranking. Se faltar à forja ou não seguir o
+          calendário, o input de <LoreEm>Volume de Carga Máxima</LoreEm> não libera. O{" "}
+          <LoreEm>VTC</LoreEm> só abre quando o dia da planilha coincide com o{" "}
+          <LoreEm>calendário de referência de Brasília</LoreEm>.
+        </p>
+        <p className="sr-only">{TREINO_EXECUTION_CLIENT_EXPLANATION}</p>
+      </div>
+
       <div className={TREINO_EXECUTION_HERO}>
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
           <p className={resolveExecutionLabelClass(executionTone)}>Execução</p>
           {isActiveDayLocked ? (
             <span className={resolveStatusBadgeClass(executionTone)}>{TREINO_DIA_CONCLUIDO_LABEL}</span>
           ) : isCalendarToday ? (
-            <span className={resolveStatusBadgeClass(executionTone)}>Dia civil</span>
+            <span className={resolveStatusBadgeClass(executionTone)}>Dia civil · Brasília</span>
           ) : null}
         </div>
         <p
@@ -203,7 +220,7 @@ export function TreinoWeekControls({
         <div className="mb-2.5 flex items-center justify-between gap-2 sm:mb-3">
           <p className={TREINO_DAY_PICKER_LABEL}>Escolha o dia</p>
           <p className="font-mono text-[7px] uppercase tracking-[0.1em] text-emerald-500/40 sm:text-[8px] sm:tracking-[0.12em]">
-            {loadingIndication ? "Sincronizando…" : "Seg a Sáb"}
+            {loadingIndication ? "Sincronizando…" : "Brasília · Seg a Sáb"}
           </p>
         </div>
 

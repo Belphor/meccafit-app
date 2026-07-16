@@ -13,6 +13,7 @@ import {
   prefetchAnimaTts,
 } from "@/lib/anima-audio-controller";
 import { injectName } from "@/lib/profile-display-name";
+import { suppressReturningLoginGreeting } from "@/lib/anyma-returning-greeting";
 import { CODIGO_DO_RENASCIMENTO } from "@/lib/phoenix-lore";
 
 export { injectName, injectRegisteredName } from "@/lib/profile-display-name";
@@ -38,12 +39,15 @@ export type IgniteVoiceInput =
       isPunished?: boolean;
       /** Mantido por compatibilidade. Card e voz sempre usam Nova Chama como fallback. */
       allowIntroFallback?: boolean;
+      /** Playback sem Web Audio — saudação automática pós-login. */
+      simplePlayback?: boolean;
     }
   | { tier: PhaseTier; fullName: string; isPunished?: boolean; allowIntroFallback?: boolean };
 
 type VoiceModulation = {
   tier?: PhaseTier;
   isPunished?: boolean;
+  simplePlayback?: boolean;
 };
 
 export function resolveIgnitePayload(input: IgniteVoiceInput): {
@@ -77,6 +81,7 @@ export function resolveIgnitePayload(input: IgniteVoiceInput): {
       modulation: {
         tier: input.tier,
         isPunished: input.isPunished,
+        simplePlayback: input.simplePlayback,
       },
     };
   }
@@ -125,7 +130,7 @@ export function usePhoenixVoice() {
     cancelVoiceRef.current = cancelVoice;
   }, [cancelVoice]);
 
-  /** Pré-síntese em paralelo ao alinhamento do tour/card. */
+  /** Pré-síntese em paralelo (não cancela os demais beats). */
   const prepareVoice = useCallback((input: IgniteVoiceInput) => {
     if (!isAnimaAudioSupported()) return;
 
@@ -133,21 +138,18 @@ export function usePhoenixVoice() {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    prefetchAbortRef.current?.abort();
-    const abort = new AbortController();
-    prefetchAbortRef.current = abort;
-    prefetchAnimaTts(trimmed, abort.signal);
+    prefetchAnimaTts(trimmed);
   }, []);
 
-  const igniteVoice = useCallback((input: IgniteVoiceInput) => {
+  const igniteVoice = useCallback((input: IgniteVoiceInput): Promise<void> => {
     if (!isAnimaAudioSupported()) {
       setState("unsupported");
-      return;
+      return Promise.resolve();
     }
 
-    const { text } = resolveIgnitePayload(input);
+    const { text, modulation } = resolveIgnitePayload(input);
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) return Promise.resolve();
 
     // Cancela síntese/reprodução anterior (mantém prefetch do mesmo texto).
     pendingTokenRef.current += 1;
@@ -156,15 +158,19 @@ export function usePhoenixVoice() {
     stopPlaybackRef.current?.();
     stopPlaybackRef.current = null;
 
+    // Não deixa "Bem-vindo" sobrepor Juramento, guia ou explicações.
+    suppressReturningLoginGreeting();
+
     const abort = new AbortController();
     abortRef.current = abort;
     setAmplitude(0);
     setState("loading-voices");
 
-    void (async () => {
+    return (async () => {
       try {
         const playback = await playAnimaTts(trimmed, {
           signal: abort.signal,
+          simplePlayback: modulation.simplePlayback,
           onSpeaking: () => {
             if (pendingTokenRef.current !== token) return;
             setState("speaking");
@@ -227,6 +233,9 @@ export function usePhoenixVoice() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(DASHBOARD_TAB_CHANGE_EVENT, onTabChange);
       window.removeEventListener("popstate", onPopState);
+      // Intencional: abortar o prefetch MAIS RECENTE no unmount (o ref é mutado ao
+      // longo da sessão), não uma cópia capturada no início do efeito.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       prefetchAbortRef.current?.abort();
       cancelVoiceRef.current?.();
     };

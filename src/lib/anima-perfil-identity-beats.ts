@@ -99,6 +99,7 @@ export const PERFIL_CONFIRMA_BEAT: PerfilIdentityBeat = {
   continueLabel: "Confirmar nome e gênero",
   waitForTarget: true,
   completesTour: true,
+  /** Só aponta ao botão real do Perfil — sem CTA duplicado no card da ANYMA. */
   hideContinueButton: true,
 };
 

@@ -64,7 +64,7 @@ const SECTION_NAV = [
   { id: "comunidade-perfil", label: "Perfil" },
   { id: "comunidade-arena", label: "Arena" },
   { id: "comunidade-titulos", label: "Títulos" },
-  { id: "comunidade-rankings", label: "RANKINGS" },
+  { id: "comunidade-rankings", label: "rankings" },
   { id: "comunidade-mural", label: "Mural" },
 ] as const;
 

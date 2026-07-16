@@ -26,7 +26,9 @@ import {
   type ProfileSexo,
 } from "@/lib/profile-identity";
 import {
+  PERFIL_IDENTITY_CONFIRM_REQUEST_EVENT,
   PERFIL_IDENTITY_FIELD_UNLOCK_EVENT,
+  isPerfilIdentityFieldUnlocked,
   publishPerfilIdentityTourInput,
   readUnlockedPerfilIdentityFields,
   unlockAllPerfilIdentityFields,
@@ -75,7 +77,7 @@ export function ProfileLinhagemIdentity({
   const [hasPhoto, setHasPhoto] = useState(false);
   const [unlockedFields, setUnlockedFields] = useState(() =>
     confirmed
-      ? new Set<PerfilIdentityFieldId>(["nome", "genero", "foto"])
+      ? new Set<PerfilIdentityFieldId>(["nome", "genero", "foto", "confirmar"])
       : new Set(readUnlockedPerfilIdentityFields()),
   );
   const [identityFeedback, setIdentityFeedback] = useState<{
@@ -87,7 +89,9 @@ export function ProfileLinhagemIdentity({
   useEffect(() => {
     if (confirmed) {
       unlockAllPerfilIdentityFields();
-      setUnlockedFields(new Set(["nome", "genero", "foto"]));
+      // Sincroniza os campos liberados quando o servidor confirma a identidade (intencional).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUnlockedFields(new Set(["nome", "genero", "foto", "confirmar"]));
     }
   }, [confirmed]);
 
@@ -159,6 +163,7 @@ export function ProfileLinhagemIdentity({
   const nomeUnlocked = confirmed || unlockedFields.has("nome");
   const generoUnlocked = confirmed || unlockedFields.has("genero");
   const fotoUnlocked = confirmed || unlockedFields.has("foto");
+  const confirmarUnlocked = confirmed || unlockedFields.has("confirmar");
 
   const handleDisplayNameChange = useCallback((value: string) => {
     setDisplayName(value);
@@ -170,13 +175,17 @@ export function ProfileLinhagemIdentity({
 
   const canConfirm =
     !confirmed &&
+    confirmarUnlocked &&
     displayName.trim().length >= 2 &&
     Boolean(sexo) &&
     hasPhoto &&
     !isSubmitting;
 
   const handleConfirmIdentity = useCallback(async () => {
-    if (!sexo || confirmed || !hasPhoto) return;
+    const sealUnlocked =
+      confirmed || confirmarUnlocked || isPerfilIdentityFieldUnlocked("confirmar");
+    if (!sexo || confirmed || !hasPhoto || !sealUnlocked || isSubmitting) return;
+    if (displayName.trim().length < 2) return;
 
     setIsSubmitting(true);
     setIdentityFeedback(null);
@@ -199,7 +208,24 @@ export function ProfileLinhagemIdentity({
     } finally {
       setIsSubmitting(false);
     }
-  }, [confirmed, displayName, hasPhoto, onIdentityConfirmed, sexo, userId]);
+  }, [
+    confirmed,
+    confirmarUnlocked,
+    displayName,
+    hasPhoto,
+    isSubmitting,
+    onIdentityConfirmed,
+    sexo,
+    userId,
+  ]);
+
+  useEffect(() => {
+    const onConfirmRequest = () => {
+      void handleConfirmIdentity();
+    };
+    window.addEventListener(PERFIL_IDENTITY_CONFIRM_REQUEST_EVENT, onConfirmRequest);
+    return () => window.removeEventListener(PERFIL_IDENTITY_CONFIRM_REQUEST_EVENT, onConfirmRequest);
+  }, [handleConfirmIdentity]);
 
   const handlePhotoChange = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,11 +252,7 @@ export function ProfileLinhagemIdentity({
     [userId],
   );
 
-  const photoButtonLabel = hasPhoto
-    ? "Trocar foto"
-    : confirmed
-      ? "Inserir foto do dispositivo"
-      : "Aperta aqui";
+  const photoButtonLabel = hasPhoto ? "Trocar foto" : "Inserir foto do dispositivo";
 
   return (
     <BrasaVivaCard
@@ -255,7 +277,7 @@ export function ProfileLinhagemIdentity({
         <div className="w-full min-w-0 flex-1 space-y-4">
           {!confirmed ? (
             <p className={EVOLUTION_HINT}>
-              Antes de forjar nos duelos e nos RANKINGS, declare quem você é. O{" "}
+              Antes de forjar nos duelos e nos rankings, declare quem você é. O{" "}
               <LoreEm>nome deve ser único</LoreEm> na linhagem, e o{" "}
               <LoreEm>gênero</LoreEm> define em qual arena mensal você compete, masculina ou
               feminina.
@@ -263,7 +285,7 @@ export function ProfileLinhagemIdentity({
           ) : (
             <p className={EVOLUTION_HINT}>
               Nome e foto ficam no seu dispositivo. O nome e uma miniatura vão ao servidor para
-              duelos, RANKINGS e mural. O anel reflete a fase da{" "}
+              duelos, rankings e mural. O anel reflete a fase da{" "}
               <LoreEm>Chama Acumulada</LoreEm>.
             </p>
           )}
@@ -347,19 +369,26 @@ export function ProfileLinhagemIdentity({
           </div>
 
           {!confirmed ? (
-            <button
-              type="button"
-              data-tour-target="perfil-confirmar"
-              disabled={!canConfirm}
-              onClick={() => void handleConfirmIdentity()}
-              className={`${DASHBOARD_TAP_TARGET} w-full rounded-full border px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] transition ${
-                canConfirm
-                  ? "anima-acender-linhagem-cta"
-                  : "border-neutral-800 bg-neutral-950/60 text-neutral-500"
-              }`}
-            >
-              {isSubmitting ? "Selando identidade…" : "Confirmar nome e gênero"}
-            </button>
+            <div>
+              <button
+                type="button"
+                data-tour-target="perfil-confirmar"
+                disabled={!canConfirm}
+                onClick={() => void handleConfirmIdentity()}
+                className={`${DASHBOARD_TAP_TARGET} relative w-full rounded-full border px-4 py-3 text-xs font-bold uppercase tracking-[0.16em] transition ${
+                  canConfirm
+                    ? "anima-acender-linhagem-cta"
+                    : "border-neutral-800 bg-neutral-950/60 text-neutral-500"
+                }`}
+              >
+                {isSubmitting ? "Selando identidade…" : "Confirmar nome e gênero"}
+              </button>
+              {!confirmarUnlocked ? (
+                <p className="mt-1.5 text-[10px] text-neutral-500">
+                  Aguarde a ANYMA explicar o selo para liberar este botão.
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           {identityFeedback ? (

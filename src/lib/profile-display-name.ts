@@ -74,10 +74,9 @@ export async function syncProfileDisplayNameToServer(name: string): Promise<stri
   }
 
   syncInFlight = (async () => {
-    const { data, error } = await supabase.rpc(
-      "client_update_display_name" as "client_submit_feedback",
-      { p_full_name: trimmed } as never,
-    );
+    const { data, error } = await supabase.rpc("client_update_display_name", {
+      p_full_name: trimmed,
+    });
 
     if (error) {
       if (error.code === "PGRST202") return;

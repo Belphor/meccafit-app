@@ -19,6 +19,15 @@ const userLabel =
   process.argv.find((arg) => arg.startsWith("--user="))?.slice("--user=".length) ||
   "cliente_principal";
 
+/** Dia da planilha (1=Seg … 6=Sáb) alinhado ao calendário civil de Brasília. */
+function resolvePlanilhaDiaSp() {
+  const spNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const dow = spNow.getDay();
+  return dow === 0 ? 1 : dow === 6 ? 6 : dow;
+}
+
+const planilhaDiaHoje = resolvePlanilhaDiaSp();
+
 function loadTestUsers() {
   try {
     const raw = readFileSync(resolve(process.cwd(), "scripts/argos/test-users.json"), "utf8");
@@ -115,6 +124,7 @@ async function main() {
       p_peso_atual: payload.pesoAtual,
       p_repeticoes: payload.repeticoes,
       p_series: payload.series,
+      p_dia_planilha: planilhaDiaHoje,
     });
 
     if (error) {

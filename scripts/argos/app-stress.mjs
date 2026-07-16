@@ -6,6 +6,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { resolveSeedPassword } from "../lib/seed-credentials.mjs";
+import { resolvePlanilhaDiaSp } from "./lib/probe-workout.mjs";
+
+const PLANILHA_DIA_HOJE = resolvePlanilhaDiaSp();
 
 function parseArgs(argv) {
   const args = { vus: 400, duration: 45, ramp: 12, appUrl: process.env.ARGOS_APP_URL ?? "http://127.0.0.1:3000" };
@@ -253,6 +256,7 @@ async function runWriteProbes(cliente) {
       p_peso_atual: peso,
       p_repeticoes: 1,
       p_series: 1,
+      p_dia_planilha: PLANILHA_DIA_HOJE,
     });
 
     const numericPeso = Number(peso);
@@ -288,6 +292,7 @@ async function runWriteProbes(cliente) {
       p_peso_atual: 40,
       p_repeticoes: 8,
       p_series: 3,
+      p_dia_planilha: PLANILHA_DIA_HOJE,
     });
     if (!error) {
       pass(id);

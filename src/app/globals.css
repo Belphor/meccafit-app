@@ -3335,10 +3335,10 @@ body {
   }
 }
 
+/* Canto inferior direito do viewport — fora de ancestors com overflow/transform. */
 .phoenix-anchor {
   position: fixed;
-  bottom: max(1rem, env(safe-area-inset-bottom));
-  right: max(1rem, env(safe-area-inset-right));
+  inset: auto max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) auto;
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -3348,22 +3348,40 @@ body {
   pointer-events: none;
 }
 
+@media (max-width: 639px) {
+  .phoenix-anchor {
+    inset: auto max(1rem, env(safe-area-inset-right))
+      max(5.25rem, calc(4.5rem + env(safe-area-inset-bottom))) auto;
+  }
+}
+
 .phoenix-anchor > button {
   pointer-events: auto;
 }
 
-/* Painel de cards da ANYMA — reserva altura da esfera + fênix no canto inferior direito. */
+/* Painel de cards da ANYMA — sobe a partir do canto inferior direito, acima da esfera. */
 .anima-hud-panel {
   --anima-phoenix-reserve: 10.5rem;
-  bottom: max(
-    calc(1rem + var(--anima-phoenix-reserve)),
-    calc(env(safe-area-inset-bottom) + var(--anima-phoenix-reserve))
-  );
+  position: fixed;
+  inset: auto max(1rem, env(safe-area-inset-right))
+    max(
+      calc(1rem + var(--anima-phoenix-reserve)),
+      calc(env(safe-area-inset-bottom) + var(--anima-phoenix-reserve))
+    )
+    auto;
+  max-height: min(62vh, 32rem);
+}
+
+@media (max-width: 639px) {
+  .anima-hud-panel {
+    --anima-phoenix-reserve: 14.5rem;
+  }
 }
 
 @media (min-width: 640px) {
   .anima-hud-panel {
     --anima-phoenix-reserve: 12rem;
+    max-height: min(68vh, 36rem);
   }
 }
 

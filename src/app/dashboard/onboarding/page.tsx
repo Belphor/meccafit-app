@@ -34,6 +34,7 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingClient
+      userId={user.id}
       termsAccepted={termsAccepted}
       profileName={profile?.full_name?.trim() ?? ""}
     />

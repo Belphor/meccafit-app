@@ -14,7 +14,6 @@ import {
   type EvolutionAvatarUpdatedDetail,
 } from "@/services/local-storage";
 import { PHASE_TIER_LABELS, type PhaseTier } from "@/lib/dashboard-config";
-import { FENIX_QA_ANIMATION_EVENT, type FenixQaAnimationDetail } from "@/lib/qa-animation-events";
 
 /** Cores das camadas do anel da Evolução (individual, tons cinza a dourado) */
 export const EVOLUTION_TIER_RING_COLORS: Record<PhaseTier, string> = {
@@ -131,23 +130,6 @@ export function FenixEvolutionAvatar({
     prevTierRef.current = tier;
     return undefined;
   }, [tier]);
-
-  useEffect(() => {
-    const onQa = (event: Event) => {
-      const detail = (event as CustomEvent<FenixQaAnimationDetail>).detail;
-      if (detail?.kind === "avatar-flash") {
-        setFlashActive(true);
-        window.setTimeout(() => setFlashActive(false), FLASH_DURATION_MS);
-      }
-      if (detail?.kind === "avatar-tier-up") {
-        setTierUpActive(true);
-        window.setTimeout(() => setTierUpActive(false), TIER_UP_DURATION_MS);
-      }
-    };
-
-    window.addEventListener(FENIX_QA_ANIMATION_EVENT, onQa);
-    return () => window.removeEventListener(FENIX_QA_ANIMATION_EVENT, onQa);
-  }, []);
 
   useEffect(() => {
     const fingerprint = buildCalorPayloadFingerprint(calorRows, indiceIgnicao, tier, vtc30dKg);

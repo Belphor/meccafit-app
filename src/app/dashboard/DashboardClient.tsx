@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { SacredPhoenixSigil } from "@/components/dashboard/DashboardBrandAssets";
@@ -18,16 +18,14 @@ import { SuperacaoOverlay } from "@/components/SuperacaoOverlay";
 import { DueloConviteHost } from "@/components/comunidade/duelo-convite-host";
 import { LinhagemTransmutationHost } from "@/components/evolution/LinhagemTransmutationHost";
 import { EvolutionLinhagemLevelUp } from "@/components/evolution/EvolutionLinhagemLevelUp";
+import { onLinhagemTransmutationStart } from "@/lib/linhagem-transmutation-coordinator";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
 import { PhoenixPhaseEngine } from "@/components/dashboard/PhoenixPhaseEngine";
 import { PhoenixHelper } from "@/components/dashboard/PhoenixHelper";
+import { AlquimiaManifestoOverlay } from "@/components/profile/AlquimiaManifestoOverlay";
 import { FenixEcossistemaTourHost } from "@/components/dashboard/FenixEcossistemaTourHost";
 import { AnymaPerfilIdentityGuide } from "@/components/dashboard/AnymaPerfilIdentityGuide";
 import VideoModal from "@/components/VideoModal";
-import {
-  FENIX_QA_ANIMATION_EVENT,
-  type FenixQaAnimationDetail,
-} from "@/lib/qa-animation-events";
 import {
   DEFAULT_FORJADOR_TREINO_CONFIG,
   fetchForjadorPrescriptionsClient,
@@ -72,17 +70,8 @@ import {
   buildThermalGravitySettlementMessage,
   evaluateThermalGravity,
   parseThermalGravityState,
-  resolveMonthlyLevelUpProgressPercent,
+  resolveMonthlyMaintenanceProgressPercent,
 } from "@/lib/thermal-gravity";
-import {
-  LINHAGEM_INACTIVITY_QA_EVENT,
-  type LinhagemInactivityQaDetail,
-} from "@/lib/linhagem-inactivity-qa";
-import {
-  readThermalGravityQaOverride,
-  THERMAL_GRAVITY_QA_UPDATED_EVENT,
-} from "@/lib/thermal-gravity-qa";
-import { isFenixQaLabEnabled } from "@/components/qa/FenixAnimationTestPanel";
 import { rekindleLinhagemAfterInactivity } from "@/lib/linhagem-inactivity-server";
 import { syncLinhagemTierAfterDemotion } from "@/lib/linhagem-tier-tracker";
 import { syncPhaseTierAfterActivity } from "@/lib/phase-tier-sync";
@@ -112,23 +101,40 @@ import {
 } from "@/lib/forja-treino-events";
 import {
   bumpAnymaPortalEntryCount,
+  beginReturningLoginGreetingEntry,
+  clearPresentationSkipIdentityOnly,
+  clearPresentationSkipSilentEntry,
+  clearReturningLoginGreetingPending,
+  isPresentationSkipSilentEntry,
+  markReturningLoginGreetingShown,
   markSecondEntryTreinoRedirectDone,
   readAnymaOnboardingComplete,
+  readAnymaPortalEntryCount,
+  readPresentationSkipIdentityOnly,
   readSecondEntryTreinoRedirectDone,
+  resolveReturningLoginSessionEntry,
 } from "@/lib/phoenix-lore";
+import {
+  armReturningLoginGreeting,
+  refreshReturningLoginGreetingName,
+  stopReturningLoginGreeting,
+} from "@/lib/anyma-returning-greeting";
 import { computeAltarEnergy, resolveProfileIncubating } from "@/lib/mock-data";
 import type { ClientProfile, MuscleSubgroup, MuralPost } from "@/lib/mock-data";
 import { PORTAL_COPY } from "@/lib/portal-copy";
 import { parseProfileSexo, markEcossistemaTourComplete } from "@/lib/profile-identity";
 import {
   isTabEnabledDuringTour,
+  markEcossistemaTourMetaOnly,
   markEcossistemaTourPending,
   readEcossistemaTourComplete,
+  readEcossistemaTourMetaOnly,
   readEcossistemaTourPending,
   readEcossistemaTourBeatIndex,
   readEcossistemaTourStepIndex,
   resolveDisabledTabsDuringTour,
   resolveEcossistemaTourSteps,
+  resolveMetaOnlyTourSteps,
   resolveTourBeats,
   skipEcossistemaTourForReturningAccount,
   writeEcossistemaTourBeatIndex,
@@ -153,8 +159,8 @@ import {
   buildScheduleMap,
   fetchPlanilhaScheduleClient,
   hasPlanilhaRows,
-  resolveCalendarWeekdayIndex,
 } from "@/lib/training-week";
+import { useBrasiliaClock } from "@/hooks/useBrasiliaClock";
 
 const EvolutionAbaPanel = dynamic(
   () =>
@@ -220,6 +226,7 @@ export function DashboardClient({
   initialForjadorPrescriptions = [],
 }: DashboardClientProps) {
   const router = useRouter();
+  const brasiliaClock = useBrasiliaClock();
   const catalogSubgroup = useMemo(
     () => resolveSubgroupFromParam(subgroupParam),
     [subgroupParam],
@@ -243,7 +250,7 @@ export function DashboardClient({
   const resolvedProfileName = useResolvedProfileName(userId, profile?.name ?? null);
   const [subgroup, setSubgroup] = useState<MuscleSubgroup>(catalogSubgroup);
   const [activeTrainingDay, setActiveTrainingDay] = useState<WeekdayIndex>(() =>
-    resolveCalendarWeekdayIndex(),
+    brasiliaClock.weekdayIndex,
   );
   const [isTreinoSwitching, setIsTreinoSwitching] = useState(false);
   const [forjadorConfig, setForjadorConfig] = useState<ForjadorTreinoConfig>(initialForjadorConfig);
@@ -277,8 +284,15 @@ export function DashboardClient({
     useState<LinhagemInactivitySyncResult | null>(null);
   const [tourStepIndex, setTourStepIndex] = useState<number | null>(null);
   const [tourBeatIndex, setTourBeatIndex] = useState(0);
+  const [metaOnlyTour, setMetaOnlyTour] = useState<boolean>(() =>
+    readEcossistemaTourMetaOnly(userId),
+  );
+  const [portalEntryCount, setPortalEntryCount] = useState(0);
+  /** Entrada FIXA da sessão de login — gate do "Bem-vindo" (não muda em reload/navegação). */
+  const [greetingSessionEntry, setGreetingSessionEntry] = useState(0);
   const tourBootstrappedRef = useRef(false);
   const secondEntryTreinoBootRef = useRef(false);
+  const portalEntryBumpDoneRef = useRef(false);
   /** Evita que reload assíncrono do perfil reverta o selo de identidade e force Perfil de novo. */
   const identitySealedRef = useRef(false);
   const pendingPostIdentityTabRef = useRef<DashboardTabId | null>(null);
@@ -401,7 +415,7 @@ export function DashboardClient({
         vtc_30d: metrics.vtc_30d,
         session_vtc_today: metrics.session_vtc_today,
       });
-      const progressPct = resolveMonthlyLevelUpProgressPercent(thermalState) ?? 0;
+      const progressPct = resolveMonthlyMaintenanceProgressPercent(thermalState) ?? 0;
       const riskMessage = buildThermalGravityMonthAtRiskMessage(thermalState, progressPct);
       if (riskMessage) {
         monthRiskToastShownRef.current = true;
@@ -411,43 +425,6 @@ export function DashboardClient({
     [handleLinhagemInactivitySync, showPortalToast, userId],
   );
 
-  const resolveQaThermalAlert = useCallback(() => {
-    if (!isFenixQaLabEnabled()) return;
-    const override = readThermalGravityQaOverride();
-    if (!override) return;
-
-    if (override.simulate_month_boundary_degraded) {
-      const degradedTier = Math.max(1, override.phase_tier - 1) as PhaseTier;
-      const settlement: ThermalGravitySettlementResult = {
-        degraded: true,
-        phase_tier: degradedTier,
-        previous_tier: override.phase_tier,
-        settled_month: null,
-        settled_month_label: override.settled_month_label ?? "o mês anterior",
-        first_settlement: false,
-      };
-      setProfileRow((row) => (row ? { ...row, phase_tier: degradedTier } : row));
-      syncLinhagemTierAfterDemotion(userId, degradedTier);
-      const message = buildThermalGravitySettlementMessage(settlement);
-      if (message) showPortalToast(message, "info");
-      return;
-    }
-
-    if (override.simulate_month_at_risk) {
-      const thermalState = evaluateThermalGravity(override.phase_tier, {
-        vtc_month: override.vtc_month,
-        vtc_30d: override.vtc_30d ?? override.vtc_month,
-        session_vtc_today: override.session_vtc_today,
-      });
-      const nextState =
-        override.days_remaining !== undefined
-          ? { ...thermalState, days_remaining: override.days_remaining }
-          : thermalState;
-      const progressPct = resolveMonthlyLevelUpProgressPercent(nextState) ?? 0;
-      const message = buildThermalGravityMonthAtRiskMessage(nextState, progressPct);
-      if (message) showPortalToast(message, "info");
-    }
-  }, [showPortalToast, userId]);
   const [trainingTrack, setTrainingTrack] = useState<TrainingTrackState>(DEFAULT_TRAINING_TRACK);
   const subgroupRef = useRef(subgroup);
   const tabBootstrappedRef = useRef(false);
@@ -474,28 +451,11 @@ export function DashboardClient({
     activeTrainingDayRef.current = activeTrainingDay;
   }, [activeTrainingDay]);
 
+  // Se o level-up começa enquanto a ascensão está na tela, oculta a ascensão:
+  // o ritual da transmutação assume sozinho até a ANYMA concluir a fala.
   useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<FenixQaAnimationDetail>).detail;
-      if (detail?.kind !== "superacao") return;
-      setShowSuperacaoFlash(true);
-      window.setTimeout(() => setShowSuperacaoFlash(false), 8000);
-    };
-
-    window.addEventListener(FENIX_QA_ANIMATION_EVENT, handler);
-    return () => window.removeEventListener(FENIX_QA_ANIMATION_EVENT, handler);
+    return onLinhagemTransmutationStart(() => setShowSuperacaoFlash(false));
   }, []);
-
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<LinhagemInactivityQaDetail>).detail;
-      if (!detail?.result) return;
-      handleLinhagemInactivitySync(detail.result);
-    };
-
-    window.addEventListener(LINHAGEM_INACTIVITY_QA_EVENT, handler);
-    return () => window.removeEventListener(LINHAGEM_INACTIVITY_QA_EVENT, handler);
-  }, [handleLinhagemInactivitySync]);
 
   useEffect(() => {
     return () => {
@@ -504,12 +464,6 @@ export function DashboardClient({
       }
     };
   }, []);
-
-  useEffect(() => {
-    const handler = () => resolveQaThermalAlert();
-    window.addEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, handler);
-    return () => window.removeEventListener(THERMAL_GRAVITY_QA_UPDATED_EVENT, handler);
-  }, [resolveQaThermalAlert]);
 
   const refreshTreinoData = useCallback(async () => {
     const [rows, schedule, config] = await Promise.all([
@@ -701,7 +655,7 @@ export function DashboardClient({
           sexo: current?.sexo ?? incoming.sexo,
         };
       });
-      const bootDay = resolveCalendarWeekdayIndex();
+      const bootDay = brasiliaClock.weekdayIndex;
       const composeDay = initialDashboardLoadRef.current ? bootDay : activeTrainingDayRef.current;
       const bootSubgroup = composeDayTreinoSubgroup(
         scheduleMap[composeDay],
@@ -750,6 +704,7 @@ export function DashboardClient({
       isMounted = false;
     };
   }, [
+    brasiliaClock.weekdayIndex,
     forjadorPrescriptions,
     loadKey,
     resolveDashboardAlerts,
@@ -757,6 +712,13 @@ export function DashboardClient({
     subgroupParam,
     syncLinhagemInactivityPendingState,
   ]);
+
+  // Alinha o dia activo ao relógio autoritativo de Brasília assim que chegar do servidor.
+  useEffect(() => {
+    if (!brasiliaClock.isAuthoritative) return;
+    if (!initialDashboardLoadRef.current) return;
+    setActiveTrainingDay(brasiliaClock.weekdayIndex);
+  }, [brasiliaClock.isAuthoritative, brasiliaClock.weekdayIndex]);
 
   const perfilIdentidadeConfirmada = Boolean(profileRow?.perfil_identidade_confirmada);
   const animaPortalVisto = Boolean(profileRow?.anima_portal_visto);
@@ -776,14 +738,15 @@ export function DashboardClient({
     !profile?.is_punished;
 
   const tourSteps = useMemo(
-    () => resolveEcossistemaTourSteps(hasPersonalBond),
-    [hasPersonalBond],
+    () =>
+      metaOnlyTour ? resolveMetaOnlyTourSteps() : resolveEcossistemaTourSteps(hasPersonalBond),
+    [hasPersonalBond, metaOnlyTour],
   );
 
   const disabledTourTabIds = useMemo(() => {
     if (!tourActive || tourStepIndex === null) return undefined;
-    return resolveDisabledTabsDuringTour(tourStepIndex, hasPersonalBond);
-  }, [hasPersonalBond, tourActive, tourStepIndex]);
+    return resolveDisabledTabsDuringTour(tourStepIndex, hasPersonalBond, tourSteps);
+  }, [hasPersonalBond, tourActive, tourStepIndex, tourSteps]);
 
   const applyDashboardTab = useCallback(
     (tab: DashboardTabId, options?: { tourStepIndexOverride?: number }) => {
@@ -804,7 +767,7 @@ export function DashboardClient({
         tourPendingFirstRun &&
         effectiveTourStepIndex !== null &&
         !profile?.is_punished &&
-        !isTabEnabledDuringTour(tab, effectiveTourStepIndex, hasPersonalBond)
+        !isTabEnabledDuringTour(tab, effectiveTourStepIndex, hasPersonalBond, tourSteps)
       ) {
         return;
       }
@@ -832,6 +795,7 @@ export function DashboardClient({
       tabsLockedForIdentity,
       tourPendingFirstRun,
       tourStepIndex,
+      tourSteps,
     ],
   );
 
@@ -866,14 +830,38 @@ export function DashboardClient({
           }
         : row,
     );
+
     tourBootstrappedRef.current = true;
+
+    // "Pular apresentação": após nome/gênero/foto/confirmar, mostra só "Defina sua
+    // meta de treino" (aba Evolução) e conclui — sem o tour completo do Portal.
+    if (readPresentationSkipIdentityOnly(userId)) {
+      clearPresentationSkipIdentityOnly(userId);
+      markEcossistemaTourMetaOnly(userId);
+      setMetaOnlyTour(true);
+      pendingPostIdentityTabRef.current = "evolucao";
+      markEcossistemaTourPending(userId);
+      setTourStepIndex(0);
+      setTourBeatIndex(0);
+      writeEcossistemaTourStepIndex(userId, 0);
+      writeEcossistemaTourBeatIndex(userId, 0);
+      return;
+    }
+
+    pendingPostIdentityTabRef.current = "treino";
+
+    // Conta que já concluiu o ecossistema antes (retorno) — sela e libera sem tour.
+    if (readEcossistemaTourComplete(userId)) {
+      finalizeEcossistemaTourSkip();
+      return;
+    }
+
     markEcossistemaTourPending(userId);
     setTourStepIndex(0);
     setTourBeatIndex(0);
     writeEcossistemaTourStepIndex(userId, 0);
     writeEcossistemaTourBeatIndex(userId, 0);
-    pendingPostIdentityTabRef.current = "treino";
-  }, [userId]);
+  }, [finalizeEcossistemaTourSkip, userId]);
 
   useEffect(() => {
     const nextTab = pendingPostIdentityTabRef.current;
@@ -906,14 +894,22 @@ export function DashboardClient({
     const nextStep = currentStep + 1;
 
     if (nextStep >= tourSteps.length) {
+      const wasMetaOnly = metaOnlyTour;
       setTourStepIndex(null);
       setTourBeatIndex(0);
+      setMetaOnlyTour(false);
       writeEcossistemaTourComplete(userId);
       setProfileRow((row) => (row ? { ...row, ecossistema_tour_concluido: true } : row));
       void markEcossistemaTourComplete().catch(() => {
         // localStorage já marca conclusão; servidor sincroniza na próxima sessão
       });
-      showPortalToast("Ecossistema FENYXIA revelado. Suas chamas estão livres.", "success", 7000);
+      showPortalToast(
+        wasMetaOnly
+          ? "Meta de treino definida. Suas chamas estão livres."
+          : "Ecossistema FENYXIA revelado. Suas chamas estão livres.",
+        "success",
+        7000,
+      );
       return;
     }
 
@@ -931,12 +927,72 @@ export function DashboardClient({
     });
   }, [
     applyDashboardTab,
+    metaOnlyTour,
     showPortalToast,
     subgroupParam,
     tourBeatIndex,
     tourStepIndex,
     tourSteps,
     userId,
+  ]);
+
+  // Conta a entrada ANTES dos useEffects dos filhos — a saudação da ANYMA precisa do count certo.
+  useLayoutEffect(() => {
+    if (!dataReady || portalEntryBumpDoneRef.current) return;
+    if (profile?.role !== "cliente" || profile?.is_punished) return;
+
+    portalEntryBumpDoneRef.current = true;
+    const entryCount = bumpAnymaPortalEntryCount(userId);
+    // Contagem única da entrada (guardada por ref) — inicialização pós-dados, intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPortalEntryCount(entryCount);
+
+    // Entrada fixa da sessão de login: reload/navegação reaproveitam o mesmo número,
+    // então "Bem-vindo" não retoca fora do início do login. Logout limpa e o próximo
+    // login recebe um número novo (mantém o replay legítimo em logout→login na aba).
+    const greetingEntry = resolveReturningLoginSessionEntry(userId, entryCount);
+    setGreetingSessionEntry(greetingEntry);
+
+    const portalReady =
+      animaPortalVisto || readAnymaOnboardingComplete(userId) || entryCount >= 2;
+
+    // Cerimônia / "Pular apresentação": sem "Bem-vindo" nesta entrada (Juramento/guia).
+    if (isPresentationSkipSilentEntry(userId)) {
+      markReturningLoginGreetingShown(userId, greetingEntry);
+      clearReturningLoginGreetingPending(userId);
+      clearPresentationSkipSilentEntry(userId);
+      return;
+    }
+
+    // Só arma no início do login de quem já conhece o Portal — nunca após onboarding.
+    if (portalReady) {
+      beginReturningLoginGreetingEntry(userId, greetingEntry);
+      armReturningLoginGreeting({
+        userId,
+        profileName: resolvedProfileName,
+        entryCount: greetingEntry,
+        portalReady: true,
+      });
+    }
+  }, [
+    animaPortalVisto,
+    dataReady,
+    profile?.is_punished,
+    profile?.role,
+    resolvedProfileName,
+    userId,
+  ]);
+
+  // Nome do perfil pode chegar depois do arm (localStorage/selo) — atualiza o "Bem-vindo, [Nome]".
+  useEffect(() => {
+    if (!dataReady || profile?.role !== "cliente" || profile?.is_punished) return;
+    if (!resolvedProfileName.trim()) return;
+    refreshReturningLoginGreetingName(resolvedProfileName);
+  }, [
+    dataReady,
+    profile?.is_punished,
+    profile?.role,
+    resolvedProfileName,
   ]);
 
   useEffect(() => {
@@ -950,7 +1006,8 @@ export function DashboardClient({
       !profile?.is_punished &&
       perfilIdentidadeConfirmada
     ) {
-      const entryCount = bumpAnymaPortalEntryCount(userId);
+      const entryCount =
+        portalEntryCount > 0 ? portalEntryCount : readAnymaPortalEntryCount(userId);
       const portalVisto = animaPortalVisto || readAnymaOnboardingComplete(userId);
 
       if (
@@ -963,7 +1020,11 @@ export function DashboardClient({
         resolved = "treino";
       }
 
-      if (entryCount >= 2 && !readEcossistemaTourComplete(userId)) {
+      if (
+        entryCount >= 2 &&
+        !readEcossistemaTourComplete(userId) &&
+        !readEcossistemaTourMetaOnly(userId)
+      ) {
         queueMicrotask(() => finalizeEcossistemaTourSkip());
       }
     }
@@ -982,6 +1043,7 @@ export function DashboardClient({
     dataReady,
     hasPersonalBond,
     perfilIdentidadeConfirmada,
+    portalEntryCount,
     profile?.is_punished,
     profile?.role,
     subgroupParam,
@@ -989,6 +1051,13 @@ export function DashboardClient({
     userId,
     finalizeEcossistemaTourSkip,
   ]);
+
+  useEffect(() => {
+    if (!dataReady || !perfilIdentidadeConfirmada) return;
+    if (readPresentationSkipIdentityOnly(userId)) {
+      clearPresentationSkipIdentityOnly(userId);
+    }
+  }, [dataReady, perfilIdentidadeConfirmada, userId]);
 
   useEffect(() => {
     if (!dataReady || !tabsLockedForIdentity || identitySealedRef.current) return;
@@ -1114,14 +1183,17 @@ export function DashboardClient({
   }, [applyDashboardTab, subgroupParam]);
 
   const showPerfilIdentityGuide =
-    tabsLockedForIdentity && animaPortalVisto && !tourActive;
+    tabsLockedForIdentity &&
+    !tourActive &&
+    (animaPortalVisto || readAnymaOnboardingComplete(userId));
 
   const handleSignOut = useCallback(async () => {
+    stopReturningLoginGreeting(userId);
     invalidateComunidadeCache();
     clearThermicSessionCache();
     await supabase.auth.signOut();
     router.replace("/");
-  }, [router]);
+  }, [router, userId]);
 
   const handleRetryLoad = useCallback(() => {
     setReloadToken((token) => token + 1);
@@ -1188,21 +1260,6 @@ export function DashboardClient({
     if (!inactivityPendingRef.current?.pending_rekindle) return;
 
     const pending = inactivityPendingRef.current;
-
-    if (isFenixQaLabEnabled()) {
-      inactivityPendingRef.current = null;
-      syncLinhagemInactivityPendingState(null);
-      setInactivityAlert(null);
-      showPortalToast(
-        buildLinhagemInactivityAckMessage({
-          phase_tier: pending.phase_tier,
-          previous_tier: pending.restore_tier ?? pending.previous_tier,
-          phases_lost: pending.phases_lost,
-        }),
-        "success",
-      );
-      return;
-    }
 
     const result = await rekindleLinhagemAfterInactivity(supabase);
     if (!result?.rekindled) return;
@@ -1316,6 +1373,7 @@ export function DashboardClient({
       hasPlanilhaRows(weekSchedule) ||
       forjadorPrescriptions.length > 0,
     activeTrainingDay,
+    calendarToday: brasiliaClock.weekdayIndex,
     forjadorConfig,
     forjadorPrescriptions,
     isTreinoSwitching,
@@ -1382,22 +1440,14 @@ export function DashboardClient({
               dataReady={dataReady}
             />
             <DueloConviteHost userId={userId} />
+
             {profile.role === "cliente" ? (
-              <PhoenixHelper
-                userId={userId}
-                profileName={resolvedProfileName}
-                phaseContext={phase}
-                daysAbsent={linhagemDaysAbsent}
-                isPunished={Boolean(profile.is_punished)}
-                animaPortalVisto={animaPortalVisto}
-                hasPersonalBond={hasPersonalBond}
-                onTabChange={handleTabChange}
-                onOnboardingComplete={handleOnboardingComplete}
-              />
+              <AlquimiaManifestoOverlay profileName={resolvedProfileName} />
             ) : null}
 
             {showPerfilIdentityGuide ? (
               <AnymaPerfilIdentityGuide
+                userId={userId}
                 activeTab={activeTab}
                 profileName={resolvedProfileName}
                 onEnsurePerfilTab={ensurePerfilTabForIdentity}
@@ -1584,6 +1634,21 @@ export function DashboardClient({
               onClose={closeVideoModal}
             />
           </main>
+
+          {profile.role === "cliente" ? (
+            <PhoenixHelper
+              userId={userId}
+              profileName={resolvedProfileName}
+              phaseContext={phase}
+              daysAbsent={linhagemDaysAbsent}
+              isPunished={Boolean(profile.is_punished)}
+              animaPortalVisto={animaPortalVisto}
+              hasPersonalBond={hasPersonalBond}
+              portalEntryCount={greetingSessionEntry}
+              onTabChange={handleTabChange}
+              onOnboardingComplete={handleOnboardingComplete}
+            />
+          ) : null}
         </AppShell>
       )}
     </PhoenixPhaseEngine>

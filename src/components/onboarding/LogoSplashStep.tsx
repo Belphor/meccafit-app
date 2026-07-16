@@ -8,7 +8,7 @@ import {
   ONBOARDING_CEREMONY_HOLD_MS,
 } from "@/lib/onboarding-ceremony";
 
-const FENYXIA_LOGO_SRC = "/assets/fenyxia-logo.webp";
+export const FENYXIA_LOGO_SRC = "/assets/fenyxia-logo.webp";
 
 type LogoSplashStepProps = {
   onComplete: () => void;

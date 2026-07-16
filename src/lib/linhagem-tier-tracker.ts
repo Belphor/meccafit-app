@@ -99,10 +99,13 @@ export function syncLinhagemTierAfterDemotion(userId: string, tier: PhaseTier): 
   writeAcknowledgedLinhagemTier(userId, tier);
 }
 
-/** Transmutação só quando a fase sobe além do baseline já reconhecido na sessão. */
+/**
+ * Transmutação só quando a fase sobe além do último nível já reconhecido pelo atleta.
+ * O baseline é o tier reconhecido, nunca o tier de sessão. A avaliação de subida
+ * grava o tier de sessão antes deste portão, então incluir a sessão aqui anularia o
+ * disparo no exato instante em que a chama acumulada cruza a pontuação necessária.
+ */
 export function canShowLinhagemTransmutation(userId: string, tier: PhaseTier): boolean {
   const acknowledged = readAcknowledgedLinhagemTier(userId);
-  const sessionTier = readSessionLinhagemTier(userId);
-  const baseline = Math.max(acknowledged ?? 0, sessionTier ?? 0);
-  return tier > baseline;
+  return tier > (acknowledged ?? 0);
 }

@@ -20,6 +20,17 @@ export function isDayLockError(message) {
   return String(message ?? "").toLowerCase().includes(DAY_LOCK_FRAGMENT);
 }
 
+/**
+ * Dia da planilha (1=Seg … 6=Sáb) alinhado ao calendário civil de Brasília,
+ * espelhando registrar_treino_com_status: domingo(0)→1, sábado(6)→6, resto = DOW.
+ * Obrigatório em registrar_treino_com_status desde o gate de dia da planilha.
+ */
+export function resolvePlanilhaDiaSp() {
+  const spNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const dow = spNow.getDay();
+  return dow === 0 ? 1 : dow === 6 ? 6 : dow;
+}
+
 export function createServiceAdmin(env = loadEnvLocal()) {
   const url = env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();

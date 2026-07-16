@@ -16,7 +16,6 @@ import {
 import { EvolutionChamaAcumuladaCard } from "@/components/evolution/EvolutionChamaAcumuladaCard";
 import { EvolutionConsistenciaSection } from "@/components/evolution/EvolutionConsistenciaSection";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
-import { FenixQaFloatingTrigger } from "@/components/qa/FenixQaFloatingTrigger";
 import { dataUrlToFile, saveCycleSelfie } from "@/services/local-storage";
 import {
   DASHBOARD_PANEL_FRAME,
@@ -26,7 +25,7 @@ import {
 } from "@/lib/dashboard-config";
 import { fetchMuscularEvolutionPayload } from "@/lib/muscular-evolution";
 import { isRitmoPurityPenaltyActive } from "@/lib/ritmo-grace-period";
-import { useThermalGravityClientState } from "@/lib/use-thermal-gravity-client";
+import { evaluateThermalGravity } from "@/lib/thermal-gravity";
 import type { ThermalGravitySettlementResult } from "@/lib/linhagem-inactivity";
 import {
   EVOLUTION_CALOR_REFRESH_EVENT,
@@ -156,8 +155,15 @@ export function EvolucaoPageClient({
     [indiceIgnicao, calorRows],
   );
 
-  const { state: thermalState, monthBoundaryDegraded: qaMonthBoundaryDegraded, simulatedPhaseTier } =
-    useThermalGravityClientState(conqueredPhaseTier ?? phaseTier, vtcMonthKg, 0, vtc30dKg);
+  const thermalState = useMemo(
+    () =>
+      evaluateThermalGravity(conqueredPhaseTier ?? phaseTier, {
+        vtc_month: vtcMonthKg,
+        vtc_30d: vtc30dKg,
+        session_vtc_today: 0,
+      }),
+    [conqueredPhaseTier, phaseTier, vtcMonthKg, vtc30dKg],
+  );
 
   const thermalStateWithSettlement = useMemo(() => {
     if (thermalState.settled_month_label) return thermalState;
@@ -168,11 +174,9 @@ export function EvolucaoPageClient({
     };
   }, [thermalSettlement, thermalState]);
 
-  const monthBoundaryDegraded =
-    qaMonthBoundaryDegraded || thermalSettlement?.degraded === true;
+  const monthBoundaryDegraded = thermalSettlement?.degraded === true;
 
-  const displayPhaseTier =
-    simulatedPhaseTier ?? conqueredPhaseTier ?? phaseTier;
+  const displayPhaseTier = conqueredPhaseTier ?? phaseTier;
 
   const niveisTermicos = useMemo(() => calorRowsToNiveisTermicos(calorRows), [calorRows]);
   const congelamentoPorMembro = useMemo(
@@ -266,8 +270,6 @@ export function EvolucaoPageClient({
 
   return (
     <Wrapper className="space-y-5">
-      <FenixQaFloatingTrigger tab="evolucao" />
-
       {/* 1. Consistência: meta + ritmo + mapa corporal (ligados) */}
       <EvolutionConsistenciaSection
         userId={userId}

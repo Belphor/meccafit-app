@@ -42,3 +42,14 @@ export const FENYXIA_WHATSAPP_TEST_MESSAGE = [
   "",
   "Teste automático da Fenyxia.",
 ].join("\n");
+
+/** Interesse na Empresa FENYXIA (página de vitrine no Perfil). */
+export function buildEmpresaInterestWhatsAppMessage(): string {
+  return [
+    "FENYXIA EMPRESA (Meccafit)",
+    "",
+    "Olá, Ricardo. Vi a página da Empresa FENYXIA no app e gostaria de saber mais.",
+    "",
+    "Enviado pelo app Meccafit.",
+  ].join("\n");
+}

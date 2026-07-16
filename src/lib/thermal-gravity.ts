@@ -30,8 +30,13 @@ export type ThermalGravityState = {
   days_in_month: number;
   days_remaining: number;
   monthly_goal_kg: number | null;
+  /** Meta que protege a fase da queda na virada (70% do patamar da fase atual). */
+  monthly_maintenance_goal_kg: number | null;
   next_tier: PhaseTier | null;
+  /** Atingiu a meta de SUBIDA (patamar da próxima fase) neste ciclo. */
   leveled_up_this_month: boolean;
+  /** Atingiu a meta de MANUTENÇÃO — protegido da queda na virada. */
+  maintained_this_month: boolean;
   is_degraded: boolean;
   restoration_active: boolean;
   restoration_session_baseline_kg: number | null;
@@ -91,6 +96,24 @@ export function resolveMonthlyLevelUpGoalKg(
   return { goalKg: resolveLevelThresholdKg(nextTier, config), nextTier };
 }
 
+/** Tolerância de manutenção: fração do patamar da fase atual necessária para NÃO cair na virada. */
+export const MONTHLY_MAINTENANCE_GOAL_RATIO = 0.7;
+
+/**
+ * Meta de MANUTENÇÃO do ciclo civil = 70% do patamar VTC da fase atual.
+ * É o piso que evita a regressão na virada — separado da meta de subida.
+ * Cinzas (tier 1) retorna 0: é o piso e nunca cai.
+ */
+export function resolveMonthlyMaintenanceGoalKg(
+  conqueredTier: PhaseTier,
+  config?: Partial<AcademiaConfig> | null,
+): number {
+  const tier = resolvePhaseTier(conqueredTier);
+  if (tier <= 1) return 0;
+  const threshold = resolveLevelThresholdKg(tier, config);
+  return Math.round(threshold * MONTHLY_MAINTENANCE_GOAL_RATIO * 100) / 100;
+}
+
 function restorationBaselineForPhase(phaseReached: PhaseLayoutCode): number | null {
   const baseline = PHASE_LAYOUT_RESTORATION_SESSION_KG[phaseReached];
   return baseline > 0 ? baseline : null;
@@ -116,10 +139,14 @@ export function evaluateThermalGravity(
     conqueredTier,
     config,
   );
+  const monthly_maintenance_goal_kg = resolveMonthlyMaintenanceGoalKg(conqueredTier, config);
 
   // Meta do ciclo civil: só VTC do mês (não misturar janela rolante 30d).
   const leveled_up_this_month =
     monthly_goal_kg !== null && monthly_goal_kg > 0 && vtc_month >= monthly_goal_kg;
+  // Manutenção protege a fase da queda na virada (Cinzas sempre protegido: piso).
+  const maintained_this_month =
+    monthly_maintenance_goal_kg <= 0 || vtc_month >= monthly_maintenance_goal_kg;
 
   const restoration_session_baseline_kg = restorationBaselineForPhase(phase_reached);
 
@@ -135,8 +162,10 @@ export function evaluateThermalGravity(
     days_in_month: monthCtx.daysInMonth,
     days_remaining: monthCtx.daysRemaining,
     monthly_goal_kg,
+    monthly_maintenance_goal_kg,
     next_tier,
     leveled_up_this_month,
+    maintained_this_month,
     is_degraded: false,
     restoration_active: false,
     restoration_session_baseline_kg,
@@ -151,14 +180,20 @@ export function parseThermalGravityState(raw: unknown): ThermalGravityState | nu
   const active_phase_layout = row.active_phase_layout;
   if (typeof phase_reached === "string" && typeof active_phase_layout === "string") {
     const monthCtx = resolveMonthContextSp();
+    const effective_tier: PhaseTier =
+      typeof row.effective_tier === "number"
+        ? (Math.min(5, Math.max(1, Math.round(row.effective_tier))) as PhaseTier)
+        : 1;
+    const vtc_month = sanitizeKg(row.vtc_month ?? row.vtc_20d ?? row.vtc_30d);
+    const monthly_maintenance_goal_kg =
+      row.monthly_maintenance_goal_kg === null || row.monthly_maintenance_goal_kg === undefined
+        ? resolveMonthlyMaintenanceGoalKg(effective_tier)
+        : sanitizeKg(row.monthly_maintenance_goal_kg);
     return {
       phase_reached: phase_reached as PhaseLayoutCode,
       active_phase_layout: active_phase_layout as PhaseLayoutCode,
-      effective_tier:
-        typeof row.effective_tier === "number"
-          ? (Math.min(5, Math.max(1, Math.round(row.effective_tier))) as PhaseTier)
-          : 1,
-      vtc_month: sanitizeKg(row.vtc_month ?? row.vtc_20d ?? row.vtc_30d),
+      effective_tier,
+      vtc_month,
       vtc_30d: sanitizeKg(row.vtc_30d ?? row.vtc_month ?? row.vtc_20d),
       session_vtc_today: sanitizeKg(row.session_vtc_today),
       month_label: typeof row.month_label === "string" ? row.month_label : monthCtx.monthLabel,
@@ -170,11 +205,16 @@ export function parseThermalGravityState(raw: unknown): ThermalGravityState | nu
         row.monthly_goal_kg === null || row.monthly_goal_kg === undefined
           ? null
           : sanitizeKg(row.monthly_goal_kg),
+      monthly_maintenance_goal_kg,
       next_tier:
         typeof row.next_tier === "number"
           ? (Math.min(5, Math.max(1, Math.round(row.next_tier))) as PhaseTier)
           : null,
       leveled_up_this_month: row.leveled_up_this_month === true,
+      maintained_this_month:
+        row.maintained_this_month === true ||
+        monthly_maintenance_goal_kg <= 0 ||
+        vtc_month >= monthly_maintenance_goal_kg,
       is_degraded: row.is_degraded === true,
       restoration_active: row.restoration_active === true,
       restoration_session_baseline_kg:
@@ -206,30 +246,46 @@ export function resolveMonthlyLevelUpProgressPercent(state: ThermalGravityState)
   return Math.min(150, Math.round((progress / state.monthly_goal_kg) * 100));
 }
 
+/** Progresso rumo à meta de MANUTENÇÃO (o que protege a fase da queda). */
+export function resolveMonthlyMaintenanceProgressPercent(
+  state: ThermalGravityState,
+): number | null {
+  if (state.monthly_maintenance_goal_kg === null || state.monthly_maintenance_goal_kg <= 0) {
+    return null;
+  }
+  return Math.min(
+    150,
+    Math.round((state.vtc_month / state.monthly_maintenance_goal_kg) * 100),
+  );
+}
+
 export function formatMonthlyGoalLabel(state: ThermalGravityState): string {
-  if (state.leveled_up_this_month) {
-    return `Gravidade Térmica de ${state.month_label} cumprida.`;
+  if (state.maintained_this_month) {
+    if (state.leveled_up_this_month) {
+      return `Gravidade Térmica de ${state.month_label} cumprida. Fase protegida e evoluindo.`;
+    }
+    return `Gravidade Térmica de ${state.month_label} cumprida. Fase protegida neste ciclo.`;
   }
-  if (state.next_tier) {
-    return `Alcance ${PHASE_TIER_LABELS[state.next_tier]} antes da virada do mês.`;
-  }
-  return `Renove ${PHASE_TIER_LABELS[5]} antes da virada do mês.`;
+  return `Mantenha ${PHASE_TIER_LABELS[state.effective_tier]} antes da virada do mês.`;
 }
 
 export function formatThermalGravityShortHint(state: ThermalGravityState): string {
-  if (state.leveled_up_this_month) {
+  if (state.maintained_this_month) {
+    if (state.next_tier && !state.leveled_up_this_month) {
+      return `Fase protegida. Chegue em ${PHASE_TIER_LABELS[state.next_tier]} para evoluir.`;
+    }
     return "Sua fase está protegida neste ciclo.";
   }
-  return "Suba de fase até a virada do mês ou a linhagem desce um nível.";
+  return "Mantenha o volume até a virada do mês ou a linhagem desce um nível.";
 }
 
 export function isThermalGravityMonthAtRisk(
   state: ThermalGravityState,
   progressPercent: number,
 ): boolean {
-  if (state.leveled_up_this_month) return false;
+  if (state.maintained_this_month) return false;
   const pct = Math.min(100, Math.max(0, progressPercent));
-  return state.days_remaining <= 7 && pct < 70;
+  return state.days_remaining <= 7 && pct < 100;
 }
 
 export function buildThermalGravityMonthAtRiskMessage(

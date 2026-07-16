@@ -107,9 +107,9 @@ export function buildThermalGravitySettlementMessage(settlement) {
 }
 
 export function isThermalGravityMonthAtRisk(state, progressPercent) {
-  if (!state || state.leveled_up_this_month) return false;
+  if (!state || state.maintained_this_month) return false;
   const pct = Math.min(100, Math.max(0, progressPercent));
-  return state.days_remaining <= 7 && pct < 70;
+  return state.days_remaining <= 7 && pct < 100;
 }
 
 export function buildThermalGravityMonthAtRiskMessage(state, progressPercent) {
@@ -125,7 +125,7 @@ export function buildThermalGravityMonthAtRiskMessage(state, progressPercent) {
 }
 
 export function formatMonthlyGoalLabelMet(state) {
-  if (!state.leveled_up_this_month) return "";
+  if (!state.maintained_this_month) return "";
   return `Gravidade Térmica de ${state.month_label} cumprida.`;
 }
 
@@ -138,6 +138,17 @@ export function shouldCelebrateLinhagemTierTransition(previousTier, nextTier, ac
   if (nextTier <= previousTier) return false;
   if (acknowledgedTier != null && nextTier <= acknowledgedTier) return false;
   return true;
+}
+
+/**
+ * Espelho puro de canShowLinhagemTransmutation (linhagem-tier-tracker.ts):
+ * a transmutação dispara quando o tier sobe além do último nível reconhecido pelo
+ * atleta. O baseline é só o acknowledged, nunca o tier de sessão, porque a avaliação
+ * de subida grava a sessão antes deste portão. O terceiro argumento é mantido por
+ * compatibilidade de assinatura, mas não entra na decisão.
+ */
+export function canShowLinhagemTransmutation(acknowledgedTier, _sessionTier, tier) {
+  return tier > (acknowledgedTier ?? 0);
 }
 
 export function isLinhagemInactivityTreinoDegraded(result) {

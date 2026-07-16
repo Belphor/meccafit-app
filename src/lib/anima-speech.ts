@@ -8,8 +8,8 @@ import { injectName } from "@/lib/profile-display-name";
 export const FENYXIA_TTS_PHONETIC = "Fenicksia";
 
 /**
- * Fonética em inglês de RANKINGS para TTS pt-BR.
- * A UI pode exibir Rankings ou RANKINGS. A voz sempre soa em inglês.
+ * Fonética em inglês de rankings para TTS pt-BR.
+ * A UI exibe rankings em minúsculas. A voz sempre soa em inglês.
  */
 export const RANKINGS_TTS_PHONETIC = "Rénquings";
 

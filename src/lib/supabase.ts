@@ -7,6 +7,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { requireSupabasePublicEnv } from "@/lib/supabase-env";
 import { resolveHistoricoExercicioId } from "@/lib/exercise-rpc";
 import { markDailyPurityLog } from "@/lib/purity-log";
+import type { WeekdayIndex } from "@/lib/training-week";
 import type { Database, Enums } from "@/types/database.types";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
@@ -58,6 +59,8 @@ export type RegistrarTreinoInput = {
   repeticoes?: number;
   series?: number;
   exercicioNome?: string;
+  /** Dia da planilha (1–6). Obrigatório: deve coincidir com o calendário de Brasília. */
+  diaPlanilha: WeekdayIndex;
 };
 
 export type RegistrarTreinoResult = {
@@ -287,6 +290,7 @@ export async function registrarTreinoComStatus(
         p_repeticoes: repeticoes,
         p_series: series,
         p_exercicio_nome: exercicioNome,
+        p_dia_planilha: input.diaPlanilha,
       });
 
       const row = Array.isArray(data) ? data[0] : data;

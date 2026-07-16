@@ -151,18 +151,18 @@ export const CHAMA_ALTAR_CLIENT_EXPLANATION =
 
 /** Rotina do dia — painel Treino */
 export const TREINO_DIA_CLIENT_EXPLANATION =
-  "Exercícios do dia escolhido. Conclua as séries e registre a carga máxima uma vez por dia.";
+  "Exercícios do dia escolhido. Conclua as séries e registre a carga máxima uma vez por dia civil de Brasília; o exercício sela e só reabre amanhã, quando o dia da planilha coincidir de novo com o calendário.";
 
 /** Execução — painel de escolha do dia */
 export const TREINO_EXECUTION_CLIENT_EXPLANATION =
-  "Escolha o dia da planilha. O forjador define os grupos. Dias concluídos aparecem marcados.";
+  "Só os mais disciplinados entram no ranking. Se faltar à forja ou não seguir o calendário, o input de Volume de Carga Máxima não libera. O VTC só abre quando o dia da planilha coincide com o calendário de referência de Brasília.";
 
 /** Input selado pelo dia civil (SP) — 1× por exercício até amanhã */
 export const PHOENIX_INPUT_GOAL_DAY_LOCKED =
-  "Já forjado hoje — volte amanhã neste exercício";
+  "Já forjado hoje. Volte amanhã neste exercício";
 
 export const PHOENIX_INPUT_HINT_DAY_LOCKED =
-  "Pico selado neste dia. O campo permanece travado até o próximo dia civil.";
+  "Pico selado neste dia. O campo permanece travado até o próximo dia civil em Brasília.";
 
 /** @deprecated Alias — use PHOENIX_INPUT_GOAL_DAY_LOCKED */
 export const PHOENIX_INPUT_GOAL_WEEK_LOCKED = PHOENIX_INPUT_GOAL_DAY_LOCKED;
@@ -171,10 +171,19 @@ export const PHOENIX_INPUT_GOAL_WEEK_LOCKED = PHOENIX_INPUT_GOAL_DAY_LOCKED;
 export const PHOENIX_INPUT_HINT_WEEK_LOCKED = PHOENIX_INPUT_HINT_DAY_LOCKED;
 
 export const PHOENIX_INPUT_DAY_LOCKED_ERROR =
-  "Este exercício já foi forjado hoje. Só é possível registrar uma vez por dia.";
+  "Este exercício já foi forjado hoje. Só é possível registrar uma vez por dia no calendário de Brasília.";
 
 export const PHOENIX_INPUT_GOAL_AWAITING_SETS =
   "Conclua todas as séries para liberar o registro";
+
+export const PHOENIX_INPUT_GOAL_AWAITING_CALENDAR =
+  "Forje no dia certo do calendário de Brasília para liberar o VTC";
+
+export const PHOENIX_INPUT_HINT_AWAITING_CALENDAR =
+  "O Volume de Carga Máxima só libera quando o dia da planilha coincide com o dia civil de Brasília.";
+
+export const PHOENIX_INPUT_CALENDAR_LOCKED_ERROR =
+  "O VTC só libera no dia da planilha alinhado ao calendário de Brasília.";
 
 /** Badge quando o dia activo da planilha está forjado nesta semana (✓). */
 export const TREINO_DIA_CONCLUIDO_LABEL = "Semana concluída";
@@ -311,7 +320,7 @@ export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
 
 /** Comunidade — arena cooperativa */
 export const COMUNIDADE_CLIENT_EXPLANATION =
-  "Três formas de se destacar. Contribua no termômetro coletivo da academia, suba nos RANKINGS mensais para ser Rei das Chamas ou dispute duelos pelo cinturão.";
+  "Três formas de se destacar. Contribua no termômetro coletivo da academia, suba nos rankings mensais para ser Rei das Chamas ou dispute duelos pelo cinturão.";
 
 export const VTC_METRIC_FRAME =
   "relative overflow-hidden rounded-2xl border border-orange-500/12 bg-black/35 px-4 py-3 backdrop-blur-sm";
@@ -456,7 +465,7 @@ export function dashboardTabPanelClass(isActive: boolean): string {
 export const DASHBOARD_EMPTY_STATE =
   "mt-6 text-sm leading-relaxed text-neutral-500 sm:text-[15px]";
 
-/** Rodapé corporativo FENYXIA — marca da empresa no ecossistema Meccafit */
+/** Rodapé corporativo FENYXIA — marca da empresa no ecossistema Fenyxia */
 export const FENYXIA_BRAND_FOOTER_BADGE =
   "text-[10px] font-semibold uppercase tracking-[0.38em] text-neutral-700 transition duration-300 hover:text-amber-500 hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.25)]";
 

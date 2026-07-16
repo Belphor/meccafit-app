@@ -26,10 +26,10 @@ export async function confirmProfileIdentity(
     throw new Error("Selecione masculino ou feminino.");
   }
 
-  const { data, error } = await supabase.rpc(
-    "client_confirm_profile_identity" as "client_submit_feedback",
-    { p_full_name: trimmed, p_sexo: sexo } as never,
-  );
+  const { data, error } = await supabase.rpc("client_confirm_profile_identity", {
+    p_full_name: trimmed,
+    p_sexo: sexo,
+  });
 
   if (error) {
     if (error.code === "PGRST202") {
@@ -61,10 +61,7 @@ export async function confirmProfileIdentity(
 }
 
 export async function markEcossistemaTourComplete(): Promise<void> {
-  const { data, error } = await supabase.rpc(
-    "client_complete_ecossistema_tour" as "client_submit_feedback",
-    {} as never,
-  );
+  const { data, error } = await supabase.rpc("client_complete_ecossistema_tour");
 
   if (error) {
     if (error.code === "PGRST202") return;
@@ -79,10 +76,7 @@ export async function markEcossistemaTourComplete(): Promise<void> {
 }
 
 export async function markAnimaPortalVisto(): Promise<void> {
-  const { data, error } = await supabase.rpc(
-    "client_mark_anima_portal_visto" as "client_submit_feedback",
-    {} as never,
-  );
+  const { data, error } = await supabase.rpc("client_mark_anima_portal_visto");
 
   if (error) {
     if (error.code === "PGRST202") return;

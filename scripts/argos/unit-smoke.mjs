@@ -25,6 +25,7 @@ import {
   resolveCurrentMonthKeyBrasilia,
   resolveThermalSettlementTierAfterMiss,
   shouldCelebrateLinhagemTierTransition,
+  canShowLinhagemTransmutation,
 } from "../lib/linhagem-thermal-alerts.mjs";
 
 let passed = 0;
@@ -354,6 +355,64 @@ assert(
   "transmutação só uma vez por nível",
   !shouldCelebrateLinhagemTierTransition(3, 4, 4),
 );
+
+// --- Disparo da transmutação: guarda canShowLinhagemTransmutation ---
+assert(
+  "disparo transmutação: sobe além do baseline reconhecido",
+  canShowLinhagemTransmutation(2, 2, 3) === true &&
+    canShowLinhagemTransmutation(2, 3, 4) === true,
+);
+assert(
+  "disparo transmutação: não repete no mesmo nível já reconhecido",
+  canShowLinhagemTransmutation(3, 3, 3) === false &&
+    canShowLinhagemTransmutation(3, 2, 3) === false,
+);
+assert(
+  "disparo transmutação: bloqueado após rebaixamento (baseline alto)",
+  canShowLinhagemTransmutation(4, 4, 3) === false &&
+    canShowLinhagemTransmutation(4, null, 3) === false,
+);
+assert(
+  "disparo transmutação: libera no instante da subida mesmo com a sessão já no novo nível",
+  canShowLinhagemTransmutation(2, 3, 3) === true,
+);
+
+// --- Fala da ANYMA na transmutação (CODIGO_DO_RENASCIMENTO por tier) ---
+const phoenixLoreSource = readFileSync(
+  resolve(process.cwd(), "src/lib/phoenix-lore.ts"),
+  "utf8",
+);
+const codigoBlockMatch = phoenixLoreSource.match(
+  /CODIGO_DO_RENASCIMENTO:\s*Record<PhaseTier,\s*string>\s*=\s*\{([\s\S]*?)\n\};/,
+);
+const codigoBlock = codigoBlockMatch?.[1] ?? "";
+const codigoByTier = {};
+for (const line of codigoBlock.matchAll(/(\d):\s*"((?:[^"\\]|\\.)*)"/g)) {
+  codigoByTier[Number(line[1])] = line[2];
+}
+assert(
+  "ANYMA transmutação: existem 5 narrativas de tier (1→5)",
+  [1, 2, 3, 4, 5].every((tier) => typeof codigoByTier[tier] === "string" && codigoByTier[tier].length > 40),
+);
+assert(
+  "ANYMA transmutação: toda narrativa injeta o nome do atleta ([Nome])",
+  [1, 2, 3, 4, 5].every((tier) => codigoByTier[tier]?.includes("[Nome]")),
+);
+assert(
+  "ANYMA transmutação: imagem térmica correta por tier",
+  /cinzas/i.test(codigoByTier[1] ?? "") &&
+    /ANYMA FÊNIX/.test(codigoByTier[1] ?? "") &&
+    /atrito/i.test(codigoByTier[2] ?? "") &&
+    /sangue ferve/i.test(codigoByTier[3] ?? "") &&
+    /asas de fogo/i.test(codigoByTier[4] ?? "") &&
+    /sol/i.test(codigoByTier[5] ?? "") &&
+    /combustão/i.test(codigoByTier[5] ?? ""),
+);
+const injectedTier3 = (codigoByTier[3] ?? "").replaceAll("[Nome]", "Rafael");
+assert(
+  "ANYMA transmutação: injeção de nome substitui todo [Nome]",
+  injectedTier3.includes("Rafael") && !injectedTier3.includes("[Nome]"),
+);
 assert(
   "virada do mês QA desce uma fase",
   resolveThermalSettlementTierAfterMiss(false, 3) === 2,
@@ -378,6 +437,7 @@ assert(
 
 const monthRiskState = {
   leveled_up_this_month: false,
+  maintained_this_month: false,
   days_remaining: 5,
   month_label: "junho de 2026",
   next_tier: 4,
@@ -399,7 +459,7 @@ assert(
 assert(
   "meta do mês cumprida usa Gravidade Térmica",
   formatMonthlyGoalLabelMet({
-    leveled_up_this_month: true,
+    maintained_this_month: true,
     month_label: "junho de 2026",
   }).includes("Gravidade Térmica de junho de 2026"),
 );

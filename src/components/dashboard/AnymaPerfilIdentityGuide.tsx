@@ -11,16 +11,22 @@ import {
 } from "@/lib/anima-perfil-identity-beats";
 import {
   PERFIL_IDENTITY_TOUR_INPUT_EVENT,
+  clearPerfilIdentityFieldUnlocks,
+  publishPerfilIdentityConfirmRequest,
   publishPerfilIdentityFieldUnlock,
   readPerfilIdentityTourFormState,
   resolveFieldIdFromBeatId,
+  resolvePerfilIdentityGuideBeatIndex,
+  revokePerfilIdentityFieldsFrom,
   type PerfilIdentityTourFormState,
 } from "@/lib/anima-perfil-identity-form";
+import { readPresentationSkipIdentityOnly } from "@/lib/phoenix-lore";
 import { resolveAnymaSpeechText } from "@/lib/anima-speech";
 import type { DashboardTabId } from "@/lib/dashboard-tabs";
 import { DASHBOARD_TAP_TARGET } from "@/lib/dashboard-config";
 
 type AnymaPerfilIdentityGuideProps = {
+  userId: string;
   activeTab: DashboardTabId;
   profileName: string;
   onEnsurePerfilTab: () => void;
@@ -30,17 +36,18 @@ type AnymaPerfilIdentityGuideProps = {
 const RETURNING_GUIDE_BEATS = [...PERFIL_IDENTITY_FIELD_BEATS];
 const GUIDE_FIELD_LOCK_MS = 3_500;
 
-function resolveInitialReturningBeatIndex(form: PerfilIdentityTourFormState): number {
-  if (form.hasName && form.hasGenero && form.hasPhoto) {
-    return Math.min(3, RETURNING_GUIDE_BEATS.length - 1);
+function resolveInitialBeatIndex(userId: string): number {
+  // "Pular apresentação": sempre nome → gênero → foto → confirmar.
+  if (readPresentationSkipIdentityOnly(userId)) {
+    clearPerfilIdentityFieldUnlocks();
+    return 0;
   }
-  if (form.hasName && form.hasGenero) return Math.min(2, RETURNING_GUIDE_BEATS.length - 1);
-  if (form.hasName) return Math.min(1, RETURNING_GUIDE_BEATS.length - 1);
-  return 0;
+  return resolvePerfilIdentityGuideBeatIndex();
 }
 
 /** Destaca cada passo de identidade enquanto o selo está pendente. */
 export function AnymaPerfilIdentityGuide({
+  userId,
   activeTab,
   profileName,
   onEnsurePerfilTab,
@@ -49,9 +56,7 @@ export function AnymaPerfilIdentityGuide({
   const [identityForm, setIdentityForm] = useState<PerfilIdentityTourFormState>(() =>
     readPerfilIdentityTourFormState(),
   );
-  const [beatIndex, setBeatIndex] = useState(() =>
-    resolveInitialReturningBeatIndex(readPerfilIdentityTourFormState()),
-  );
+  const [beatIndex, setBeatIndex] = useState(() => resolveInitialBeatIndex(userId));
   const [readyBeatIndex, setReadyBeatIndex] = useState<number | null>(null);
   const targetReady = readyBeatIndex === beatIndex;
   const [guideComplete, setGuideComplete] = useState(false);
@@ -128,8 +133,11 @@ export function AnymaPerfilIdentityGuide({
   useEffect(() => {
     hasSpokenRef.current = false;
     narrationFiredRef.current = false;
+    // Reset do beat da narração ao mudar de passo — sincronização intencional.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setNarrationDone(!isSupported);
     setFieldLockMs(GUIDE_FIELD_LOCK_MS);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [beatIndex, isSupported]);
 
   useEffect(() => {
@@ -193,10 +201,26 @@ export function AnymaPerfilIdentityGuide({
   const fieldUnlockReady = targetReady && narrationDone && fieldLockReleased;
 
   useEffect(() => {
-    if (!fieldUnlockReady || !onPerfil || guideComplete) return;
+    if (!onPerfil || guideComplete) return;
     const field = resolveFieldIdFromBeatId(beat.id);
-    if (field) publishPerfilIdentityFieldUnlock(field);
-  }, [beat.id, fieldUnlockReady, guideComplete, onPerfil]);
+    if (!field) return;
+    // Relocka o campo atual (e posteriores) ao entrar na explicação.
+    revokePerfilIdentityFieldsFrom(field);
+  }, [beat.id, guideComplete, onPerfil]);
+
+  useEffect(() => {
+    if (!onPerfil || guideComplete) return;
+    const field = resolveFieldIdFromBeatId(beat.id);
+    if (!field) return;
+
+    // Confirmar libera no início da explicação; nome/gênero/foto só após narrativa + lock.
+    if (field === "confirmar") {
+      if (targetReady) publishPerfilIdentityFieldUnlock(field);
+      return;
+    }
+
+    if (fieldUnlockReady) publishPerfilIdentityFieldUnlock(field);
+  }, [beat.id, fieldUnlockReady, guideComplete, onPerfil, targetReady]);
 
   if (guideComplete) return null;
 
@@ -229,10 +253,22 @@ export function AnymaPerfilIdentityGuide({
   }
 
   const canContinue = fieldUnlockReady && advanceGateMet;
+  const canConfirmFromGuide =
+    beat.id === "perfil-confirmar" &&
+    targetReady &&
+    identityForm.hasName &&
+    identityForm.hasGenero &&
+    identityForm.hasPhoto;
   const fieldLockSecondsLeft = Math.ceil(fieldLockMs / 1000);
 
   const resolveHint = (): string => {
     if (!targetReady) return "Localizando o passo na aba Perfil…";
+    if (beat.id === "perfil-confirmar") {
+      if (!canConfirmFromGuide) {
+        return "Complete nome, gênero e foto antes de selar.";
+      }
+      return "Toque no botão iluminado Confirmar nome e gênero para selar sua identidade.";
+    }
     if (!fieldLockReleased) {
       return state === "speaking"
         ? `Ouça a ${ANYMA_BRAND} enquanto a linha aponta o campo.`
@@ -249,13 +285,30 @@ export function AnymaPerfilIdentityGuide({
       return "Selecione masculino ou feminino no campo iluminado.";
     }
     if (beat.advanceGate === "foto" && !identityForm.hasPhoto) {
-      return "Toque em Aperta aqui para inserir a foto. Depois Continuar para selar libera.";
-    }
-    if (beat.completesTour) {
-      return "Use o botão iluminado Confirmar nome e gênero para selar sua identidade.";
+      return "Toque no botão destacado para inserir a foto. Depois Continuar para selar libera.";
     }
     return "Toque em continuar quando estiver pronto.";
   };
+
+  const handleGuideContinue = () => {
+    if (beat.id === "perfil-confirmar") {
+      publishPerfilIdentityFieldUnlock("confirmar");
+      publishPerfilIdentityConfirmRequest();
+      return;
+    }
+    advanceBeat();
+  };
+
+  const guideActionEnabled =
+    beat.id === "perfil-confirmar" ? canConfirmFromGuide : canContinue;
+  const guideActionLabel =
+    beat.id === "perfil-confirmar"
+      ? canConfirmFromGuide
+        ? beat.continueLabel
+        : "Complete os campos…"
+      : canContinue
+        ? beat.continueLabel
+        : "Narrativa em chamas…";
 
   return (
     <AnimaTourCallout
@@ -282,15 +335,15 @@ export function AnymaPerfilIdentityGuide({
         {beat.hideContinueButton ? null : (
           <button
             type="button"
-            disabled={!canContinue}
-            onClick={advanceBeat}
+            disabled={!guideActionEnabled}
+            onClick={handleGuideContinue}
             className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
-              canContinue
+              guideActionEnabled
                 ? "anima-acender-linhagem-cta"
                 : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
             }`}
           >
-            {canContinue ? beat.continueLabel : "Narrativa em chamas…"}
+            {guideActionLabel}
           </button>
         )}
       </div>

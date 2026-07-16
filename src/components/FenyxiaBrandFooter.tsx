@@ -17,11 +17,11 @@ export function FenyxiaBrandFooter({
   return (
     <footer
       className={`${FENYXIA_BRAND_FOOTER_SHELL} ${className}`}
-      aria-label="Marca Fenyxia · Ecossistema Meccafit"
+      aria-label="Marca Fenyxia · Ecossistema Fenyxia"
     >
       <p className={FENYXIA_BRAND_FOOTER_BADGE}>Powered by Fenyxia</p>
       {showTagline ? (
-        <p className={FENYXIA_BRAND_FOOTER_TAGLINE}>Ecossistema Meccafit</p>
+        <p className={FENYXIA_BRAND_FOOTER_TAGLINE}>Ecossistema Fenyxia</p>
       ) : null}
     </footer>
   );

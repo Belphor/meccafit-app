@@ -61,10 +61,13 @@ export function FenixEcossistemaTourHost({
   const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
 
   useEffect(() => {
+    // Reset da fala ao trocar de beat/passo do tour — sincronização intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasSpoken(false);
   }, [beatIndex, step.id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state === "speaking") setHasSpoken(true);
   }, [state]);
 
@@ -102,6 +105,7 @@ export function FenixEcossistemaTourHost({
 
   useEffect(() => {
     if (beat.advanceGate !== "meta-sync") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMetaSynced(true);
       return;
     }
