@@ -13,6 +13,11 @@ const COMPOSE_FILE = "docker-compose.test.yml";
 function loadEnvTest() {
   const envPath = resolve(process.cwd(), ".env.test");
   if (!existsSync(envPath)) {
+    // Em CI a URL do banco de testes chega via variaveis de ambiente (ver workflow),
+    // entao o arquivo .env.test e opcional quando TEST_DATABASE_URL ja esta definido.
+    if (process.env.TEST_DATABASE_URL?.trim()) {
+      return;
+    }
     throw new Error(".env.test nao encontrado.");
   }
 

@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // WASM decoders de terceiros (Draco) — não lintar assets vendidos
     "public/draco/**",
+    // Artefatos gerados (relatórios de teste/cobertura) — não fazem parte do código-fonte
+    "coverage/**",
+    "test-results/**",
+    "playwright-report/**",
   ]),
   {
     rules: {

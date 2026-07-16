@@ -49,9 +49,3 @@ test-global-*.log
 
 # typescript
 *.tsbuildinfo
-
-.vercel
-
-.vercel
-
-.env*.local
