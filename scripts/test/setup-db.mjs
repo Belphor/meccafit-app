@@ -6,6 +6,11 @@ import { assertSafeTestDatabaseUrl } from "./safe-test-db.mjs";
 function loadEnvTest(cwd = process.cwd()) {
   const envPath = resolve(cwd, ".env.test");
   if (!existsSync(envPath)) {
+    // Em CI o TEST_DATABASE_URL chega via variaveis de ambiente, entao o
+    // arquivo .env.test (apenas local) e opcional quando ja esta definido.
+    if (process.env.TEST_DATABASE_URL?.trim()) {
+      return;
+    }
     throw new Error(".env.test nao encontrado. Crie o arquivo antes de rodar testes de backend.");
   }
 
