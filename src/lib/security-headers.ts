@@ -17,6 +17,9 @@ export function buildContentSecurityPolicy(nonce: string): string {
   const directives = [
     "default-src 'self'",
     scriptSrc,
+    // Service worker do PWA (mesmo domínio) — strict-dynamic ignora 'self' em script-src.
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
