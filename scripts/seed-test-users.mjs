@@ -8,7 +8,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { seedPlanilhasForAllClientes } from "./lib/planilhas-seed.mjs";
-import { resolveSeedPassword } from "./lib/seed-credentials.mjs";
+import { assertAllowSeedTestUsers, resolveSeedPassword } from "./lib/seed-credentials.mjs";
+
+assertAllowSeedTestUsers("seed-test-users");
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), ".env.local");

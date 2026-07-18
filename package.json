@@ -57,6 +57,7 @@
     "reset:full": "node scripts/reset-full-test-environment.mjs",
     "reset:onboarding": "node scripts/reset-onboarding-first-run.mjs",
     "seed:test-users": "node scripts/seed-test-users.mjs",
+    "purge:test-users": "node scripts/purge-test-users.mjs --confirm",
     "seed:vip-students": "node scripts/seed-vip-students.mjs",
     "seed:test-training": "node scripts/seed-test-training.mjs",
     "seed:comunidade-demo": "node scripts/seed-comunidade-demo.mjs",
@@ -85,6 +86,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "^0.35.3",
     "three": "^0.185.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },

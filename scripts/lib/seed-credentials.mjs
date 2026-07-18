@@ -16,3 +16,16 @@ export function resolveSeedPassword() {
 
   return DEV_FALLBACK_PASSWORD;
 }
+
+/**
+ * Impede seed acidental de contas de teste no Supabase de produção (CI/push).
+ * Só libera com ALLOW_SEED_TEST_USERS=1.
+ */
+export function assertAllowSeedTestUsers(scriptName = "seed") {
+  if (process.env.ALLOW_SEED_TEST_USERS === "1") return;
+  console.error(
+    `${scriptName} BLOQUEADO: defina ALLOW_SEED_TEST_USERS=1 para criar contas de teste.\n` +
+      "Motivo: evitar recriar usuários ARGOS no Supabase de produção.",
+  );
+  process.exit(1);
+}

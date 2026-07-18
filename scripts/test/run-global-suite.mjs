@@ -144,8 +144,8 @@ async function main() {
 
   if (!skipArgos && hasEnvLocal) {
     await ensureQaApp();
-    runStep("Seed usuários de teste", "npm run seed:test-users", { optional: true });
-    runStep("Seed planilhas ARGOS", "npm run argos:seed-planilhas", { optional: true });
+    // Seed de usuários ARGOS desativado — recriava contas no Supabase de produção.
+    // Local: ALLOW_SEED_TEST_USERS=1 npm run seed:test-users
     runStep("ARGOS security suite", "npm run argos:test", {
       env: {
         ARGOS_SKIP_APP_BOOT: "1",

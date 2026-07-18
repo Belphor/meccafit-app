@@ -71,7 +71,6 @@ export function PrimeiroAcessoFenyxiaPanel({
           placeholder="Digite seu email"
           className={PORTAL_INPUT}
           name="access-email"
-          inputMode="email"
           {...PORTAL_PASSWORD_MANAGER_ATTRS}
         />
       </div>

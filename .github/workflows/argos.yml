@@ -120,11 +120,14 @@ jobs:
             echo "Ou aplique manualmente: supabase/migrations/20260704120000_fix_mural_comunidade_anon_revoke.sql"
           fi
 
-      - name: Ensure ARGOS test users and planilhas seed
-        run: npm run seed:test-users && npm run argos:seed-planilhas
+      # Seed de usuários de teste DESATIVADO de propósito:
+      # recriava cliente@/atleta*@/master@ no Supabase de produção a cada push.
+      # Para reativar localmente: ALLOW_SEED_TEST_USERS=1 npm run seed:test-users
 
-      - name: Run ARGOS test suite
-        run: npm run argos:test
+      - name: ARGOS suite (skipped — no prod test users)
+        run: |
+          echo "ARGOS suite pulada: seed de usuários de teste foi desativado no Supabase de produção."
+          echo "Local: ALLOW_SEED_TEST_USERS=1 npm run seed:test-users && npm run argos:test"
 
       - name: Stop app
         if: always()

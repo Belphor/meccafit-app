@@ -10,6 +10,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { assertAllowSeedTestUsers } from "./lib/seed-credentials.mjs";
+
+assertAllowSeedTestUsers("seed-vip-students");
 
 const VIP_PASSWORD = "vip123";
 
