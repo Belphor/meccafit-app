@@ -20,7 +20,9 @@ export function detectTouchPrimaryDevice(): boolean {
 }
 
 export function useTouchPrimaryDevice(): boolean {
-  const [isTouchPrimary, setIsTouchPrimary] = useState(false);
+  const [isTouchPrimary, setIsTouchPrimary] = useState(() =>
+    typeof window === "undefined" ? false : detectTouchPrimaryDevice(),
+  );
 
   useEffect(() => {
     const media = [

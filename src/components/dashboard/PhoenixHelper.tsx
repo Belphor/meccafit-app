@@ -4,6 +4,7 @@ import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useStat
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
 import { AnimaTourCallout } from "@/components/dashboard/AnimaTourCallout";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
+import { useTouchPrimaryDevice } from "@/hooks/useTouchPrimaryDevice";
 import { PhoenixCanvas } from "@/components/dashboard/PhoenixCanvas";
 import {
   ANYMA_BRAND,
@@ -131,6 +132,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   onOnboardingComplete,
 }: PhoenixHelperProps) {
   const { igniteVoice, prepareVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
+  const isTouchPrimary = useTouchPrimaryDevice();
   const [hudOpen, setHudOpen] = useState(false);
   const [onboardingPhase, setOnboardingPhase] = useState<OnboardingPhase>(null);
   const [onboardingLockMs, setOnboardingLockMs] = useState(ANYMA_ONBOARDING_LOCK_MS);
@@ -536,6 +538,15 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
     return clearSpotlightTimer;
   }, [clearSpotlightTimer, onboardingPhase, spotlightBeat]);
+
+  useEffect(() => {
+    document.body.classList.toggle("anyma-hud-open", hudOpen);
+    document.body.classList.toggle("anyma-touch-primary", isTouchPrimary);
+    return () => {
+      document.body.classList.remove("anyma-hud-open");
+      document.body.classList.remove("anyma-touch-primary");
+    };
+  }, [hudOpen, isTouchPrimary]);
 
   useEffect(
     () => () => {
@@ -1002,13 +1013,17 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         <div className="fixed inset-0 z-[58]" role="presentation">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className={`absolute inset-0 bg-black/40 ${isTouchPrimary ? "" : "backdrop-blur-sm"}`}
             aria-label={`Fechar ${ANYMA_BRAND}`}
             onClick={handleCloseHud}
           />
 
           <aside
-            className="anima-hud-panel flex w-[min(100vw-2rem,24rem)] min-w-0 flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-3 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl sm:min-w-[17rem] sm:p-4 sm:w-[min(46vw,24rem)]"
+            className={`anima-hud-panel flex w-[min(100vw-2rem,24rem)] min-w-0 flex-col rounded-2xl border border-orange-500/15 p-3 shadow-[0_0_32px_rgba(249,115,22,0.12)] sm:min-w-[17rem] sm:p-4 sm:w-[min(46vw,24rem)] ${
+              isTouchPrimary
+                ? "bg-neutral-950/95"
+                : "bg-neutral-950/60 backdrop-blur-xl"
+            }`}
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -1041,7 +1056,9 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               ) : (
                 explanationGroups.map((group) => (
                   <div key={group.group} className="space-y-2">
-                    <p className="sticky top-0 z-[1] bg-neutral-950/90 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 backdrop-blur-sm">
+                    <p className={`sticky top-0 z-[1] py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 ${
+                      isTouchPrimary ? "bg-neutral-950" : "bg-neutral-950/90 backdrop-blur-sm"
+                    }`}>
                       {group.label}
                     </p>
                     {group.cards.map((card) => {

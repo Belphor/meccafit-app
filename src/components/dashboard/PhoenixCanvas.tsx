@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   PHOENIX_CORE_FLASH_BLOOM_MS,
@@ -68,7 +68,6 @@ const PhoenixCanvasDynamic = dynamic(
 export type PhoenixCanvasProps = {
   isPunished?: boolean;
   isDeployed?: boolean;
-  isSpeaking?: boolean;
   greetingCopy?: string;
   onEngage?: () => void;
   onPhoenixRevealed?: () => void;
@@ -76,7 +75,7 @@ export type PhoenixCanvasProps = {
   className?: string;
 };
 
-export function PhoenixCanvas({
+export const PhoenixCanvas = memo(function PhoenixCanvas({
   isPunished = false,
   isDeployed: isHudOpen = false,
   greetingCopy = ANYMA_ORB_GREETING,
@@ -140,6 +139,10 @@ export function PhoenixCanvas({
     if (!modelReady) return;
     setModelEmerging(true);
   }, [modelReady]);
+
+  const handleModelLoaded = useCallback(() => {
+    setModelReady(true);
+  }, []);
 
   useEffect(() => {
     if (isPunished || !flashHidden || !modelRevealed) return;
@@ -415,7 +418,7 @@ export function PhoenixCanvas({
                 isPunished={isPunished}
                 isVisible={modelCanvasActive}
                 isOpenOrb={showModel}
-                onLoaded={() => setModelReady(true)}
+                onLoaded={handleModelLoaded}
                 onEngage={handleEngage}
               />
             </Suspense>
@@ -454,4 +457,4 @@ export function PhoenixCanvas({
     </div>,
     document.body,
   );
-}
+});

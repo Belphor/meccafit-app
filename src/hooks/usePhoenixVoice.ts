@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, startTransition } from "react";
 import type { PhaseTier } from "@/lib/dashboard-config";
 import {
   DASHBOARD_TAB_CHANGE_EVENT,
@@ -117,6 +117,11 @@ export function usePhoenixVoice() {
   const isPriming = state === "loading-voices";
   const isSpeaking = state === "speaking";
 
+  const setVoiceState = useCallback((next: PhoenixVoiceState) => {
+    // Transição: não bloqueia WebGL/HUD no mesmo tick do decode de áudio.
+    startTransition(() => setState(next));
+  }, []);
+
   const cancelVoice = useCallback(() => {
     pendingTokenRef.current += 1;
     abortRef.current?.abort();
@@ -124,8 +129,8 @@ export function usePhoenixVoice() {
     stopPlaybackRef.current?.();
     stopPlaybackRef.current = null;
     amplitudeRef.current = 0;
-    setState(isAnimaAudioSupported() ? "idle" : "unsupported");
-  }, []);
+    setVoiceState(isAnimaAudioSupported() ? "idle" : "unsupported");
+  }, [setVoiceState]);
 
   useEffect(() => {
     cancelVoiceRef.current = cancelVoice;
@@ -144,7 +149,7 @@ export function usePhoenixVoice() {
 
   const igniteVoice = useCallback((input: IgniteVoiceInput): Promise<void> => {
     if (!isAnimaAudioSupported()) {
-      setState("unsupported");
+      setVoiceState("unsupported");
       return Promise.resolve();
     }
 
@@ -165,7 +170,7 @@ export function usePhoenixVoice() {
     const abort = new AbortController();
     abortRef.current = abort;
     amplitudeRef.current = 0;
-    setState("loading-voices");
+    setVoiceState("loading-voices");
 
     return (async () => {
       try {
@@ -175,7 +180,7 @@ export function usePhoenixVoice() {
           simplePlayback: true,
           onSpeaking: () => {
             if (pendingTokenRef.current !== token) return;
-            setState("speaking");
+            setVoiceState("speaking");
           },
         });
 
@@ -191,20 +196,20 @@ export function usePhoenixVoice() {
           stopPlaybackRef.current = null;
           abortRef.current = null;
           amplitudeRef.current = 0;
-          setState("idle");
+          setVoiceState("idle");
         }
       } catch {
         if (pendingTokenRef.current !== token) return;
         if (abort.signal.aborted) {
           amplitudeRef.current = 0;
-          setState("idle");
+          setVoiceState("idle");
           return;
         }
         amplitudeRef.current = 0;
-        setState("idle");
+        setVoiceState("idle");
       }
     })();
-  }, []);
+  }, [setVoiceState]);
 
   useEffect((): (() => void) => {
     const onVisibilityChange = (): void => {

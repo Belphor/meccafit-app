@@ -2650,6 +2650,31 @@ body {
   backdrop-filter: blur(12px);
 }
 
+/* Celular: blur no glass + WebGL = travamento. Opacidade sólida mantém o look. */
+body.anyma-touch-primary .anima-glass-magma,
+body.anyma-touch-primary .anima-glass-suporte {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.anyma-touch-primary .anima-glass-magma {
+  background: linear-gradient(
+    135deg,
+    rgba(249, 115, 22, 0.22) 0%,
+    rgba(10, 10, 10, 0.92) 55%,
+    rgba(251, 191, 36, 0.12) 100%
+  );
+}
+
+body.anyma-touch-primary .anima-glass-suporte {
+  background: linear-gradient(
+    135deg,
+    rgba(6, 78, 59, 0.55) 0%,
+    rgba(10, 10, 10, 0.94) 52%,
+    rgba(16, 185, 129, 0.14) 100%
+  );
+}
+
 .anyma-destination-highlight {
   animation: anyma-destination-highlight-pulse 2s ease-out forwards;
 }
@@ -3425,6 +3450,7 @@ body {
     width: min(calc(100vw - 2rem), 24rem);
     max-width: min(calc(100vw - 2rem), 24rem);
     min-width: 0;
+    max-height: min(58dvh, 28rem);
   }
 }
 
@@ -3798,7 +3824,9 @@ body {
   transition: none;
 }
 
-/* Contorno fino da ANYMA — borda luminosa de chamas (só no modelo, não na bola). */
+/* Contorno fino da ANYMA — borda luminosa de chamas (só no modelo, não na bola).
+   Filter estático no WebGL: animar filter a cada frame forçava re-raster do canvas.
+   O pulso vivo fica no ::after (opacity/scale — barato no compositor). */
 .phoenix-orb-model-layer--contoured {
   filter:
     drop-shadow(0 0 0.6px rgba(255, 251, 235, 0.95))
@@ -3807,8 +3835,6 @@ body {
     drop-shadow(0 0 7px rgba(249, 115, 22, 0.88))
     drop-shadow(0 0 14px rgba(234, 88, 12, 0.62))
     drop-shadow(0 0 24px rgba(194, 65, 12, 0.38));
-  animation: phoenix-model-contour-pulse var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
-  will-change: filter;
 }
 
 .phoenix-orb-model-contact-shadow {
@@ -3889,6 +3915,41 @@ body {
   border-radius: 0 !important;
   background: transparent !important;
   pointer-events: auto;
+  contain: layout paint;
+  transform: translateZ(0);
+}
+
+/* HUD aberto: pausa animações do dashboard atrás do overlay (a fênix segue animando). */
+body.anyma-hud-open main {
+  content-visibility: auto;
+  contain: layout paint;
+}
+
+body.anyma-hud-open main * {
+  animation-play-state: paused !important;
+}
+
+/* Celular: contorno mais leve no canvas WebGL + anéis CSS seguem vivos. */
+body.anyma-touch-primary .phoenix-orb-model-layer--contoured {
+  filter:
+    drop-shadow(0 0 1px rgba(253, 224, 71, 0.95))
+    drop-shadow(0 0 6px rgba(249, 115, 22, 0.85))
+    drop-shadow(0 0 14px rgba(234, 88, 12, 0.45));
+}
+
+body.anyma-touch-primary .phoenix-orb-plasma-corona {
+  will-change: auto;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .anima-hud-panel {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  body.anyma-hud-open .phoenix-flame-ring--ambient {
+    opacity: 0.32;
+  }
 }
 
 @media (min-width: 640px) {
