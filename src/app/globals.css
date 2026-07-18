@@ -2996,23 +2996,19 @@ body {
 
 .phoenix-flame-ring--ambient {
   inset: -8%;
-  border-color: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.45);
   box-shadow:
-    0 0 8px rgba(255, 255, 255, 0.72),
-    0 0 18px rgba(254, 249, 195, 0.48);
+    0 0 6px rgba(255, 255, 255, 0.5),
+    0 0 12px rgba(254, 249, 195, 0.32);
   z-index: 1;
+  opacity: 0.4;
+  animation: none;
 }
 
-.phoenix-flame-ring--ambient.phoenix-flame-ring--one {
-  animation: phoenix-flame-ring-ambient var(--phoenix-pulse-cycle, 7.1s) ease-out infinite;
-}
-
-.phoenix-flame-ring--ambient.phoenix-flame-ring--two {
-  animation: phoenix-flame-ring-ambient var(--phoenix-pulse-cycle, 7.1s) ease-out 0.33s infinite;
-}
-
+.phoenix-flame-ring--ambient.phoenix-flame-ring--one,
+.phoenix-flame-ring--ambient.phoenix-flame-ring--two,
 .phoenix-flame-ring--ambient.phoenix-flame-ring--three {
-  animation: phoenix-flame-ring-ambient var(--phoenix-pulse-cycle, 7.1s) ease-out 0.66s infinite;
+  animation: none;
 }
 
 @keyframes phoenix-flame-ring-ambient {
@@ -3503,7 +3499,6 @@ body {
     width ease-out,
     height ease-out,
     box-shadow ease-out;
-  will-change: width, height, box-shadow;
 }
 
 .phoenix-orb-shell--compact {
@@ -3534,7 +3529,11 @@ body {
 }
 
 .phoenix-orb-shell--ascended {
-  animation: phoenix-orb-shell-plasma-ascended var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
+  /* Sem animação de filter — competia com WebGL no mesmo frame. */
+  box-shadow:
+    0 8px 22px rgba(69, 26, 3, 0.36),
+    0 0 28px rgba(249, 115, 22, 0.42),
+    0 0 48px rgba(251, 191, 36, 0.18);
 }
 
 .phoenix-orb-plasma-corona {
@@ -3549,24 +3548,21 @@ body {
     transparent 92%
   );
   mix-blend-mode: screen;
-  opacity: 0.92;
-  animation: phoenix-orb-plasma-corona var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
-  will-change: opacity, transform, filter;
+  opacity: 0.8;
 }
 
 .phoenix-orb-sphere-rim {
   background: radial-gradient(
     circle at 50% 50%,
     transparent 56%,
-    rgba(255, 255, 255, 0.32) 62%,
-    rgba(254, 249, 195, 0.55) 68%,
-    rgba(255, 255, 255, 0.38) 74%,
-    rgba(254, 249, 195, 0.16) 80%,
+    rgba(255, 255, 255, 0.28) 62%,
+    rgba(254, 249, 195, 0.45) 68%,
+    rgba(255, 255, 255, 0.28) 74%,
+    rgba(254, 249, 195, 0.12) 80%,
     transparent 86%
   );
   mix-blend-mode: screen;
-  opacity: 0.88;
-  animation: phoenix-orb-sphere-rim var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
+  opacity: 0.82;
   pointer-events: none;
 }
 
@@ -3798,17 +3794,9 @@ body {
   transition: none;
 }
 
-/* Contorno fino da ANYMA — borda luminosa de chamas (só no modelo, não na bola). */
+/* Contorno da ANYMA — 1 sombra estática (6 drop-shadows animados no canvas WebGL travavam). */
 .phoenix-orb-model-layer--contoured {
-  filter:
-    drop-shadow(0 0 0.6px rgba(255, 251, 235, 0.95))
-    drop-shadow(0 0 1.2px rgba(253, 224, 71, 1))
-    drop-shadow(0 0 3px rgba(251, 146, 60, 0.98))
-    drop-shadow(0 0 7px rgba(249, 115, 22, 0.88))
-    drop-shadow(0 0 14px rgba(234, 88, 12, 0.62))
-    drop-shadow(0 0 24px rgba(194, 65, 12, 0.38));
-  animation: phoenix-model-contour-pulse var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
-  will-change: filter;
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.55));
 }
 
 .phoenix-orb-model-contact-shadow {
@@ -3819,8 +3807,7 @@ body {
     rgba(69, 26, 3, 0.1) 58%,
     transparent 76%
   );
-  filter: blur(2px);
-  opacity: 0.72;
+  opacity: 0.65;
 }
 
 .phoenix-orb-model-layer--contoured .phoenix-model-canvas {
@@ -3832,19 +3819,17 @@ body {
   content: "";
   pointer-events: none;
   position: absolute;
-  inset: 10%;
+  inset: 12%;
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 46%,
-    transparent 36%,
-    rgba(253, 224, 71, 0.12) 44%,
-    rgba(251, 146, 60, 0.42) 50%,
-    rgba(249, 115, 22, 0.55) 54%,
-    rgba(234, 88, 12, 0.28) 58%,
+    transparent 40%,
+    rgba(251, 146, 60, 0.22) 52%,
+    rgba(249, 115, 22, 0.28) 56%,
     transparent 66%
   );
   mix-blend-mode: screen;
-  animation: phoenix-contour-halo-pulse var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
+  opacity: 0.85;
 }
 
 @keyframes phoenix-contour-halo-pulse {

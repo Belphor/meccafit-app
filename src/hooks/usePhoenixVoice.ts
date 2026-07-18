@@ -148,7 +148,7 @@ export function usePhoenixVoice() {
       return Promise.resolve();
     }
 
-    const { text, modulation } = resolveIgnitePayload(input);
+    const { text } = resolveIgnitePayload(input);
     const trimmed = text.trim();
     if (!trimmed) return Promise.resolve();
 
@@ -171,12 +171,12 @@ export function usePhoenixVoice() {
       try {
         const playback = await playAnimaTts(trimmed, {
           signal: abort.signal,
-          simplePlayback: modulation.simplePlayback,
+          // Sempre HTMLAudio simples: AnalyserNode + AudioContext competem com WebGL/HUD.
+          simplePlayback: true,
           onSpeaking: () => {
             if (pendingTokenRef.current !== token) return;
             setState("speaking");
           },
-          // Sem onAmplitude: evita AnalyserNode + RAF → setState no React a 60fps.
         });
 
         if (pendingTokenRef.current !== token) {

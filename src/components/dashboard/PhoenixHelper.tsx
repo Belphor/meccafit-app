@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PhoenixPhaseRuntimeContext } from "@/components/dashboard/PhoenixPhaseEngine";
 import { AnimaTourCallout } from "@/components/dashboard/AnimaTourCallout";
 import { usePhoenixVoice } from "@/hooks/usePhoenixVoice";
@@ -562,7 +562,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     if (hudOpen) return;
 
     if (isPunished) {
-      setHudOpen(true);
+      startTransition(() => setHudOpen(true));
       return;
     }
 
@@ -571,7 +571,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
       return;
     }
 
-    setHudOpen(true);
+    startTransition(() => setHudOpen(true));
 
     if (!debtGreetingFiredRef.current && shouldShowDebtSoftGreeting(userId, daysAbsent)) {
       debtGreetingFiredRef.current = true;
@@ -983,7 +983,6 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           className={onboardingPhase === "spotlight" ? "anima-phoenix-spotlight-pulse" : ""}
           isPunished={isPunished}
           isDeployed={hudOpen}
-          isSpeaking={state === "speaking"}
           greetingCopy=""
           onPhoenixRevealed={handlePhoenixRevealed}
           onEngage={handleOpenHud}
@@ -1003,13 +1002,13 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         <div className="fixed inset-0 z-[58]" role="presentation">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/55"
             aria-label={`Fechar ${ANYMA_BRAND}`}
             onClick={handleCloseHud}
           />
 
           <aside
-            className="anima-hud-panel flex w-[min(100vw-2rem,24rem)] min-w-0 flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-3 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl sm:min-w-[17rem] sm:p-4 sm:w-[min(46vw,24rem)]"
+            className="anima-hud-panel flex w-[min(100vw-2rem,24rem)] min-w-0 flex-col rounded-2xl border border-orange-500/20 bg-neutral-950 p-3 shadow-[0_0_28px_rgba(249,115,22,0.14)] sm:min-w-[17rem] sm:p-4 sm:w-[min(46vw,24rem)]"
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -1033,7 +1032,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
             <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-y-contain pb-2 pr-1">
               {isPunished ? (
-                <div className="anima-glass-magma rounded-xl border border-neutral-700/50 px-4 py-3 text-left">
+                <div className="rounded-xl border border-neutral-700/50 bg-neutral-900/90 px-4 py-3 text-left">
                   <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-400">
                     Exílio das Chamas
                   </p>
@@ -1042,7 +1041,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
               ) : (
                 explanationGroups.map((group) => (
                   <div key={group.group} className="space-y-2">
-                    <p className="sticky top-0 z-[1] bg-neutral-950/90 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70 backdrop-blur-sm">
+                    <p className="sticky top-0 z-[1] bg-neutral-950 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300/70">
                       {group.label}
                     </p>
                     {group.cards.map((card) => {
@@ -1061,8 +1060,8 @@ export const PhoenixHelper = memo(function PhoenixHelper({
                         }
                         className={`${DASHBOARD_TAP_TARGET} w-full shrink-0 rounded-xl border px-4 py-2.5 text-left transition ${
                           isSuporteAccent
-                            ? "anima-glass-suporte border-emerald-500/40 hover:border-emerald-400/55"
-                            : "anima-glass-magma border-orange-500/20 hover:border-amber-400/35"
+                            ? "border-emerald-500/40 bg-emerald-950/50 hover:border-emerald-400/55"
+                            : "border-orange-500/25 bg-orange-950/35 hover:border-amber-400/35"
                         } ${
                           highlightExplanation === card.id
                             ? isSuporteAccent
