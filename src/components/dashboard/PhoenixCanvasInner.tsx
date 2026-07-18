@@ -14,7 +14,7 @@ export type PhoenixCanvasInnerProps = {
   onEngage?: () => void;
 };
 
-/** Garante 1 paint ao abrir/fechar (frameloop demand/never). */
+/** Força paints ao mudar estado — evita canvas preto no mobile. */
 function PhoenixFrameKick({
   isVisible,
   isOpenOrb,
@@ -26,7 +26,14 @@ function PhoenixFrameKick({
 }) {
   const invalidate = useThree((state) => state.invalidate);
   useEffect(() => {
+    if (!isVisible) return;
     invalidate();
+    const t1 = window.setTimeout(() => invalidate(), 32);
+    const t2 = window.setTimeout(() => invalidate(), 120);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [invalidate, isMobile, isOpenOrb, isVisible]);
   return null;
 }
@@ -40,13 +47,10 @@ export function PhoenixCanvasInner({
 }: PhoenixCanvasInnerProps) {
   const isMobile = useTouchPrimaryDevice();
 
-  // Celular + HUD: congela WebGL (CSS da orb continua vivo). Desktop: demand ~30fps.
-  const frameloop =
-    !isVisible ? "never" : isMobile && isOpenOrb ? "never" : "demand";
-
   return (
     <Canvas
-      frameloop={frameloop}
+      // Sempre demand quando visível — "never" no mobile apagava a fênix antes do paint.
+      frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
       camera={{ position: [0, 0.14, 3.55], fov: 38, near: 0.1, far: 100 }}
       gl={{
@@ -62,12 +66,22 @@ export function PhoenixCanvasInner({
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = isPunished ? 0.9 : isOpenOrb ? 1.18 : 1.2;
+        gl.toneMappingExposure = isPunished
+          ? 0.9
+          : isMobile
+            ? isOpenOrb
+              ? 1.28
+              : 1.22
+            : isOpenOrb
+              ? 1.18
+              : 1.2;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
       <PhoenixFrameKick isVisible={isVisible} isOpenOrb={isOpenOrb} isMobile={isMobile} />
-      <ambientLight intensity={isPunished ? 0.36 : isOpenOrb ? 0.3 : 0.4} />
+      <ambientLight
+        intensity={isPunished ? 0.36 : isMobile ? (isOpenOrb ? 0.48 : 0.42) : isOpenOrb ? 0.3 : 0.4}
+      />
       <PhoenixModel
         isPunished={isPunished}
         isVisible={isVisible}

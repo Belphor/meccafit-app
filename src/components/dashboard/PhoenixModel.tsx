@@ -64,9 +64,10 @@ export const PHOENIX_BOUNDS_MARGIN = {
   open: 1.25,
 } as const;
 
-/** ~30fps desktop / ~20fps mobile compact — respiração lenta permanece suave. */
+/** ~30fps desktop / ~18fps mobile compact / ~12fps mobile HUD — barato e visível. */
 const PHOENIX_RENDER_INTERVAL_MS = 1000 / 30;
-const PHOENIX_RENDER_INTERVAL_MOBILE_MS = 1000 / 20;
+const PHOENIX_RENDER_INTERVAL_MOBILE_MS = 1000 / 18;
+const PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS = 1000 / 12;
 /** Anisotropy — orb pequeno no celular não ganha com 4+. */
 const PHOENIX_TEXTURE_ANISOTROPY = 4;
 const PHOENIX_TEXTURE_ANISOTROPY_MOBILE = 2;
@@ -107,12 +108,13 @@ function enhanceTextureQuality(texture: Texture, anisotropy: number): void {
   enhancedTextures.add(texture);
 }
 
-function collectMagmaMaterials(root: Object3D): MeshStandardMaterial[] {
+function collectMagmaMaterials(root: Object3D, isMobile: boolean): MeshStandardMaterial[] {
   const materials: MeshStandardMaterial[] = [];
   root.traverse((node) => {
     const mesh = node as { isMesh?: boolean; material?: Material | Material[]; frustumCulled?: boolean };
     if (!mesh.isMesh || !mesh.material) return;
-    mesh.frustumCulled = true;
+    // Mobile: frustumCulled às vezes corta o modelo no orb pequeno.
+    mesh.frustumCulled = !isMobile;
     const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     for (const material of list) {
       if (material instanceof MeshStandardMaterial) materials.push(material);
@@ -127,8 +129,9 @@ function applyPhoenixMaterials(
   isOpenOrb: boolean,
   anisotropy: number,
   emissiveMap: Texture,
+  isMobile = false,
 ): MeshStandardMaterial[] {
-  const materials = collectMagmaMaterials(root);
+  const materials = collectMagmaMaterials(root, isMobile);
 
   for (const material of materials) {
     const maps = [
@@ -164,7 +167,9 @@ function applyPhoenixMaterials(
       material.emissiveMap = emissiveMap;
       material.emissive.set("#ff6a1a");
       material.emissiveIntensity = isOpenOrb
-        ? PHOENIX_MAGMA_EMISSIVE.openMin
+        ? isMobile
+          ? 1.25
+          : PHOENIX_MAGMA_EMISSIVE.openMin
         : PHOENIX_MAGMA_EMISSIVE.idleMin;
       material.envMapIntensity = isOpenOrb ? 1.05 : 0.78;
     }
@@ -194,11 +199,15 @@ function PhoenixModelMesh({
 
   const scene = useMemo(() => gltf.scene.clone(true) as Group, [gltf.scene]);
 
-  // Celular + orb aberta: pose estática (CSS anima a bola). Compacta: respira em ~20fps.
-  const lifeMotionActive = isVisible && !isPunished && !(isMobile && isOpenOrb);
+  // Sempre anima quando visível — no mobile aberto só reduz FPS (não congela / não some).
+  const lifeMotionActive = isVisible && !isPunished;
   const contextScale = isOpenOrb ? PHOENIX_CONTEXT_SCALE.open : PHOENIX_CONTEXT_SCALE.compact;
   const anisotropy = isMobile ? PHOENIX_TEXTURE_ANISOTROPY_MOBILE : PHOENIX_TEXTURE_ANISOTROPY;
-  const renderIntervalMs = isMobile ? PHOENIX_RENDER_INTERVAL_MOBILE_MS : PHOENIX_RENDER_INTERVAL_MS;
+  const renderIntervalMs = isMobile
+    ? isOpenOrb
+      ? PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS
+      : PHOENIX_RENDER_INTERVAL_MOBILE_MS
+    : PHOENIX_RENDER_INTERVAL_MS;
 
   isOpenOrbRef.current = isOpenOrb;
 
@@ -209,11 +218,6 @@ function PhoenixModelMesh({
   useEffect(() => {
     if (lifeMotionActive || !rootRef.current) return;
     rootRef.current.position.y = 0;
-    for (const material of magmaMaterialsRef.current) {
-      material.emissiveIntensity = isOpenOrbRef.current
-        ? PHOENIX_MAGMA_EMISSIVE.openMin
-        : PHOENIX_MAGMA_EMISSIVE.idleMin;
-    }
     invalidate();
   }, [invalidate, lifeMotionActive]);
 
@@ -224,9 +228,12 @@ function PhoenixModelMesh({
       isOpenOrb,
       anisotropy,
       emissiveMap,
+      isMobile,
     );
     invalidate();
-  }, [anisotropy, emissiveMap, invalidate, isOpenOrb, isPunished, scene]);
+    const kick = window.setTimeout(() => invalidate(), 50);
+    return () => window.clearTimeout(kick);
+  }, [anisotropy, emissiveMap, invalidate, isMobile, isOpenOrb, isPunished, scene]);
 
   useEffect(() => {
     onLoaded?.();
@@ -256,8 +263,16 @@ function PhoenixModelMesh({
       }
 
       const open = isOpenOrbRef.current;
-      const emissiveMin = open ? PHOENIX_MAGMA_EMISSIVE.openMin : PHOENIX_MAGMA_EMISSIVE.idleMin;
-      const emissiveMax = open ? PHOENIX_MAGMA_EMISSIVE.openMax : PHOENIX_MAGMA_EMISSIVE.idleMax;
+      const emissiveMin = open
+        ? isMobile
+          ? 1.25
+          : PHOENIX_MAGMA_EMISSIVE.openMin
+        : PHOENIX_MAGMA_EMISSIVE.idleMin;
+      const emissiveMax = open
+        ? isMobile
+          ? 1.85
+          : PHOENIX_MAGMA_EMISSIVE.openMax
+        : PHOENIX_MAGMA_EMISSIVE.idleMax;
       const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
 
       for (const material of magmaMaterialsRef.current) {
@@ -273,7 +288,7 @@ function PhoenixModelMesh({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [invalidate, lifeMotionActive, renderIntervalMs]);
+  }, [invalidate, isMobile, lifeMotionActive, renderIntervalMs]);
 
   if (!isVisible) return null;
 
@@ -328,49 +343,38 @@ export function PhoenixModel({
         intensity={isPunished ? 0.45 : open ? 1.55 : 1.4}
         color={isPunished ? "#6b7280" : "#fffbeb"}
       />
-      {/* Fill lights — desktop full; mobile 1 fill (orb pequeno). */}
-      {!isMobile ? (
-        <>
-          <directionalLight
-            position={[-3.2, 2.4, -1.6]}
-            intensity={isPunished ? 0.15 : open ? 0.52 : 0.48}
-            color={isPunished ? "#52525b" : "#fdba74"}
-          />
-          <directionalLight
-            position={[0.15, 2.4, -4.2]}
-            intensity={isPunished ? 0.08 : open ? 0.78 : 0.48}
-            color={isPunished ? "#52525b" : "#ea580c"}
-          />
-          <pointLight
-            position={[0, 0.55, 2.4]}
-            intensity={isPunished ? 0.08 : open ? 0.85 : 0.58}
-            color="#fde68a"
-            distance={6}
-            decay={2}
-          />
-          <pointLight
-            position={[0, 0.35, -2.2]}
-            intensity={isPunished ? 0.08 : open ? 0.72 : 0.95}
-            color="#fde68a"
-            distance={7}
-            decay={2}
-          />
-        </>
-      ) : (
-        <directionalLight
-          position={[-2.4, 2.8, -1.2]}
-          intensity={isPunished ? 0.12 : open ? 0.7 : 0.55}
-          color={isPunished ? "#52525b" : "#fdba74"}
-        />
-      )}
+      <directionalLight
+        position={[-3.2, 2.4, -1.6]}
+        intensity={isPunished ? 0.15 : open ? 0.52 : 0.48}
+        color={isPunished ? "#52525b" : "#fdba74"}
+      />
+      <directionalLight
+        position={[0.15, 2.4, -4.2]}
+        intensity={isPunished ? 0.08 : open ? 0.78 : 0.48}
+        color={isPunished ? "#52525b" : "#ea580c"}
+      />
       <pointLight
         position={[0, -0.6, 2.0]}
-        intensity={isPunished ? 0.18 : open ? (isMobile ? 1.2 : 1.65) : 0.85}
+        intensity={isPunished ? 0.18 : open ? 1.65 : 0.85}
         color="#f97316"
         distance={open ? 8.5 : 6.5}
         decay={2}
       />
-      {/* ContactShadows é caro no mobile — o CSS .phoenix-orb-model-contact-shadow cobre. */}
+      <pointLight
+        position={[0, 0.55, 2.4]}
+        intensity={isPunished ? 0.08 : open ? 0.85 : 0.58}
+        color="#fde68a"
+        distance={6}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 0.35, -2.2]}
+        intensity={isPunished ? 0.08 : open ? 0.72 : 0.95}
+        color="#fde68a"
+        distance={7}
+        decay={2}
+      />
+      {/* ContactShadows no mobile custa demais — CSS cobre a sombra. */}
       {open && !isMobile ? (
         <ContactShadows
           position={[0, -0.62, 0]}
