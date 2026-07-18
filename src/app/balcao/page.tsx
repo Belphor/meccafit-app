@@ -17,19 +17,19 @@ const HANDSHAKE_QR_URL =
 
 /**
  * Cartaz imprimível para o balcão da academia.
- * QR (preto sobre branco, para leitura garantida) + instruções para iPhone
- * logo abaixo. Fundo IRIS na tela; layout limpo na impressão.
+ * QR em PNG (mais legível na câmera do que SVG) + quiet zone ampla.
  */
 export default async function BalcaoPage() {
-  const qrSvg = await QRCode.toString(HANDSHAKE_QR_URL, {
-    type: "svg",
-    errorCorrectionLevel: "H",
-    margin: 1,
+  const qrDataUrl = await QRCode.toDataURL(HANDSHAKE_QR_URL, {
+    type: "image/png",
+    errorCorrectionLevel: "M",
+    margin: 4,
+    width: 1024,
     color: { dark: "#000000", light: "#ffffff" },
   });
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-black px-6 py-12 print:bg-white print:py-0">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center bg-black px-6 py-12 print:bg-white print:py-0">
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -49,14 +49,24 @@ export default async function BalcaoPage() {
           Escaneie para instalar o app
         </p>
 
-        <div
-          className="mt-5 w-full max-w-[16rem] bg-white p-4"
-          aria-label="QR Code de instalação"
-          dangerouslySetInnerHTML={{ __html: qrSvg }}
-        />
+        <div className="mt-5 w-full max-w-[20rem] bg-white p-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrDataUrl}
+            alt="QR Code — escaneie para instalar o app FENYXIA"
+            width={1024}
+            height={1024}
+            className="h-auto w-full"
+            decoding="async"
+          />
+        </div>
 
         <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffb800]/70 print:text-black">
           Aproxime a câmera do celular do código acima
+        </p>
+
+        <p className="mt-3 break-all text-center text-[9px] font-medium tracking-wide text-[#ffb800]/50 print:text-black/60">
+          {HANDSHAKE_QR_URL}
         </p>
 
         <div className="mt-8 w-full border-t border-[#ffb800]/25 pt-6 print:border-black/30">
