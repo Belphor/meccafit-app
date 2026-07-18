@@ -68,6 +68,7 @@ const PhoenixCanvasDynamic = dynamic(
 export type PhoenixCanvasProps = {
   isPunished?: boolean;
   isDeployed?: boolean;
+  isSpeaking?: boolean;
   greetingCopy?: string;
   onEngage?: () => void;
   onPhoenixRevealed?: () => void;
@@ -103,10 +104,9 @@ export function PhoenixCanvas({
     !flashHidden && (phase === "igniting" || (phase === "revealing" && !flashHidden));
   const fireballIgnited = flashVisible;
   const orbGlowActive = showModel && (modelEmerging || isHudOpen);
-  // Anéis/corona animados + blur no canvas WebGL travam o main thread com o HUD aberto.
-  const openFlameRings = false;
+  const openFlameRings = orbGlowActive && flashHidden;
   const modelContourGlow =
-    !isHudOpen && (modelRevealed || phase === "awake") && (flashFading || !flashVisible);
+    (modelRevealed || isHudOpen) && (flashFading || !flashVisible);
   const coreFlashVisible =
     modelEmerging && !flashHidden && (phase === "igniting" || phase === "revealing");
   const shellClass = resolveOrbShellClass(phase, isHudOpen);
@@ -350,11 +350,17 @@ export function PhoenixCanvas({
           }`}
         />
 
-        {orbGlowActive && !isHudOpen ? (
-          <span
-            aria-hidden="true"
-            className="phoenix-orb-sphere-rim pointer-events-none absolute inset-[-4%] z-[4] rounded-full"
-          />
+        {orbGlowActive ? (
+          <>
+            <span
+              aria-hidden="true"
+              className="phoenix-orb-plasma-corona pointer-events-none absolute inset-[-40%] z-[0] rounded-full"
+            />
+            <span
+              aria-hidden="true"
+              className="phoenix-orb-sphere-rim pointer-events-none absolute inset-[-4%] z-[4] rounded-full"
+            />
+          </>
         ) : null}
 
         <span

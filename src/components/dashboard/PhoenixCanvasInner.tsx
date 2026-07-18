@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
 import { PhoenixModel } from "@/components/dashboard/PhoenixModel";
 
@@ -13,15 +12,6 @@ export type PhoenixCanvasInnerProps = {
   onEngage?: () => void;
 };
 
-/** Dispara 1 frame quando o orb abre/fecha (frameloop never precisa de invalidate). */
-function PhoenixFrameKick({ isVisible, isOpenOrb }: { isVisible: boolean; isOpenOrb: boolean }) {
-  const invalidate = useThree((state) => state.invalidate);
-  useEffect(() => {
-    invalidate();
-  }, [invalidate, isOpenOrb, isVisible]);
-  return null;
-}
-
 export function PhoenixCanvasInner({
   isPunished,
   isVisible,
@@ -31,29 +21,27 @@ export function PhoenixCanvasInner({
 }: PhoenixCanvasInnerProps) {
   return (
     <Canvas
-      // Orb aberta: congela o WebGL (HUD + voz no main thread). Compacta: demand + timer ~10fps.
-      frameloop={isVisible ? (isOpenOrb ? "never" : "demand") : "never"}
+      frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
       camera={{ position: [0, 0.14, 3.55], fov: 38, near: 0.1, far: 100 }}
       gl={{
         alpha: true,
         premultipliedAlpha: false,
-        antialias: false,
-        powerPreference: "low-power",
+        antialias: true,
+        powerPreference: "high-performance",
         stencil: false,
         depth: true,
-        preserveDrawingBuffer: false,
       }}
-      dpr={1}
+      // Cap DPR: orb aberta + blur do HUD no mesmo frame travava o main thread.
+      dpr={isOpenOrb ? [1, 1.5] : [1, 1.75]}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = isPunished ? 0.9 : isOpenOrb ? 1.12 : 1.15;
+        gl.toneMappingExposure = isPunished ? 0.9 : isOpenOrb ? 1.18 : 1.2;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
-      <PhoenixFrameKick isVisible={isVisible} isOpenOrb={isOpenOrb} />
-      <ambientLight intensity={isPunished ? 0.4 : isOpenOrb ? 0.45 : 0.5} />
+      <ambientLight intensity={isPunished ? 0.36 : isOpenOrb ? 0.3 : 0.4} />
       <PhoenixModel
         isPunished={isPunished}
         isVisible={isVisible}

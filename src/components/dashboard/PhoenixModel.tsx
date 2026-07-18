@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Bounds, Center, useGLTF, useTexture } from "@react-three/drei";
-import { useThree, type ThreeEvent } from "@react-three/fiber";
+import { Bounds, Center, ContactShadows, useGLTF, useTexture } from "@react-three/drei";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import type { Group, Object3D, Texture } from "three";
 import {
   LinearFilter,
@@ -37,9 +37,9 @@ export const PHOENIX_GREETING_DELAY_MS = 380;
 export const PHOENIX_GREETING_VISIBLE_MS = 9200;
 
 /** Respiração da ANYMA (rad/s) — flutuação Y + pulso de magma no mesmo ciclo. */
-export const PHOENIX_WING_FLAP_SPEED = 0.85;
+export const PHOENIX_WING_FLAP_SPEED = 1.05;
 /** Amplitude de flutuação no eixo Y (world units ≈ poucos pixels no orb). */
-export const PHOENIX_FLOAT_AMPLITUDE = 0.028;
+export const PHOENIX_FLOAT_AMPLITUDE = 0.038;
 /** @deprecated alias — mantido para sync CSS do ciclo via --phoenix-pulse-cycle. */
 export const PHOENIX_WING_FLAP_AMPLITUDE = PHOENIX_FLOAT_AMPLITUDE;
 export const PHOENIX_WING_CYCLE_S = (2 * Math.PI) / PHOENIX_WING_FLAP_SPEED;
@@ -47,9 +47,9 @@ export const PHOENIX_WING_CYCLE_S = (2 * Math.PI) / PHOENIX_WING_FLAP_SPEED;
 /** Pulso luminoso do shader de magma (emissiveIntensity). */
 export const PHOENIX_MAGMA_EMISSIVE = {
   idleMin: 0.72,
-  idleMax: 1.05,
-  openMin: 1.0,
-  openMax: 1.35,
+  idleMax: 1.18,
+  openMin: 1.05,
+  openMax: 1.92,
 } as const;
 
 /** Escala contextual da ANYMA dentro do orb (não altera o shell CSS). */
@@ -58,16 +58,11 @@ export const PHOENIX_CONTEXT_SCALE = {
   open: 0.9,
 } as const;
 
-/** Margem do Bounds — fixa para não remountar o grafo ao abrir o HUD. */
+/** Margem do Bounds — mais margem = ANYMA menor e centrada na bola. */
 export const PHOENIX_BOUNDS_MARGIN = {
-  compact: 1.28,
-  open: 1.28,
+  compact: 1.32,
+  open: 1.18,
 } as const;
-
-/** Idle 3D: ~10 fps. Evita invalidate() a 60fps competindo com React/CSS. */
-const PHOENIX_IDLE_FRAME_INTERVAL_S = 1 / 10;
-/** Anisotropy baixo — texturas 4K + max GPU travavam mobile. */
-const PHOENIX_TEXTURE_ANISOTROPY = 2;
 
 /** Tempo total do clarão após o modelo emergir (fade-in + hold + fade-out). */
 export const PHOENIX_FLASH_TOTAL_AFTER_EMERGE_MS =
@@ -139,7 +134,7 @@ function applyPhoenixMaterials(
     material.depthWrite = true;
 
     if (material.normalMap) {
-      material.normalScale.set(isPunished ? 0.7 : 0.95, isPunished ? 0.7 : 0.95);
+      material.normalScale.set(isPunished ? 0.85 : 1.2, isPunished ? 0.85 : 1.2);
     }
 
     if (isPunished) {
@@ -151,14 +146,14 @@ function applyPhoenixMaterials(
       material.emissiveIntensity = 0.04;
       material.envMapIntensity = 0.35;
     } else {
-      material.roughness = Math.max(0.38, material.roughness * 0.92);
-      material.metalness = Math.min(0.45, material.metalness + 0.05);
+      material.roughness = Math.max(0.32, material.roughness * 0.9);
+      material.metalness = Math.min(0.55, material.metalness + 0.08);
       material.emissiveMap = emissiveMap;
       material.emissive.set("#ff6a1a");
       material.emissiveIntensity = isOpenOrb
         ? PHOENIX_MAGMA_EMISSIVE.openMin
         : PHOENIX_MAGMA_EMISSIVE.idleMin;
-      material.envMapIntensity = isOpenOrb ? 0.85 : 0.7;
+      material.envMapIntensity = isOpenOrb ? 1.05 : 0.78;
     }
 
     material.needsUpdate = true;
@@ -178,18 +173,19 @@ function PhoenixModelMesh({
   const breathPhaseRef = useRef(0);
   const magmaMaterialsRef = useRef<MeshStandardMaterial[]>([]);
   const reducedMotionRef = useRef(false);
-  const isOpenOrbRef = useRef(isOpenOrb);
   const invalidate = useThree((state) => state.invalidate);
+  // Cap anisotropy: qualidade visual quase idêntica, bem menos custo de GPU.
+  const maxAnisotropy = useThree((state) =>
+    Math.min(4, state.gl.capabilities.getMaxAnisotropy()),
+  );
   const gltf = useGLTF(FENYXIA_CORE_GLB);
   const emissiveMap = useTexture(PHOENIX_EMISSIVE_MAP);
 
   const scene = useMemo(() => gltf.scene.clone(true) as Group, [gltf.scene]);
 
-  // Só anima no orb compacto. HUD aberto = pose estática (frameloop never no canvas).
-  const lifeMotionActive = isVisible && !isPunished && !isOpenOrb;
+  const lifeMotionActive = isVisible && !isPunished;
   const contextScale = isOpenOrb ? PHOENIX_CONTEXT_SCALE.open : PHOENIX_CONTEXT_SCALE.compact;
-
-  isOpenOrbRef.current = isOpenOrb;
+  const boundsMargin = isOpenOrb ? PHOENIX_BOUNDS_MARGIN.open : PHOENIX_BOUNDS_MARGIN.compact;
 
   useEffect(() => {
     reducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -198,11 +194,6 @@ function PhoenixModelMesh({
   useEffect(() => {
     if (lifeMotionActive || !rootRef.current) return;
     rootRef.current.position.y = 0;
-    for (const material of magmaMaterialsRef.current) {
-      material.emissiveIntensity = isOpenOrbRef.current
-        ? PHOENIX_MAGMA_EMISSIVE.openMin
-        : PHOENIX_MAGMA_EMISSIVE.idleMin;
-    }
     invalidate();
   }, [invalidate, lifeMotionActive]);
 
@@ -211,58 +202,49 @@ function PhoenixModelMesh({
       scene,
       isPunished,
       isOpenOrb,
-      PHOENIX_TEXTURE_ANISOTROPY,
+      maxAnisotropy,
       emissiveMap,
     );
     invalidate();
-  }, [emissiveMap, invalidate, isOpenOrb, isPunished, scene]);
+  }, [emissiveMap, invalidate, isOpenOrb, isPunished, maxAnisotropy, scene]);
 
   useEffect(() => {
     onLoaded?.();
   }, [onLoaded, scene]);
 
-  // Timer ~10fps fora do useFrame: com frameloop=demand, throttle via RAF morto o loop.
-  useEffect(() => {
+  useFrame((_, delta) => {
     if (!lifeMotionActive || reducedMotionRef.current) return;
 
-    let cancelled = false;
-    let timer = 0;
+    breathPhaseRef.current += delta * PHOENIX_WING_FLAP_SPEED;
+    const phase = breathPhaseRef.current;
+    const wave = Math.sin(phase);
+    // 0 → 1 → 0: respiração de fogo (ease suave via seno)
+    const breath = 0.5 + 0.5 * wave;
 
-    const tick = () => {
-      if (cancelled) return;
+    const root = rootRef.current;
+    if (root) {
+      root.position.y = wave * PHOENIX_FLOAT_AMPLITUDE;
+    }
 
-      breathPhaseRef.current += PHOENIX_IDLE_FRAME_INTERVAL_S * PHOENIX_WING_FLAP_SPEED;
-      const wave = Math.sin(breathPhaseRef.current);
-      const breath = 0.5 + 0.5 * wave;
+    const emissiveMin = isOpenOrb
+      ? PHOENIX_MAGMA_EMISSIVE.openMin
+      : PHOENIX_MAGMA_EMISSIVE.idleMin;
+    const emissiveMax = isOpenOrb
+      ? PHOENIX_MAGMA_EMISSIVE.openMax
+      : PHOENIX_MAGMA_EMISSIVE.idleMax;
+    const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
 
-      const root = rootRef.current;
-      if (root) {
-        root.position.y = wave * PHOENIX_FLOAT_AMPLITUDE;
-      }
+    for (const material of magmaMaterialsRef.current) {
+      material.emissiveIntensity = emissiveIntensity;
+    }
 
-      const emissiveIntensity =
-        PHOENIX_MAGMA_EMISSIVE.idleMin +
-        (PHOENIX_MAGMA_EMISSIVE.idleMax - PHOENIX_MAGMA_EMISSIVE.idleMin) * breath;
-
-      for (const material of magmaMaterialsRef.current) {
-        material.emissiveIntensity = emissiveIntensity;
-      }
-
-      invalidate();
-      timer = window.setTimeout(tick, PHOENIX_IDLE_FRAME_INTERVAL_S * 1000);
-    };
-
-    timer = window.setTimeout(tick, PHOENIX_IDLE_FRAME_INTERVAL_S * 1000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [invalidate, lifeMotionActive]);
+    invalidate();
+  });
 
   if (!isVisible) return null;
 
   return (
-    <Bounds fit clip={false} margin={PHOENIX_BOUNDS_MARGIN.open}>
+    <Bounds fit clip={false} margin={boundsMargin} key={isOpenOrb ? "open" : "compact"}>
       <Center>
         <group scale={contextScale}>
           <group ref={rootRef}>
@@ -301,22 +283,57 @@ export function PhoenixModel({
   return (
     <>
       <hemisphereLight
-        intensity={isPunished ? 0.28 : open ? 0.38 : 0.32}
+        intensity={isPunished ? 0.22 : open ? 0.42 : 0.34}
         color={isPunished ? "#71717a" : "#fff7ed"}
         groundColor={isPunished ? "#27272a" : "#451a03"}
       />
       <directionalLight
-        position={[2.0, 3.6, 2.8]}
-        intensity={isPunished ? 0.5 : open ? 1.15 : 1.05}
+        position={[2.2, 4.2, 3.4]}
+        intensity={isPunished ? 0.45 : open ? 1.55 : 1.4}
         color={isPunished ? "#6b7280" : "#fffbeb"}
       />
+      <directionalLight
+        position={[-3.2, 2.4, -1.6]}
+        intensity={isPunished ? 0.15 : open ? 0.52 : 0.48}
+        color={isPunished ? "#52525b" : "#fdba74"}
+      />
+      <directionalLight
+        position={[0.15, 2.4, -4.2]}
+        intensity={isPunished ? 0.08 : open ? 0.78 : 0.48}
+        color={isPunished ? "#52525b" : "#ea580c"}
+      />
       <pointLight
-        position={[0, 0.2, 2.2]}
-        intensity={isPunished ? 0.12 : open ? 0.7 : 0.55}
+        position={[0, -0.6, 2.0]}
+        intensity={isPunished ? 0.18 : open ? 1.65 : 0.85}
         color="#f97316"
+        distance={open ? 8.5 : 6.5}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 0.55, 2.4]}
+        intensity={isPunished ? 0.08 : open ? 0.85 : 0.58}
+        color="#fde68a"
+        distance={6}
+        decay={2}
+      />
+      <pointLight
+        position={[0, 0.35, -2.2]}
+        intensity={isPunished ? 0.08 : open ? 0.72 : 0.95}
+        color="#fde68a"
         distance={7}
         decay={2}
       />
+      {open ? (
+        <ContactShadows
+          position={[0, -0.62, 0]}
+          opacity={0.4}
+          scale={3.4}
+          blur={2.4}
+          far={1.4}
+          color="#120804"
+          frames={1}
+        />
+      ) : null}
       <PhoenixModelMesh
         isPunished={isPunished}
         isVisible={isVisible}
