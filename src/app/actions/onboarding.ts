@@ -63,7 +63,6 @@ export async function registerCliente(
 
   const email = input.email.trim().toLowerCase();
   const fullName = input.fullName.trim();
-  const birthDate = input.birthDate.trim();
 
   try {
     const admin = createServiceRoleClient();
@@ -77,7 +76,6 @@ export async function registerCliente(
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
-        data_nascimento: birthDate,
         role: "cliente",
         has_accepted_terms: false,
       },

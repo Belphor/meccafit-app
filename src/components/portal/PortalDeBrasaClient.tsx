@@ -59,7 +59,6 @@ const EMPTY_ONBOARDING: PrimeiroAcessoInput = {
   email: "",
   password: "",
   fullName: "",
-  birthDate: "",
 };
 
 function SacredPhoenixLogoPortal({ tone }: { tone: PhoenixTone }) {

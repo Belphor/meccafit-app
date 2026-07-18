@@ -57,7 +57,6 @@ export const PORTAL_COPY = {
   onboardingEmailInvalid: "Informe um e-mail válido.",
   onboardingPasswordMin: "A senha deve ter no mínimo 6 caracteres.",
   onboardingFullNameRequired: "Informe seu nome completo.",
-  onboardingBirthInvalid: "Informe uma data de nascimento válida.",
   onboardingProcessing: "Forjando sua conta no altar...",
   onboardingSuccess: "Linhagem acesa. Entrando no dashboard...",
   onboardingSignupFailed: "Não foi possível criar a conta. Tente novamente.",

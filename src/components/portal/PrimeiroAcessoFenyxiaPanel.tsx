@@ -12,7 +12,6 @@ export type PrimeiroAcessoFormState = {
   email: string;
   password: string;
   fullName: string;
-  birthDate: string;
 };
 
 type PrimeiroAcessoFenyxiaPanelProps = {
@@ -57,24 +56,6 @@ export function PrimeiroAcessoFenyxiaPanel({
       </div>
 
       <div className="w-full">
-        <label htmlFor="onboarding-birth-date" className={PORTAL_LABEL}>
-          Data de nascimento
-        </label>
-        <input
-          id="onboarding-birth-date"
-          type="date"
-          value={values.birthDate}
-          onChange={handleChange("birthDate")}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          disabled={disabled}
-          className={PORTAL_INPUT}
-          name="birth-date"
-          {...PORTAL_PASSWORD_MANAGER_ATTRS}
-        />
-      </div>
-
-      <div className="w-full">
         <label htmlFor="onboarding-email" className={PORTAL_LABEL}>
           E-mail de acesso
         </label>
@@ -106,7 +87,7 @@ export function PrimeiroAcessoFenyxiaPanel({
           onBlur={onBlur}
           disabled={disabled}
           placeholder="Digite sua senha"
-          minLength={6}
+          minLength={8}
         />
       </div>
     </div>

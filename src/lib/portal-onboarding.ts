@@ -6,7 +6,6 @@ export type PrimeiroAcessoInput = {
   email: string;
   password: string;
   fullName: string;
-  birthDate: string;
 };
 
 export type PrimeiroAcessoResult =
@@ -17,19 +16,10 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function isValidBirthDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const parsed = new Date(`${value}T12:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime())) return false;
-  const today = new Date();
-  return parsed <= today;
-}
-
 export function validatePrimeiroAcesso(input: PrimeiroAcessoInput): PrimeiroAcessoResult {
   const email = input.email.trim();
   const password = input.password;
   const fullName = input.fullName.trim();
-  const birthDate = input.birthDate.trim();
 
   if (!email) {
     return { ok: false, message: PORTAL_COPY.onboardingEmailRequired };
@@ -49,10 +39,6 @@ export function validatePrimeiroAcesso(input: PrimeiroAcessoInput): PrimeiroAces
 
   if (!fullName) {
     return { ok: false, message: PORTAL_COPY.onboardingFullNameRequired };
-  }
-
-  if (!isValidBirthDate(birthDate)) {
-    return { ok: false, message: PORTAL_COPY.onboardingBirthInvalid };
   }
 
   return { ok: true };
