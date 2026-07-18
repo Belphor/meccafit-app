@@ -7,6 +7,7 @@ import {
   type PrimeiroAcessoInput,
   type PrimeiroAcessoResult,
 } from "@/lib/portal-onboarding";
+import { createServiceRoleClient } from "@/lib/supabase-admin.server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 async function fetchProfileById(userId: string) {
@@ -40,7 +41,20 @@ async function waitForServerProfile(userId: string) {
   return null;
 }
 
-/** Cadastro público de cliente (sem convite). */
+function isEmailAlreadyRegistered(error: { message?: string; code?: string; status?: number }) {
+  const message = (error.message ?? "").toLowerCase();
+  const code = (error.code ?? "").toLowerCase();
+  return (
+    code === "email_exists" ||
+    code === "user_already_exists" ||
+    error.status === 422 ||
+    message.includes("already been registered") ||
+    message.includes("already registered") ||
+    message.includes("user already exists")
+  );
+}
+
+/** Cadastro público de cliente — e-mail já confirmado no altar (sem link do Gmail). */
 export async function registerCliente(
   input: PrimeiroAcessoInput,
 ): Promise<PrimeiroAcessoResult> {
@@ -52,48 +66,48 @@ export async function registerCliente(
   const birthDate = input.birthDate.trim();
 
   try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: input.password,
-      options: {
-        data: {
-          full_name: fullName,
-          data_nascimento: birthDate,
-          role: "cliente",
-          has_accepted_terms: false,
-        },
-      },
-    });
-
-    if (error) {
-      return { ok: false, message: mapAuthError(error) };
-    }
-
-    if (!data.user) {
+    const admin = createServiceRoleClient();
+    if (!admin) {
       return { ok: false, message: PORTAL_COPY.onboardingSignupFailed };
     }
 
-    if (!data.session) {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: input.password,
-      });
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+        data_nascimento: birthDate,
+        role: "cliente",
+        has_accepted_terms: false,
+      },
+    });
 
-      if (signInError || !signInData.user) {
-        return { ok: false, message: PORTAL_COPY.onboardingConfirmEmail };
+    if (createError) {
+      if (isEmailAlreadyRegistered(createError)) {
+        return { ok: false, message: PORTAL_COPY.onboardingEmailAlreadyExists };
       }
-
-      const profile = await waitForServerProfile(signInData.user.id);
-      if (!profile) {
-        await supabase.auth.signOut();
-        return { ok: false, message: PORTAL_COPY.loginProfileMissing };
-      }
-
-      return { ok: true };
+      return { ok: false, message: createError.message.trim() || PORTAL_COPY.onboardingSignupFailed };
     }
 
-    const profile = await waitForServerProfile(data.user.id);
+    if (!created.user) {
+      return { ok: false, message: PORTAL_COPY.onboardingSignupFailed };
+    }
+
+    const supabase = await createSupabaseServerClient();
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: input.password,
+    });
+
+    if (signInError || !signInData.user) {
+      return {
+        ok: false,
+        message: signInError ? mapAuthError(signInError) : PORTAL_COPY.onboardingSignupFailed,
+      };
+    }
+
+    const profile = await waitForServerProfile(signInData.user.id);
     if (!profile) {
       await supabase.auth.signOut();
       return { ok: false, message: PORTAL_COPY.loginProfileMissing };

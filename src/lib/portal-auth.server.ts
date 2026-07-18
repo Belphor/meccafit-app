@@ -27,7 +27,7 @@ export function mapAuthError(error: AuthError): string {
   }
 
   if (code === "email_not_confirmed") {
-    return "Confirme seu e-mail antes de acessar o altar.";
+    return "Conta ainda não liberada no altar. Contate o Forjador Soberano.";
   }
 
   if (error.message.trim().length > 0) {

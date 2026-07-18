@@ -18,6 +18,7 @@ import { FENYXIA_LOGO_SRC } from "@/components/onboarding/LogoSplashStep";
 import { PortalEmberCurtain } from "@/components/portal/PortalEmberCurtain";
 import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
 import { PrimeiroAcessoFenyxiaPanel } from "@/components/portal/PrimeiroAcessoFenyxiaPanel";
+import { PortalPasswordField } from "@/components/portal/PortalPasswordField";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { SacredPhoenixLogo, type PhoenixTone } from "@/components/SacredPhoenixLogo";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
@@ -35,9 +36,11 @@ import {
   PORTAL_BRAND_HEADER,
   PORTAL_BRAND_TO_CARD_GAP,
   PORTAL_BRASAO_PULSE,
+  PORTAL_FORM_ATTRS,
   PORTAL_INPUT,
   PORTAL_LABEL,
   PORTAL_LOGIN_CARD,
+  PORTAL_PASSWORD_MANAGER_ATTRS,
   PORTAL_SHELL,
 } from "@/lib/portal-theme";
 import { ONBOARDING_ROUTE } from "@/lib/onboarding-terms";
@@ -161,12 +164,15 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
 
   async function handleCriarContaSubmit() {
     setFeedback({ status: "loading", message: PORTAL_COPY.onboardingProcessing });
+    setToast(null);
     const result = await registerCliente(onboarding);
     if (!result.ok) {
       setFeedback({ status: "error", message: result.message });
+      showPortalToast(result.message, "error");
       return;
     }
     setFeedback({ status: "loading", message: PORTAL_COPY.onboardingSuccess });
+    showPortalToast(PORTAL_COPY.onboardingSuccess, "success");
     router.replace(ONBOARDING_ROUTE);
   }
 
@@ -245,12 +251,16 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
       />
       <PortalEmberCurtain tone="cliente" />
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col items-center justify-between">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col items-center justify-between">
         <header className={PORTAL_BRAND_HEADER}>
           <MeccafitCenterBrand variant="portal" />
         </header>
 
-        <form onSubmit={handlePortalSubmit} className={`${PORTAL_BRAND_TO_CARD_GAP} ${cardClassName}`}>
+        <form
+          onSubmit={handlePortalSubmit}
+          className={`${PORTAL_BRAND_TO_CARD_GAP} ${cardClassName}`}
+          {...PORTAL_FORM_ATTRS}
+        >
           <div className="mx-auto flex max-w-md flex-col items-center">
             <SacredPhoenixLogoPortal tone="cliente" />
 
@@ -302,16 +312,17 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
                     disabled={isLoading}
                     placeholder="Digite seu email"
                     className={PORTAL_INPUT}
-                    autoComplete="email"
+                    name="access-email"
+                    inputMode="email"
+                    {...PORTAL_PASSWORD_MANAGER_ATTRS}
                   />
                 </div>
                 <div className="w-full">
                   <label htmlFor="portal-password" className={PORTAL_LABEL}>
                     Senha de acesso
                   </label>
-                  <input
+                  <PortalPasswordField
                     id="portal-password"
-                    type="password"
                     value={password}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       setPassword(event.target.value)
@@ -320,11 +331,9 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
                     onBlur={() => setFocused(false)}
                     disabled={isLoading}
                     placeholder="Digite sua senha"
-                    className={PORTAL_INPUT}
-                    autoComplete="current-password"
                   />
                 </div>
-                <label className="flex cursor-pointer items-center gap-3 text-left text-xs text-neutral-400">
+                <label className="flex min-h-11 cursor-pointer items-center gap-3 text-left text-xs text-neutral-400">
                   <input
                     type="checkbox"
                     checked={rememberCredentials}
@@ -378,7 +387,7 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
                 type="button"
                 onClick={goToLogin}
                 disabled={isLoading}
-                className="mt-2 text-xs text-neutral-600 underline-offset-4 transition hover:text-amber-300 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 inline-flex min-h-11 items-center justify-center text-xs text-neutral-600 underline-offset-4 transition hover:text-amber-300 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {PORTAL_COPY.onboardingAlreadyHaveAccount}
               </button>
@@ -390,14 +399,14 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
                   type="button"
                   onClick={goToCriarConta}
                   disabled={isLoading}
-                  className="mt-2 text-xs text-neutral-600 underline-offset-4 transition hover:text-amber-300 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-2 inline-flex min-h-11 items-center justify-center text-xs text-neutral-600 underline-offset-4 transition hover:text-amber-300 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {PORTAL_COPY.createAccountCta}
                 </button>
                 <button
                   type="button"
                   onClick={() => router.push("/forja")}
-                  className="mt-2 text-xs text-neutral-600 underline-offset-4 transition hover:text-blue-100 hover:underline"
+                  className="mt-2 inline-flex min-h-11 items-center justify-center text-xs text-neutral-600 underline-offset-4 transition hover:text-blue-100 hover:underline"
                 >
                   {PORTAL_COPY.forjaLoginCta}
                 </button>

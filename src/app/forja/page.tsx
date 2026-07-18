@@ -15,6 +15,7 @@ import {
 } from "@/components/portal/PortalBurnSubmitButton";
 import { PortalEmberCurtain } from "@/components/portal/PortalEmberCurtain";
 import { PortalToast, type PortalToastVariant } from "@/components/portal/PortalToast";
+import { PortalPasswordField } from "@/components/portal/PortalPasswordField";
 import { MeccafitCenterBrand } from "@/components/MeccafitCenterBrand";
 import { SacredPhoenixLogo } from "@/components/SacredPhoenixLogo";
 import { FenyxiaBrandFooter } from "@/components/FenyxiaBrandFooter";
@@ -30,9 +31,11 @@ import {
   PORTAL_BRAND_HEADER,
   PORTAL_BRAND_TO_CARD_GAP,
   PORTAL_BRASAO_PULSE,
+  PORTAL_FORM_ATTRS,
   PORTAL_INPUT,
   PORTAL_LABEL,
   PORTAL_LOGIN_CARD,
+  PORTAL_PASSWORD_MANAGER_ATTRS,
   PORTAL_SHELL,
 } from "@/lib/portal-theme";
 
@@ -157,12 +160,16 @@ export default function ForjaLoginPage() {
       />
       <PortalEmberCurtain tone="forja" />
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col items-center justify-between">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col items-center justify-between">
         <header className={PORTAL_BRAND_HEADER}>
           <MeccafitCenterBrand variant="portal" />
         </header>
 
-        <form onSubmit={handleSubmit} className={`${PORTAL_BRAND_TO_CARD_GAP} ${cardClassName}`}>
+        <form
+          onSubmit={handleSubmit}
+          className={`${PORTAL_BRAND_TO_CARD_GAP} ${cardClassName}`}
+          {...PORTAL_FORM_ATTRS}
+        >
           <div className="mx-auto flex max-w-md flex-col items-center">
             <div className={PORTAL_BRASAO_PULSE}>
               <SacredPhoenixLogo tone="forja" variant="login" />
@@ -194,16 +201,17 @@ export default function ForjaLoginPage() {
                   disabled={isLoading}
                   placeholder="Digite seu email"
                   className={PORTAL_INPUT}
-                  autoComplete="email"
+                  name="access-email"
+                  inputMode="email"
+                  {...PORTAL_PASSWORD_MANAGER_ATTRS}
                 />
               </div>
               <div className="w-full">
                 <label htmlFor="forja-password" className={PORTAL_LABEL}>
                   Senha de acesso
                 </label>
-                <input
+                <PortalPasswordField
                   id="forja-password"
-                  type="password"
                   value={password}
                   onChange={(event: ChangeEvent<HTMLInputElement>) =>
                     setPassword(event.target.value)
@@ -212,8 +220,6 @@ export default function ForjaLoginPage() {
                   onBlur={() => setFocused(false)}
                   disabled={isLoading}
                   placeholder="Digite sua senha"
-                  className={PORTAL_INPUT}
-                  autoComplete="current-password"
                 />
               </div>
               <label className="flex cursor-pointer items-center gap-3 text-left text-xs text-neutral-400">

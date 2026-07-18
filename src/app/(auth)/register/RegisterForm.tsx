@@ -1,6 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ChangeEvent } from "react";
+import { PortalPasswordField } from "@/components/portal/PortalPasswordField";
+import { PORTAL_FORM_ATTRS, PORTAL_PASSWORD_MANAGER_ATTRS } from "@/lib/portal-theme";
 
 /**
  * Formulário mínimo de cadastro — só é montado quando o handshake do balcão foi
@@ -14,7 +16,7 @@ export function RegisterForm() {
   const [password, setPassword] = useState("");
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-black px-6 py-16">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center bg-black px-6 py-16">
       <div className="w-full max-w-sm">
         <h1 className="text-center text-2xl font-bold uppercase tracking-[0.18em] text-[#ffb800]">
           Ignição do Altar
@@ -27,6 +29,7 @@ export function RegisterForm() {
           className="mt-10 flex flex-col gap-6"
           action="/api/auth/register"
           method="post"
+          {...PORTAL_FORM_ATTRS}
         >
           <div className="flex flex-col gap-2">
             <label
@@ -37,13 +40,13 @@ export function RegisterForm() {
             </label>
             <input
               id={emailId}
-              name="email"
+              name="access-email"
               type="email"
-              autoComplete="email"
               required
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}
               className="w-full border border-[#ffb800]/40 bg-black px-4 py-3 text-base text-[#ffb800] outline-none focus:border-[#ffb800]"
+              {...PORTAL_PASSWORD_MANAGER_ATTRS}
             />
           </div>
 
@@ -54,15 +57,13 @@ export function RegisterForm() {
             >
               Senha
             </label>
-            <input
+            <PortalPasswordField
               id={passwordId}
-              name="password"
-              type="password"
-              autoComplete="new-password"
+              name="access-secret"
+              value={password}
               required
               minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
               className="w-full border border-[#ffb800]/40 bg-black px-4 py-3 text-base text-[#ffb800] outline-none focus:border-[#ffb800]"
             />
           </div>

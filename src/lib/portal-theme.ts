@@ -10,7 +10,8 @@ export type PortalAtmosphere = {
   particleSecondary: string;
 };
 
-export const PORTAL_SHELL = "relative flex min-h-screen overflow-hidden bg-black px-5 py-8 text-white";
+export const PORTAL_SHELL =
+  "relative flex min-h-dvh overflow-hidden bg-black px-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] py-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] text-white";
 
 /** Brasão IRIS — pulso cardíaco 1s */
 export const PORTAL_BRASAO_PULSE =
@@ -20,7 +21,26 @@ export const PORTAL_LOGIN_CARD =
   "w-full rounded-[2.25rem] border border-orange-500/15 bg-neutral-950/60 p-7 text-center shadow-[0_0_30px_rgba(245,158,11,0.04)] backdrop-blur-md sm:p-11";
 
 export const PORTAL_INPUT =
-  "w-full rounded-2xl border border-neutral-900 bg-black px-5 py-4 text-sm text-neutral-200 outline-none transition-all placeholder:text-neutral-700 focus:border-orange-500/40 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-2xl border border-neutral-900 bg-black px-5 py-4 text-base text-neutral-200 outline-none transition-all placeholder:text-neutral-700 focus:border-orange-500/40 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm";
+
+/**
+ * Reduz prompts do navegador (salvar senha / gerenciadores).
+ * O app usa "Lembrar usuário e senha" próprio — não o Chrome/Safari.
+ */
+export const PORTAL_PASSWORD_MANAGER_ATTRS = {
+  autoComplete: "off",
+  "data-lpignore": "true",
+  "data-1p-ignore": "true",
+  "data-bwignore": "true",
+  "data-form-type": "other",
+} as const;
+
+export const PORTAL_FORM_ATTRS = {
+  autoComplete: "off",
+  "data-lpignore": "true",
+  "data-1p-ignore": "true",
+  "data-bwignore": "true",
+} as const;
 
 export const PORTAL_LABEL =
   "mb-2 block text-left text-[10px] uppercase tracking-[0.3em] text-amber-500";

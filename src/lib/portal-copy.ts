@@ -62,6 +62,8 @@ export const PORTAL_COPY = {
   onboardingSuccess: "Linhagem acesa. Entrando no dashboard...",
   onboardingSignupFailed: "Não foi possível criar a conta. Tente novamente.",
   onboardingConfirmEmail: "Conta criada. Confirme seu e-mail antes de acessar o altar.",
+  onboardingEmailAlreadyExists:
+    "Este e-mail já possui conta no altar. Entre com seu login ou use outro e-mail.",
   onboardingAlreadyHaveAccount: "Já possuo conta. Ir para o login",
   submitOnboarding: "ACENDER MINHA LINHAGEM",
   submitProcessing: "PROCESSANDO...",

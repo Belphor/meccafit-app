@@ -1,7 +1,12 @@
 "use client";
 
 import type { ChangeEvent } from "react";
-import { PORTAL_INPUT, PORTAL_LABEL } from "@/lib/portal-theme";
+import { PortalPasswordField } from "@/components/portal/PortalPasswordField";
+import {
+  PORTAL_INPUT,
+  PORTAL_LABEL,
+  PORTAL_PASSWORD_MANAGER_ATTRS,
+} from "@/lib/portal-theme";
 
 export type PrimeiroAcessoFormState = {
   email: string;
@@ -46,7 +51,8 @@ export function PrimeiroAcessoFenyxiaPanel({
           disabled={disabled}
           placeholder="Seu nome completo"
           className={PORTAL_INPUT}
-          autoComplete="name"
+          name="full-name"
+          {...PORTAL_PASSWORD_MANAGER_ATTRS}
         />
       </div>
 
@@ -63,7 +69,8 @@ export function PrimeiroAcessoFenyxiaPanel({
           onBlur={onBlur}
           disabled={disabled}
           className={PORTAL_INPUT}
-          autoComplete="bday"
+          name="birth-date"
+          {...PORTAL_PASSWORD_MANAGER_ATTRS}
         />
       </div>
 
@@ -81,7 +88,9 @@ export function PrimeiroAcessoFenyxiaPanel({
           disabled={disabled}
           placeholder="Digite seu email"
           className={PORTAL_INPUT}
-          autoComplete="email"
+          name="access-email"
+          inputMode="email"
+          {...PORTAL_PASSWORD_MANAGER_ATTRS}
         />
       </div>
 
@@ -89,17 +98,14 @@ export function PrimeiroAcessoFenyxiaPanel({
         <label htmlFor="onboarding-password" className={PORTAL_LABEL}>
           Senha de acesso
         </label>
-        <input
+        <PortalPasswordField
           id="onboarding-password"
-          type="password"
           value={values.password}
           onChange={handleChange("password")}
           onFocus={onFocus}
           onBlur={onBlur}
           disabled={disabled}
           placeholder="Digite sua senha"
-          className={PORTAL_INPUT}
-          autoComplete="new-password"
           minLength={6}
         />
       </div>
