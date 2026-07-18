@@ -21,7 +21,7 @@ export function PhoenixCanvasInner({
 }: PhoenixCanvasInnerProps) {
   return (
     <Canvas
-      frameloop={isVisible ? "always" : "demand"}
+      frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
       camera={{ position: [0, 0.14, 3.55], fov: 38, near: 0.1, far: 100 }}
       gl={{
@@ -32,7 +32,8 @@ export function PhoenixCanvasInner({
         stencil: false,
         depth: true,
       }}
-      dpr={isOpenOrb ? [1, 2.5] : [1, 2]}
+      // Cap DPR: orb aberta + blur do HUD no mesmo frame travava o main thread.
+      dpr={isOpenOrb ? [1, 1.5] : [1, 1.75]}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = ACESFilmicToneMapping;

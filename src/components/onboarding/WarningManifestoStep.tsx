@@ -45,7 +45,7 @@ export function WarningManifestoStep({
 
   return (
     <motion.div
-      className="relative flex min-h-dvh w-full flex-col items-center justify-center overflow-y-auto bg-black px-5 py-8 sm:px-8 sm:py-12"
+      className="relative flex min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-black px-5 py-8 sm:px-8 sm:py-12"
       initial={{ opacity: 0 }}
       animate={{ opacity: phase === "exit" && !error ? 0 : 1 }}
       transition={
@@ -61,15 +61,15 @@ export function WarningManifestoStep({
     >
       <div className="pointer-events-none absolute inset-0 bg-black" aria-hidden="true" />
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(127,29,29,0.22),rgba(0,0,0,0.92)_42%,#000_78%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(127,29,29,0.22),rgba(0,0,0,0.92)_48%,#000_100%)]"
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute inset-x-[-16%] top-[-18%] h-[42dvh] bg-gradient-to-b from-red-950/28 via-transparent to-transparent blur-3xl"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[42dvh] bg-gradient-to-b from-red-950/28 via-transparent to-transparent blur-3xl"
         aria-hidden="true"
       />
 
-      <div className="relative z-[1] my-auto flex w-full max-w-2xl flex-col items-center gap-10 text-center sm:gap-12">
+      <div className="relative z-[1] flex w-full max-w-2xl flex-col items-center gap-10 text-center sm:gap-12">
         <motion.h1
           className="bg-gradient-to-r from-red-300 via-rose-100 to-red-400 bg-clip-text text-3xl font-black uppercase leading-tight tracking-[0.14em] text-transparent sm:text-4xl sm:tracking-[0.18em] md:text-5xl"
           initial={{ opacity: 0, y: 8 }}

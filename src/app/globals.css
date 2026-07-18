@@ -3415,6 +3415,8 @@ body {
     )
     auto;
   max-height: min(62vh, 32rem);
+  contain: layout paint;
+  transform: translateZ(0);
 }
 
 @media (max-width: 639px) {

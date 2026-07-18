@@ -233,7 +233,7 @@ function playFromBlob(blob: Blob, options?: PlayAnimaTtsOptions): AnimaAudioPlay
     // ignore
   }
 
-  const useSimple = Boolean(options?.simplePlayback);
+  const useSimple = Boolean(options?.simplePlayback) || !options?.onAmplitude;
   const analyser = useSimple
     ? {
         getAmplitude: () => 0,
@@ -254,14 +254,14 @@ function playFromBlob(blob: Blob, options?: PlayAnimaTtsOptions): AnimaAudioPlay
   };
 
   const tick = (): void => {
-    if (settled) return;
-    options?.onAmplitude?.(analyser.getAmplitude());
+    if (settled || !options?.onAmplitude) return;
+    options.onAmplitude(analyser.getAmplitude());
     rafId = window.requestAnimationFrame(tick);
   };
 
   const cleanup = (): void => {
     window.cancelAnimationFrame(rafId);
-    options?.onAmplitude?.(0);
+    if (options?.onAmplitude) options.onAmplitude(0);
     analyser.dispose();
     audio.pause();
     audio.removeAttribute("src");
@@ -302,7 +302,7 @@ function playFromBlob(blob: Blob, options?: PlayAnimaTtsOptions): AnimaAudioPlay
         }
         await audio.play();
         notifySpeaking();
-        if (!settled && !useSimple) {
+        if (!settled && !useSimple && options?.onAmplitude) {
           rafId = window.requestAnimationFrame(tick);
         }
       } catch {
@@ -330,7 +330,13 @@ function playFromMediaSource(
   const audio = new Audio(url);
   audio.preload = "auto";
 
-  const analyser = createAnalyserFromElement(audio);
+  const analyser = options?.onAmplitude
+    ? createAnalyserFromElement(audio)
+    : {
+        getAmplitude: () => 0,
+        dispose: () => undefined,
+        ensureRunning: async () => undefined,
+      };
   let rafId = 0;
   let settled = false;
   let finishPlayback: (() => void) | null = null;
@@ -344,14 +350,14 @@ function playFromMediaSource(
   };
 
   const tick = (): void => {
-    if (settled) return;
-    options?.onAmplitude?.(analyser.getAmplitude());
+    if (settled || !options?.onAmplitude) return;
+    options.onAmplitude(analyser.getAmplitude());
     rafId = window.requestAnimationFrame(tick);
   };
 
   const cleanup = (): void => {
     window.cancelAnimationFrame(rafId);
-    options?.onAmplitude?.(0);
+    if (options?.onAmplitude) options.onAmplitude(0);
     analyser.dispose();
     audio.pause();
     audio.removeAttribute("src");
@@ -415,7 +421,9 @@ function playFromMediaSource(
               void audio.play().then(
                 () => {
                   notifySpeaking();
-                  if (!settled) rafId = window.requestAnimationFrame(tick);
+                  if (!settled && options?.onAmplitude) {
+                    rafId = window.requestAnimationFrame(tick);
+                  }
                 },
                 () => finish(),
               );

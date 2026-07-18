@@ -328,7 +328,7 @@ export function PhoenixModel({
           blur={2.4}
           far={1.4}
           color="#120804"
-          frames={Infinity}
+          frames={1}
         />
       ) : null}
       <PhoenixModelMesh

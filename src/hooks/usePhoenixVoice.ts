@@ -97,14 +97,15 @@ export function getResolvedPhoenixVoiceLabel(): string | null {
 
 /**
  * Hook de voz da ANYMA FÊNIX.
- * Sintetiza via `/api/anima/tts` (edge-tts) e expõe `amplitude` para IRIS/magma.
+ * Sintetiza via `/api/anima/tts` (edge-tts). Amplitude fica em ref (sem re-render).
  * Use `prepareVoice` para pré-aquecer o áudio antes do card aparecer.
  */
 export function usePhoenixVoice() {
   const [state, setState] = useState<PhoenixVoiceState>(() =>
     isAnimaAudioSupported() ? "idle" : "unsupported",
   );
-  const [amplitude, setAmplitude] = useState(0);
+  /** Ref (não state): amplitude a 60fps não pode re-renderizar o HUD/canvas da ANYMA. */
+  const amplitudeRef = useRef(0);
 
   const pendingTokenRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -122,7 +123,7 @@ export function usePhoenixVoice() {
     abortRef.current = null;
     stopPlaybackRef.current?.();
     stopPlaybackRef.current = null;
-    setAmplitude(0);
+    amplitudeRef.current = 0;
     setState(isAnimaAudioSupported() ? "idle" : "unsupported");
   }, []);
 
@@ -163,7 +164,7 @@ export function usePhoenixVoice() {
 
     const abort = new AbortController();
     abortRef.current = abort;
-    setAmplitude(0);
+    amplitudeRef.current = 0;
     setState("loading-voices");
 
     return (async () => {
@@ -175,10 +176,7 @@ export function usePhoenixVoice() {
             if (pendingTokenRef.current !== token) return;
             setState("speaking");
           },
-          onAmplitude: (value) => {
-            if (pendingTokenRef.current !== token) return;
-            setAmplitude(value);
-          },
+          // Sem onAmplitude: evita AnalyserNode + RAF → setState no React a 60fps.
         });
 
         if (pendingTokenRef.current !== token) {
@@ -192,17 +190,17 @@ export function usePhoenixVoice() {
         if (pendingTokenRef.current === token) {
           stopPlaybackRef.current = null;
           abortRef.current = null;
-          setAmplitude(0);
+          amplitudeRef.current = 0;
           setState("idle");
         }
       } catch {
         if (pendingTokenRef.current !== token) return;
         if (abort.signal.aborted) {
-          setAmplitude(0);
+          amplitudeRef.current = 0;
           setState("idle");
           return;
         }
-        setAmplitude(0);
+        amplitudeRef.current = 0;
         setState("idle");
       }
     })();
@@ -249,7 +247,7 @@ export function usePhoenixVoice() {
     isPriming,
     isSpeaking,
     state,
-    /** 0–1 — amplitude da voz para pulso de magma IRIS. */
-    amplitude,
+    /** Leitura pontual da amplitude (não reativa — evita travar o React). */
+    getAmplitude: () => amplitudeRef.current,
   } as const;
 }

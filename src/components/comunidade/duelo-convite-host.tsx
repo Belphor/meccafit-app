@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   fetchDueloConvitePendente,
   responderDuelo,
@@ -19,10 +20,15 @@ function labelTipo(tipo: DueloConvitePendente["tipo_confronto"]): string {
 }
 
 export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps) {
+  const [mounted, setMounted] = useState(false);
   const [convite, setConvite] = useState<DueloConvitePendente | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const loadConvite = useCallback(async () => {
     setLoading(true);
@@ -92,7 +98,9 @@ export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps)
     return null;
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[145] flex items-center justify-center bg-black/90 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]"
       role="alertdialog"
@@ -137,6 +145,7 @@ export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps)
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -11,6 +11,7 @@ import {
   COMUNIDADE_PANEL,
 } from "@/components/comunidade/comunidade-layout";
 import { PlutusAvatar } from "@/components/comunidade/plutus-avatar";
+import type { ComunidadePhotoResolver } from "@/lib/comunidade-avatar";
 import type {
   CampeoesCinturao,
   ComunidadeDueloAtivo,
@@ -25,7 +26,7 @@ type DuelosArenaPanelProps = {
   campeaoCinturaoId?: string | null;
   rankings?: RankingsThoth | null;
   userId: string;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
   loading?: boolean;
   onDueloCreated?: () => void;
 };
@@ -67,7 +68,7 @@ function CampeaoCinturaoCard({
   campeaoId: string | null;
   userId: string;
   rankings?: RankingsThoth | null;
-  resolvePhotoUrl?: (atletaId: string) => string | null;
+  resolvePhotoUrl?: ComunidadePhotoResolver;
 }) {
   const label = tipo === "SUPERIORES" ? "Superiores" : "Inferiores";
   if (!campeaoId) {
