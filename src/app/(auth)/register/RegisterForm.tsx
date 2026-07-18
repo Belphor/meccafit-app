@@ -41,7 +41,8 @@ export function RegisterForm() {
             <input
               id={emailId}
               name="access-email"
-              type="email"
+              type="text"
+              inputMode="email"
               required
               value={email}
               onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}

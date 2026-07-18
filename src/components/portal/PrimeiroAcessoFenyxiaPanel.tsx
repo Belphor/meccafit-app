@@ -61,7 +61,8 @@ export function PrimeiroAcessoFenyxiaPanel({
         </label>
         <input
           id="onboarding-email"
-          type="email"
+          type="text"
+          inputMode="email"
           value={values.email}
           onChange={handleChange("email")}
           onFocus={onFocus}

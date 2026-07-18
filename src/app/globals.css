@@ -30,6 +30,27 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* Nitidez de texto no responsivo — suavização consistente entre navegadores/telas. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * Máscara de segredo sem type="password".
+ * Evita que Chrome/Safari classifiquem o campo como senha e mostrem
+ * "salvar senha" / "check your saved passwords".
+ */
+.portal-secret-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-secret-masked {
+    -webkit-text-security: disc;
+    text-security: disc;
+  }
 }
 
 /* Phoenix protocol — PhoenixInput + optional motion utilities */
@@ -3018,6 +3039,17 @@ body {
   animation: phoenix-orb-greeting-revealed-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* Mobile estreito: bolha acima do orb, não ao lado (evita clip em 320px). */
+@media (max-width: 639px) {
+  .phoenix-orb-greeting--revealed {
+    right: 0;
+    bottom: calc(100% + 0.65rem);
+    width: min(17rem, calc(100vw - 2rem));
+    transform: none;
+    animation: phoenix-orb-greeting-revealed-in-mobile 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+}
+
 @keyframes phoenix-orb-greeting-revealed-in {
   from {
     opacity: 0;
@@ -3027,6 +3059,19 @@ body {
   to {
     opacity: 1;
     transform: translateY(50%);
+    filter: blur(0);
+  }
+}
+
+@keyframes phoenix-orb-greeting-revealed-in-mobile {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
     filter: blur(0);
   }
 }
@@ -3351,7 +3396,7 @@ body {
 @media (max-width: 639px) {
   .phoenix-anchor {
     inset: auto max(1rem, env(safe-area-inset-right))
-      max(5.25rem, calc(4.5rem + env(safe-area-inset-bottom))) auto;
+      max(6.25rem, calc(5.5rem + env(safe-area-inset-bottom))) auto;
   }
 }
 
@@ -3375,6 +3420,9 @@ body {
 @media (max-width: 639px) {
   .anima-hud-panel {
     --anima-phoenix-reserve: 14.5rem;
+    width: min(calc(100vw - 2rem), 24rem);
+    max-width: min(calc(100vw - 2rem), 24rem);
+    min-width: 0;
   }
 }
 

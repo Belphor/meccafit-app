@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent, type FocusEventHandler } from "react";
+import { useId, useState, type ChangeEvent, type FocusEventHandler } from "react";
 import { PORTAL_INPUT, PORTAL_PASSWORD_MANAGER_ATTRS } from "@/lib/portal-theme";
 
 type PortalPasswordFieldProps = {
@@ -51,7 +51,11 @@ function EyeClosedIcon() {
   );
 }
 
-/** Campo de senha com olho (mostrar/ocultar) e atributos anti-password-manager do navegador. */
+/**
+ * Campo secreto com olho.
+ * Usa type="text" + máscara CSS (nunca type="password") para o Chrome/Safari
+ * não tratarem como formulário de senha e não exibirem "salvar / check passwords".
+ */
 export function PortalPasswordField({
   id,
   value,
@@ -59,30 +63,38 @@ export function PortalPasswordField({
   placeholder = "Digite sua senha",
   minLength,
   required,
-  name = "access-secret",
+  name,
   className = PORTAL_INPUT,
   onChange,
   onFocus,
   onBlur,
 }: PortalPasswordFieldProps) {
+  const generatedName = useId().replace(/:/g, "");
+  const fieldName = name ?? `fenyxia-secret-${generatedName}`;
   const [visible, setVisible] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
   return (
     <div className="relative w-full">
       <input
         id={id}
-        name={name}
-        type={visible ? "text" : "password"}
+        name={fieldName}
+        type="text"
+        inputMode="text"
         value={value}
         onChange={onChange}
-        onFocus={onFocus}
+        onFocus={(event) => {
+          setUnlocked(true);
+          onFocus?.(event);
+        }}
         onBlur={onBlur}
         disabled={disabled}
         placeholder={placeholder}
-        className={`${className} pr-14`}
+        className={`${className} pr-14 ${visible ? "" : "portal-secret-masked"}`}
         minLength={minLength}
         required={required}
-        spellCheck={false}
+        readOnly={!unlocked}
+        aria-label={placeholder}
         {...PORTAL_PASSWORD_MANAGER_ATTRS}
       />
       <button

@@ -303,7 +303,8 @@ export function PortalDeBrasaClient({ initialMode = "login_cliente" }: PortalDeB
                   </label>
                   <input
                     id="portal-email"
-                    type="email"
+                    type="text"
+                    inputMode="email"
                     value={email}
                     onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}
                     onFocus={() => setFocused(true)}

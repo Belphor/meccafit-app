@@ -26,20 +26,26 @@ export const PORTAL_INPUT =
 /**
  * Reduz prompts do navegador (salvar senha / gerenciadores).
  * O app usa "Lembrar usuário e senha" próprio — não o Chrome/Safari.
+ * Valores "off" sozinhos são ignorados por vários browsers; usamos token único.
  */
 export const PORTAL_PASSWORD_MANAGER_ATTRS = {
-  autoComplete: "off",
+  autoComplete: "fenyxia-no-store",
+  autoCapitalize: "off",
+  autoCorrect: "off",
+  spellCheck: false,
   "data-lpignore": "true",
   "data-1p-ignore": "true",
   "data-bwignore": "true",
   "data-form-type": "other",
+  "data-protonpass-ignore": "true",
 } as const;
 
 export const PORTAL_FORM_ATTRS = {
-  autoComplete: "off",
+  autoComplete: "fenyxia-no-store",
   "data-lpignore": "true",
   "data-1p-ignore": "true",
   "data-bwignore": "true",
+  "data-form-type": "other",
 } as const;
 
 export const PORTAL_LABEL =

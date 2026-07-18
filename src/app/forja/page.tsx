@@ -193,7 +193,8 @@ export default function ForjaLoginPage() {
                 </label>
                 <input
                   id="forja-email"
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={email}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)}
                   onFocus={() => setFocused(true)}
