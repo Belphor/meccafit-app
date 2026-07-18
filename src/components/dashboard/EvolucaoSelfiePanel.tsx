@@ -42,20 +42,56 @@ function applyCinemaFrame(context: CanvasRenderingContext2D, width: number, heig
   context.fillText("FENYXIA", width / 2, height - 28);
 }
 
+function frameImageDataUrl(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const snapshot = document.createElement("canvas");
+    const snapshotImage = new window.Image();
+    snapshotImage.onload = () => {
+      try {
+        snapshot.width = snapshotImage.width || 640;
+        snapshot.height = snapshotImage.height || 800;
+        const snapshotCtx = snapshot.getContext("2d");
+        if (!snapshotCtx) {
+          reject(new Error("Canvas indisponível"));
+          return;
+        }
+        snapshotCtx.drawImage(snapshotImage, 0, 0);
+        applyCinemaFrame(snapshotCtx, snapshot.width, snapshot.height);
+        resolve(snapshot.toDataURL("image/jpeg", 0.92));
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error("Falha ao processar a foto"));
+      }
+    };
+    snapshotImage.onerror = () => reject(new Error("Não foi possível ler a imagem selecionada"));
+    snapshotImage.src = dataUrl;
+  });
+}
+
 export function EvolucaoSelfiePanel({
   onCapture,
   onClose,
 }: {
   /** Quando definido, entrega o data URL capturado em vez de só preview local */
-  onCapture?: (dataUrl: string) => void;
+  onCapture?: (dataUrl: string) => void | Promise<void>;
   onClose?: () => void;
 } = {}) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [captureUrl, setCaptureUrl] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const stopCamera = useCallback(() => {
+    stopMediaStream(streamRef.current);
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraReady(false);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -72,6 +108,10 @@ export function EvolucaoSelfiePanel({
         streamRef.current = stream;
         if (videoRef.current) {
           await bindStreamToVideo(videoRef.current, stream);
+        }
+        if (!mounted) {
+          stopMediaStream(stream);
+          return;
         }
         setIsCameraReady(true);
         setCameraError(null);
@@ -92,30 +132,32 @@ export function EvolucaoSelfiePanel({
   }, []);
 
   const applyCapturedDataUrl = useCallback(
-    (dataUrl: string) => {
-      const snapshot = document.createElement("canvas");
-      const snapshotImage = new window.Image();
-      snapshotImage.onload = () => {
-        snapshot.width = snapshotImage.width;
-        snapshot.height = snapshotImage.height;
-        const snapshotCtx = snapshot.getContext("2d");
-        if (!snapshotCtx) return;
-        snapshotCtx.drawImage(snapshotImage, 0, 0);
-        applyCinemaFrame(snapshotCtx, snapshot.width, snapshot.height);
-        const framedUrl = snapshot.toDataURL("image/png");
+    async (dataUrl: string) => {
+      setBusy(true);
+      setCameraError(null);
+      try {
+        const framedUrl = await frameImageDataUrl(dataUrl);
         setCaptureUrl(framedUrl);
-        onCapture?.(framedUrl);
-      };
-      snapshotImage.src = dataUrl;
+        await onCapture?.(framedUrl);
+      } catch (error) {
+        setCameraError(
+          error instanceof Error ? error.message : "Falha ao processar a foto capturada.",
+        );
+      } finally {
+        setBusy(false);
+      }
     },
     [onCapture],
   );
 
   const captureSelfie = useCallback(() => {
     const video = videoRef.current;
-    if (!video || video.videoWidth === 0) return;
+    if (!video || video.videoWidth === 0) {
+      setCameraError("Câmera ainda não está pronta. Aguarde ou use a galeria.");
+      return;
+    }
     const dataUrl = captureVideoFrameDataUrl(video, { mirror: true });
-    applyCapturedDataUrl(dataUrl);
+    void applyCapturedDataUrl(dataUrl);
   }, [applyCapturedDataUrl]);
 
   const handlePhotoFile = useCallback(
@@ -124,23 +166,43 @@ export function EvolucaoSelfiePanel({
       event.target.value = "";
       if (!file) return;
 
+      if (!file.type.startsWith("image/") && file.type !== "") {
+        setCameraError("Selecione um arquivo de imagem.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === "string") {
-          applyCapturedDataUrl(reader.result);
-          setCameraError(null);
+          void applyCapturedDataUrl(reader.result);
+        } else {
+          setCameraError("Não foi possível ler a imagem selecionada.");
         }
+      };
+      reader.onerror = () => {
+        setCameraError("Falha ao abrir a foto da galeria. Tente outra imagem.");
       };
       reader.readAsDataURL(file);
     },
     [applyCapturedDataUrl],
   );
 
+  const openCameraPicker = useCallback(() => {
+    stopCamera();
+    cameraInputRef.current?.click();
+  }, [stopCamera]);
+
+  const openGalleryPicker = useCallback(() => {
+    // Liberar a câmera evita conflito no WebView ao abrir o seletor nativo.
+    stopCamera();
+    galleryInputRef.current?.click();
+  }, [stopCamera]);
+
   const downloadSelfie = useCallback(() => {
     if (!captureUrl) return;
     const anchor = document.createElement("a");
     anchor.href = captureUrl;
-    anchor.download = "fenyxia-selfie-evolucao.png";
+    anchor.download = "fenyxia-selfie-evolucao.jpg";
     anchor.click();
   }, [captureUrl]);
 
@@ -210,21 +272,30 @@ export function EvolucaoSelfiePanel({
           </p>
         ) : null}
         {cameraError ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
-            <p className="text-sm text-white/60">{cameraError}</p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className={`${DASHBOARD_ACTION_BUTTON} px-4 py-2 text-xs`}
-            >
-              Tirar ou escolher foto
-            </button>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/75 px-6 text-center">
+            <p className="text-sm text-white/70">{cameraError}</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={openCameraPicker}
+                className={`${DASHBOARD_ACTION_BUTTON} px-4 py-2 text-xs`}
+              >
+                Abrir câmera
+              </button>
+              <button
+                type="button"
+                onClick={openGalleryPicker}
+                className={`${DASHBOARD_ACTION_BUTTON} px-4 py-2 text-xs`}
+              >
+                Abrir galeria
+              </button>
+            </div>
           </div>
         ) : null}
       </div>
 
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="user"
@@ -232,26 +303,43 @@ export function EvolucaoSelfiePanel({
         aria-hidden
         onChange={handlePhotoFile}
       />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="sr-only"
+        aria-hidden
+        onChange={handlePhotoFile}
+      />
 
-      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <button
           type="button"
-          disabled={!isCameraReady}
+          disabled={!isCameraReady || busy}
           onClick={captureSelfie}
-          className={`${DASHBOARD_ACTION_BUTTON} justify-center`}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
         >
-          Capturar
+          {busy ? "Processando…" : "Capturar"}
         </button>
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className={`${DASHBOARD_ACTION_BUTTON} justify-center`}
+          disabled={busy}
+          onClick={openCameraPicker}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
         >
-          Câmera ou galeria
+          Câmera
         </button>
         <button
           type="button"
-          disabled={!captureUrl}
+          disabled={busy}
+          onClick={openGalleryPicker}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
+        >
+          Galeria
+        </button>
+        <button
+          type="button"
+          disabled={!captureUrl || busy}
           onClick={downloadSelfie}
           className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
         >

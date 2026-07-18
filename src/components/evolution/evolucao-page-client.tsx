@@ -16,7 +16,13 @@ import {
 import { EvolutionChamaAcumuladaCard } from "@/components/evolution/EvolutionChamaAcumuladaCard";
 import { EvolutionConsistenciaSection } from "@/components/evolution/EvolutionConsistenciaSection";
 import type { AthletePlanConfig } from "@/components/evolution/plan-config-form";
-import { dataUrlToFile, saveCycleSelfie } from "@/services/local-storage";
+import {
+  CYCLE_SELFIE_DAY_IDS,
+  dataUrlToFile,
+  resolveTargetCycleSelfieDay,
+  resolveCycleSelfieDayLabel,
+  saveCycleSelfie,
+} from "@/services/local-storage";
 import {
   DASHBOARD_PANEL_FRAME,
   DASHBOARD_TAP_TARGET,
@@ -134,6 +140,7 @@ export function EvolucaoPageClient({
   const [performanceMode] = useState(resolvePerformanceModePreference);
   const [showSelfie, setShowSelfie] = useState(false);
   const [espelhoExpanded, setEspelhoExpanded] = useState(false);
+  const [selfieFeedback, setSelfieFeedback] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [scopeError, setScopeError] = useState<string | null>(null);
   const [evolutionReady, setEvolutionReady] = useState(
@@ -260,11 +267,26 @@ export function EvolucaoPageClient({
   }, [refreshCalor, userId]);
 
   const handleSelfieCaptured = useCallback(async (dataUrl: string) => {
-    const cycleId = `cycle-${new Date().toISOString().slice(0, 7)}-${Date.now()}`;
-    const file = await dataUrlToFile(dataUrl, `selfie-${cycleId}.webp`);
-    if (file) await saveCycleSelfie(cycleId, file);
-    setShowSelfie(false);
-    setEspelhoExpanded(true);
+    setSelfieFeedback(null);
+    try {
+      const day = await resolveTargetCycleSelfieDay();
+      const id = CYCLE_SELFIE_DAY_IDS[day];
+      const file = await dataUrlToFile(dataUrl, `selfie-${id}.jpg`);
+      if (!file) {
+        setSelfieFeedback("Falha ao processar a imagem capturada.");
+        return;
+      }
+      const saved = await saveCycleSelfie(id, file);
+      if (!saved) {
+        setSelfieFeedback("Não foi possível gravar a selfie no disco local.");
+        return;
+      }
+      setSelfieFeedback(`${resolveCycleSelfieDayLabel(day)} gravado no espelho do ciclo.`);
+      setShowSelfie(false);
+      setEspelhoExpanded(true);
+    } catch {
+      setSelfieFeedback("Erro ao salvar a selfie de ciclo.");
+    }
   }, []);
 
   const Wrapper = variant === "page" ? "div" : "main";
@@ -364,6 +386,12 @@ export function EvolucaoPageClient({
               Compare selfies do primeiro dia útil e do último dia do mês, no calendário de Brasília,
               para ver sua evolução física no ciclo.
             </p>
+
+            {selfieFeedback ? (
+              <p className="mt-2 text-[11px] text-emerald-200/85" role="status">
+                {selfieFeedback}
+              </p>
+            ) : null}
 
             <button
               type="button"

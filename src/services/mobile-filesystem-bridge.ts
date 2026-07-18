@@ -338,14 +338,18 @@ export async function writeAppFile(relativePath: string, file: File): Promise<Ap
   const backend = await resolveBackend();
 
   switch (backend) {
-    case "capacitor":
-      return writeViaCapacitor(relativePath, file);
+    case "capacitor": {
+      const written = await writeViaCapacitor(relativePath, file);
+      if (written) return written;
+      // Fallback se o Filesystem nativo falhar no WebView.
+      return writeViaOpfs(relativePath, file);
+    }
     case "tauri":
       return writeViaTauri(relativePath, file);
     case "opfs":
       return writeViaOpfs(relativePath, file);
     default:
-      return null;
+      return writeViaOpfs(relativePath, file);
   }
 }
 

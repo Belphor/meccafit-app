@@ -11,6 +11,7 @@ import {
   resolveAppFileSrc,
   writeAppFile,
 } from "@/services/mobile-filesystem-bridge";
+import { resolveCycleSelfieCaptureKindToday } from "@/lib/cycle-selfie-calendar";
 
 const DB_NAME = "fenyxia_local_db";
 const DB_VERSION = 2;
@@ -39,10 +40,12 @@ export const CYCLE_SELFIE_SLOTS = [1, 30] as const satisfies readonly CycleSelfi
 
 export {
   resolveCycleSelfieCalendarDay,
+  resolveCycleSelfieCaptureKindToday,
   resolveCycleSelfieDayLabel,
 } from "@/lib/cycle-selfie-calendar";
 
 export const EVOLUTION_AVATAR_UPDATED_EVENT = "meccafit:evolution-avatar-updated";
+export const CYCLE_SELFIE_UPDATED_EVENT = "meccafit:cycle-selfie-updated";
 
 type AvatarPathRecord = {
   native_path: string;
@@ -209,6 +212,21 @@ async function readSelfieRecords(): Promise<SelfiePathRecord[]> {
   }
 }
 
+const STABLE_CYCLE_SELFIE_IDS = new Set<string>(Object.values(CYCLE_SELFIE_DAY_IDS));
+
+function notifyCycleSelfieUpdated(id: string): void {
+  if (!isBrowser()) return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent(CYCLE_SELFIE_UPDATED_EVENT, {
+        detail: { id },
+      }),
+    );
+  } catch {
+    /* fallback silencioso */
+  }
+}
+
 async function trimCycleSelfiesToLimit(): Promise<void> {
   const selfies = await readSelfieRecords();
   if (selfies.length <= MAX_CYCLE_SELFIES) return;
@@ -216,7 +234,12 @@ async function trimCycleSelfiesToLimit(): Promise<void> {
   const sorted = [...selfies].sort(
     (a, b) => new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime(),
   );
-  const overflow = sorted.slice(0, sorted.length - MAX_CYCLE_SELFIES);
+  // Preferir remover ids aleatórios/legados antes dos slots fixos day-1 / day-30.
+  const overflowCandidates = [
+    ...sorted.filter((row) => !STABLE_CYCLE_SELFIE_IDS.has(row.id)),
+    ...sorted.filter((row) => STABLE_CYCLE_SELFIE_IDS.has(row.id)),
+  ];
+  const overflow = overflowCandidates.slice(0, sorted.length - MAX_CYCLE_SELFIES);
 
   for (const row of overflow) {
     try {
@@ -280,17 +303,19 @@ export async function getLocalAvatarPath(userId: string): Promise<string | null>
 }
 
 /**
- * Grava selfie de ciclo no disco e indexa apenas o native_path (máx. 3/mês).
+ * Grava selfie de ciclo no disco e indexa apenas o native_path (máx. 2 slots).
+ * @returns true se gravou; false se backend/arquivo indisponível.
  */
-export async function saveCycleSelfie(id: string, file: File): Promise<void> {
-  if (!isBrowser() || !isFile(file) || !id.trim()) return;
+export async function saveCycleSelfie(id: string, file: File): Promise<boolean> {
+  if (!isBrowser() || !isFile(file) || !id.trim()) return false;
 
   const trimmedId = id.trim();
 
   try {
+    const previous = (await readSelfieRecords()).find((row) => row.id === trimmedId);
     const relativePath = buildSelfieRelativePath(trimmedId, file);
     const written = await writeAppFile(relativePath, file);
-    if (!written) return;
+    if (!written) return false;
 
     const row: SelfiePathRecord = {
       id: trimmedId,
@@ -301,10 +326,33 @@ export async function saveCycleSelfie(id: string, file: File): Promise<void> {
     await withStore<IDBValidKey>(STORE_SELFIES, "readwrite", (store) =>
       store.put(row),
     );
+
+    if (previous && previous.native_path !== written.native_path) {
+      await deleteAppFile(previous.native_path);
+    }
+
     await trimCycleSelfiesToLimit();
+    notifyCycleSelfieUpdated(trimmedId);
+    return true;
   } catch {
-    /* fallback silencioso */
+    return false;
   }
+}
+
+/**
+ * Escolhe o slot do espelho para uma captura avulsa:
+ * dia de início/fim do calendário de Brasília, senão o primeiro slot vazio.
+ */
+export async function resolveTargetCycleSelfieDay(
+  referenceDate: Date = new Date(),
+): Promise<CycleSelfieDay> {
+  const kind = resolveCycleSelfieCaptureKindToday(referenceDate);
+  if (kind === "start") return 1;
+  if (kind === "end") return 30;
+
+  const day1Src = await getCycleSelfiePathById(CYCLE_SELFIE_DAY_IDS[1]);
+  if (!day1Src) return 1;
+  return 30;
 }
 
 /** Resolve URL local de uma selfie de ciclo pelo id (ex.: cycle-selfie-day-1). */
@@ -386,6 +434,22 @@ export async function dataUrlToFile(dataUrl: string, fileName = "avatar.webp"): 
   if (!isBrowser() || !dataUrl.startsWith("data:")) return null;
 
   try {
+    const comma = dataUrl.indexOf(",");
+    if (comma > 0) {
+      const header = dataUrl.slice(0, comma);
+      const payload = dataUrl.slice(comma + 1);
+      const mimeMatch = /^data:([^;,]+)/i.exec(header);
+      const mime = mimeMatch?.[1] || "image/jpeg";
+      if (/;base64/i.test(header)) {
+        const binary = atob(payload);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new File([bytes], fileName, { type: mime });
+      }
+    }
+
     const response = await fetch(dataUrl);
     const blob = await response.blob();
     const type = blob.type || "image/webp";

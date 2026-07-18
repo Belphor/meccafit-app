@@ -344,7 +344,6 @@ export function ProfileLinhagemIdentity({
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="user"
               className="sr-only"
               onChange={(event) => void handlePhotoChange(event)}
             />

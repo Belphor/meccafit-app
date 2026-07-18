@@ -11,6 +11,7 @@ import {
 import {
   CYCLE_SELFIE_DAY_IDS,
   CYCLE_SELFIE_SLOTS,
+  CYCLE_SELFIE_UPDATED_EVENT,
   dataUrlToFile,
   getCycleSelfiePathById,
   resolveCycleSelfieDayLabel,
@@ -22,7 +23,7 @@ import {
   bindStreamToVideo,
   captureVideoFrameDataUrl,
   formatCameraError,
-  requestFrontCameraStream,
+  requestAnyCameraStream,
   stopMediaStream,
 } from "@/lib/camera-capture";
 import {
@@ -90,6 +91,29 @@ function HudSelfiePlaceholder({ label, animate }: { label: string; animate?: boo
   );
 }
 
+function SlotPhotoOrPlaceholder({
+  src,
+  label,
+  animate,
+}: {
+  src: string | null;
+  label: string;
+  animate?: boolean;
+}) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- src local blob:// capacitor://
+      <img
+        src={src}
+        alt={`Selfie ${label}`}
+        className="h-full w-full object-cover"
+        draggable={false}
+      />
+    );
+  }
+  return <HudSelfiePlaceholder label={label} animate={animate} />;
+}
+
 async function loadCycleSlots(): Promise<{ slots: CycleSlotState; blocked: boolean }> {
   const slots: CycleSlotState = { ...DEFAULT_SLOT_STATE };
   let blocked = false;
@@ -120,6 +144,8 @@ type SelfieComparisonProps = {
 export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   const rootId = useId();
   const frameRef = useRef<HTMLDivElement>(null);
+  const cameraInputRefs = useRef<Partial<Record<CycleSelfieDay, HTMLInputElement | null>>>({});
+  const galleryInputRefs = useRef<Partial<Record<CycleSelfieDay, HTMLInputElement | null>>>({});
   const [slots, setSlots] = useState<CycleSlotState>(DEFAULT_SLOT_STATE);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
   const [sliderPercent, setSliderPercent] = useState(50);
@@ -137,7 +163,8 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   const day1Src = slots[1];
   const dayEndSrc = slots[30];
   const canCompare = Boolean(day1Src && dayEndSrc) && storageStatus !== "blocked";
-  const showPlaceholders = storageStatus === "blocked" || !canCompare;
+  const hasAnyPhoto = Boolean(day1Src || dayEndSrc);
+  const showBlockedPlaceholders = storageStatus === "blocked";
 
   const refreshSlots = useCallback(async () => {
     setStorageStatus("loading");
@@ -160,6 +187,14 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
     return () => {
       cancelled = true;
     };
+  }, [refreshSlots]);
+
+  useEffect(() => {
+    const onUpdated = () => {
+      void refreshSlots();
+    };
+    window.addEventListener(CYCLE_SELFIE_UPDATED_EVENT, onUpdated);
+    return () => window.removeEventListener(CYCLE_SELFIE_UPDATED_EVENT, onUpdated);
   }, [refreshSlots]);
 
   const updateSliderFromClientX = useCallback((clientX: number) => {
@@ -206,13 +241,28 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
     async (day: CycleSelfieDay, file: File | null | undefined) => {
       if (!file) return;
 
+      if (!file.type.startsWith("image/") && file.type !== "") {
+        setFeedback("Selecione um arquivo de imagem.");
+        return;
+      }
+
       setCaptureBusy(day);
       setFeedback(null);
 
       try {
         const id = CYCLE_SELFIE_DAY_IDS[day];
-        await saveCycleSelfie(id, file);
+        const saved = await saveCycleSelfie(id, file);
+        if (!saved) {
+          setStorageStatus("blocked");
+          setFeedback("Armazenamento local indisponível. Use o modo normal do navegador.");
+          return;
+        }
         const src = await getCycleSelfiePathById(id);
+        if (!src) {
+          setFeedback("Foto gravada, mas não foi possível exibir. Recarregue a aba.");
+          await refreshSlots();
+          return;
+        }
         setSlots((prev) => ({ ...prev, [day]: src }));
         setStorageStatus("ready");
         setFeedback(`${resolveCycleSelfieDayLabel(day)} gravado no disco local.`);
@@ -223,13 +273,13 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
         setCaptureBusy(null);
       }
     },
-    [],
+    [refreshSlots],
   );
 
   const handleDataUrlCapture = useCallback(
     async (day: CycleSelfieDay, dataUrl: string) => {
       try {
-        const file = await dataUrlToFile(dataUrl, `selfie_dia_${day}.webp`);
+        const file = await dataUrlToFile(dataUrl, `selfie_dia_${day}.jpg`);
         if (!file) {
           setFeedback("Falha ao processar a imagem capturada.");
           return;
@@ -245,21 +295,26 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   const openCameraForDay = useCallback(
     async (day: CycleSelfieDay) => {
       setFeedback(null);
+      setCaptureBusy(day);
 
       let stream: MediaStream | null = null;
       const video = document.createElement("video");
 
       try {
-        stream = await requestFrontCameraStream();
+        stream = await requestAnyCameraStream();
         await bindStreamToVideo(video, stream);
 
         const dataUrl = captureVideoFrameDataUrl(video, { mirror: true });
         await handleDataUrlCapture(day, dataUrl);
       } catch (error) {
-        setFeedback(formatCameraError(error));
+        setFeedback(
+          `${formatCameraError(error)} Abrindo seletor de câmera/galeria…`,
+        );
+        cameraInputRefs.current[day]?.click();
       } finally {
         stopMediaStream(stream);
         video.srcObject = null;
+        setCaptureBusy(null);
       }
     },
     [handleDataUrlCapture],
@@ -288,7 +343,9 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
             ? "IndexedDB bloqueado"
             : canCompare
               ? "Arraste o divisor"
-              : `Capture ${dayStartLabel} e ${dayEndLabel}`}
+              : hasAnyPhoto
+                ? "Capture o outro dia para comparar"
+                : `Capture ${dayStartLabel} e ${dayEndLabel}`}
         </p>
       </div>
 
@@ -306,14 +363,14 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
         role="img"
         aria-label="Comparação antes e depois do ciclo de evolução"
       >
-        {showPlaceholders ? (
+        {showBlockedPlaceholders ? (
           <div className="grid h-full w-full grid-cols-2">
             <div className="border-r border-cyan-500/10">
-              <HudSelfiePlaceholder label={dayStartLabel} animate={storageStatus === "loading"} />
+              <HudSelfiePlaceholder label={dayStartLabel} />
             </div>
-            <HudSelfiePlaceholder label={dayEndLabel} animate={storageStatus === "loading"} />
+            <HudSelfiePlaceholder label={dayEndLabel} />
           </div>
-        ) : (
+        ) : canCompare ? (
           <>
             {/* Base · último dia do mês (direita) */}
             {/* eslint-disable-next-line @next/next/no-img-element -- src local blob:// capacitor:// */}
@@ -370,6 +427,29 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               </span>
             </div>
           </>
+        ) : (
+          <div className="grid h-full w-full grid-cols-2">
+            <div className="relative border-r border-cyan-500/10">
+              <SlotPhotoOrPlaceholder
+                src={day1Src}
+                label={dayStartLabel}
+                animate={storageStatus === "loading"}
+              />
+              <span className="pointer-events-none absolute left-2 top-2 rounded-full border border-emerald-500/25 bg-black/45 px-2 py-0.5 font-mono text-[7px] uppercase tracking-[0.12em] text-emerald-200/90 backdrop-blur-md">
+                {dayStartLabel}
+              </span>
+            </div>
+            <div className="relative">
+              <SlotPhotoOrPlaceholder
+                src={dayEndSrc}
+                label={dayEndLabel}
+                animate={storageStatus === "loading"}
+              />
+              <span className="pointer-events-none absolute right-2 top-2 rounded-full border border-cyan-500/25 bg-black/45 px-2 py-0.5 font-mono text-[7px] uppercase tracking-[0.12em] text-cyan-200/90 backdrop-blur-md">
+                {dayEndLabel}
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
@@ -384,35 +464,90 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               key={day}
               className="rounded-xl border border-orange-500/10 bg-neutral-950/50 p-3 backdrop-blur-sm"
             >
-              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-neutral-500">
-                {label}
-              </p>
-              <p className="mt-0.5 truncate font-mono text-[8px] text-neutral-600">
-                {CYCLE_SELFIE_DAY_IDS[day]}.webp
-              </p>
-              <button
-                type="button"
+              <div className="flex items-start gap-3">
+                <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg border border-cyan-500/15 bg-black/50">
+                  {slots[day] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={slots[day] ?? undefined}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center font-mono text-[8px] text-neutral-600">
+                      —
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-neutral-500">
+                    {label}
+                  </p>
+                  <p className="mt-0.5 truncate font-mono text-[8px] text-neutral-600">
+                    {hasPhoto ? "Gravado neste dispositivo" : "Aguardando captura"}
+                  </p>
+                </div>
+              </div>
+              <input
+                ref={(node) => {
+                  cameraInputRefs.current[day] = node;
+                }}
+                type="file"
+                accept="image/*"
+                capture="user"
+                className="sr-only"
+                tabIndex={-1}
                 disabled={busy || storageStatus === "loading"}
-                onClick={() => void openCameraForDay(day)}
-                className={`${DASHBOARD_TAP_TARGET} mt-3 w-full rounded-full border border-cyan-500/20 bg-black/40 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100/85 transition-opacity hover:border-cyan-400/35 disabled:opacity-45`}
-              >
-                {busy ? "Gravando…" : hasPhoto ? "Recapturar" : "Capturar"}
-              </button>
-              <label className="mt-2 block">
-                <span className="sr-only">Importar foto {label}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="user"
-                  className="block w-full cursor-pointer text-[8px] text-neutral-500 file:mr-2 file:rounded-full file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-[8px] file:uppercase file:tracking-wider file:text-neutral-300"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  void handleCaptureFile(day, file);
+                  event.target.value = "";
+                }}
+              />
+              <input
+                ref={(node) => {
+                  galleryInputRefs.current[day] = node;
+                }}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                tabIndex={-1}
+                disabled={busy || storageStatus === "loading"}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  void handleCaptureFile(day, file);
+                  event.target.value = "";
+                }}
+              />
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <button
+                  type="button"
                   disabled={busy || storageStatus === "loading"}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    void handleCaptureFile(day, file);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
+                  onClick={() => void openCameraForDay(day)}
+                  className={`${DASHBOARD_TAP_TARGET} w-full rounded-full border border-cyan-500/20 bg-black/40 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-cyan-100/85 transition-opacity hover:border-cyan-400/35 disabled:opacity-45`}
+                >
+                  {busy ? "Gravando…" : hasPhoto ? "Recapturar" : "Capturar"}
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || storageStatus === "loading"}
+                    onClick={() => cameraInputRefs.current[day]?.click()}
+                    className={`${DASHBOARD_TAP_TARGET} rounded-full border border-neutral-700/60 bg-neutral-900/70 px-2 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-45`}
+                  >
+                    Câmera
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || storageStatus === "loading"}
+                    onClick={() => galleryInputRefs.current[day]?.click()}
+                    className={`${DASHBOARD_TAP_TARGET} rounded-full border border-cyan-500/25 bg-cyan-950/40 px-2 py-2 text-[8px] font-bold uppercase tracking-[0.12em] text-cyan-100 disabled:opacity-45`}
+                  >
+                    Galeria
+                  </button>
+                </div>
+              </div>
             </div>
           );
         })}
