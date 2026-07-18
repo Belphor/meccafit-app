@@ -126,7 +126,7 @@ export const ANYMA_SPEECH_EVOLUCAO_GRAVIDADE =
 
 /** Espelho do ciclo. */
 export const ANYMA_SPEECH_EVOLUCAO_ESPELHO =
-  "O Espelho Visual guarda selfies do ciclo no primeiro dia, no meio do mês e no último dia do mês atual. Use a mesma pose e a mesma luz. Com o primeiro e o último dia gravados, compare o progresso. As fotos ficam só no seu dispositivo.";
+  "O Espelho do Ciclo guarda selfies no primeiro dia útil do mês, de segunda a sexta, e no último dia do mês no calendário de Brasília. Se o dia 1 cair no domingo ou no sábado, a captura do início passa para a próxima segunda. Use a mesma pose e a mesma luz. Com início e fim gravados, compare o progresso. As fotos ficam só no seu dispositivo.";
 
 /** Aba Comunidade. */
 export const ANYMA_SPEECH_COMUNIDADE_ABA =
@@ -275,7 +275,7 @@ export const ANYMA_EXPLANATION_CARDS: readonly AnymaExplanationCard[] = [
     label: "Espelho do Ciclo",
     tab: "evolucao",
     speech: ANYMA_SPEECH_EVOLUCAO_ESPELHO,
-    summary: "Selfies locais para comparar o ciclo físico.",
+    summary: "Fotos locais no início útil e no último dia do mês.",
   },
   {
     id: "comunidade-aba",

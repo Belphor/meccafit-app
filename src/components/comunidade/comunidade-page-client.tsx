@@ -240,16 +240,17 @@ export function ComunidadePageClient({
 
         <div
           id="comunidade-arena"
-          data-tour-target="comunidade-arena"
           className={`${COMUNIDADE_SCROLL_MT} ${COMUNIDADE_SECTION_INNER} space-y-3 sm:space-y-4`}
         >
           <p className={COMUNIDADE_SECTION_LABEL}>Arena, termômetro coletivo e duelos</p>
           <div className="grid grid-cols-1 gap-3 xs:gap-4 lg:grid-cols-2 lg:items-start">
-            <MetaColetivaTermometro
-              meta={meta}
-              mesReferencia={arena?.mes_referencia}
-              loading={arenaLoading && !arena}
-            />
+            <div data-tour-target="comunidade-arena">
+              <MetaColetivaTermometro
+                meta={meta}
+                mesReferencia={arena?.mes_referencia}
+                loading={arenaLoading && !arena}
+              />
+            </div>
             <DuelosArenaPanel
               duelos={arena?.duelos_ativos ?? []}
               campeoesCinturao={

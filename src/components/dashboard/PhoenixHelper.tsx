@@ -48,7 +48,18 @@ import {
   PHOENIX_PUNISHMENT_LORE,
   type AnymaSpeechContext,
 } from "@/lib/phoenix-lore";
-import { triggerReturningLoginGreeting } from "@/lib/anyma-returning-greeting";
+import {
+  suppressReturningLoginGreeting,
+  triggerReturningLoginGreeting,
+} from "@/lib/anyma-returning-greeting";
+import {
+  ANYMA_CYCLE_SELFIE_REMINDER_EYEBROW,
+  ANYMA_CYCLE_SELFIE_REMINDER_SPEECH,
+  ANYMA_CYCLE_SELFIE_REMINDER_TITLE,
+  markCycleSelfieReminderShown,
+  shouldShowCycleSelfieReminder,
+} from "@/lib/anyma-cycle-selfie-reminder";
+import type { CycleSelfieCaptureKind } from "@/lib/cycle-selfie-calendar";
 import { markAnymaPortalVisto } from "@/lib/profile-identity";
 import {
   DASHBOARD_TAP_TARGET,
@@ -60,6 +71,7 @@ import type { DashboardTabId } from "@/lib/dashboard-tabs";
 
 const ANYMA_SPOTLIGHT_LOCK_MS = 8_000;
 const ANYMA_SPOTLIGHT_FIELD_LOCK_MS = 3_500;
+const CYCLE_SELFIE_REMINDER_DELAY_MS = 4_200;
 
 const EXPLANATION_SCROLL_TARGETS: Partial<Record<AnymaExplanationId, string>> = {
   "treino-aba": '[data-tour-tab="treino"]',
@@ -137,9 +149,12 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const spotlightBootstrappedRef = useRef(false);
   const onboardingHasSpokenRef = useRef(false);
   const spotlightHasSpokenRef = useRef(false);
+  const cycleSelfieReminderFiredRef = useRef(false);
   const [onboardingNarrationDone, setOnboardingNarrationDone] = useState(!isSupported);
   const [spotlightNarrationDone, setSpotlightNarrationDone] = useState(!isSupported);
   const [spotlightTargetReady, setSpotlightTargetReady] = useState(false);
+  const [cycleSelfieReminderKind, setCycleSelfieReminderKind] =
+    useState<CycleSelfieCaptureKind | null>(null);
   const [identityForm, setIdentityForm] = useState<PerfilIdentityTourFormState>(() =>
     readPerfilIdentityTourFormState(),
   );
@@ -152,6 +167,11 @@ export const PhoenixHelper = memo(function PhoenixHelper({
   const explanationGroups = useMemo(
     () => groupAnymaExplanationCards(resolveAnymaExplanationCards(hasPersonalBond)),
     [hasPersonalBond],
+  );
+
+  const cycleSelfieReminderSpeech = useMemo(
+    () => resolveAnymaSpeechText(ANYMA_CYCLE_SELFIE_REMINDER_SPEECH, profileName),
+    [profileName],
   );
 
   const onboardingSpeech = useMemo(
@@ -265,6 +285,57 @@ export const PhoenixHelper = memo(function PhoenixHelper({
     markReturningLoginGreetingShown(userId, portalEntryCount);
     clearReturningLoginGreetingPending(userId);
   }, [isPunished, onboardingPhase, portalEntryCount, userId]);
+
+  /** Espelho do Ciclo · card + voz só no dia útil de início e no último dia (Brasília). */
+  useEffect(() => {
+    if (isPunished || onboardingPhase !== null) return;
+    if (cycleSelfieReminderFiredRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      if (cycleSelfieReminderFiredRef.current) return;
+      const kind = shouldShowCycleSelfieReminder(userId);
+      if (!kind) return;
+
+      cycleSelfieReminderFiredRef.current = true;
+      markCycleSelfieReminderShown(userId, kind);
+      setCycleSelfieReminderKind(kind);
+      suppressReturningLoginGreeting();
+      igniteVoice({
+        text: ANYMA_CYCLE_SELFIE_REMINDER_SPEECH,
+        fullName: profileName,
+        tier: phaseContext.phaseTier,
+        allowIntroFallback: false,
+      });
+    }, CYCLE_SELFIE_REMINDER_DELAY_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    igniteVoice,
+    isPunished,
+    onboardingPhase,
+    phaseContext.phaseTier,
+    profileName,
+    userId,
+  ]);
+
+  const dismissCycleSelfieReminder = useCallback(() => {
+    setCycleSelfieReminderKind(null);
+  }, []);
+
+  const openCycleSelfieFromReminder = useCallback(() => {
+    setCycleSelfieReminderKind(null);
+    onTabChange("evolucao", { preserveVoice: true });
+    window.setTimeout(() => {
+      const target = document.querySelector('[data-tour-target="evolucao-espelho"]');
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+        target.classList.add("anyma-destination-highlight");
+        window.setTimeout(() => {
+          target.classList.remove("anyma-destination-highlight");
+        }, 2000);
+      }
+    }, 420);
+  }, [onTabChange]);
 
   const guidedTabChange = useCallback(
     (tab: DashboardTabId) => {
@@ -798,7 +869,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
 
       {onboardingPhase === "intro" ? (
         <div
-          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 px-5 backdrop-blur-md"
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/85 px-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-label="Juramento das Cinzas"
@@ -867,6 +938,46 @@ export const PhoenixHelper = memo(function PhoenixHelper({
         </AnimaTourCallout>
       ) : null}
 
+      {cycleSelfieReminderKind && onboardingPhase === null && !isPunished ? (
+        <div
+          className="pointer-events-none fixed inset-x-0 top-[max(4.5rem,calc(env(safe-area-inset-top)+3.5rem))] z-[125] flex justify-center px-4"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="anyma-cycle-selfie-reminder-title"
+        >
+          <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-cyan-400/35 bg-neutral-950/94 p-4 text-left shadow-[0_0_32px_rgba(34,211,238,0.18)] backdrop-blur-md">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/85">
+              {ANYMA_CYCLE_SELFIE_REMINDER_EYEBROW}
+            </p>
+            <h2
+              id="anyma-cycle-selfie-reminder-title"
+              className="mt-2 text-base font-semibold text-amber-50"
+            >
+              {ANYMA_CYCLE_SELFIE_REMINDER_TITLE}
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-amber-50/90">
+              {cycleSelfieReminderSpeech}
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={openCycleSelfieFromReminder}
+                className={`${DASHBOARD_TAP_TARGET} flex-1 rounded-full border border-cyan-400/45 bg-cyan-950/70 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-50`}
+              >
+                Abrir Evolução
+              </button>
+              <button
+                type="button"
+                onClick={dismissCycleSelfieReminder}
+                className={`${DASHBOARD_TAP_TARGET} flex-1 rounded-full border border-neutral-700/60 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-300`}
+              >
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showPhoenixOrb ? (
         <PhoenixCanvas
           className={onboardingPhase === "spotlight" ? "anima-phoenix-spotlight-pulse" : ""}
@@ -898,7 +1009,7 @@ export const PhoenixHelper = memo(function PhoenixHelper({
           />
 
           <aside
-            className="anima-hud-panel flex w-[min(46vw,24rem)] min-w-[17rem] flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-4 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl"
+            className="anima-hud-panel flex w-[min(100vw-2rem,24rem)] min-w-0 flex-col rounded-2xl border border-orange-500/15 bg-neutral-950/60 p-3 shadow-[0_0_32px_rgba(249,115,22,0.12)] backdrop-blur-xl sm:min-w-[17rem] sm:p-4 sm:w-[min(46vw,24rem)]"
             aria-label={`Painel ${ANYMA_BRAND}`}
           >
             <div className="flex items-start justify-between gap-3">

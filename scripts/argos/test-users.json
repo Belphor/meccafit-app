@@ -1,49 +1,49 @@
 {
-  "generatedAt": "2026-07-12T21:58:20.996Z",
+  "generatedAt": "2026-07-18T02:34:38.215Z",
   "users": {
     "cliente_principal": {
       "email": "cliente@meccafit.com",
-      "userId": "1f34a2fd-91cb-46d6-a718-ec689cd221a3"
+      "userId": "693c75de-3ebd-47e1-823e-f2755c813303"
     },
     "atleta_vitima": {
       "email": "atleta2@meccafit.com",
-      "userId": "b3f4960a-e84e-4138-b61a-065cfba01ccd"
+      "userId": "c53bd27c-6de9-45c9-9af7-2c92454245da"
     },
     "atleta_carga": {
       "email": "atleta4@meccafit.com",
-      "userId": "7bc7e6ce-0557-49f9-8637-100aa929b18d"
+      "userId": "6fec80d5-ef5e-44ee-ae68-c9768743d48c"
     },
     "atleta_ranking_5": {
       "email": "atleta5@meccafit.com",
-      "userId": "f717f098-2eef-4c96-9628-cb368d9990c8"
+      "userId": "19d03919-5aa8-4c96-8d6a-f9d4e9342648"
     },
     "atleta_ranking_6": {
       "email": "atleta6@meccafit.com",
-      "userId": "89a8981a-70c1-452c-b6cc-e88951e22142"
+      "userId": "ed710bac-e124-4c46-ace1-6749e3128acc"
     },
     "atleta_ranking_7": {
       "email": "atleta7@meccafit.com",
-      "userId": "32931412-da87-4885-b304-8d0950486eda"
+      "userId": "ffae4561-9f9a-4feb-82f1-c318096e7098"
     },
     "atleta_ranking_8": {
       "email": "atleta8@meccafit.com",
-      "userId": "c4779c07-d542-417a-90b5-1e4bce7de0a2"
+      "userId": "e76186be-7a6f-4659-b063-c9ebf6693248"
     },
     "atleta_ranking_9": {
       "email": "atleta9@meccafit.com",
-      "userId": "79a60c1f-6191-419a-b02b-afe7448b556c"
+      "userId": "a8423e3c-ca66-4abb-b197-44ffbaec33c7"
     },
     "atleta_ranking_10": {
       "email": "atleta10@meccafit.com",
-      "userId": "bcf45f7c-6c4d-4d74-8875-231e769284a4"
+      "userId": "dbfa7e2a-fdf9-4d61-9952-4a324001ec35"
     },
     "forjador_linhagem": {
       "email": "forjador@meccafit.com",
-      "userId": "322ad4af-20b7-4035-8e4d-7ebdbc889883"
+      "userId": "6961e205-603a-46b7-a5c9-49e38463bddb"
     },
     "forjador_soberano": {
       "email": "master@meccafit.com",
-      "userId": "d3fe801c-47a6-4b87-849c-6af49e8eb541"
+      "userId": "ef30d3b5-98a5-4469-a80e-c0c25c9966d4"
     }
   }
 }

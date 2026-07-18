@@ -13,6 +13,7 @@ import type {
   SovereignMuscleId,
 } from "@/components/evolution/human-body-constants";
 import { DASHBOARD_PANEL_FRAME } from "@/lib/dashboard-config";
+import { useTourHighlightActive } from "@/lib/use-tour-highlight";
 
 type EvolutionConsistenciaSectionProps = {
   userId: string;
@@ -61,6 +62,10 @@ export function EvolutionConsistenciaSection({
   ritmoGraceDaysRemaining,
   purityPenaltyActive = false,
 }: EvolutionConsistenciaSectionProps) {
+  // Durante "Defina sua meta", atenua Ritmo/Brasas (sem desmontar) para o callout
+  // e o spotlight focarem o bloco da meta — apresentação completa e Pular.
+  const metaTourActive = useTourHighlightActive("evolucao-meta");
+
   return (
     <BrasaVivaCard
       as="section"
@@ -68,7 +73,9 @@ export function EvolutionConsistenciaSection({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="evolucao-consistencia-title"
     >
-      <DashboardPanelHeader chip="Consistência" meta="Meta, Ritmo e Mapa corporal" />
+      {metaTourActive ? null : (
+        <DashboardPanelHeader chip="Consistência" meta="Meta, Ritmo e Mapa corporal" />
+      )}
 
       <p id="evolucao-consistencia-title" className="sr-only">
         Meta de treino, Ritmo da Fênix e mapa de calor muscular
@@ -82,9 +89,20 @@ export function EvolutionConsistenciaSection({
         embedded
       />
 
-      <div className="mx-4 border-t border-orange-500/12 sm:mx-5" aria-hidden />
+      <div
+        className={`mx-4 border-t border-orange-500/12 sm:mx-5 ${metaTourActive ? "hidden" : ""}`}
+        aria-hidden
+      />
 
-      <div data-tour-target="evolucao-ritmo">
+      <div
+        data-tour-target="evolucao-ritmo"
+        className={
+          metaTourActive
+            ? "pointer-events-none max-h-0 overflow-hidden opacity-0 transition-[opacity,max-height]"
+            : undefined
+        }
+        aria-hidden={metaTourActive || undefined}
+      >
         <EvolutionRitmoPanel
           indiceIgnicao={indiceIgnicao}
           metaVtcMensalKg={metaVtcMensalKg}
@@ -98,7 +116,15 @@ export function EvolutionConsistenciaSection({
         />
       </div>
 
-      <div data-tour-target="evolucao-brasas">
+      <div
+        data-tour-target="evolucao-brasas"
+        className={
+          metaTourActive
+            ? "pointer-events-none max-h-0 overflow-hidden opacity-0 transition-[opacity,max-height]"
+            : undefined
+        }
+        aria-hidden={metaTourActive || undefined}
+      >
         <EvolutionBodyMapPanel
           loading={loading}
           refreshing={refreshing}

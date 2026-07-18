@@ -222,12 +222,15 @@ export function DietExcelDropzone({
         ) : null}
 
         {preview ? (
-          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-800/80 p-4">
-            <p className="text-sm font-medium text-zinc-100">{preview.titulo}</p>
-            <p className={`${FORJA_META} mt-1`}>
-              {DIET_OBJECTIVE_LABELS[preview.objetivo]} · {preview.caloriasAlvo} kcal ·{" "}
-              {preview.proteinasG}g P · {preview.carboidratosG}g C · {preview.gordurasG}g G ·{" "}
-              {preview.aguaLitros}L água
+          <div className="mt-4 rounded-xl border border-zinc-800/80 p-4">
+            <p className="break-words text-sm font-medium text-zinc-100">{preview.titulo}</p>
+            <p className={`${FORJA_META} mt-1 flex flex-wrap gap-x-2 gap-y-1 break-words`}>
+              <span>{DIET_OBJECTIVE_LABELS[preview.objetivo]}</span>
+              <span>{preview.caloriasAlvo} kcal</span>
+              <span>{preview.proteinasG}g P</span>
+              <span>{preview.carboidratosG}g C</span>
+              <span>{preview.gordurasG}g G</span>
+              <span>{preview.aguaLitros}L água</span>
             </p>
             {preview.refeicoes.length > 0 ? (
               <ul className={`${FORJA_META} mt-3 space-y-1`}>

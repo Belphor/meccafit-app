@@ -1054,9 +1054,21 @@ export function DashboardClient({
 
   useEffect(() => {
     if (!dataReady || !perfilIdentidadeConfirmada) return;
-    if (readPresentationSkipIdentityOnly(userId)) {
-      clearPresentationSkipIdentityOnly(userId);
+    if (!readPresentationSkipIdentityOnly(userId)) return;
+
+    // Não descartar o caminho "Pular" sem garantir o tour reduzido da meta.
+    if (!readEcossistemaTourComplete(userId) && !readEcossistemaTourMetaOnly(userId)) {
+      markEcossistemaTourMetaOnly(userId);
+      markEcossistemaTourPending(userId);
+      // Bootstrap do tour a partir de flags em localStorage (1ª visita / reload).
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sync ceremony flags → UI
+      setMetaOnlyTour(true);
+      setTourStepIndex(0);
+      setTourBeatIndex(0);
+      writeEcossistemaTourStepIndex(userId, 0);
+      writeEcossistemaTourBeatIndex(userId, 0);
     }
+    clearPresentationSkipIdentityOnly(userId);
   }, [dataReady, perfilIdentidadeConfirmada, userId]);
 
   useEffect(() => {

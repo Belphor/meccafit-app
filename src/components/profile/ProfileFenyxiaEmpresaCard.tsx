@@ -36,8 +36,9 @@ export function ProfileFenyxiaEmpresaCard() {
             {FENYXIA_EMPRESA_TITLE}
           </h2>
           <p className="text-sm leading-relaxed text-neutral-400">
-            A casa em fundação por trás deste altar. O primeiro projeto no modelo{" "}
-            <LoreEm>FENYXIA</LoreEm>, feito para vitrine, sem cobranças dentro do produto.
+            Empresa de tecnologia que cria <LoreEm>sistemas sob medida</LoreEm>. Cada entrega é{" "}
+            <LoreEm>exclusiva</LoreEm>, <LoreEm>high code</LoreEm> e <LoreEm>fantasia</LoreEm>{" "}
+            aplicada ao produto.
           </p>
         </div>
 

@@ -16,6 +16,7 @@ import {
 import {
   PLAN_META_SYNCED_EVENT,
   readPlanMetaSyncedFromDom,
+  requestPlanMetaSync,
 } from "@/lib/plan-meta-tour";
 
 type FenixEcossistemaTourHostProps = {
@@ -38,6 +39,7 @@ export function FenixEcossistemaTourHost({
   const { igniteVoice, prepareVoice, cancelVoice, isSupported, state } = usePhoenixVoice();
   const [tabReadyKey, setTabReadyKey] = useState("");
   const [metaSynced, setMetaSynced] = useState(false);
+  const [metaSyncPending, setMetaSyncPending] = useState(false);
   const [hasSpoken, setHasSpoken] = useState(false);
   const tabAligned = activeTab === step.tab;
   const tabReady = tabAligned && tabReadyKey === `${step.id}-${beatIndex}`;
@@ -56,14 +58,18 @@ export function FenixEcossistemaTourHost({
 
   const narrationDone =
     !isSupported || (hasSpoken && state === "idle" && tabReady && tabAligned);
+  const needsMetaSync = beat.advanceGate === "meta-sync" && !metaSynced;
   const advanceGateMet = beat.advanceGate !== "meta-sync" || metaSynced;
   const canContinue = tabAligned && tabReady && narrationDone && advanceGateMet;
+  const canTriggerMetaSync =
+    tabAligned && tabReady && narrationDone && needsMetaSync && !metaSyncPending;
   const eyebrowSuffix = step.eyebrow.replace(`${ANYMA_BRAND} · `, "");
 
   useEffect(() => {
     // Reset da fala ao trocar de beat/passo do tour — sincronização intencional.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasSpoken(false);
+    setMetaSyncPending(false);
   }, [beatIndex, step.id]);
 
   useEffect(() => {
@@ -110,10 +116,17 @@ export function FenixEcossistemaTourHost({
       return;
     }
 
-    const syncFromDom = () => setMetaSynced(readPlanMetaSyncedFromDom());
+    const syncFromDom = () => {
+      const synced = readPlanMetaSyncedFromDom();
+      setMetaSynced(synced);
+      if (synced) setMetaSyncPending(false);
+    };
     syncFromDom();
 
-    const onSynced = () => setMetaSynced(true);
+    const onSynced = () => {
+      setMetaSynced(true);
+      setMetaSyncPending(false);
+    };
     window.addEventListener(PLAN_META_SYNCED_EVENT, onSynced);
     const poll = window.setInterval(syncFromDom, 800);
 
@@ -122,6 +135,12 @@ export function FenixEcossistemaTourHost({
       window.clearInterval(poll);
     };
   }, [beat.advanceGate, beatIndex, step.id, tabReady]);
+
+  useEffect(() => {
+    if (!metaSyncPending) return;
+    const timer = window.setTimeout(() => setMetaSyncPending(false), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [metaSyncPending]);
 
   const resolveHint = (): string => {
     if (!tabAligned) return `Abrindo ${eyebrowSuffix}.`;
@@ -134,11 +153,33 @@ export function FenixEcossistemaTourHost({
         ? `Aguarde a ${ANYMA_BRAND} concluir a orientação.`
         : "Voz indisponível neste dispositivo. Leia e continue.";
     }
-    if (beat.advanceGate === "meta-sync" && !metaSynced) {
-      return "Ajuste os dias planejados e toque em Sincronizar meta para seguir.";
+    if (needsMetaSync) {
+      return metaSyncPending
+        ? "Sincronizando sua meta de treino…"
+        : "Ajuste os dias no slider e toque em Sincronizar meta neste card.";
     }
     return "Leia e avance quando estiver pronto.";
   };
+
+  const handlePrimaryAction = () => {
+    if (needsMetaSync) {
+      if (!canTriggerMetaSync) return;
+      setMetaSyncPending(true);
+      requestPlanMetaSync();
+      return;
+    }
+    if (!canContinue) return;
+    onContinue();
+  };
+
+  const primaryEnabled = needsMetaSync ? canTriggerMetaSync : canContinue;
+  const primaryLabel = needsMetaSync
+    ? metaSyncPending
+      ? "Sincronizando…"
+      : "Sincronizar meta"
+    : canContinue
+      ? beat.continueLabel
+      : "Narrativa em chamas…";
 
   return (
     <AnimaTourCallout
@@ -149,35 +190,35 @@ export function FenixEcossistemaTourHost({
       zIndex={125}
     >
       <div
-        className="rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-5 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl"
+        className={`anima-tour-card flex w-full flex-col overflow-hidden rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-4 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl sm:p-5 ${
+          needsMetaSync
+            ? "max-h-[min(42dvh,17rem)]"
+            : "max-h-[min(80dvh,30rem)]"
+        }`}
         role="dialog"
         aria-modal="true"
         aria-label={`Apresentação da aba ${beat.title}`}
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
+        <p className="shrink-0 text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
           {step.eyebrow}
           {beats.length > 1 ? ` · ${beatIndex + 1}/${beats.length}` : ""}
         </p>
-        <h2 className="mt-2 text-base font-semibold text-amber-50">{beat.title}</h2>
-        <p className="mt-3 max-h-[min(32vh,11rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
+        <h2 className="mt-2 shrink-0 text-base font-semibold text-amber-50">{beat.title}</h2>
+        <p className="mt-3 min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed text-amber-50/90">
           {resolvedSpeech}
         </p>
-        <p className="mt-3 text-[11px] text-neutral-400">{resolveHint()}</p>
+        <p className="mt-3 shrink-0 text-[11px] text-neutral-400">{resolveHint()}</p>
         <button
           type="button"
-          disabled={!canContinue}
-          onClick={onContinue}
-          className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
-            canContinue
+          disabled={!primaryEnabled}
+          onClick={handlePrimaryAction}
+          className={`${DASHBOARD_TAP_TARGET} mt-4 w-full shrink-0 rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
+            primaryEnabled
               ? "anima-acender-linhagem-cta"
               : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"
           }`}
         >
-          {canContinue
-            ? beat.continueLabel
-            : beat.advanceGate === "meta-sync" && !metaSynced
-              ? "Sincronize a meta…"
-              : "Narrativa em chamas…"}
+          {primaryLabel}
         </button>
       </div>
     </AnimaTourCallout>

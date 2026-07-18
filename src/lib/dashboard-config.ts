@@ -16,9 +16,10 @@ export const SUPERACAO_OVERLAY_MS = 8000;
 export const SUPERACAO_MURAL_DELAY_MS = 100;
 export const SUPERACAO_MURAL_MS = SUPERACAO_OVERLAY_MS + SUPERACAO_MURAL_DELAY_MS;
 
-/** Shell IRIS — Absolute Black + brasa ambiente + safe-area */
+/** Shell IRIS — Absolute Black + brasa ambiente + safe-area.
+ * Bottom padding menor no mobile quando dentro do AppShell (nav já reserva espaço). */
 export const DASHBOARD_SHELL =
-  "relative min-h-dvh overflow-x-hidden bg-black px-[max(1.25rem,env(safe-area-inset-left))] py-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] pr-[max(1.25rem,env(safe-area-inset-right))] text-white";
+  "relative min-h-dvh overflow-x-hidden bg-black px-[max(1rem,env(safe-area-inset-left))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-4 pr-[max(1rem,env(safe-area-inset-right))] text-white sm:px-[max(1.25rem,env(safe-area-inset-left))] sm:pt-[max(2rem,env(safe-area-inset-top))] sm:pb-[max(2rem,env(safe-area-inset-bottom))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]";
 
 /** Listas com scroll interno apenas em telas grandes */
 export const DASHBOARD_SCROLL_LIST =
@@ -316,7 +317,7 @@ export const DIETA_CLIENT_EXPLANATION =
 
 /** Comparação de Ciclo (Evolução) — selfies locais */
 export const CICLO_COMPARACAO_CLIENT_EXPLANATION =
-  "Espelho do ciclo mensal. Capture no primeiro dia, no meio do mês e no último dia do mês, com a mesma pose e luz. Com o primeiro e o último dia gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo.";
+  "Espelho do ciclo mensal no calendário de Brasília. Capture no primeiro dia útil do mês, de segunda a sexta, e no último dia do mês, com a mesma pose e a mesma luz. Se o dia 1 cair no domingo ou no sábado, a captura do início passa para a próxima segunda. Com início e fim gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo.";
 
 /** Comunidade — arena cooperativa */
 export const COMUNIDADE_CLIENT_EXPLANATION =
@@ -433,7 +434,7 @@ export const MECCAFIT_CENTER_BRAND =
 
 /** Shell do header — reserva espaço lateral para o botão Sair */
 export const MECCAFIT_CENTER_HEADER_SHELL =
-  "pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-[max(4.5rem,18vw)] sm:px-[max(5rem,12vw)]";
+  "pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-[max(3.25rem,14vw)] max-[359px]:px-[max(3rem,12vw)] sm:px-[max(5rem,12vw)]";
 
 /** @deprecated Use MECCAFIT_CENTER_BRAND via MeccafitCenterBrand */
 export const DASHBOARD_BRAND_TITLE = MECCAFIT_CENTER_BRAND;
@@ -441,10 +442,12 @@ export const DASHBOARD_BRAND_TITLE = MECCAFIT_CENTER_BRAND;
 export const DASHBOARD_HERO_TITLE =
   "mt-3 text-balance text-[clamp(1.35rem,6vw,2rem)] leading-tight tracking-[0.06em] sm:mt-4 sm:text-5xl sm:tracking-[0.12em] lg:text-6xl";
 
-export const DASHBOARD_PORTAL_PADDING = "rounded-[1.75rem] p-3 max-[359px]:p-2.5 sm:rounded-[2.25rem] sm:p-6 lg:p-10";
+export const DASHBOARD_PORTAL_PADDING =
+  "rounded-[1.75rem] p-2.5 max-[359px]:p-2 sm:rounded-[2.25rem] sm:p-6 md:p-8 lg:p-10";
 
 /** Painéis de aba — moldura compartilhada */
-export const DASHBOARD_PANEL_FRAME = "rounded-[1.5rem] p-3 max-[359px]:p-2.5 sm:rounded-[2rem] sm:p-4 lg:p-8";
+export const DASHBOARD_PANEL_FRAME =
+  "rounded-[1.5rem] p-2.5 max-[359px]:p-2 sm:rounded-[2rem] sm:p-4 md:p-6 lg:p-8";
 
 export const DASHBOARD_PANEL_HEADER =
   "flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/50 pb-4";
@@ -467,10 +470,10 @@ export const DASHBOARD_EMPTY_STATE =
 
 /** Rodapé corporativo FENYXIA — marca da empresa no ecossistema Fenyxia */
 export const FENYXIA_BRAND_FOOTER_BADGE =
-  "text-[10px] font-semibold uppercase tracking-[0.38em] text-neutral-700 transition duration-300 hover:text-amber-500 hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.25)]";
+  "text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-700 transition duration-300 hover:text-amber-500 hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.25)] sm:tracking-[0.38em]";
 
 export const FENYXIA_BRAND_FOOTER_TAGLINE =
-  "mt-1.5 text-[9px] font-medium uppercase tracking-[0.22em] text-neutral-800 transition duration-300 group-hover/footer:text-neutral-600";
+  "mt-1.5 text-[9px] font-medium uppercase tracking-[0.14em] text-neutral-800 transition duration-300 group-hover/footer:text-neutral-600 sm:tracking-[0.22em]";
 
 export const FENYXIA_BRAND_FOOTER_SHELL =
   "group/footer mt-auto border-t border-orange-500/10 pt-6 text-center";
@@ -528,10 +531,11 @@ export const PHASE_ONE_MIN_SESSIONS = 4;
 export const PHASE_ONE_MIN_VTC_KG = 2000;
 
 /** IRIS transmutation breakscreen — timeline olho da Fênix */
-export const PHASE_TRANSMUTATION_REVEAL_MS = 2_000;
-export const PHASE_TRANSMUTATION_HOLD_MS = 3_200;
-export const PHASE_TRANSMUTATION_FADE_MS = 1_600;
-export const PHASE_TRANSMUTATION_SKIP_AFTER_MS = 5_800;
+export const PHASE_TRANSMUTATION_REVEAL_MS = 1_800;
+export const PHASE_TRANSMUTATION_HOLD_MS = 2_800;
+export const PHASE_TRANSMUTATION_FADE_MS = 1_400;
+/** Continuar liberado cedo — voz/texto já rodam desde o disparo. */
+export const PHASE_TRANSMUTATION_SKIP_AFTER_MS = 2_400;
 
 export const PHASE_TRANSMUTATION_COPY =
   "「A LINHAGEM EVOLUIU · NOVA CAMADA NA CHAMA ACUMULADA」";
@@ -546,10 +550,11 @@ export const PHASE_TRANSMUTATION_IRIS = {
   plasmaAmber: "#fde68a",
   emberDeep: "#c2410c",
   obsidian: "#050505",
-  eyeSize: "min(42vw, 11rem)",
-  /** Whiteout IRIS — genesis termina quando o olho abre */
-  genesisMs: 5_200,
-  awakenMs: 5_200,
+  /** Fluido: respeita largura, altura útil e teto em desktop. */
+  eyeSize: "clamp(9.25rem, min(72vw, 26dvh), 15rem)",
+  /** Abertura rápida do olho — voz/texto já começaram no disparo. */
+  genesisMs: 1_400,
+  awakenMs: 1_400,
 } as const;
 
 /** Duração total derivada dos atos (pulse → reveal → hold → fade). */

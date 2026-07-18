@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CardioIgnitionBar } from "@/components/dashboard/CardioIgnitionBar";
 import { DashboardClientInfoBlock } from "@/components/dashboard/DashboardClientInfoBlock";
 import type { MuscleCalorLevel } from "@/components/evolution/human-body-constants";
@@ -16,6 +17,7 @@ import {
   resolveIgnicaoNextLevel,
 } from "@/lib/fenix-evolution-glossary";
 import { LoreEm } from "@/lib/lore-emphasis";
+import { useTourHighlightActive } from "@/lib/use-tour-highlight";
 import { VTC_DISPLAY_NAME, formatVtcKg } from "@/lib/vtc-labels";
 import {
   buildRitmoGraceActiveHint,
@@ -47,6 +49,15 @@ export function EvolutionRitmoPanel({
   ritmoGraceDaysRemaining,
   loading = false,
 }: EvolutionRitmoPanelProps) {
+  const [expanded, setExpanded] = useState(false);
+  const tourActive = useTourHighlightActive("evolucao-ritmo");
+
+  useEffect(() => {
+    // Durante a APRESENTAÇÃO, expande automaticamente para a ANYMA explicar.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (tourActive) setExpanded(true);
+  }, [tourActive]);
+
   const ritmoNext = resolveIgnicaoNextLevel(indiceIgnicao);
   const ritmoBand =
     indiceIgnicao >= 90 ? "elite" : indiceIgnicao >= 50 ? "active" : "latent";
@@ -72,19 +83,31 @@ export function EvolutionRitmoPanel({
   return (
     <div className={`${DASHBOARD_INNER_FRAME} space-y-4 p-4 sm:p-5`}>
       <header>
-        <h3 className={DASHBOARD_SECTION_TITLE}>Ritmo da Fênix</h3>
-        <p className={EVOLUTION_SECTION_SUBTITLE}>
-          Quanto da meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>, calculada pelos seus dias de
-          treino planejados, você já acumulou nos últimos 30 dias.
-        </p>
-        <DashboardClientInfoBlock className="mt-3">
-          <p className="text-xs font-semibold text-amber-100">Como funciona</p>
-          <p className="mt-2 text-xs leading-relaxed text-neutral-300">
-            O <LoreEm>Ritmo da Fênix</LoreEm> compara o volume forjado com a meta dos{" "}
-            <LoreEm>dias planejados</LoreEm>. Olha os{" "}
-            <strong className="text-amber-50">últimos 30 dias</strong>.
-          </p>
-        </DashboardClientInfoBlock>
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          aria-controls="evolucao-ritmo-detalhe"
+          className="flex w-full items-start justify-between gap-3 text-left"
+        >
+          <span className="min-w-0">
+            <h3 className={DASHBOARD_SECTION_TITLE}>Ritmo da Fênix</h3>
+            {expanded ? (
+              <span className={`mt-1 block ${EVOLUTION_SECTION_SUBTITLE}`}>
+                Quanto da meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm>, calculada pelos seus
+                dias de treino planejados, você já acumulou nos últimos 30 dias.
+              </span>
+            ) : null}
+          </span>
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-amber-950/40 text-amber-200/90 transition ${
+              expanded ? "rotate-180" : ""
+            }`}
+            aria-hidden
+          >
+            ▾
+          </span>
+        </button>
       </header>
 
       <div className="space-y-3">
@@ -94,31 +117,6 @@ export function EvolutionRitmoPanel({
         </div>
 
         <CardioIgnitionBar percent={indiceIgnicao} band={ritmoBand} emphasized calm />
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <p className={EVOLUTION_HINT}>
-            Meta mensal do plano:{" "}
-            <span className="font-mono font-semibold text-amber-100">{formatVtcKg(metaVtcMensalKg)}</span>
-          </p>
-          <p className={EVOLUTION_HINT}>
-            Acumulado (30d):{" "}
-            <span className="font-mono font-semibold text-amber-100">{formatVtcKg(vtc30dKg)}</span>
-          </p>
-        </div>
-
-        <p className={EVOLUTION_HINT}>
-          Intensidade global:{" "}
-          <span className="font-medium text-amber-50">
-            {formatThermalLevelWithContext(nivelTermicoGlobal ?? computedNivelGlobal, "consistency")}
-          </span>
-        </p>
-
-        {ritmoNext.nextLevel && ritmoNext.remainingPercent !== null ? (
-          <p className="text-xs text-cyan-200/85">
-            Próximo nível: {formatThermalLevelWithContext(ritmoNext.nextLevel, "consistency")}. Faltam{" "}
-            {Math.ceil(ritmoNext.remainingPercent)} pontos percentuais.
-          </p>
-        ) : null}
 
         {inGrace ? (
           <p className="rounded-lg border border-cyan-500/25 bg-cyan-950/20 px-3 py-2.5 text-xs leading-relaxed text-cyan-100/90">
@@ -135,6 +133,44 @@ export function EvolutionRitmoPanel({
           </p>
         ) : null}
       </div>
+
+      {expanded ? (
+        <div id="evolucao-ritmo-detalhe" className="space-y-3">
+          <DashboardClientInfoBlock>
+            <p className="text-xs font-semibold text-amber-100">Como funciona</p>
+            <p className="mt-2 text-xs leading-relaxed text-neutral-300">
+              O <LoreEm>Ritmo da Fênix</LoreEm> compara o volume forjado com a meta dos{" "}
+              <LoreEm>dias planejados</LoreEm>. Olha os{" "}
+              <strong className="text-amber-50">últimos 30 dias</strong>.
+            </p>
+          </DashboardClientInfoBlock>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <p className={EVOLUTION_HINT}>
+              Meta mensal do plano:{" "}
+              <span className="font-mono font-semibold text-amber-100">{formatVtcKg(metaVtcMensalKg)}</span>
+            </p>
+            <p className={EVOLUTION_HINT}>
+              Acumulado (30d):{" "}
+              <span className="font-mono font-semibold text-amber-100">{formatVtcKg(vtc30dKg)}</span>
+            </p>
+          </div>
+
+          <p className={EVOLUTION_HINT}>
+            Intensidade global:{" "}
+            <span className="font-medium text-amber-50">
+              {formatThermalLevelWithContext(nivelTermicoGlobal ?? computedNivelGlobal, "consistency")}
+            </span>
+          </p>
+
+          {ritmoNext.nextLevel && ritmoNext.remainingPercent !== null ? (
+            <p className="text-xs text-cyan-200/85">
+              Próximo nível: {formatThermalLevelWithContext(ritmoNext.nextLevel, "consistency")}. Faltam{" "}
+              {Math.ceil(ritmoNext.remainingPercent)} pontos percentuais.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

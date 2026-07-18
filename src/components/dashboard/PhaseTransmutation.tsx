@@ -31,6 +31,13 @@ type PhaseTransmutationProps = {
   holdForVoice?: boolean;
   /** A narração da ANYMA terminou (ou falhou/foi cancelada). */
   voiceSettled?: boolean;
+  /** ANYMA já começou a narrar (`speaking`) — reforça o texto na tela. */
+  voiceStarted?: boolean;
+  /**
+   * Cue no disparo do ritual: o host deve disparar `igniteVoice` imediatamente
+   * para voz e texto nascerem juntos no início da transmutação.
+   */
+  onReadyForVoice?: () => void;
 };
 
 type TransmutationAct = "pulse" | "reveal" | "hold" | "fade";
@@ -55,7 +62,6 @@ function phaseIrisCssVars(phaseTier: PhaseTier): CSSProperties {
     "--phase-transmutation-ms": `${PHASE_TRANSMUTATION_MS}ms`,
     "--phase-transmutation-fade-ms": `${PHASE_TRANSMUTATION_FADE_MS}ms`,
     "--phase-transmutation-reveal-ms": `${PHASE_TRANSMUTATION_REVEAL_MS}ms`,
-    "--phase-eye-size": PHASE_TRANSMUTATION_IRIS.eyeSize,
   } as CSSProperties;
 }
 
@@ -353,12 +359,15 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
   ariaLabel = "Transmutação da linhagem",
   holdForVoice = false,
   voiceSettled = false,
+  voiceStarted = false,
+  onReadyForVoice,
 }: PhaseTransmutationProps) {
   const [act, setAct] = useState<TransmutationAct>("pulse");
   const [canSkip, setCanSkip] = useState(false);
   /** Coreografia mínima concluída (pulse → reveal → hold), garante o ritual completo. */
   const [choreographyDone, setChoreographyDone] = useState(false);
   const dismissedRef = useRef(false);
+  const voiceCueSentRef = useRef(false);
   const tierLabel = PHASE_TIER_LABELS[phaseTier] ?? PHASE_TIER_LABELS[1];
 
   const dismiss = useCallback(() => {
@@ -388,6 +397,13 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [dismiss, holdForVoice]);
 
+  /** No disparo do ritual — voz e texto começam juntos, sem esperar o olho abrir. */
+  useEffect(() => {
+    if (voiceCueSentRef.current) return;
+    voiceCueSentRef.current = true;
+    onReadyForVoice?.();
+  }, [onReadyForVoice]);
+
   /**
    * Com voz ativa, o fade só dispara quando a ANYMA termina a narração e a
    * coreografia mínima já rodou — assim o ritual dura exatamente até a fala acabar.
@@ -403,71 +419,65 @@ export const PhaseTransmutation = memo(function PhaseTransmutation({
     return () => window.clearTimeout(timer);
   }, [holdForVoice, voiceSettled, choreographyDone, dismiss]);
 
-  const showCopy = act === "reveal" || act === "hold" || act === "fade";
+  const revealReady = act === "reveal" || act === "hold" || act === "fade";
+  /** Com voz: texto no disparo. Sem voz: texto quando o olho abre. */
+  const showCopy = holdForVoice || revealReady;
+  const hasAnima = Boolean(animaSpeech);
 
   return (
     <div
-      className={`phase-transmutation-screen fixed inset-0 z-[120] min-h-dvh w-full bg-black px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] ${act === "fade" ? "phase-transmutation-fading" : ""}`}
+      className={`phase-transmutation-screen fixed inset-0 z-[120] w-full bg-black ${act === "fade" ? "phase-transmutation-fading" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={ariaLabel}
       data-act={act}
       data-tier={phaseTier}
+      data-has-anima={hasAnima ? "true" : "false"}
+      data-voice={voiceStarted ? "speaking" : holdForVoice ? "priming" : "off"}
       style={phaseIrisCssVars(phaseTier)}
     >
       <div className="phase-transmutation-vignette pointer-events-none absolute inset-0" aria-hidden="true" />
 
-      <div className="phase-transmutation-iris-anchor pointer-events-none absolute inset-0">
-        <div className="phase-phoenix-stage-wrap pointer-events-auto">
-          <PhoenixEyeStage act={act} phaseTier={phaseTier} />
-          <div className="phase-iris-genesis-flash-wrap" aria-hidden="true">
-            <div className="phase-iris-genesis-flash" />
+      <div className="phase-transmutation-stage">
+        <div className="phase-transmutation-iris-anchor">
+          <div className="phase-phoenix-stage-wrap">
+            <PhoenixEyeStage act={act} phaseTier={phaseTier} />
+            <div className="phase-iris-genesis-flash-wrap" aria-hidden="true">
+              <div className="phase-iris-genesis-flash" />
+            </div>
           </div>
+        </div>
+
+        <div
+          className={`phase-transmutation-copy-stack${showCopy ? " is-revealed" : ""}`}
+          aria-hidden={showCopy ? undefined : true}
+        >
+          <p className={`${PLASMA_TITLE} phase-transmutation-tier`}>
+            {tierLabel}
+          </p>
+          <p className="phase-transmutation-subline">{subline}</p>
+          <p className="phase-transmutation-copy">{copy}</p>
+          {animaSpeech ? (
+            <div className="phase-transmutation-anima-block">
+              <p className="phase-transmutation-anima-label">ANYMA FÊNIX</p>
+              <p className="phase-transmutation-anima">{animaSpeech}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 
-      <div
-        className={`phase-transmutation-copy-stack pointer-events-none absolute inset-x-0 z-[2] flex flex-col items-center gap-3 px-4 transition-opacity duration-[900ms] ease-out ${showCopy ? "opacity-100" : "opacity-0"}`}
-      >
-        <p
-          className={`${PLASMA_TITLE} phase-transmutation-tier text-[clamp(1.75rem,8vw,3.25rem)] font-semibold tracking-[0.18em] sm:tracking-[0.24em]`}
-        >
-          {tierLabel}
-        </p>
-        <p className="text-[10px] font-bold uppercase tracking-[0.38em] text-amber-500/75">
-          {subline}
-        </p>
-        <p className="phase-transmutation-copy mt-2 max-w-2xl text-center font-serif text-[clamp(0.62rem,2.2vw,0.82rem)] font-semibold uppercase leading-relaxed tracking-[0.2em] text-amber-100/90 sm:tracking-[0.26em]">
-          {copy}
-        </p>
-        {animaSpeech ? (
-          <>
-            <p className="mt-3 text-[9px] font-bold uppercase tracking-[0.34em] text-amber-500/70">
-              ANYMA FÊNIX
-            </p>
-            <p className="phase-transmutation-anima pointer-events-auto mt-1 max-h-[38dvh] max-w-xl overflow-y-auto text-center font-serif text-[clamp(0.72rem,2.6vw,0.95rem)] font-medium normal-case leading-relaxed tracking-[0.02em] text-amber-50/90">
-              {animaSpeech}
-            </p>
-          </>
-        ) : null}
-      </div>
-
-      <div
-        className="phase-transmutation-progress pointer-events-none absolute inset-x-[max(1.5rem,env(safe-area-inset-left))] bottom-[max(1rem,env(safe-area-inset-bottom))] h-px overflow-hidden rounded-full bg-white/5"
-        aria-hidden="true"
-      >
-        <div className="phase-transmutation-progress-bar h-full origin-left bg-gradient-to-r from-orange-600/60 via-amber-400/80 to-amber-200/90" />
-      </div>
-
-      {canSkip ? (
-        <button
-          type="button"
-          onClick={dismiss}
-          className="absolute bottom-[max(2.25rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-[3] rounded-full border border-orange-500/25 bg-black/60 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.22em] text-amber-200/80 backdrop-blur-sm transition hover:border-amber-400/40 hover:text-amber-50"
-        >
-          Continuar
-        </button>
-      ) : null}
+      <footer className="phase-transmutation-footer">
+        <div className="phase-transmutation-progress" aria-hidden="true">
+          <div className="phase-transmutation-progress-bar" />
+        </div>
+        {canSkip ? (
+          <button type="button" onClick={dismiss} className="phase-transmutation-skip">
+            Continuar
+          </button>
+        ) : (
+          <span className="phase-transmutation-skip-spacer" aria-hidden="true" />
+        )}
+      </footer>
     </div>
   );
 });

@@ -9,7 +9,7 @@ type AppShellProps = {
 export function AppShell({ children, className = "" }: AppShellProps) {
   return (
     <div className={`relative min-h-dvh bg-black text-white ${className}`}>
-      <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</div>
+      <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</div>
       <Suspense fallback={null}>
         <FenyxiaAppNav />
       </Suspense>

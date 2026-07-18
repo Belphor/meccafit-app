@@ -14,8 +14,11 @@ export type VideoModalProps = {
 export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: VideoModalProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playableUrl = useMemo(() => toPlayableVideoUrl(videoUrl), [videoUrl]);
-  const sourceKind = resolveVideoSourceKind(playableUrl);
+  const playableUrl = useMemo(
+    () => toPlayableVideoUrl(videoUrl, { autoplay: true }),
+    [videoUrl],
+  );
+  const sourceKind = resolveVideoSourceKind(videoUrl);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -31,12 +34,20 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
     closeButtonRef.current?.focus();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    if (video && sourceKind === "html5") {
+      video.muted = true;
+      void video.play().catch(() => {
+        /* Autoplay pode ser bloqueado; o usuário ainda tem controls. */
+      });
+    }
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = previousOverflow;
       video?.pause();
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen, handleKeyDown, sourceKind, playableUrl]);
 
   if (!isOpen) return null;
 
@@ -49,7 +60,7 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-md max-sm:portrait:items-end max-sm:portrait:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-4"
       role="presentation"
       onClick={onClose}
     >
@@ -57,15 +68,18 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
         open
         aria-labelledby="video-modal-title"
         aria-modal="true"
-        className={`${VIDEO_MODAL_PANEL} relative m-0 flex w-full max-w-2xl flex-col gap-3 p-4 sm:gap-4 sm:p-5`}
+        className={`${VIDEO_MODAL_PANEL} relative m-0 flex max-h-[min(100dvh,100%)] w-full max-w-2xl flex-col gap-3 overflow-y-auto p-4 sm:gap-4 sm:p-5 max-sm:landscape:max-w-4xl max-sm:landscape:flex-row max-sm:landscape:items-stretch max-sm:landscape:gap-3 max-sm:landscape:p-3`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 shrink-0 items-center justify-between gap-2 max-sm:landscape:w-44 max-sm:landscape:flex-col max-sm:landscape:items-stretch max-sm:landscape:justify-start">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-500/80">
               {sourceLabel}
             </p>
-            <h2 id="video-modal-title" className="min-w-0 truncate font-serif text-lg text-white sm:text-xl">
+            <h2
+              id="video-modal-title"
+              className="min-w-0 truncate font-serif text-lg text-white sm:text-xl max-sm:landscape:whitespace-normal max-sm:landscape:text-base"
+            >
               {exerciseName}
             </h2>
           </div>
@@ -80,7 +94,7 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
           </button>
         </div>
 
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-orange-500/15 bg-black">
+        <div className="relative aspect-video w-full min-h-0 flex-1 overflow-hidden rounded-xl border border-orange-500/15 bg-black max-h-[min(70dvh,480px)] max-sm:landscape:aspect-auto max-sm:landscape:h-[min(78dvh,360px)] max-sm:landscape:max-h-none">
           {!playableUrl ? (
             <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
               <p className="text-sm text-neutral-400">
@@ -94,7 +108,9 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
               src={playableUrl}
               controls
               playsInline
-              preload="metadata"
+              autoPlay
+              muted
+              preload="auto"
               className="absolute inset-0 size-full object-contain"
               title={`Execução: ${exerciseName}`}
             />
@@ -114,10 +130,10 @@ export default function VideoModal({ isOpen, exerciseName, videoUrl, onClose }: 
             </div>
           ) : (
             <iframe
+              key={playableUrl}
               src={playableUrl}
               title={`Execução: ${exerciseName}`}
               className="absolute inset-0 size-full border-0"
-              loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen

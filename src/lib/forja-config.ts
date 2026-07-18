@@ -41,10 +41,10 @@ export const FORJA_TABLE_COMUM_BADGE =
   "inline-block rounded border border-slate-700/45 bg-slate-950/45 px-1 py-px text-[9px] font-medium uppercase tracking-wide text-slate-500";
 
 export const FORJA_COMMAND_PANEL =
-  "relative min-h-[min(72vh,720px)] rounded-2xl border border-zinc-800/90 bg-zinc-900/25 p-5 backdrop-blur-md sm:p-6 lg:p-8";
+  "relative min-h-0 rounded-2xl border border-zinc-800/90 bg-zinc-900/25 p-3 backdrop-blur-md sm:min-h-[min(72vh,720px)] sm:p-5 md:p-6 lg:p-8";
 
 export const FORJA_COMMAND_INNER =
-  "rounded-xl border border-zinc-800/80 bg-black/35 p-4 sm:p-5";
+  "rounded-xl border border-zinc-800/80 bg-black/35 p-3 sm:p-5";
 
 export const FORJA_SECTION_CHIP =
   "text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500";
@@ -59,7 +59,7 @@ export const FORJA_LABEL =
   "mb-1.5 block text-xs font-medium text-zinc-400";
 
 export const FORJA_INPUT =
-  "w-full rounded-xl border border-zinc-800 bg-black/60 px-4 py-2.5 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600/40 disabled:cursor-not-allowed disabled:opacity-50";
+  "w-full rounded-xl border border-zinc-800 bg-black/60 px-4 py-2.5 text-base text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600/40 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm";
 
 export const FORJA_PRIMARY_BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-xl border border-zinc-600 bg-zinc-100 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45";
@@ -79,7 +79,7 @@ export const FORJA_SIDEBAR_SCROLL =
   "max-h-[min(72vh,720px)] space-y-2 overflow-y-auto pr-1 lg:pr-2";
 
 export const FORJA_EMPTY_STATE =
-  "flex min-h-[min(48vh,480px)] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800/90 bg-black/20 px-6 py-12 text-center";
+  "flex min-h-0 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-800/90 bg-black/20 px-4 py-8 text-center md:min-h-[min(48vh,480px)] md:px-6 md:py-12";
 
 export const FORJA_FEEDBACK_OK =
   "mt-4 rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-300";

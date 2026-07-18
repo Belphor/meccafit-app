@@ -212,7 +212,81 @@ export function ScientificMetricsTable({
         </div>
       </form>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-zinc-800/80">
+      <div className="mt-6 space-y-3 md:hidden">
+        {sortedEntries.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-zinc-800/80 px-3 py-8 text-center text-zinc-500">
+            {FORJA_COPY.medidas.emptyHistory}
+          </p>
+        ) : (
+          sortedEntries.map((entry) => (
+            <article
+              key={entry.id}
+              className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 px-3 py-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="tabular-nums text-sm text-zinc-200">
+                  {formatScientificDate(entry.measuredAt)}
+                  {entry.syncedAt ? (
+                    <span className="ml-2 text-[10px] text-emerald-400/80">pub.</span>
+                  ) : null}
+                </p>
+                {allowDelete && onDeleteEntry ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteEntry(entry.id)}
+                    className={`${FORJA_GHOST_BUTTON} ${TOUCH_BUTTON} px-3 text-[11px] text-red-300/90`}
+                  >
+                    Remover
+                  </button>
+                ) : null}
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
+                <div>
+                  <dt className="text-zinc-600">Peso</dt>
+                  <dd className="tabular-nums text-zinc-100">
+                    {formatScientificNumber(entry.weightKg)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-600">Gordura</dt>
+                  <dd className="tabular-nums text-zinc-300">
+                    {formatScientificNumber(entry.bodyFatPct)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-600">M. magra</dt>
+                  <dd className="tabular-nums text-zinc-300">
+                    {formatScientificNumber(entry.leanMassKg)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-600">Total dobras</dt>
+                  <dd className="tabular-nums font-medium text-zinc-200">
+                    {formatScientificNumber(sumScientificSkinfolds(entry.skinfolds))}
+                  </dd>
+                </div>
+              </dl>
+              <div className="mt-3 border-t border-zinc-900/80 pt-2">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+                  Dobras
+                </p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
+                  {SCIENTIFIC_SKINFOLD_IDS.map((id) => (
+                    <div key={id} className="min-w-0">
+                      <dt className="truncate text-zinc-600">{SCIENTIFIC_SKINFOLD_LABELS[id]}</dt>
+                      <dd className="tabular-nums text-zinc-400">
+                        {formatScientificNumber(entry.skinfolds[id])}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className="mt-6 hidden overflow-x-auto rounded-xl border border-zinc-800/80 md:block">
         <table className="min-w-[72rem] w-full border-collapse text-left text-xs sm:text-sm">
           <thead className="bg-zinc-950/90 text-[10px] uppercase tracking-[0.16em] text-zinc-500">
             <tr>

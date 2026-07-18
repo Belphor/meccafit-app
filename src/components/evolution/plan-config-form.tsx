@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrasaVivaCard } from "@/components/BrasaVivaCard";
 import { DashboardPanelHeader } from "@/components/dashboard/DashboardPanelHeader";
 import {
@@ -21,7 +21,11 @@ import {
   resolveDaysUntilCycleResetSp,
 } from "@/lib/meta-sync-calendar";
 import { LoreEm } from "@/lib/lore-emphasis";
-import { publishPlanMetaSynced } from "@/lib/plan-meta-tour";
+import {
+  PLAN_META_SYNC_REQUEST_EVENT,
+  publishPlanMetaSynced,
+} from "@/lib/plan-meta-tour";
+import { useTourHighlightActive } from "@/lib/use-tour-highlight";
 import { VTC_DISPLAY_NAME, formatVtcKg } from "@/lib/vtc-labels";
 
 export const PLAN_SESSIONS_MIN = 4;
@@ -84,7 +88,7 @@ function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderPro
 
   return (
     <div className="mt-5 space-y-3">
-      <div className="relative h-2 rounded-full bg-neutral-900 ring-1 ring-orange-500/10">
+      <div className="relative h-3 rounded-full bg-neutral-900 ring-1 ring-orange-500/20">
         <div
           className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-600/35 via-emerald-500/55 to-amber-500/45 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
           style={{ width: `${fillPercent}%` }}
@@ -98,7 +102,7 @@ function PlanSessionsSlider({ value, disabled, onChange }: PlanSessionsSliderPro
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-emerald-200/70 [&::-moz-range-thumb]:bg-emerald-400 [&::-moz-range-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)] [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-emerald-200/70 [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)]"
+          className="absolute inset-x-0 top-1/2 h-12 w-full -translate-y-1/2 cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed disabled:opacity-50 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-emerald-200/70 [&::-moz-range-thumb]:bg-emerald-400 [&::-moz-range-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)] [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-emerald-200/70 [&::-webkit-slider-thumb]:bg-emerald-400 [&::-webkit-slider-thumb]:shadow-[0_0_14px_rgba(16,185,129,0.55)]"
           aria-valuemin={PLAN_SESSIONS_MIN}
           aria-valuemax={PLAN_SESSIONS_MAX}
           aria-valuenow={value}
@@ -133,6 +137,8 @@ export function PlanConfigForm({
   const syncLocked = syncedThisMonth;
   const cycleResetMessage = buildMetaSyncLockedMessagePt();
   const monthLengthHint = buildMonthLengthHintPt();
+  /** Tour "Defina sua meta": layout compacto para caber título + barra de dias + sync. */
+  const metaTourActive = useTourHighlightActive("evolucao-meta");
 
   const hasLocalChanges = useMemo(
     () => !planStatesEqual(draft, syncedBaseline),
@@ -211,48 +217,72 @@ export function PlanConfigForm({
 
   const isSyncing = phase === "syncing";
 
+  useEffect(() => {
+    const onTourSyncRequest = () => {
+      if (isSyncing || syncLocked) return;
+      void handleSync();
+    };
+    window.addEventListener(PLAN_META_SYNC_REQUEST_EVENT, onTourSyncRequest);
+    return () => window.removeEventListener(PLAN_META_SYNC_REQUEST_EVENT, onTourSyncRequest);
+  }, [handleSync, isSyncing, syncLocked]);
+
   const content = (
     <>
       {!embedded ? (
         <DashboardPanelHeader chip="Meta de treino" meta="Evolução e consistência" />
       ) : null}
 
-      <header className={`${embedded ? "mt-4" : "mt-4 border-b border-orange-500/10 pb-5 sm:pb-6"}`}>
+      <header
+        className={`${embedded ? "mt-2" : "mt-4 border-b border-orange-500/10 pb-5 sm:pb-6"} ${metaTourActive ? "pb-0" : ""}`}
+      >
         <h2 id="plan-config-title" className={DASHBOARD_SECTION_TITLE}>
           {embedded ? "Defina sua meta de treino" : "Quantos dias você vai treinar"}
         </h2>
-        <p className={`mt-2 max-w-prose ${EVOLUTION_SECTION_SUBTITLE}`}>
-          {embedded ? (
-            <>
-              <strong className="font-bold tracking-[0.04em] text-amber-50">COMECE POR AQUI</strong>
-              <br />
-              Defina quantos dias você pretende treinar nos próximos 30 dias. Esse compromisso vira a
-              meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do <LoreEm>Ritmo da Fênix</LoreEm>.
-            </>
-          ) : (
-            <>
-              Defina quantos dias você pretende treinar nos próximos 30 dias. Esse plano calcula a meta
-              mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do <LoreEm>Ritmo da Fênix</LoreEm>; o mapa
-              corporal reage a esse ritmo. Sincronize uma vez por mês civil ({currentMonthLabel},
-              horário de Brasília).
-            </>
-          )}
-        </p>
-        <p className={`mt-2 ${EVOLUTION_HINT}`}>{monthLengthHint}</p>
-        {!syncedThisMonth ? (
-          <p className="mt-3 rounded-lg border border-amber-500/25 bg-amber-950/25 px-3 py-2.5 text-sm leading-relaxed text-amber-100">
-            Você ainda não sincronizou a meta de {currentMonthLabel}. Ajuste o valor e toque em
-            Sincronizar meta.
+        {metaTourActive ? (
+          <p className={`mt-2 max-w-prose ${EVOLUTION_SECTION_SUBTITLE}`}>
+            Escolha os dias no slider e sincronize a meta.
           </p>
         ) : (
-          <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2.5 text-sm leading-relaxed text-emerald-100">
-            Meta sincronizada para {currentMonthLabel}. {cycleResetMessage}
-          </p>
+          <>
+            <p className={`mt-2 max-w-prose ${EVOLUTION_SECTION_SUBTITLE}`}>
+              {embedded ? (
+                <>
+                  Defina quantos dias você pretende treinar nos próximos 30 dias. Esse compromisso vira
+                  a meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do{" "}
+                  <LoreEm>Ritmo da Fênix</LoreEm>.
+                </>
+              ) : (
+                <>
+                  Defina quantos dias você pretende treinar nos próximos 30 dias. Esse plano calcula a
+                  meta mensal de <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> do{" "}
+                  <LoreEm>Ritmo da Fênix</LoreEm>; o mapa corporal reage a esse ritmo. Sincronize uma
+                  vez por mês civil ({currentMonthLabel}, horário de Brasília).
+                </>
+              )}
+            </p>
+            <p className={`mt-2 ${EVOLUTION_HINT}`}>{monthLengthHint}</p>
+            {!syncedThisMonth ? (
+              <p className="mt-3 rounded-lg border border-amber-500/25 bg-amber-950/25 px-3 py-2.5 text-sm leading-relaxed text-amber-100">
+                Você ainda não sincronizou a meta de {currentMonthLabel}. Ajuste o valor e toque em
+                Sincronizar meta.
+              </p>
+            ) : (
+              <p className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-950/20 px-3 py-2.5 text-sm leading-relaxed text-emerald-100">
+                Meta sincronizada para {currentMonthLabel}. {cycleResetMessage}
+              </p>
+            )}
+          </>
         )}
       </header>
 
-      <div className={`${embedded ? "mt-5" : "mt-6"} space-y-6 ${DASHBOARD_INNER_FRAME}`}>
-        <section aria-labelledby="plan-sessions-label" className="space-y-3">
+      <div
+        className={`${embedded || metaTourActive ? "mt-4" : "mt-6"} space-y-6 ${DASHBOARD_INNER_FRAME}`}
+      >
+        <section
+          aria-labelledby="plan-sessions-label"
+          className="space-y-3"
+          data-tour-anchor="plan-sessions-slider"
+        >
           <p id="plan-sessions-label" className="text-sm leading-relaxed text-neutral-300">
             Dias de treino planejados: {draft.totalTreinosMensaisPlanejados}
             <span className="text-neutral-500">
@@ -268,17 +298,18 @@ export function PlanConfigForm({
           />
         </section>
 
-        {estimatedMetaVtcMensalKg ? (
+        {!metaTourActive && estimatedMetaVtcMensalKg ? (
           <p className="text-sm leading-relaxed text-neutral-400">
             Meta estimada do <LoreEm>Ritmo da Fênix</LoreEm>:{" "}
             <span className="font-mono font-semibold text-amber-100">
               {formatVtcKg(estimatedMetaVtcMensalKg)}
-            </span>{"."} A referência é o limiar Faísca da academia para 16 treinos; planos menores respeitam uma
-            meta mínima para manter a forja justa.
+            </span>
+            {"."} A referência é o limiar Faísca da academia para 16 treinos; planos menores
+            respeitam uma meta mínima para manter a forja justa.
           </p>
         ) : null}
 
-        {!embedded ? (
+        {!embedded && !metaTourActive ? (
           <p className="text-sm leading-relaxed text-neutral-400">
             <LoreEm>Ritmo da Fênix</LoreEm> mede quanto da sua meta mensal de{" "}
             <LoreEm>{VTC_DISPLAY_NAME}</LoreEm> você já acumulou. A meta nasce dos dias planejados, e
@@ -288,7 +319,7 @@ export function PlanConfigForm({
       </div>
 
       <footer
-        className={`flex flex-col gap-3 ${embedded ? "mt-5 px-4 pb-5 sm:px-5" : "mt-6 border-t border-orange-500/10 pt-5"} sm:flex-row sm:items-center sm:justify-between`}
+        className={`flex flex-col gap-3 ${embedded || metaTourActive ? "mt-4 pb-2" : "mt-6 border-t border-orange-500/10 pt-5"} sm:flex-row sm:items-center sm:justify-between`}
       >
         <div className="min-w-0 flex-1">
           {feedback ? (
@@ -299,7 +330,7 @@ export function PlanConfigForm({
             >
               {feedback}
             </p>
-          ) : hasLocalChanges ? (
+          ) : metaTourActive ? null : hasLocalChanges ? (
             <p className="text-sm text-amber-200">Alterações aguardando sincronização.</p>
           ) : syncLocked ? (
             <p className={EVOLUTION_HINT}>
@@ -315,6 +346,7 @@ export function PlanConfigForm({
           type="button"
           disabled={isSyncing || syncLocked}
           onClick={() => void handleSync()}
+          data-tour-action="sincronizar-meta"
           className={`${DASHBOARD_TAP_TARGET} min-h-11 w-full shrink-0 rounded-full border border-emerald-500/30 bg-neutral-950/75 px-6 py-2.5 text-xs font-semibold text-emerald-100 transition hover:shadow-[0_0_16px_rgba(16,185,129,0.28)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-[13rem] sm:w-auto`}
         >
           {isSyncing ? (
@@ -338,9 +370,10 @@ export function PlanConfigForm({
   if (embedded) {
     return (
       <div
-        className="px-4 pt-1 sm:px-5"
+        className="px-1 pt-1 sm:px-2"
         aria-labelledby="plan-config-title"
         data-tour-target="evolucao-meta"
+        data-tour-spotlight="full"
         data-meta-synced={syncedThisMonth ? "true" : "false"}
       >
         {content}
@@ -355,6 +388,7 @@ export function PlanConfigForm({
       className={DASHBOARD_PANEL_FRAME}
       aria-labelledby="plan-config-title"
       data-tour-target="evolucao-meta"
+      data-tour-spotlight="full"
       data-meta-synced={syncedThisMonth ? "true" : "false"}
     >
       {content}

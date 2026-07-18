@@ -186,7 +186,100 @@ function ForjaVtcFeedPanelComponent({
           </p>
         ) : (
           <>
-            <div className="mt-4 overflow-x-auto">
+            <ul className="mt-4 space-y-2 md:hidden">
+              {pageEntries.map((entry) => {
+                const effectiveTier = resolveEffectivePhaseTier(entry.phaseTier, entry.vtc30d);
+                const thermal = resolveForjaThermalStyle(effectiveTier);
+                const mismatch = hasPhaseTierMismatch(entry.phaseTier, entry.vtc30d);
+                const isSelected = selectedClientId === entry.clientId;
+                const isVip = entry.hasVipBond ?? vipBondByClientId[entry.clientId] ?? false;
+                const alertSeverity =
+                  clientAlertSeverity[entry.clientId] ??
+                  (mismatch ? ("warn" as const) : entry.alertSpike ? ("warn" as const) : null);
+                const alertLabel = resolveFeedAlertLabel(alertSeverity, {
+                  mismatch,
+                  spike: entry.alertSpike,
+                });
+                const accessDisplay = resolveAccountAccessDisplay(entry.statusAltar);
+
+                return (
+                  <li key={entry.clientId}>
+                    <button
+                      type="button"
+                      className={[
+                        "w-full rounded-xl border px-3 py-3 text-left transition",
+                        resolveRowAlertClass(alertSeverity, isSelected),
+                        !alertSeverity && !isSelected ? "border-zinc-800/80 bg-zinc-950/40" : "",
+                        onSelectClient ? "cursor-pointer" : "cursor-default",
+                      ].join(" ")}
+                      onClick={onSelectClient ? () => onSelectClient(entry.clientId) : undefined}
+                      aria-current={isSelected ? "true" : undefined}
+                      aria-label={`Ver detalhes de ${entry.displayName}`}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="min-w-0 flex-1 break-words font-medium text-zinc-100">
+                          {entry.displayName}
+                        </p>
+                        <span className={isVip ? FORJA_TABLE_VIP_BADGE : FORJA_TABLE_COMUM_BADGE}>
+                          {isVip ? FORJA_COPY.athleteVipBadge : FORJA_COPY.athleteStandardBadge}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-1.5 text-[10px]">
+                        {alertLabel ? (
+                          <span
+                            className={
+                              alertSeverity === "critical"
+                                ? "rounded bg-red-900/45 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-red-200/90"
+                                : "rounded bg-amber-900/40 px-1.5 py-0.5 font-semibold uppercase tracking-wide text-amber-200/90"
+                            }
+                          >
+                            {alertLabel}
+                          </span>
+                        ) : null}
+                        <span className="text-zinc-600">
+                          {entry.isOwnClient
+                            ? FORJA_COPY.monitor.vtcOwnClient
+                            : FORJA_COPY.monitor.vtcOtherClient}
+                        </span>
+                      </div>
+                      <p className="mt-2 break-words text-[11px] text-zinc-400">
+                        {entry.forgerName && entry.forgerName !== "Sem dado"
+                          ? entry.forgerName
+                          : "Sem Forjador"}
+                      </p>
+                      <dl className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                        <div>
+                          <dt className="text-zinc-600">{FORJA_COPY.monitor.vtcColToday}</dt>
+                          <dd className="tabular-nums font-medium text-zinc-100">
+                            {formatVtc(entry.vtcToday)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-zinc-600">{FORJA_COPY.monitor.vtcColAvg7d}</dt>
+                          <dd className="tabular-nums text-zinc-400">{formatVtc(entry.vtcAvg7d)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-zinc-600">{FORJA_COPY.monitor.vtcCol30d}</dt>
+                          <dd className="tabular-nums text-zinc-400">{formatVtc(entry.vtc30d)}</dd>
+                        </div>
+                      </dl>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-medium ${resolveForjaChipClass(effectiveTier)}`}
+                        >
+                          {thermal.label}
+                        </span>
+                        <span className={resolveAccessBadgeClass(accessDisplay.tone)}>
+                          {accessDisplay.label}
+                        </span>
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="mt-4 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800/80 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
@@ -306,14 +399,14 @@ function ForjaVtcFeedPanelComponent({
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <p className={`${FORJA_META} text-zinc-500`}>
                 {FORJA_COPY.monitor.vtcFeedPageLabel(safePage, totalPages, filteredEntries.length)}
               </p>
-              <div className="flex gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <button
                   type="button"
-                  className={FORJA_GHOST_BUTTON}
+                  className={`${FORJA_GHOST_BUTTON} w-full sm:w-auto`}
                   disabled={safePage <= 1}
                   onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 >
@@ -321,7 +414,7 @@ function ForjaVtcFeedPanelComponent({
                 </button>
                 <button
                   type="button"
-                  className={FORJA_GHOST_BUTTON}
+                  className={`${FORJA_GHOST_BUTTON} w-full sm:w-auto`}
                   disabled={safePage >= totalPages}
                   onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
                 >

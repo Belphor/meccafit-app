@@ -410,7 +410,19 @@ export function AcademiaConfigPanel({ isSovereign }: AcademiaConfigPanelProps) {
         ) : null}
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+          <ul className="space-y-2 md:hidden">
+            {phasePreview.map((row) => (
+              <li
+                key={row.tier}
+                className="rounded-lg border border-zinc-800/80 bg-zinc-950/40 px-3 py-2.5"
+              >
+                <p className="text-[11px] text-zinc-400">Fase {row.tier}</p>
+                <p className="font-medium text-zinc-100">{row.label}</p>
+                <p className="mt-1 break-words text-[12px] text-zinc-400">{row.vtcRangeLabel}</p>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden w-full min-w-[520px] border-collapse text-left text-sm md:table">
             <thead>
               <tr className="border-b border-zinc-800/80 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 <th className="px-2 py-2">Fase</th>

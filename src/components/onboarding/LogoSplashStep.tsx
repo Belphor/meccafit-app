@@ -57,7 +57,7 @@ export function LogoSplashStep({ onComplete }: LogoSplashStepProps) {
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute inset-x-[-20%] bottom-[-28%] h-[52vh] bg-gradient-to-t from-sky-950/20 via-blue-900/10 to-transparent blur-3xl"
+        className="pointer-events-none absolute inset-x-[-20%] bottom-[-28%] h-[52dvh] bg-gradient-to-t from-sky-950/20 via-blue-900/10 to-transparent blur-3xl"
         aria-hidden="true"
       />
 
@@ -107,7 +107,7 @@ export function LogoSplashStep({ onComplete }: LogoSplashStepProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.28, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="bg-gradient-to-r from-sky-100 via-white to-orange-200 bg-clip-text text-4xl font-black uppercase tracking-[0.36em] text-transparent drop-shadow-[0_0_22px_rgba(125,211,252,0.45),0_0_48px_rgba(56,189,248,0.28)] sm:text-5xl sm:tracking-[0.4em]">
+          <p className="bg-gradient-to-r from-sky-100 via-white to-orange-200 bg-clip-text pl-[0.22em] text-[clamp(2rem,10vw,2.25rem)] font-black uppercase tracking-[0.22em] text-transparent drop-shadow-[0_0_22px_rgba(125,211,252,0.45),0_0_48px_rgba(56,189,248,0.28)] xs:tracking-[0.36em] sm:text-5xl sm:tracking-[0.4em]">
             FENYXIA
           </p>
           <p className="text-[11px] font-bold uppercase tracking-[0.34em] text-sky-300/70 sm:text-xs">

@@ -10,9 +10,11 @@ export function buildContentSecurityPolicy(nonce: string): string {
   const scriptSrc = isProd
     ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
     : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`;
+  // `blob:` é necessário para o ImageBitmapLoader do GLTFLoader (three), que faz
+  // `fetch()` em blob: URLs das texturas embutidas no GLB — fetch é regido por connect-src.
   const connectSrc = isProd
-    ? "connect-src 'self' https://*.supabase.co wss://*.supabase.co"
-    : "connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://127.0.0.1:* ws://localhost:* http://127.0.0.1:* http://localhost:*";
+    ? "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co"
+    : "connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co ws://127.0.0.1:* ws://localhost:* http://127.0.0.1:* http://localhost:*";
 
   const directives = [
     "default-src 'self'",

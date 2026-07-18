@@ -35,6 +35,7 @@ import { supabase } from "@/lib/supabase";
 import { EvolutionLevelsTable } from "@/components/evolution/EvolutionLevelsTable";
 import { SelfieComparison } from "@/components/evolution/selfie-comparison";
 import type { PhaseTier } from "@/lib/dashboard-config";
+import { useTourHighlightActive } from "@/lib/use-tour-highlight";
 import { VTC_DISPLAY_NAME } from "@/lib/vtc-labels";
 
 const EvolucaoSelfiePanel = dynamic(
@@ -267,6 +268,9 @@ export function EvolucaoPageClient({
   }, []);
 
   const Wrapper = variant === "page" ? "div" : "main";
+  // Apresentação completa e "Pular": no beat da meta, esconde o restante da aba
+  // para o spotlight cobrir o card inteiro e a barra de dias ficar visível.
+  const metaTourActive = useTourHighlightActive("evolucao-meta");
 
   return (
     <Wrapper className="space-y-5">
@@ -296,31 +300,40 @@ export function EvolucaoPageClient({
       />
 
       {/* 2. Chama acumulada — fase da linhagem */}
-      <BrasaVivaCard
-        as="section"
-        variant="treino"
-        className={DASHBOARD_PANEL_FRAME}
-        aria-labelledby="evolucao-linhagem-title"
-        data-tour-target="evolucao-chama"
+      <div
+        className={
+          metaTourActive
+            ? "pointer-events-none max-h-0 overflow-hidden opacity-0"
+            : undefined
+        }
+        aria-hidden={metaTourActive || undefined}
       >
-        <DashboardPanelHeader chip="Linhagem" meta={`${VTC_DISPLAY_NAME} acumulado · 30 dias`} />
-        <EvolutionChamaAcumuladaCard
-          userId={userId}
-          loading={loading}
-          dataReady={evolutionReady}
-          indiceIgnicao={indiceIgnicao}
-          calorRows={calorRows}
-          phaseTier={displayPhaseTier}
-          vtc30dKg={vtc30dKg}
-          thermalState={thermalStateWithSettlement}
-          monthBoundaryDegraded={monthBoundaryDegraded}
-          profileName={profileName}
-          profilePhotoUrl={profilePhotoUrl}
-          purityPenaltyActive={purityPenaltyActive}
-        />
-      </BrasaVivaCard>
+        <BrasaVivaCard
+          as="section"
+          variant="treino"
+          className={DASHBOARD_PANEL_FRAME}
+          aria-labelledby="evolucao-linhagem-title"
+          data-tour-target="evolucao-chama"
+        >
+          <DashboardPanelHeader chip="Linhagem" meta={`${VTC_DISPLAY_NAME} acumulado · 30 dias`} />
+          <EvolutionChamaAcumuladaCard
+            userId={userId}
+            loading={loading}
+            dataReady={evolutionReady}
+            indiceIgnicao={indiceIgnicao}
+            calorRows={calorRows}
+            phaseTier={displayPhaseTier}
+            vtc30dKg={vtc30dKg}
+            thermalState={thermalStateWithSettlement}
+            monthBoundaryDegraded={monthBoundaryDegraded}
+            profileName={profileName}
+            profilePhotoUrl={profilePhotoUrl}
+            purityPenaltyActive={purityPenaltyActive}
+          />
+        </BrasaVivaCard>
+      </div>
 
-      {showSelfie ? (
+      {showSelfie && !metaTourActive ? (
         <BrasaVivaCard as="section" variant="treino" className={DASHBOARD_PANEL_FRAME}>
           <EvolucaoSelfiePanel
             onCapture={handleSelfieCaptured}
@@ -330,50 +343,61 @@ export function EvolucaoPageClient({
       ) : null}
 
       {/* 4. Espelho visual — comparativo opcional */}
-      <BrasaVivaCard
-        as="section"
-        variant="treino"
-        className={DASHBOARD_PANEL_FRAME}
-        data-tour-target="evolucao-espelho"
+      <div
+        className={
+          metaTourActive
+            ? "pointer-events-none max-h-0 overflow-hidden opacity-0"
+            : undefined
+        }
+        aria-hidden={metaTourActive || undefined}
       >
-        <DashboardPanelHeader chip="Espelho visual" meta="Comparação de ciclo" />
+        <BrasaVivaCard
+          as="section"
+          variant="treino"
+          className={DASHBOARD_PANEL_FRAME}
+          data-tour-target="evolucao-espelho"
+        >
+          <DashboardPanelHeader chip="Espelho visual" meta="Comparação de ciclo" />
 
-        <div className="mt-3 px-4 sm:px-5">
-          <p className={EVOLUTION_HINT}>
-            Compare selfies do primeiro dia e do último dia do mês para ver sua evolução física no
-            ciclo.
-          </p>
+          <div className="mt-3 px-1 sm:px-2">
+            <p className={EVOLUTION_HINT}>
+              Compare selfies do primeiro dia útil e do último dia do mês, no calendário de Brasília,
+              para ver sua evolução física no ciclo.
+            </p>
 
-          <button
-            type="button"
-            onClick={() => setEspelhoExpanded((open) => !open)}
-            className={`${DASHBOARD_TAP_TARGET} mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-neutral-950/50 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-400/35`}
-            aria-expanded={espelhoExpanded}
-            aria-controls="evolucao-espelho-panel"
-          >
-            {espelhoExpanded ? "Recolher comparação" : "Abrir comparação de ciclo"}
-          </button>
+            <button
+              type="button"
+              onClick={() => setEspelhoExpanded((open) => !open)}
+              className={`${DASHBOARD_TAP_TARGET} mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-500/20 bg-neutral-950/50 px-4 py-3 text-sm font-medium text-cyan-100 transition hover:border-cyan-400/35`}
+              aria-expanded={espelhoExpanded}
+              aria-controls="evolucao-espelho-panel"
+            >
+              {espelhoExpanded ? "Recolher comparação" : "Abrir comparação de ciclo"}
+            </button>
 
-          {espelhoExpanded ? (
-            <div id="evolucao-espelho-panel" className="mt-4 space-y-3">
-              <button
-                type="button"
-                onClick={() => setShowSelfie((open) => !open)}
-                className={`${EVOLUTION_ACTION_BUTTON} w-full border-cyan-500/20 text-cyan-100`}
-              >
-                {showSelfie ? "Fechar captura de selfie" : "Capturar selfie de ciclo"}
-              </button>
-              <SelfieComparison />
-            </div>
-          ) : null}
-        </div>
-      </BrasaVivaCard>
+            {espelhoExpanded ? (
+              <div id="evolucao-espelho-panel" className="mt-4 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowSelfie((open) => !open)}
+                  className={`${EVOLUTION_ACTION_BUTTON} w-full border-cyan-500/20 text-cyan-100`}
+                >
+                  {showSelfie ? "Fechar captura de selfie" : "Capturar selfie de ciclo"}
+                </button>
+                <SelfieComparison />
+              </div>
+            ) : null}
+          </div>
+        </BrasaVivaCard>
+      </div>
 
-      <EvolutionLevelsTable />
+      {metaTourActive ? null : <EvolutionLevelsTable />}
 
-      <p className={`px-1 text-center ${EVOLUTION_HINT}`}>
-        Dúvidas sobre {VTC_DISPLAY_NAME}? Consulte a referência e o suporte na aba Perfil.
-      </p>
+      {metaTourActive ? null : (
+        <p className={`px-1 text-center ${EVOLUTION_HINT}`}>
+          Dúvidas sobre {VTC_DISPLAY_NAME}? Consulte a referência e o suporte na aba Perfil.
+        </p>
+      )}
     </Wrapper>
   );
 }

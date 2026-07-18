@@ -233,17 +233,17 @@ export function AnymaPerfilIdentityGuide({
         placement="bottom"
         zIndex={127}
       >
-        <div className="rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-4 shadow-[0_0_32px_rgba(249,115,22,0.16)] backdrop-blur-xl">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/85">
+        <div className="anima-tour-card flex max-h-[min(80dvh,30rem)] w-full flex-col overflow-hidden rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-4 shadow-[0_0_32px_rgba(249,115,22,0.16)] backdrop-blur-xl">
+          <p className="shrink-0 text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300/85">
             {ANYMA_BRAND} · Perfil
           </p>
-          <p className="mt-2 text-sm text-amber-50/90">
+          <p className="mt-2 min-h-0 flex-1 overflow-y-auto text-sm text-amber-50/90">
             Abra a aba Perfil. A linha aponta onde você selará nome e gênero.
           </p>
           <button
             type="button"
             onClick={onEnsurePerfilTab}
-            className={`${DASHBOARD_TAP_TARGET} anima-acender-linhagem-cta mt-3 w-full rounded-full px-4 py-3 text-xs font-bold uppercase tracking-[0.16em]`}
+            className={`${DASHBOARD_TAP_TARGET} anima-acender-linhagem-cta mt-3 w-full shrink-0 rounded-full px-4 py-3 text-xs font-bold uppercase tracking-[0.16em]`}
           >
             Ir ao Perfil
           </button>
@@ -319,25 +319,25 @@ export function AnymaPerfilIdentityGuide({
       zIndex={127}
     >
       <div
-        className="rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-5 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl"
+        className="anima-tour-card flex max-h-[min(80dvh,30rem)] w-full flex-col overflow-hidden rounded-2xl border border-orange-500/25 bg-neutral-950/95 p-4 shadow-[0_0_40px_rgba(249,115,22,0.18)] backdrop-blur-xl sm:p-5"
         role="dialog"
         aria-modal="true"
         aria-label="Selo de identidade do Perfil"
       >
-        <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
+        <p className="shrink-0 text-[10px] font-bold uppercase tracking-[0.24em] text-amber-300/85">
           {ANYMA_BRAND} · Selo do Perfil · {beatIndex + 1}/{RETURNING_GUIDE_BEATS.length}
         </p>
-        <h2 className="mt-2 text-base font-semibold text-amber-50">{beat.title}</h2>
-        <p className="mt-3 max-h-[min(36vh,12rem)] overflow-y-auto text-sm leading-relaxed text-amber-50/90">
+        <h2 className="mt-2 shrink-0 text-base font-semibold text-amber-50">{beat.title}</h2>
+        <p className="mt-3 min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed text-amber-50/90">
           {speech}
         </p>
-        <p className="mt-3 text-[11px] text-neutral-400">{resolveHint()}</p>
+        <p className="mt-3 shrink-0 text-[11px] text-neutral-400">{resolveHint()}</p>
         {beat.hideContinueButton ? null : (
           <button
             type="button"
             disabled={!guideActionEnabled}
             onClick={handleGuideContinue}
-            className={`${DASHBOARD_TAP_TARGET} mt-4 w-full rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
+            className={`${DASHBOARD_TAP_TARGET} mt-4 w-full shrink-0 rounded-full px-5 py-3.5 text-xs font-bold uppercase tracking-[0.18em] transition ${
               guideActionEnabled
                 ? "anima-acender-linhagem-cta"
                 : "anima-acender-linhagem-cta anima-acender-linhagem-cta--waiting"

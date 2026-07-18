@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-06-27T02:42:00.132Z",
+  "generatedAt": "2026-07-18T02:37:51.968Z",
   "password": "vip123",
   "students": {
     "vip_forjador_linhagem": {
       "email": "vip-linhagem@meccafit.com",
       "password": "vip123",
-      "userId": "91444d5e-14ae-4c6f-9c4f-7825ef9b806f",
-      "forgerId": "322ad4af-20b7-4035-8e4d-7ebdbc889883",
-      "bondId": "4e722614-7ad5-43f0-9f22-d77fbe33c248"
+      "userId": "a55f6607-c29a-40cc-9a1f-2e615cb7d742",
+      "forgerId": "6961e205-603a-46b7-a5c9-49e38463bddb",
+      "bondId": "b2c161bc-cd9b-4c9a-8ad9-5aa3b05c0024"
     },
     "vip_forjador_soberano": {
       "email": "vip-soberano@meccafit.com",
       "password": "vip123",
-      "userId": "62e91913-0afd-4934-a2d7-087129284a46",
-      "forgerId": "d3fe801c-47a6-4b87-849c-6af49e8eb541",
-      "bondId": "2e6aa62a-3d5a-4c4c-aedb-236868a3f358"
+      "userId": "1d7f5b9f-79d8-463d-8950-792851778c49",
+      "forgerId": "ef30d3b5-98a5-4469-a80e-c0c25c9966d4",
+      "bondId": "caf9fdc6-22b4-496b-b9d0-541c610ad396"
     }
   }
 }

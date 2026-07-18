@@ -4,12 +4,12 @@
 export const COMUNIDADE_PANEL =
   "box-border min-w-0 max-w-full overflow-hidden rounded-2xl border p-3 max-[359px]:p-2.5 xs:p-4 sm:p-5";
 
-/** Âncoras de scroll com header fixo do dashboard */
-export const COMUNIDADE_SCROLL_MT = "scroll-mt-[5.5rem] sm:scroll-mt-24";
+/** Âncoras de scroll — offset baixo no mobile (tabs top ocultas) */
+export const COMUNIDADE_SCROLL_MT = "scroll-mt-4 sm:scroll-mt-24";
 
 /** Mural — offset extra para navegação sticky + SUPERAÇÃO */
 export const COMUNIDADE_MURAL_SCROLL_MT =
-  "scroll-mt-[6.5rem] sm:scroll-mt-[7.5rem] lg:scroll-mt-28";
+  "scroll-mt-4 sm:scroll-mt-[7.5rem] lg:scroll-mt-28";
 
 /** Secção interna — evita overflow em grids aninhados */
 export const COMUNIDADE_SECTION_INNER = "min-w-0 max-w-full";
@@ -25,9 +25,9 @@ export const COMUNIDADE_EYEBROW =
 export const COMUNIDADE_HEADING =
   "mt-1 text-balance break-words text-sm font-semibold leading-snug sm:text-base";
 
-/** Navegação · 3+2 em mobile · 5 colunas centrado a partir de sm */
+/** Navegação · 2 colunas equilibradas no mobile · 5 colunas a partir de sm */
 export const COMUNIDADE_NAV =
-  "mt-4 grid w-full min-w-0 grid-cols-3 gap-1.5 xs:gap-2 sm:mx-auto sm:max-w-2xl sm:grid-cols-5";
+  "mt-4 grid w-full min-w-0 grid-cols-2 gap-1.5 xs:gap-2 sm:mx-auto sm:max-w-2xl sm:grid-cols-5";
 
 export const COMUNIDADE_NAV_LINK =
   "flex min-h-11 w-full min-w-0 items-center justify-center rounded-full border border-neutral-800/90 bg-neutral-950/70 px-1 text-center text-[10px] font-bold uppercase leading-tight tracking-[0.04em] text-neutral-400 transition-colors hover:border-orange-500/30 hover:text-amber-200/90 xs:text-[11px] sm:px-2";

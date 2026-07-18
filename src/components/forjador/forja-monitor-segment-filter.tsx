@@ -29,7 +29,7 @@ export function ForjaMonitorSegmentFilter({
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(segment)}
-            className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+            className={`inline-flex min-h-11 items-center rounded-lg border px-3 py-2 text-xs font-medium transition ${
               isActive ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
             }`}
           >

@@ -78,14 +78,14 @@ const TREINO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     continueLabel: "Ver Voo de Cinzas",
     targetSelector: '[data-tour-tab="treino"]',
     highlightSelectors: ['[data-tour-tab="treino"]'],
-    calloutPlacement: "bottom",
+    calloutPlacement: "top",
   },
   {
     title: "Voo de Cinzas",
     speech: ANYMA_SPEECH_TREINO_VOO,
     continueLabel: "Ver calendário",
     targetSelector: '[data-tour-target="treino-voo-cinzas"]',
-    highlightSelectors: ['[data-tour-tab="treino"]'],
+    highlightSelectors: ['[data-tour-target="treino-voo-cinzas"]'],
     calloutPlacement: "auto",
   },
   {
@@ -93,7 +93,7 @@ const TREINO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_TREINO_CALENDARIO,
     continueLabel: "Ver Treino do Dia",
     targetSelector: '[data-tour-target="treino-calendario"]',
-    highlightSelectors: ['[data-tour-tab="treino"]'],
+    highlightSelectors: ['[data-tour-target="treino-calendario"]'],
     calloutPlacement: "auto",
   },
   {
@@ -101,7 +101,7 @@ const TREINO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_TREINO_DIA,
     continueLabel: "Ver Chama do Altar",
     targetSelector: '[data-tour-target="treino-dia"]',
-    highlightSelectors: ['[data-tour-tab="treino"]'],
+    highlightSelectors: ['[data-tour-target="treino-dia"]'],
     calloutPlacement: "auto",
   },
   {
@@ -109,8 +109,8 @@ const TREINO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_TREINO_CHAMA_ALTAR,
     continueLabel: "Continuar para Evolução",
     targetSelector: '[data-tour-target="treino-chama-altar"]',
-    highlightSelectors: ['[data-tour-tab="treino"]'],
-    calloutPlacement: "auto",
+    highlightSelectors: ['[data-tour-target="treino-chama-altar"]'],
+    calloutPlacement: "top",
   },
 ] as const;
 
@@ -121,15 +121,15 @@ const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     continueLabel: "Definir meta de treino",
     targetSelector: '[data-tour-tab="evolucao"]',
     highlightSelectors: ['[data-tour-tab="evolucao"]'],
-    calloutPlacement: "bottom",
+    calloutPlacement: "top",
   },
   {
     title: "Defina sua meta de treino",
     speech: ANYMA_SPEECH_EVOLUCAO_META,
     continueLabel: "Ver Ritmo da Fênix",
     targetSelector: '[data-tour-target="evolucao-meta"]',
-    highlightSelectors: ['[data-tour-tab="evolucao"]'],
-    calloutPlacement: "auto",
+    highlightSelectors: ['[data-tour-target="evolucao-meta"]'],
+    calloutPlacement: "top",
     advanceGate: "meta-sync",
   },
   {
@@ -137,7 +137,7 @@ const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_EVOLUCAO_RITMO,
     continueLabel: "Ver Brasas Musculares",
     targetSelector: '[data-tour-target="evolucao-ritmo"]',
-    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    highlightSelectors: ['[data-tour-target="evolucao-ritmo"]'],
     calloutPlacement: "auto",
   },
   {
@@ -145,7 +145,7 @@ const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_EVOLUCAO_BRASAS,
     continueLabel: "Ver Chama Acumulada",
     targetSelector: '[data-tour-target="evolucao-brasas"]',
-    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    highlightSelectors: ['[data-tour-target="evolucao-brasas"]'],
     calloutPlacement: "auto",
   },
   {
@@ -154,14 +154,14 @@ const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     continueLabel: "Ver Gravidade Térmica",
     targetSelector: '[data-tour-target="evolucao-chama"]',
     highlightSelectors: ['[data-tour-target="evolucao-chama"]'],
-    calloutPlacement: "top",
+    calloutPlacement: "auto",
   },
   {
     title: "Gravidade Térmica",
     speech: ANYMA_SPEECH_EVOLUCAO_GRAVIDADE,
     continueLabel: "Ver Espelho do Ciclo",
     targetSelector: '[data-tour-target="evolucao-gravidade"]',
-    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    highlightSelectors: ['[data-tour-target="evolucao-gravidade"]'],
     calloutPlacement: "auto",
   },
   {
@@ -169,7 +169,7 @@ const EVOLUCAO_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_EVOLUCAO_ESPELHO,
     continueLabel: "Continuar para Comunidade",
     targetSelector: '[data-tour-target="evolucao-espelho"]',
-    highlightSelectors: ['[data-tour-tab="evolucao"]'],
+    highlightSelectors: ['[data-tour-target="evolucao-espelho"]'],
     calloutPlacement: "auto",
   },
 ] as const;
@@ -181,30 +181,30 @@ const COMUNIDADE_TOUR_BEATS_BASE: readonly EcossistemaTourBeat[] = [
     continueLabel: "Ver Arena e Termômetro",
     targetSelector: '[data-tour-tab="comunidade"]',
     highlightSelectors: ['[data-tour-tab="comunidade"]'],
-    calloutPlacement: "bottom",
+    calloutPlacement: "top",
   },
   {
     title: "Arena e Termômetro",
     speech: ANYMA_SPEECH_COMUNIDADE_ARENA,
     continueLabel: "Ver Títulos",
     targetSelector: '[data-tour-target="comunidade-arena"]',
-    highlightSelectors: ['[data-tour-tab="comunidade"]'],
-    calloutPlacement: "auto",
+    highlightSelectors: ['[data-tour-target="comunidade-arena"]'],
+    calloutPlacement: "top",
   },
   {
     title: "Títulos e Reis",
     speech: ANYMA_SPEECH_COMUNIDADE_TITULOS,
     continueLabel: "Ver rankings",
     targetSelector: '[data-tour-target="comunidade-titulos"]',
-    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    highlightSelectors: ['[data-tour-target="comunidade-titulos"]'],
     calloutPlacement: "auto",
   },
   {
-    title: "rankings",
+    title: "Rankings",
     speech: ANYMA_SPEECH_COMUNIDADE_RANKINGS,
     continueLabel: "Ver Mural",
     targetSelector: '[data-tour-target="comunidade-rankings"]',
-    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    highlightSelectors: ['[data-tour-target="comunidade-rankings"]'],
     calloutPlacement: "auto",
   },
   {
@@ -212,7 +212,7 @@ const COMUNIDADE_TOUR_BEATS_BASE: readonly EcossistemaTourBeat[] = [
     speech: ANYMA_SPEECH_COMUNIDADE_MURAL,
     continueLabel: "Entrar no Portal de Brasa",
     targetSelector: '[data-tour-target="comunidade-mural"]',
-    highlightSelectors: ['[data-tour-tab="comunidade"]'],
+    highlightSelectors: ['[data-tour-target="comunidade-mural"]'],
     calloutPlacement: "auto",
   },
 ] as const;
@@ -224,7 +224,7 @@ const DIETA_TOUR_BEATS: readonly EcossistemaTourBeat[] = [
     continueLabel: "Entrar no Portal de Brasa",
     targetSelector: '[data-tour-tab="dieta"]',
     highlightSelectors: ['[data-tour-tab="dieta"]'],
-    calloutPlacement: "bottom",
+    calloutPlacement: "top",
   },
 ] as const;
 
@@ -318,7 +318,12 @@ export function resolveMetaOnlyTourSteps(): EcossistemaTourStep[] {
 
   if (!evolucaoStep || !metaBeat) return [];
 
-  const beat: EcossistemaTourBeat = { ...metaBeat, continueLabel: "Concluir" };
+  const beat: EcossistemaTourBeat = {
+    ...metaBeat,
+    continueLabel: "Concluir",
+    calloutPlacement: "top",
+    highlightSelectors: ['[data-tour-target="evolucao-meta"]'],
+  };
 
   return [
     {
@@ -327,6 +332,7 @@ export function resolveMetaOnlyTourSteps(): EcossistemaTourStep[] {
       speech: beat.speech,
       continueLabel: beat.continueLabel,
       targetSelector: beat.targetSelector,
+      calloutPlacement: beat.calloutPlacement,
       beats: [beat],
     },
   ];

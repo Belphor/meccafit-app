@@ -66,7 +66,6 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
 
       {expanded ? (
         <div id="evolucao-reguas-panel" className="mt-5 space-y-5 border-t border-neutral-800/80 pt-5">
-          {/* 1 · Ritmo da Fênix — bloco Consistência */}
           <section
             aria-labelledby="evolucao-ritmo-title"
             className="rounded-xl border border-amber-500/20 bg-amber-950/10 px-3.5 py-4"
@@ -81,7 +80,20 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
               {ritmo.metricName} · {ritmo.unit} · {ritmo.period}
             </p>
             <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">{IGNICAO_LEVELS_TABLE_INTRO}</p>
-            <div className="mt-3 overflow-x-auto">
+
+            <ul className="mt-3 space-y-2 md:hidden">
+              {ritmoRows.map((row) => (
+                <li
+                  key={row.level}
+                  className="rounded-lg border border-neutral-800/80 bg-black/30 px-3 py-2.5"
+                >
+                  <p className="text-sm font-medium text-neutral-100">{row.label}</p>
+                  <p className="mt-0.5 text-[11px] text-neutral-400">{row.rangeLabel}</p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-3 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[400px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-neutral-800 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
@@ -101,7 +113,6 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
             </div>
           </section>
 
-          {/* 2 · Brasas Musculares — mapa corporal */}
           <section
             aria-labelledby="evolucao-brasas-title"
             className="rounded-xl border border-cyan-500/20 bg-cyan-950/10 px-3.5 py-4"
@@ -116,7 +127,41 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
               {brasas.metricName} · {brasas.unit} · {brasas.period}
             </p>
             <p className="mt-2 text-[11px] leading-relaxed text-neutral-500">{MUSCLE_LEVELS_TABLE_INTRO}</p>
-            <div className="mt-3 overflow-x-auto">
+
+            <ul className="mt-3 space-y-2 md:hidden">
+              {muscleRows.map((row) => (
+                <li
+                  key={row.muscle}
+                  className="rounded-lg border border-neutral-800/80 bg-black/30 px-3 py-2.5"
+                >
+                  <p className="text-sm font-medium text-neutral-100">{row.label}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                    <div>
+                      <dt className="text-neutral-600">Cinzas</dt>
+                      <dd className="tabular-nums text-neutral-400">{row.cinzas}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-neutral-600">Faísca</dt>
+                      <dd className="tabular-nums text-neutral-400">{row.faisca}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-neutral-600">Brasa</dt>
+                      <dd className="tabular-nums text-neutral-300">{row.brasa}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-neutral-600">Labareda</dt>
+                      <dd className="tabular-nums text-neutral-300">{row.labareda}</dd>
+                    </div>
+                    <div className="col-span-2">
+                      <dt className="text-neutral-600">Fogo Cósmico</dt>
+                      <dd className="tabular-nums text-amber-100/90">{row.fogoCosmico}</dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-3 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-neutral-800 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
@@ -144,7 +189,6 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
             </div>
           </section>
 
-          {/* 3 · Chama Acumulada + Gravidade Térmica */}
           <section
             aria-labelledby="evolucao-chama-title"
             className="rounded-xl border border-amber-500/25 bg-amber-950/15 px-3.5 py-4"
@@ -169,7 +213,21 @@ export function EvolutionLevelsTable({ initialConfig = null }: EvolutionLevelsTa
               </p>
             </div>
 
-            <div className="mt-3 overflow-x-auto">
+            <ul className="mt-3 space-y-2 md:hidden">
+              {phaseRows.map((row) => (
+                <li
+                  key={row.tier}
+                  className="rounded-lg border border-neutral-800/80 bg-black/30 px-3 py-2.5"
+                >
+                  <p className="font-mono text-[10px] text-amber-200/85">Fase {row.tier}</p>
+                  <p className="mt-0.5 text-sm font-medium text-neutral-100">{row.label}</p>
+                  <p className="mt-1 tabular-nums text-[11px] text-neutral-300">{row.vtcRangeLabel}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">{row.description}</p>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-3 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[520px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-neutral-800 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">

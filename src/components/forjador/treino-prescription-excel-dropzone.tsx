@@ -237,7 +237,53 @@ export function TreinoPrescriptionExcelDropzone({
               </p>
             ) : null}
             <div className="overflow-x-auto rounded-xl border border-zinc-800/80">
-              <table className="min-w-full text-left text-sm text-zinc-300">
+              <ul className="space-y-2 p-3 md:hidden">
+                {preview.map((row) => (
+                  <li
+                    key={`${row.diaSemana}-${row.grupoMuscular}-${row.exercicio}-${row.series}`}
+                    className="rounded-lg border border-zinc-900 bg-zinc-950/50 px-3 py-2.5"
+                  >
+                    <p className="text-[11px] text-zinc-500">
+                      {WEEKDAY_LABELS[row.diaSemana as WeekdayIndex]} ({row.diaSemana}) ·{" "}
+                      {row.grupoMuscular}
+                    </p>
+                    <p className="mt-1 break-words text-sm font-medium text-zinc-100">
+                      {row.exercicio}
+                    </p>
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-400">
+                      <div>
+                        <dt className="text-zinc-600">Peso</dt>
+                        <dd className="tabular-nums">
+                          {row.pesoPrescrito ? `${row.pesoPrescrito} kg` : "sem peso"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-600">Reps</dt>
+                        <dd className="tabular-nums">{row.repeticoes}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-600">Séries</dt>
+                        <dd className="tabular-nums">{row.series}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-600">Descanso</dt>
+                        <dd className="tabular-nums">
+                          {row.descansoSegundos ? `${row.descansoSegundos}s` : "não definido"}
+                        </dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-zinc-600">Técnica</dt>
+                        <dd className="break-words">
+                          {row.progressaoAlternativas.length > 0
+                            ? formatProgressionSummary(row.progressaoAlternativas)
+                            : "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+              <table className="hidden min-w-full text-left text-sm text-zinc-300 md:table">
                 <thead className="bg-zinc-950/80 text-xs text-zinc-500">
                   <tr>
                     <th className="px-3 py-2 font-medium">Dia</th>
@@ -259,8 +305,8 @@ export function TreinoPrescriptionExcelDropzone({
                       <td className="px-3 py-2">
                         {WEEKDAY_LABELS[row.diaSemana as WeekdayIndex]} ({row.diaSemana})
                       </td>
-                      <td className="px-3 py-2">{row.grupoMuscular}</td>
-                      <td className="px-3 py-2">{row.exercicio}</td>
+                      <td className="break-words px-3 py-2">{row.grupoMuscular}</td>
+                      <td className="break-words px-3 py-2">{row.exercicio}</td>
                       <td className="px-3 py-2 tabular-nums">
                         {row.pesoPrescrito ? `${row.pesoPrescrito} kg` : "sem peso"}
                       </td>
@@ -269,7 +315,7 @@ export function TreinoPrescriptionExcelDropzone({
                       <td className="px-3 py-2 tabular-nums">
                         {row.descansoSegundos ? `${row.descansoSegundos}s` : "não definido"}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="break-words px-3 py-2">
                         {row.progressaoAlternativas.length > 0
                           ? formatProgressionSummary(row.progressaoAlternativas)
                           : "—"}

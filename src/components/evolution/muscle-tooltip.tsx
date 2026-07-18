@@ -64,12 +64,21 @@ export function MuscleTooltip({
   const purityLow = purityPenaltyActive ?? indiceIgnicao < PURITY_PENALTY_THRESHOLD;
   const calorMetric = formatCalorMembroMetric(row);
 
+  // Trava o balão dentro da viewport para nunca vazar em telas estreitas (< 360px).
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 375;
+  const halfWidthWithMargin = 138; // metade da largura máxima (~130px) + respiro
+  const rawLeft = anchor?.x ?? viewportWidth / 2;
+  const clampedLeft = Math.min(
+    Math.max(rawLeft, halfWidthWithMargin),
+    Math.max(halfWidthWithMargin, viewportWidth - halfWidthWithMargin),
+  );
+
   return createPortal(
     <div
-      className="pointer-events-none fixed z-50 max-w-[260px] -translate-x-1/2 -translate-y-full rounded-lg border border-cyan-500/25 bg-neutral-950/96 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_20px_rgba(6,182,212,0.12)] backdrop-blur-md"
+      className="pointer-events-none fixed z-50 w-max max-w-[min(16rem,calc(100vw-1rem))] -translate-x-1/2 -translate-y-full rounded-lg border border-cyan-500/25 bg-neutral-950/96 px-3 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_20px_rgba(6,182,212,0.12)] backdrop-blur-md"
       style={{
-        left: anchor?.x ?? "50%",
-        top: (anchor?.y ?? 120) - 8,
+        left: clampedLeft,
+        top: Math.max((anchor?.y ?? 120) - 8, 8),
       }}
       role="tooltip"
     >

@@ -454,14 +454,14 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
                     className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 p-3"
                   >
                     <p className="text-xs font-medium text-zinc-500">Série {index + 1}</p>
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                       <input
                         type="text"
                         inputMode="numeric"
                         value={isFailure ? "" : value}
                         onChange={(event) => handleRepPerSetChange(index, event.target.value)}
                         placeholder={isFailure ? "FALHA" : "12"}
-                        className={`${FORJA_INPUT} min-h-10 flex-1`}
+                        className={`${FORJA_INPUT} min-h-10 w-full flex-1`}
                         disabled={isSyncing || isFailure}
                         aria-label={`Repetições série ${index + 1}`}
                       />
@@ -469,7 +469,7 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
                         type="button"
                         disabled={isSyncing}
                         onClick={() => toggleFailureForSet(index)}
-                        className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                        className={`min-h-11 w-full rounded-lg border px-3 py-2 text-xs font-medium transition sm:w-auto ${
                           isFailure ? FORJA_TAB_ACTIVE : FORJA_TAB_IDLE
                         }`}
                         aria-pressed={isFailure}
@@ -541,7 +541,11 @@ function ForjaCommandPanelComponent({ athlete }: ForjaCommandPanelProps) {
         </div>
 
         <div className="mt-5">
-          <button type="submit" className={FORJA_PRIMARY_BUTTON} disabled={isSyncing}>
+          <button
+            type="submit"
+            className={`${FORJA_PRIMARY_BUTTON} w-full sm:w-auto`}
+            disabled={isSyncing}
+          >
             {isSyncing ? FORJA_COPY.prescription.submitting : FORJA_COPY.prescription.submit}
           </button>
         </div>

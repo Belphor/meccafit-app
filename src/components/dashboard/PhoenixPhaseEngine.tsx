@@ -14,8 +14,6 @@ import {
   type ReactNode,
 } from "react";
 import {
-  PHASE_ONE_MIN_SESSIONS,
-  PHASE_ONE_MIN_VTC_KG,
   PHASE_TIER_LABELS,
   type PhaseLayoutCode,
   type PhaseTier,
@@ -146,23 +144,6 @@ export const PhoenixPhaseEngine = memo(function PhoenixPhaseEngine({
       style={shellStyle}
     >
       {children(runtimeContext)}
-
-      {payload.phase_tier === 1 && payload.phase_progress ? (
-        <aside
-          className="pointer-events-none fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-[8] max-w-[min(18rem,88vw)] rounded-xl border border-orange-500/10 bg-black/70 px-3 py-2 backdrop-blur-sm"
-          aria-label="Progresso fase Cinzas"
-        >
-          <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-amber-500/80">
-            Fase Cinzas · linhagem Fenyxia
-          </p>
-          <p className="mt-1 text-[10px] leading-snug text-neutral-400">
-            {payload.phase_progress.hours_elapsed}/{payload.phase_progress.hours_required}h ·{" "}
-            {payload.phase_progress.sessions}/{PHASE_ONE_MIN_SESSIONS} sessões ·{" "}
-            {payload.phase_progress.vtc_cumulative.toLocaleString("pt-BR")}/
-            {PHASE_ONE_MIN_VTC_KG.toLocaleString("pt-BR")} kg VTC
-          </p>
-        </aside>
-      ) : null}
     </div>
   );
 });

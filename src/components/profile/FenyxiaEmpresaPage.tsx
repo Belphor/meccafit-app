@@ -27,6 +27,36 @@ function openEmpresaWhatsApp() {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+function EmpresaIntroParagraph() {
+  return (
+    <p className="text-sm leading-relaxed text-neutral-300">
+      A <LoreEm>FENYXIA</LoreEm> é uma empresa de tecnologia que cria{" "}
+      <LoreEm>sistemas sob medida</LoreEm>. Cada entrega é <LoreEm>exclusiva</LoreEm>,{" "}
+      <LoreEm>high code</LoreEm> e <LoreEm>fantasia</LoreEm> aplicada ao produto. Os pontos da{" "}
+      <LoreEm>FENYXIA</LoreEm> nascem <LoreEm>únicos para cada cliente</LoreEm>, com identidade
+      própria e sem atalho de prateleira.
+    </p>
+  );
+}
+
+function EmpresaShowcaseParagraph() {
+  return (
+    <p className="text-sm leading-relaxed text-neutral-300">
+      O <LoreEm>MECCAFIT</LoreEm> é a primeira obra neste modelo, vitrine viva do que a casa
+      forja. Dentro do altar não há cobranças nem monetização.
+    </p>
+  );
+}
+
+function EmpresaContactParagraph() {
+  return (
+    <p className="text-sm leading-relaxed text-neutral-300">
+      Se o trabalho da <LoreEm>FENYXIA</LoreEm> despertou o seu interesse, fale conosco pelo
+      atendimento abaixo.
+    </p>
+  );
+}
+
 /** Página dedicada · apresentação da Empresa FENYXIA. */
 export function FenyxiaEmpresaPage() {
   return (
@@ -53,22 +83,9 @@ export function FenyxiaEmpresaPage() {
                 {FENYXIA_EMPRESA_TITLE}
               </h1>
 
-              <p className="text-sm leading-relaxed text-neutral-300">
-                A <LoreEm>FENYXIA</LoreEm> está em processo de fundação. O{" "}
-                <LoreEm>MECCAFIT</LoreEm> é o primeiro projeto no modelo da casa:{" "}
-                <LoreEm>exclusividade</LoreEm>, <LoreEm>high code</LoreEm> e{" "}
-                <LoreEm>fantasia</LoreEm> como fonte de criação.
-              </p>
-
-              <p className="text-sm leading-relaxed text-neutral-300">
-                Este produto é uma demonstração do que a empresa pode entregar. Serve como
-                vitrine. Dentro do altar não há cobranças nem monetização.
-              </p>
-
-              <p className="text-sm leading-relaxed text-neutral-300">
-                Se quiser saber mais, ou se o trabalho da <LoreEm>FENYXIA</LoreEm> despertou o seu
-                interesse, fale conosco pelo atendimento abaixo.
-              </p>
+              <EmpresaIntroParagraph />
+              <EmpresaShowcaseParagraph />
+              <EmpresaContactParagraph />
             </div>
 
             <div className="rounded-xl border border-emerald-500/30 bg-gradient-to-br from-emerald-950/45 via-black/50 to-black/65 px-4 py-5 text-center">

@@ -37,7 +37,6 @@ type StorageStatus = "loading" | "ready" | "blocked";
 
 const DEFAULT_SLOT_STATE: CycleSlotState = {
   1: null,
-  15: null,
   30: null,
 };
 
@@ -129,11 +128,9 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const dayStartLabel = resolveCycleSelfieDayLabel(1);
-  const dayMidLabel = resolveCycleSelfieDayLabel(15);
   const dayEndLabel = resolveCycleSelfieDayLabel(30);
   const dayLabels: Record<CycleSelfieDay, string> = {
     1: dayStartLabel,
-    15: dayMidLabel,
     30: dayEndLabel,
   };
 
@@ -173,7 +170,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
     if (rect.width <= 0) return;
 
     const ratio = (clientX - rect.left) / rect.width;
-    const clamped = Math.min(100, Math.max(0, ratio * 100));
+    const clamped = Math.min(92, Math.max(8, ratio * 100));
     setSliderPercent(clamped);
   }, []);
 
@@ -296,10 +293,11 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
       </div>
 
       <DashboardClientInfoBlock label="Como comparar">
-        Espelho do ciclo mensal. Capture no <LoreEm>primeiro dia</LoreEm>, no{" "}
-        <LoreEm>meio do mês</LoreEm> e no <LoreEm>último dia do mês</LoreEm>, com a mesma pose e
-        luz. Com o primeiro e o último dia gravados, arraste o divisor para comparar. As fotos
-        ficam só no seu dispositivo.
+        Espelho do ciclo mensal no calendário de Brasília. Capture no{" "}
+        <LoreEm>primeiro dia útil</LoreEm> do mês, de segunda a sexta, e no{" "}
+        <LoreEm>último dia do mês</LoreEm>, com a mesma pose e a mesma luz. Se o dia 1 cair no
+        domingo ou no sábado, a captura do início passa para a próxima segunda. Com início e fim
+        gravados, arraste o divisor para comparar. As fotos ficam só no seu dispositivo.
       </DashboardClientInfoBlock>
 
       <div
@@ -363,11 +361,11 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
               </span>
             </button>
 
-            <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between p-3">
-              <span className="rounded-full border border-emerald-500/25 bg-black/45 px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-emerald-200/90 backdrop-blur-md">
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between p-2 max-[359px]:p-1.5 sm:p-3">
+              <span className="rounded-full border border-emerald-500/25 bg-black/45 px-2 py-0.5 font-mono text-[7px] uppercase tracking-[0.12em] text-emerald-200/90 backdrop-blur-md max-[359px]:px-1.5 sm:px-2.5 sm:py-1 sm:text-[8px] sm:tracking-[0.16em]">
                 {dayStartLabel}
               </span>
-              <span className="rounded-full border border-cyan-500/25 bg-black/45 px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-cyan-200/90 backdrop-blur-md">
+              <span className="rounded-full border border-cyan-500/25 bg-black/45 px-2 py-0.5 font-mono text-[7px] uppercase tracking-[0.12em] text-cyan-200/90 backdrop-blur-md max-[359px]:px-1.5 sm:px-2.5 sm:py-1 sm:text-[8px] sm:tracking-[0.16em]">
                 {dayEndLabel}
               </span>
             </div>
@@ -375,7 +373,7 @@ export function SelfieComparison({ className = "" }: SelfieComparisonProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {CYCLE_SELFIE_SLOTS.map((day) => {
           const hasPhoto = Boolean(slots[day]);
           const busy = captureBusy === day;

@@ -233,7 +233,7 @@ export function EvolucaoSelfiePanel({
         onChange={handlePhotoFile}
       />
 
-      <div className="mt-4 grid grid-cols-1 gap-2 xs:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <button
           type="button"
           disabled={!isCameraReady}
@@ -253,7 +253,7 @@ export function EvolucaoSelfiePanel({
           type="button"
           disabled={!captureUrl}
           onClick={downloadSelfie}
-          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40 xs:col-span-1`}
+          className={`${DASHBOARD_ACTION_BUTTON} justify-center disabled:opacity-40`}
         >
           Salvar no aparelho
         </button>

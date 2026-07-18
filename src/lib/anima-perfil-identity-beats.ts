@@ -5,7 +5,6 @@ import {
   ANYMA_PERFIL_FOTO_SPEECH,
   ANYMA_PERFIL_GENERO_SPEECH,
   ANYMA_PERFIL_NOME_SPEECH,
-  ANYMA_PERFIL_SEAL_SPEECH,
   ANYMA_PERFIL_TAB_SPEECH,
 } from "@/lib/anyma-copy";
 
@@ -36,19 +35,8 @@ export const PERFIL_TAB_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_TAB_SPEECH,
   targetSelector: PERFIL_TAB_SELECTOR,
   highlightSelectors: [PERFIL_TAB_SELECTOR],
-  placement: "auto",
-  title: "Aba Perfil",
-  continueLabel: "Continuar para identidade",
-  waitForTarget: true,
-};
-
-export const PERFIL_IDENTIDADE_BEAT: PerfilIdentityBeat = {
-  id: "perfil-identidade",
-  speech: ANYMA_PERFIL_SEAL_SPEECH,
-  targetSelector: PERFIL_IDENTIDADE_SELECTOR,
-  highlightSelectors: [PERFIL_IDENTIDADE_SELECTOR],
   placement: "top",
-  title: "Identidade no Perfil",
+  title: "Aba Perfil",
   continueLabel: "Continuar para o nome",
   waitForTarget: true,
 };
@@ -58,7 +46,7 @@ export const PERFIL_NOME_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_NOME_SPEECH,
   targetSelector: '[data-tour-target="perfil-nome"]',
   highlightSelectors: ['[data-tour-target="perfil-nome"]'],
-  placement: "bottom",
+  placement: "auto",
   title: "Seu nome",
   continueLabel: "Continuar para o gênero",
   waitForTarget: true,
@@ -70,7 +58,7 @@ export const PERFIL_GENERO_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_GENERO_SPEECH,
   targetSelector: '[data-tour-target="perfil-genero"]',
   highlightSelectors: ['[data-tour-target="perfil-genero"]'],
-  placement: "bottom",
+  placement: "auto",
   title: "Gênero na arena",
   continueLabel: "Continuar para a foto",
   waitForTarget: true,
@@ -82,7 +70,7 @@ export const PERFIL_FOTO_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_FOTO_SPEECH,
   targetSelector: '[data-tour-target="perfil-foto"]',
   highlightSelectors: ['[data-tour-target="perfil-foto"]'],
-  placement: "top",
+  placement: "auto",
   title: "Inserir foto do dispositivo",
   continueLabel: "Continuar para selar",
   waitForTarget: true,
@@ -94,7 +82,7 @@ export const PERFIL_CONFIRMA_BEAT: PerfilIdentityBeat = {
   speech: ANYMA_PERFIL_CONFIRMA_SPEECH,
   targetSelector: '[data-tour-target="perfil-confirmar"]',
   highlightSelectors: ['[data-tour-target="perfil-confirmar"]'],
-  placement: "top",
+  placement: "auto",
   title: "Selar identidade",
   continueLabel: "Confirmar nome e gênero",
   waitForTarget: true,
@@ -111,7 +99,7 @@ export const PERFIL_IDENTITY_FIELD_BEATS: readonly PerfilIdentityBeat[] = [
   PERFIL_CONFIRMA_BEAT,
 ] as const;
 
-/** Sequência completa do onboarding spotlight (orb + perfil). */
+/** Sequência completa do onboarding spotlight (orb + perfil). Sem card/voz de identidade genérica. */
 export const ONBOARDING_SPOTLIGHT_BEATS: readonly PerfilIdentityBeat[] = [
   {
     id: "orb",
@@ -123,7 +111,6 @@ export const ONBOARDING_SPOTLIGHT_BEATS: readonly PerfilIdentityBeat[] = [
     continueLabel: "Continuar para a aba Perfil",
   },
   PERFIL_TAB_BEAT,
-  PERFIL_IDENTIDADE_BEAT,
   PERFIL_NOME_BEAT,
   PERFIL_GENERO_BEAT,
   {
@@ -189,7 +176,8 @@ export function waitForTourTarget(
 
     const node = queryVisibleTourTarget(selector);
     if (node && isTourTargetVisible(node)) {
-      node.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+      // nearest evita centralizar alvos altos (isso empurrava o callout para cima do card).
+      node.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
       onReady(node);
       return;
     }

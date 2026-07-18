@@ -331,10 +331,22 @@ function assertCalorJsonSixGroups(payload) {
  */
 export async function runMigrationProbes(admin, options = {}) {
   const probes = [];
-  let probeUserId = null;
 
-  const { data: profileRow } = await admin.from("profiles").select("id").limit(1).maybeSingle();
-  probeUserId = profileRow?.id ?? null;
+  // Preferir cliente_principal: VIP com bond+ficha congela grupos e zera metrica_bruta.
+  let probeUserId = await resolveClientePrincipalUserId(admin, null);
+  if (!probeUserId) {
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("role", "cliente")
+      .limit(1)
+      .maybeSingle();
+    probeUserId = profileRow?.id ?? null;
+  }
+  if (!probeUserId) {
+    const { data: anyProfile } = await admin.from("profiles").select("id").limit(1).maybeSingle();
+    probeUserId = anyProfile?.id ?? null;
+  }
 
   const { error: forumErr } = await admin.rpc("argos_fetch_forum_brasa_viva", { p_limit: 1 });
   probes.push({

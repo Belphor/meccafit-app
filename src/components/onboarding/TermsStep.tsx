@@ -140,16 +140,16 @@ export function TermsStep({
 
   return (
     <motion.div
-      className="relative flex min-h-dvh w-full flex-col items-center justify-center overflow-hidden bg-black px-4 py-10 sm:px-6"
+      className="relative flex min-h-dvh w-full flex-col items-center justify-center overflow-y-auto bg-black px-4 py-6 sm:px-6 sm:py-10"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(245,158,11,0.09),rgba(0,0,0,0.88)_46%,#000_82%)]" />
-      <div className="pointer-events-none absolute inset-x-[-18%] bottom-[-30%] h-[46vh] bg-gradient-to-t from-orange-950/25 via-orange-600/10 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-[-18%] bottom-[-30%] h-[46dvh] bg-gradient-to-t from-orange-950/25 via-orange-600/10 to-transparent blur-3xl" />
 
-      <div className="relative z-[1] flex w-full max-w-lg flex-col gap-5">
+      <div className="relative z-[1] my-auto flex w-full max-w-lg flex-col gap-5">
         <header className="text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-amber-500/70">
             Contrato da linhagem
@@ -163,7 +163,7 @@ export function TermsStep({
         </header>
 
         <div
-          className="max-h-[min(52vh,440px)] overflow-y-auto rounded-3xl border border-orange-500/20 bg-neutral-950/55 p-5 shadow-[inset_0_1px_0_rgba(251,191,36,0.06),0_0_48px_rgba(249,115,22,0.1)] backdrop-blur-xl sm:p-6"
+          className="max-h-[min(52dvh,440px)] overflow-y-auto rounded-3xl border border-orange-500/20 bg-neutral-950/55 p-5 shadow-[inset_0_1px_0_rgba(251,191,36,0.06),0_0_48px_rgba(249,115,22,0.1)] backdrop-blur-xl sm:p-6"
           role="region"
           aria-label="Políticas e contrato FENYXIA"
         >

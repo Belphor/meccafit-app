@@ -76,7 +76,7 @@ export function FenyxiaAppNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-40 border-t border-orange-500/10 bg-black/85 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-orange-500/10 bg-black/85 px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:hidden"
       aria-label="Navegação principal"
     >
       <ul className="mx-auto flex max-w-3xl items-stretch justify-between gap-1">
@@ -90,13 +90,13 @@ export function FenyxiaAppNav() {
                 data-tour-tab={item.id}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => handleTabPick(item.id)}
-                className={`${DASHBOARD_TAP_TARGET} flex h-full w-full min-h-11 items-center justify-center rounded-xl border px-1 py-2.5 text-center transition-[border-color,background-color,color] duration-200 ${
+                className={`${DASHBOARD_TAP_TARGET} flex h-full w-full min-h-11 items-center justify-center rounded-xl border px-0.5 py-2.5 text-center transition-[border-color,background-color,color] duration-200 xs:px-1 ${
                   isActive
                     ? "border-emerald-500/35 bg-emerald-950/25 text-emerald-100"
                     : "border-transparent bg-transparent text-neutral-500 hover:border-orange-500/12 hover:text-neutral-300"
                 }`}
               >
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em]">
+                <span className="w-full truncate text-center text-[9px] font-bold uppercase leading-[1.05] tracking-[0.04em] xs:text-[10px] xs:tracking-[0.12em]">
                   {item.label}
                 </span>
               </button>

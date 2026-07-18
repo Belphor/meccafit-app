@@ -10,9 +10,36 @@
   --phase-magma-rgb: 255, 69, 0;
   --phase-solar-rgb: 255, 184, 0;
   --phase-portal-rgb: 249, 115, 22;
+  --phase-eye-size: clamp(9.25rem, min(72vw, 26dvh), 15rem);
+  /* Halo elíptico derivado do olho — mesma âncora em todos os breakpoints. */
+  --phase-iris-field-w: calc(var(--phase-eye-size) * 1.52);
+  --phase-iris-field-h: calc(var(--phase-eye-size) * 0.7);
+  --phase-glow-spread-y: 102%;
+  --phase-glow-spread-x: 112%;
+  --phase-glow-opacity: 0.42;
+  /* Âncora vertical do flare de fundo (alinha com o olho, não com o centro da tela). */
+  --phase-vignette-y: 42%;
+  --phase-copy-gap: clamp(0.45rem, 1.4dvh, 0.85rem);
+  --phase-anima-max: min(28dvh, 11.5rem);
+  --phase-safe-x: max(1rem, env(safe-area-inset-left, 0px));
+  --phase-safe-r: max(1rem, env(safe-area-inset-right, 0px));
+  --phase-safe-t: max(1.1rem, env(safe-area-inset-top, 0px));
+  --phase-safe-b: max(1.1rem, env(safe-area-inset-bottom, 0px));
   contain: layout paint style;
   will-change: opacity;
   background: var(--phase-obsidian, #050505);
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding:
+    var(--phase-safe-t)
+    var(--phase-safe-r)
+    var(--phase-safe-b)
+    var(--phase-safe-x);
+  box-sizing: border-box;
 }
 
 @keyframes phase-phoenix-iris-breathe {
@@ -50,12 +77,12 @@
 @keyframes phase-phoenix-ambient-neon {
   0%,
   100% {
-    opacity: 0.62;
+    opacity: calc(0.55 * var(--phase-glow-opacity, 0.42));
     transform: translate(-50%, -50%) scale(0.98);
   }
   50% {
-    opacity: 0.82;
-    transform: translate(-50%, -50%) scale(1.02);
+    opacity: calc(0.78 * var(--phase-glow-opacity, 0.42));
+    transform: translate(-50%, -50%) scale(1.015);
   }
 }
 
@@ -146,19 +173,11 @@
 @keyframes phase-transmutation-copy {
   0% {
     opacity: 0;
-    letter-spacing: 0.08em;
-    transform: translateY(16px);
+    transform: translateY(12px);
     filter: blur(4px);
-  }
-  40% {
-    opacity: 1;
-    letter-spacing: 0.22em;
-    transform: translateY(0);
-    filter: blur(0);
   }
   100% {
     opacity: 1;
-    letter-spacing: 0.28em;
     transform: translateY(0);
     filter: blur(0);
   }
@@ -206,59 +225,24 @@
 
 @keyframes phase-iris-genesis-whiteout {
   0% {
-    opacity: 1;
+    opacity: 0.72;
     transform: scale(1);
     filter: blur(0);
   }
-  12% {
-    opacity: 0.96;
-    transform: scale(0.998);
-    filter: blur(0.5px);
+  35% {
+    opacity: 0.42;
+    transform: scale(0.99);
+    filter: blur(1px);
   }
-  24% {
-    opacity: 0.91;
-    transform: scale(0.995);
-    filter: blur(0.8px);
-  }
-  36% {
-    opacity: 0.84;
-    transform: scale(0.992);
-    filter: blur(1.2px);
-  }
-  48% {
-    opacity: 0.76;
-    transform: scale(0.988);
-    filter: blur(1.8px);
-  }
-  58% {
-    opacity: 0.66;
-    transform: scale(0.984);
-    filter: blur(2.5px);
-  }
-  68% {
-    opacity: 0.52;
-    transform: scale(0.98);
-    filter: blur(3.5px);
-  }
-  78% {
-    opacity: 0.34;
-    transform: scale(0.976);
-    filter: blur(5px);
-  }
-  86% {
-    opacity: 0.2;
-    transform: scale(0.972);
-    filter: blur(6px);
-  }
-  93% {
-    opacity: 0.1;
-    transform: scale(0.968);
-    filter: blur(7px);
+  70% {
+    opacity: 0.14;
+    transform: scale(0.975);
+    filter: blur(3px);
   }
   100% {
     opacity: 0;
-    transform: scale(0.965);
-    filter: blur(8px);
+    transform: scale(0.96);
+    filter: blur(5px);
     visibility: hidden;
   }
 }
@@ -275,41 +259,15 @@
 }
 
 @keyframes phase-phoenix-eye-awaken {
-  0%,
-  28% {
+  0% {
     opacity: 0;
-    transform: scale(0.84);
-    filter: blur(12px) brightness(1.65) saturate(1.45);
+    transform: scale(0.92);
+    filter: blur(4px) brightness(1.2) saturate(1.15);
   }
-  38% {
-    opacity: 0.14;
-    transform: scale(0.87);
-    filter: blur(10px) brightness(1.48) saturate(1.38);
-  }
-  48% {
-    opacity: 0.3;
-    transform: scale(0.9);
-    filter: blur(8px) brightness(1.35) saturate(1.28);
-  }
-  58% {
-    opacity: 0.48;
-    transform: scale(0.93);
-    filter: blur(6px) brightness(1.22) saturate(1.18);
-  }
-  68% {
-    opacity: 0.64;
-    transform: scale(0.95);
-    filter: blur(4px) brightness(1.12) saturate(1.1);
-  }
-  78% {
-    opacity: 0.8;
+  45% {
+    opacity: 0.55;
     transform: scale(0.97);
-    filter: blur(2px) brightness(1.05) saturate(1.05);
-  }
-  88% {
-    opacity: 0.92;
-    transform: scale(0.99);
-    filter: blur(0.8px) brightness(1.01) saturate(1.02);
+    filter: blur(1.5px) brightness(1.06) saturate(1.05);
   }
   100% {
     opacity: 1;
@@ -332,55 +290,30 @@
 
 @keyframes phase-iris-bloom-awaken {
   0% {
-    opacity: 1;
-    transform: scale(1.28);
-    filter: blur(12px);
-  }
-  15% {
-    opacity: 0.94;
-    transform: scale(1.24);
-    filter: blur(10px);
-  }
-  30% {
-    opacity: 0.86;
-    transform: scale(1.18);
-    filter: blur(8px);
-  }
-  45% {
-    opacity: 0.76;
-    transform: scale(1.12);
-    filter: blur(6px);
-  }
-  60% {
-    opacity: 0.66;
+    opacity: 0.55;
     transform: scale(1.08);
-    filter: blur(4px);
-  }
-  75% {
-    opacity: 0.58;
-    transform: scale(1.04);
     filter: blur(2px);
   }
-  88% {
-    opacity: 0.52;
+  55% {
+    opacity: 0.32;
     transform: scale(1.02);
-    filter: blur(1px);
+    filter: blur(0.5px);
   }
   100% {
-    opacity: 0.64;
+    opacity: 0.22;
     transform: scale(1);
-    filter: blur(0) saturate(1.12);
+    filter: blur(0);
   }
 }
 
 @keyframes phase-iris-bloom-settle {
   0% {
-    opacity: 0.58;
+    opacity: 0.22;
     transform: scale(1);
   }
   100% {
-    opacity: 0.38;
-    transform: scale(0.96);
+    opacity: 0.12;
+    transform: scale(0.98);
   }
 }
 
@@ -430,29 +363,30 @@
   z-index: 5;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  /* Mesma caixa do olho — flash e iris compartilham o centro. */
+  width: var(--phase-eye-size);
+  aspect-ratio: 200 / 88;
+  overflow: visible;
 }
 
 .phase-iris-genesis-flash {
-  width: min(48vw, 13rem);
-  height: min(48vw, 13rem);
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background:
     radial-gradient(
-      circle at 50% 50%,
+      ellipse 72% 78% at 50% 50%,
       var(--phase-plasma-hot, #fffef5) 0%,
-      color-mix(in srgb, var(--phase-plasma-amber, #fde68a) 96%, white) 9%,
-      color-mix(in srgb, var(--phase-solar-gold, #ffb800) 94%, white) 20%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.92) 36%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.58) 48%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.22) 58%,
-      transparent 68%
+      color-mix(in srgb, var(--phase-plasma-amber, #fde68a) 88%, white) 14%,
+      color-mix(in srgb, var(--phase-solar-gold, #ffb800) 80%, transparent) 28%,
+      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.55) 44%,
+      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.08) 62%,
+      transparent 78%
     );
   box-shadow:
-    0 0 56px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.72),
-    0 0 112px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.52),
-    0 0 180px rgba(var(--phase-portal-rgb, 249, 115, 22), 0.24),
-    inset 0 0 42px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.42);
-  animation: phase-iris-genesis-whiteout var(--phase-genesis-ms, 5200ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    0 0 14px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.28),
+    0 0 28px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.16);
+  animation: phase-iris-genesis-whiteout var(--phase-genesis-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .phase-transmutation-screen[data-act="reveal"] .phase-iris-genesis-flash,
@@ -463,71 +397,44 @@
 
 .phase-transmutation-vignette {
   background: radial-gradient(
-    circle at 50% 50%,
+    ellipse 78% 62% at 50% var(--phase-vignette-y, 42%),
     transparent 0%,
-    rgba(5, 5, 5, 0.72) 50%,
+    rgba(5, 5, 5, 0.78) 55%,
     var(--phase-obsidian, #050505) 100%
   );
 }
 
 .phase-transmutation-screen[data-act="pulse"] .phase-transmutation-vignette {
-  animation: phase-vignette-genesis-soften var(--phase-genesis-ms, 5200ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: phase-vignette-genesis-soften var(--phase-genesis-ms, 1400ms)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes phase-vignette-genesis-soften {
   0% {
     background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.72) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.48) 16%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.22) 28%,
-      rgba(5, 5, 5, 0.82) 42%,
+      ellipse 58% 38% at 50% var(--phase-vignette-y, 42%),
+      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.16) 0%,
+      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.08) 22%,
+      rgba(5, 5, 5, 0.88) 52%,
       var(--phase-obsidian, #050505) 100%
     );
   }
-  20% {
+
+  55% {
     background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.58) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.34) 18%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.14) 30%,
-      rgba(5, 5, 5, 0.86) 44%,
+      ellipse 68% 48% at 50% var(--phase-vignette-y, 42%),
+      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.06) 0%,
+      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.03) 26%,
+      rgba(5, 5, 5, 0.92) 54%,
       var(--phase-obsidian, #050505) 100%
     );
   }
-  40% {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.4) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.22) 20%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.08) 32%,
-      rgba(5, 5, 5, 0.9) 46%,
-      var(--phase-obsidian, #050505) 100%
-    );
-  }
-  60% {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.26) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.12) 22%,
-      rgba(5, 5, 5, 0.92) 46%,
-      var(--phase-obsidian, #050505) 100%
-    );
-  }
-  80% {
-    background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.14) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.06) 24%,
-      rgba(5, 5, 5, 0.94) 44%,
-      var(--phase-obsidian, #050505) 100%
-    );
-  }
+
   100% {
     background: radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), calc(0.1 * var(--phase-tier-intensity, 0.7))) 0%,
-      rgba(5, 5, 5, 0.94) 40%,
+      ellipse 78% 62% at 50% var(--phase-vignette-y, 42%),
+      transparent 0%,
+      rgba(5, 5, 5, 0.78) 55%,
       var(--phase-obsidian, #050505) 100%
     );
   }
@@ -535,9 +442,9 @@
 
 .phase-transmutation-screen[data-act="reveal"] .phase-transmutation-vignette {
   background: radial-gradient(
-    circle at 50% 50%,
-    rgba(var(--phase-portal-rgb, 249, 115, 22), calc(0.12 * var(--phase-tier-intensity, 0.7))) 0%,
-    rgba(5, 5, 5, 0.88) 42%,
+    ellipse 78% 56% at 50% var(--phase-vignette-y, 42%),
+    rgba(var(--phase-portal-rgb, 249, 115, 22), calc(0.08 * var(--phase-tier-intensity, 0.7))) 0%,
+    rgba(5, 5, 5, 0.88) 46%,
     var(--phase-obsidian, #050505) 100%
   );
   transition: background 0.5s ease-out;
@@ -549,34 +456,398 @@
 }
 
 .phase-phoenix-stage {
-  --phase-eye-size: min(42vw, 11rem);
   position: relative;
   width: var(--phase-eye-size);
   aspect-ratio: 200 / 88;
+  flex-shrink: 0;
+  /* Reserva halo lateral sem deixar luz circular cair sob o olho. */
+  overflow: visible;
+  isolation: isolate;
 }
 
 .phase-phoenix-stage-wrap {
   position: relative;
-  animation: phase-eye-stack-rise var(--phase-genesis-ms, 5400ms) linear forwards;
-}
-
-.phase-transmutation-iris-anchor {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--phase-eye-size);
+  aspect-ratio: 200 / 88;
+  overflow: visible;
+  animation: phase-eye-stack-rise var(--phase-genesis-ms, 1400ms) linear forwards;
+}
+
+.phase-transmutation-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.85rem, 2.8dvh, 1.75rem);
+  min-height: 0;
+  width: 100%;
+  padding-inline: 0.25rem;
+}
+
+.phase-transmutation-iris-anchor {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Reserva espaço pro halo sem empurrar luz pra faixa do texto. */
+  padding-block: clamp(0.35rem, 1.6dvh, 0.85rem);
+  overflow: visible;
 }
 
 .phase-transmutation-copy-stack {
-  top: calc(50% + clamp(3.25rem, 14vw, 5.75rem));
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  width: min(100%, 36rem);
+  min-height: 0;
+  max-height: 0;
+  overflow: hidden;
+  text-align: center;
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.phase-transmutation-copy-stack.is-revealed {
+  visibility: visible;
+  opacity: 1;
+  gap: var(--phase-copy-gap);
+  max-height: min(46dvh, 22rem);
+  pointer-events: none;
+}
+
+.phase-transmutation-screen[data-has-anima="true"] .phase-transmutation-copy-stack.is-revealed {
+  max-height: min(52dvh, 26rem);
+}
+
+.phase-transmutation-copy-stack.is-revealed .phase-transmutation-anima {
+  pointer-events: auto;
+}
+
+.phase-transmutation-tier {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(1.35rem, 6.4vw + 0.35rem, 3.1rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: clamp(0.08em, 1.8vw, 0.22em);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.phase-transmutation-subline {
+  margin: 0;
+  max-width: 100%;
+  font-size: clamp(0.58rem, 1.7vw + 0.28rem, 0.72rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: clamp(0.16em, 2.4vw, 0.34em);
+  color: rgb(245 158 11 / 0.75);
+  text-wrap: balance;
+}
+
+.phase-transmutation-copy {
+  margin: 0.15rem 0 0;
+  max-width: min(100%, 34rem);
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(0.62rem, 1.5vw + 0.35rem, 0.86rem);
+  font-weight: 600;
+  line-height: 1.55;
+  text-transform: uppercase;
+  letter-spacing: clamp(0.1em, 1.4vw, 0.22em);
+  color: rgb(254 243 199 / 0.9);
+  text-wrap: balance;
+}
+
+.phase-transmutation-anima-block {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 0;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.phase-transmutation-anima-label {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: clamp(0.52rem, 1.2vw + 0.28rem, 0.62rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: clamp(0.18em, 2vw, 0.32em);
+  color: rgb(245 158 11 / 0.7);
+}
+
+.phase-transmutation-anima {
+  margin: 0;
+  width: 100%;
+  max-width: min(100%, 34rem);
+  max-height: var(--phase-anima-max);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  pointer-events: auto;
+  padding-inline: 0.15rem;
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  font-size: clamp(0.72rem, 1.4vw + 0.42rem, 0.98rem);
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: rgb(255 251 235 / 0.9);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(245 158 11 / 0.35) transparent;
+}
+
+.phase-transmutation-footer {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+  width: 100%;
+  margin-top: clamp(0.35rem, 1.2dvh, 0.75rem);
+  padding-top: 0.15rem;
+}
+
+.phase-transmutation-progress {
+  height: 1px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.05);
+  pointer-events: none;
+}
+
+.phase-transmutation-progress-bar {
+  height: 100%;
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    rgb(234 88 12 / 0.6),
+    rgb(251 191 36 / 0.8),
+    rgb(253 230 138 / 0.9)
+  );
+}
+
+.phase-transmutation-skip {
+  align-self: flex-end;
+  display: inline-flex;
+  min-height: 2.75rem;
+  min-width: 7.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgb(249 115 22 / 0.25);
+  background: rgb(0 0 0 / 0.62);
+  padding: 0.55rem 1.15rem;
+  font-size: clamp(0.58rem, 1.2vw + 0.28rem, 0.68rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgb(253 230 138 / 0.85);
+  backdrop-filter: blur(8px);
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.phase-transmutation-skip:hover {
+  border-color: rgb(251 191 36 / 0.4);
+  color: rgb(255 251 235 / 1);
+  background: rgb(0 0 0 / 0.78);
+}
+
+.phase-transmutation-skip:focus-visible {
+  outline: 2px solid rgb(251 191 36 / 0.55);
+  outline-offset: 3px;
+}
+
+.phase-transmutation-skip-spacer {
+  display: block;
+  height: 2.75rem;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .phase-transmutation-screen.phase-transmutation-fading {
-  animation: phase-screen-fade-out var(--phase-transmutation-fade-ms, 1600ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: phase-screen-fade-out var(--phase-transmutation-fade-ms, 1400ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@media (max-width: 389px) {
+  .phase-transmutation-screen {
+    --phase-eye-size: clamp(8.5rem, min(78vw, 22dvh), 11.5rem);
+    --phase-glow-spread-y: 106%;
+    --phase-glow-spread-x: 114%;
+    --phase-glow-opacity: 0.32;
+    --phase-vignette-y: 36%;
+    --phase-anima-max: min(26dvh, 9.75rem);
+    --phase-copy-gap: 0.4rem;
+  }
+
+  .phase-transmutation-copy-stack.is-revealed {
+    max-height: min(48dvh, 20rem);
+  }
+
+  .phase-transmutation-skip {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .phase-iris-genesis-flash {
+    box-shadow:
+      0 0 10px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.22),
+      0 0 20px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.12);
+  }
+}
+
+@media (max-height: 700px) and (orientation: portrait) {
+  .phase-transmutation-screen {
+    --phase-eye-size: clamp(8rem, min(68vw, 20dvh), 11rem);
+    --phase-glow-spread-y: 102%;
+    --phase-glow-spread-x: 112%;
+    --phase-glow-opacity: 0.28;
+    --phase-vignette-y: 22%;
+    --phase-anima-max: min(22dvh, 8.5rem);
+    --phase-copy-gap: 0.35rem;
+  }
+
+  .phase-transmutation-stage {
+    gap: clamp(0.55rem, 1.8dvh, 1rem);
+    justify-content: flex-start;
+    padding-top: clamp(0.35rem, 2dvh, 1rem);
+  }
+
+  .phase-transmutation-copy-stack.is-revealed {
+    max-height: min(50dvh, 18rem);
+  }
+
+  .phase-phoenix-eye {
+    filter:
+      drop-shadow(0 0 5px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.48))
+      drop-shadow(0 0 12px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.28));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .phase-transmutation-screen {
+    --phase-eye-size: clamp(7.5rem, min(34vw, 42dvh), 11rem);
+    --phase-glow-spread-y: 100%;
+    --phase-glow-spread-x: 110%;
+    --phase-glow-opacity: 0.26;
+    --phase-vignette-y: 48%;
+    --phase-anima-max: min(42dvh, 7.5rem);
+    --phase-copy-gap: 0.28rem;
+    --phase-safe-t: max(0.65rem, env(safe-area-inset-top, 0px));
+    --phase-safe-b: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .phase-transmutation-stage {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.75rem, 3vw, 1.75rem);
+    padding-inline: 0.35rem;
+  }
+
+  .phase-transmutation-iris-anchor {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .phase-transmutation-copy-stack.is-revealed,
+  .phase-transmutation-screen[data-has-anima="true"] .phase-transmutation-copy-stack.is-revealed {
+    flex: 1 1 0;
+    align-items: flex-start;
+    text-align: left;
+    max-width: min(58vw, 28rem);
+    max-height: min(68dvh, 14rem);
+  }
+
+  .phase-transmutation-anima-block {
+    align-items: flex-start;
+    margin-top: 0.2rem;
+  }
+
+  .phase-transmutation-anima {
+    text-align: left;
+  }
+
+  .phase-transmutation-footer {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.85rem;
+  }
+
+  .phase-transmutation-progress {
+    flex: 1 1 auto;
+  }
+
+  .phase-transmutation-skip,
+  .phase-transmutation-skip-spacer {
+    align-self: center;
+    flex-shrink: 0;
+  }
+
+  .phase-transmutation-skip {
+    width: auto;
+  }
+}
+
+@media (min-width: 640px) and (min-height: 720px) {
+  .phase-transmutation-screen {
+    --phase-eye-size: clamp(11rem, min(48vw, 28dvh), 15rem);
+    --phase-glow-spread-y: 104%;
+    --phase-glow-spread-x: 114%;
+    --phase-glow-opacity: 0.38;
+    --phase-anima-max: min(30dvh, 13rem);
+  }
+
+  .phase-transmutation-copy-stack {
+    width: min(100%, 40rem);
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 800px) {
+  .phase-transmutation-screen {
+    --phase-eye-size: clamp(12.5rem, min(32vw, 30dvh), 16.5rem);
+    --phase-glow-spread-y: 104%;
+    --phase-glow-spread-x: 116%;
+    --phase-anima-max: min(28dvh, 14rem);
+  }
+
+  .phase-transmutation-tier {
+    letter-spacing: 0.24em;
+  }
+
+  .phase-transmutation-copy {
+    letter-spacing: 0.22em;
+  }
 }
 
 .phase-phoenix-stage[data-act="pulse"]::after {
   content: "";
   position: absolute;
+  left: 8%;
+  right: 92%;
   top: 50%;
   z-index: 4;
   height: 1px;
@@ -590,11 +861,11 @@
     rgba(var(--phase-solar-rgb, 255, 184, 0), 0.22) 80%,
     transparent 100%
   );
-  box-shadow: 0 0 14px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.45);
+  box-shadow: 0 0 10px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.32);
   pointer-events: none;
   animation:
-    phase-iris-focal-sweep 1.05s ease-in-out calc(var(--phase-genesis-ms, 5400ms) * 0.78) infinite,
-    phase-iris-focal-fade-in 0.8s ease-out calc(var(--phase-genesis-ms, 5400ms) * 0.62) forwards;
+    phase-iris-focal-sweep 0.85s ease-in-out calc(var(--phase-genesis-ms, 1400ms) * 0.55) 1,
+    phase-iris-focal-fade-in 0.4s ease-out calc(var(--phase-genesis-ms, 1400ms) * 0.5) forwards;
 }
 
 @keyframes phase-iris-focal-fade-in {
@@ -607,8 +878,11 @@
 }
 
 .phase-iris-field {
-  width: min(96vw, 26rem);
-  height: min(96vw, 26rem);
+  width: var(--phase-iris-field-w);
+  height: var(--phase-iris-field-h);
+  /* Máscara elíptica alinhada ao olho. */
+  -webkit-mask-image: radial-gradient(ellipse 62% 52% at 50% 50%, #000 0%, #000 46%, transparent 78%);
+  mask-image: radial-gradient(ellipse 62% 52% at 50% 50%, #000 0%, #000 46%, transparent 78%);
 }
 
 .phase-iris-bloom {
@@ -621,37 +895,29 @@
 .phase-iris-bloom-awaken {
   background:
     radial-gradient(
-      circle at 50% 50%,
-      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.62) 0%,
-      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.38) 26%,
-      rgba(var(--phase-portal-rgb, 249, 115, 22), 0.14) 46%,
-      transparent 72%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      var(--phase-plasma-hot, #fffef5) 0%,
-      color-mix(in srgb, var(--phase-plasma-amber, #fde68a) 78%, transparent) 16%,
-      transparent 44%
+      ellipse 58% 48% at 50% 50%,
+      rgba(var(--phase-solar-rgb, 255, 184, 0), 0.22) 0%,
+      rgba(var(--phase-magma-rgb, 255, 69, 0), 0.1) 28%,
+      transparent 62%
     );
-  animation: phase-iris-bloom-awaken var(--phase-genesis-ms, 5200ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: phase-iris-bloom-awaken var(--phase-genesis-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .phase-iris-bloom-settle {
   background: radial-gradient(
-    circle at 50% 50%,
-    rgba(var(--phase-solar-rgb, 255, 184, 0), 0.28) 0%,
-    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.16) 26%,
-    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.07) 44%,
-    transparent 68%
+    ellipse 52% 44% at 50% 50%,
+    rgba(var(--phase-solar-rgb, 255, 184, 0), 0.1) 0%,
+    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.05) 28%,
+    transparent 58%
   );
-  opacity: 0.58;
-  animation: phase-iris-bloom-settle 1.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0.2;
+  animation: phase-iris-bloom-settle 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .phase-iris-bloom-fade {
   background: radial-gradient(
-    circle at 50% 50%,
-    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.05) 0%,
+    ellipse 50% 44% at 50% 50%,
+    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.04) 0%,
     transparent 55%
   );
   opacity: 0;
@@ -667,33 +933,33 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 36%;
-  height: 36%;
-  margin: -18% 0 0 -18%;
+  width: 44%;
+  height: 56%;
+  margin: -28% 0 0 -22%;
   border-radius: 50%;
-  border: 1px solid rgba(var(--phase-solar-rgb, 255, 184, 0), 0.24);
-  box-shadow: 0 0 18px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.1);
+  border: 1px solid rgba(var(--phase-solar-rgb, 255, 184, 0), 0.22);
+  box-shadow: 0 0 12px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.08);
   opacity: 0;
-  animation: phase-iris-wave-expand 2.2s ease-out infinite;
-  animation-delay: calc(var(--phase-genesis-ms, 5400ms) * 0.68 + var(--wave-i, 0) * 0.55s);
 }
 
+/* Ondas após o reveal — reforço visual com o olho aberto. */
 .phase-iris-waves--pulse .phase-iris-wave {
-  animation: phase-iris-wave-expand 2.2s ease-out infinite;
-  animation-delay: calc(var(--phase-genesis-ms, 5400ms) * 0.68 + var(--wave-i, 0) * 0.55s);
+  animation: none;
+  opacity: 0;
 }
 
 .phase-iris-waves--reveal .phase-iris-wave {
-  border-color: rgba(var(--phase-solar-rgb, 255, 184, 0), 0.36);
-  box-shadow: 0 0 22px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.14);
-  animation-duration: 1.8s;
+  border-color: rgba(var(--phase-solar-rgb, 255, 184, 0), 0.34);
+  box-shadow: 0 0 18px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.12);
+  animation: phase-iris-wave-expand 2s ease-out infinite;
+  animation-delay: calc(var(--wave-i, 0) * 0.42s);
 }
 
 .phase-iris-waves--hold .phase-iris-wave {
   animation: phase-iris-wave-hold 3.6s ease-in-out infinite;
   animation-delay: calc(var(--wave-i, 0) * 0.35s);
   border-color: rgba(var(--phase-portal-rgb, 249, 115, 22), 0.18);
-  box-shadow: 0 0 16px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.08);
+  box-shadow: 0 0 14px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.08);
 }
 
 .phase-phoenix-eye-anchor {
@@ -706,7 +972,7 @@
 }
 
 .phase-phoenix-eye-anchor-awaken {
-  animation: phase-phoenix-eye-awaken var(--phase-genesis-ms, 5200ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: phase-phoenix-eye-awaken var(--phase-genesis-ms, 1400ms) cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .phase-phoenix-eye-anchor-open {
@@ -721,60 +987,30 @@
 
 .phase-eye-atmosphere {
   position: absolute;
-  inset: -42% -48%;
+  inset: -8% -14%;
   border-radius: 50%;
   background: radial-gradient(
-    ellipse 44% 38% at 50% 50%,
-    rgba(var(--phase-solar-rgb, 255, 184, 0), 0.18) 0%,
-    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.12) 28%,
-    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.05) 48%,
-    transparent 72%
+    ellipse 54% 44% at 50% 50%,
+    rgba(var(--phase-solar-rgb, 255, 184, 0), 0.08) 0%,
+    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.04) 34%,
+    transparent 68%
   );
   opacity: 0;
-  transition: opacity 0.35s ease-out, inset 0.9s ease-out;
+  transition: opacity 0.4s ease-out, inset 0.7s ease-out;
+  -webkit-mask-image: radial-gradient(ellipse 68% 54% at 50% 50%, #000 0%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(ellipse 68% 54% at 50% 50%, #000 0%, #000 50%, transparent 100%);
 }
 
+/* Sem glow de atmosfera no pulse — evita poça de luz atrás do olho. */
 .phase-eye-atmosphere-visible {
   opacity: 0;
-  animation: phase-eye-atmosphere-dense var(--phase-genesis-ms, 5400ms) linear forwards;
-}
-
-@keyframes phase-eye-atmosphere-dense {
-  0%,
-  38% {
-    opacity: 0;
-    inset: -42% -48%;
-  }
-  48% {
-    opacity: 0.1;
-    inset: -40% -46%;
-  }
-  58% {
-    opacity: 0.24;
-    inset: -38% -44%;
-  }
-  68% {
-    opacity: 0.42;
-    inset: -38% -44%;
-  }
-  78% {
-    opacity: 0.62;
-    inset: -40% -46%;
-  }
-  88% {
-    opacity: 0.84;
-    inset: -41% -47%;
-  }
-  100% {
-    opacity: 1;
-    inset: -42% -48%;
-  }
+  animation: none;
 }
 
 .phase-eye-atmosphere-recede {
-  inset: -24% -28%;
-  opacity: 0.6;
-  transition: opacity 1.4s ease-out, inset 0.9s ease-out;
+  inset: -6% -10%;
+  opacity: 0.22;
+  transition: opacity 0.9s ease-out, inset 0.7s ease-out;
 }
 
 .phase-flame-core {
@@ -782,66 +1018,41 @@
   width: 100%;
   height: auto;
   aspect-ratio: 200 / 88;
+  overflow: visible;
 }
 
+/* Halo atrás removido no pulse; só um rim suave após o olho abrir. */
 .phase-flame-core::before {
   content: "";
   position: absolute;
   left: 50%;
   top: 50%;
   z-index: -1;
-  width: 132%;
-  height: 168%;
+  width: var(--phase-glow-spread-x, 112%);
+  height: var(--phase-glow-spread-y, 102%);
   transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.28) 0%,
-    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.14) 34%,
-    rgba(var(--phase-solar-rgb, 255, 184, 0), 0.06) 52%,
-    transparent 72%
+    ellipse 58% 48% at 50% 50%,
+    rgba(var(--phase-magma-rgb, 255, 69, 0), 0.12) 0%,
+    rgba(var(--phase-portal-rgb, 249, 115, 22), 0.05) 38%,
+    transparent 68%
   );
   opacity: 0;
-  animation:
-    phase-flame-core-dense var(--phase-genesis-ms, 5400ms) linear forwards,
-    phase-phoenix-ambient-neon 2.4s ease-in-out calc(var(--phase-genesis-ms, 5400ms) * 0.82) infinite;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 66% 52% at 50% 50%, #000 0%, #000 45%, transparent 78%);
+  mask-image: radial-gradient(ellipse 66% 52% at 50% 50%, #000 0%, #000 45%, transparent 78%);
 }
 
-@keyframes phase-flame-core-dense {
-  0%,
-  36% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.78);
-    filter: blur(8px);
-  }
-  48% {
-    opacity: 0.12;
-    transform: translate(-50%, -50%) scale(0.84);
-    filter: blur(6px);
-  }
-  58% {
-    opacity: 0.28;
-    transform: translate(-50%, -50%) scale(0.9);
-    filter: blur(4px);
-  }
-  68% {
-    opacity: 0.46;
-    transform: translate(-50%, -50%) scale(0.96);
-    filter: blur(2px);
-  }
-  78% {
-    opacity: 0.66;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  88% {
-    opacity: 0.84;
-    transform: translate(-50%, -50%) scale(1.02);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-    filter: blur(0);
-  }
+.phase-phoenix-stage[data-act="reveal"] .phase-flame-core::before,
+.phase-phoenix-stage[data-act="hold"] .phase-flame-core::before {
+  opacity: calc(0.35 * var(--phase-glow-opacity, 0.42));
+  animation: phase-phoenix-ambient-neon 2.8s ease-in-out infinite;
+}
+
+.phase-phoenix-stage[data-act="fade"] .phase-flame-core::before {
+  opacity: 0;
+  transition: opacity 1.2s ease-in;
 }
 
 .phase-phoenix-eye {
@@ -849,17 +1060,18 @@
   width: 100%;
   height: auto;
   overflow: visible;
+  /* Halo mais lateral do que vertical — evita poça de luz sob o olho. */
   filter:
-    drop-shadow(0 0 8px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.62))
-    drop-shadow(0 0 18px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.42))
-    drop-shadow(0 0 32px rgba(var(--phase-portal-rgb, 249, 115, 22), 0.26));
+    drop-shadow(0 0 6px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.52))
+    drop-shadow(0 0 14px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.32))
+    drop-shadow(0 1px 20px rgba(var(--phase-portal-rgb, 249, 115, 22), 0.16));
   transition: filter 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .phase-phoenix-eye--pulse {
   filter:
     drop-shadow(0 0 4px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.4))
-    drop-shadow(0 0 10px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.26));
+    drop-shadow(0 0 10px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.22));
 }
 
 .phase-phoenix-eye--pulse .phase-phoenix-pupil-group {
@@ -870,9 +1082,9 @@
 .phase-phoenix-eye--reveal,
 .phase-phoenix-eye--hold {
   filter:
-    drop-shadow(0 0 10px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.82))
-    drop-shadow(0 0 22px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.58))
-    drop-shadow(0 0 38px rgba(var(--phase-portal-rgb, 249, 115, 22), 0.34));
+    drop-shadow(0 0 8px rgba(var(--phase-solar-rgb, 255, 184, 0), 0.7))
+    drop-shadow(0 0 16px rgba(var(--phase-magma-rgb, 255, 69, 0), 0.44))
+    drop-shadow(0 1px 24px rgba(var(--phase-portal-rgb, 249, 115, 22), 0.22));
 }
 
 .phase-phoenix-eye--reveal .phase-phoenix-pupil-group {
@@ -932,8 +1144,19 @@
 
 .phase-phoenix-lid-lower {
   animation: phase-phoenix-lid-flicker 3.4s ease-in-out 0.5s infinite;
-  filter: drop-shadow(0 0 2px rgba(234, 88, 12, 0.28))
-    drop-shadow(0 0 5px rgba(249, 115, 22, 0.14));
+  filter: drop-shadow(0 0 1.5px rgba(234, 88, 12, 0.22))
+    drop-shadow(0 1px 3px rgba(249, 115, 22, 0.1));
+}
+
+@media (max-width: 639px), (max-height: 700px) {
+  .phase-phoenix-lid-lower-glow {
+    opacity: 0.55;
+  }
+
+  .phase-phoenix-lid-lower {
+    opacity: 0.75;
+    filter: drop-shadow(0 0 1px rgba(234, 88, 12, 0.16));
+  }
 }
 
 .phase-flame-ember {
@@ -955,14 +1178,12 @@
 }
 
 .phase-transmutation-tier {
-  animation: phase-transmutation-tier 1.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
   text-shadow:
     0 0 24px rgba(251, 191, 36, 0.42),
     0 0 48px rgba(249, 115, 22, 0.22);
 }
 
 .phase-transmutation-copy {
-  animation: phase-transmutation-copy 2.4s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
   text-shadow:
     0 0 22px rgba(251, 191, 36, 0.32),
     0 0 38px rgba(249, 115, 22, 0.16);
@@ -970,6 +1191,23 @@
 
 .phase-transmutation-progress-bar {
   animation: phase-transmutation-progress var(--phase-transmutation-ms, 12s) linear forwards;
+}
+
+/* Animações de texto no disparo (com voz) ou no reveal (sem voz). */
+.phase-transmutation-copy-stack.is-revealed .phase-transmutation-tier {
+  animation: phase-transmutation-tier 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.phase-transmutation-copy-stack.is-revealed .phase-transmutation-subline {
+  animation: phase-transmutation-copy 1.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+.phase-transmutation-copy-stack.is-revealed .phase-transmutation-copy {
+  animation: phase-transmutation-copy 1.7s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+
+.phase-transmutation-copy-stack.is-revealed .phase-transmutation-anima-block {
+  animation: phase-transmutation-copy 1.8s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1000,10 +1238,12 @@
   .phase-flame-ember,
   .phase-transmutation-copy,
   .phase-transmutation-tier,
+  .phase-transmutation-anima,
   .phase-transmutation-progress-bar,
   .phase-transmutation-screen {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
 }

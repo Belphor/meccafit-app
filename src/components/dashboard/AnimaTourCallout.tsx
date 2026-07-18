@@ -3,18 +3,52 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { resolveTourTargetElement } from "@/lib/anima-perfil-identity-beats";
 
-const CALLOUT_GAP = 20;
+const CALLOUT_GAP = 14;
 const HIGHLIGHT_PAD = 10;
 const VIEWPORT_MARGIN = 14;
 const TARGET_EDGE_INSET = 10;
+/** Alvos altos — limita só o buraco visual do spotlight; colisão usa o card inteiro. */
+const TALL_TARGET_VH = 0.42;
+const TALL_HOLE_VH = 0.38;
 const EMPTY_HIGHLIGHTS: readonly string[] = [];
+/** Scroll mínimo considerado significativo. */
+const SCROLL_EPSILON = 6;
+
+function isTallTargetRect(rect: DOMRect, vh: number): boolean {
+  return rect.height > vh * TALL_TARGET_VH;
+}
+
+function prefersFullSpotlight(element: Element): boolean {
+  return element instanceof HTMLElement && element.dataset.tourSpotlight === "full";
+}
+
+/**
+ * Recorta o retângulo do alvo alto só para o buraco visual do spotlight.
+ * `data-tour-spotlight="full"` força o card inteiro (ex.: meta de treino + slider).
+ */
+function resolveSpotlightTargetRect(rect: DOMRect, vh: number, element: Element): DOMRect {
+  if (prefersFullSpotlight(element)) return rect;
+  if (!isTallTargetRect(rect, vh)) return rect;
+  const maxHeight = Math.max(140, vh * TALL_HOLE_VH);
+  if (rect.height <= maxHeight) return rect;
+  return new DOMRect(rect.left, rect.top, rect.width, maxHeight);
+}
+
+function resolveViewportBottomMargin(vh: number, vw: number): number {
+  if (vw >= 640) return VIEWPORT_MARGIN;
+  const navReserve = Math.min(vh * 0.28, 120);
+  return Math.max(VIEWPORT_MARGIN + navReserve, 108);
+}
+
+function resolveViewportTopMargin(vw: number): number {
+  if (vw >= 640) return VIEWPORT_MARGIN;
+  return Math.max(VIEWPORT_MARGIN, 56);
+}
 
 export type AnimaTourCalloutPlacement = "left" | "right" | "top" | "bottom" | "auto";
-/** Alias de marca — mesmo tipo. */
 export type AnymaTourCalloutPlacement = AnimaTourCalloutPlacement;
 
 type Rect = { top: number; left: number; width: number; height: number };
-
 type HighlightHole = Rect & { borderRadius: string };
 
 type PointerGeometry = {
@@ -24,16 +58,10 @@ type PointerGeometry = {
   lineStart: { x: number; y: number };
   lineEnd: { x: number; y: number };
   placement: Exclude<AnimaTourCalloutPlacement, "auto">;
+  scrollDelta: number;
 };
 
 type ResolvedPlacement = Exclude<AnimaTourCalloutPlacement, "auto">;
-
-const OPPOSITE_PLACEMENT: Record<ResolvedPlacement, ResolvedPlacement> = {
-  left: "right",
-  right: "left",
-  top: "bottom",
-  bottom: "top",
-};
 
 function domRectToRect(rect: DOMRect, pad = 0): Rect {
   return {
@@ -72,98 +100,149 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function placementSpace(
-  placement: ResolvedPlacement,
-  target: DOMRect,
+function overlapsTarget(
+  calloutLeft: number,
+  calloutTop: number,
   calloutW: number,
   calloutH: number,
-  vw: number,
-  vh: number,
-): number {
-  switch (placement) {
-    case "left":
-      return target.left - VIEWPORT_MARGIN;
-    case "right":
-      return vw - target.right - VIEWPORT_MARGIN;
-    case "top":
-      return target.top - VIEWPORT_MARGIN;
-    case "bottom":
-      return vh - target.bottom - VIEWPORT_MARGIN;
-  }
-}
-
-function placementFits(
-  placement: ResolvedPlacement,
   target: DOMRect,
-  calloutW: number,
-  calloutH: number,
-  vw: number,
-  vh: number,
+  gap = CALLOUT_GAP,
 ): boolean {
-  const space = placementSpace(placement, target, calloutW, calloutH, vw, vh);
-  const needed =
-    placement === "left" || placement === "right"
-      ? calloutW + CALLOUT_GAP
-      : calloutH + CALLOUT_GAP;
-  return space >= needed;
-}
-
-function pickAutoPlacement(
-  target: DOMRect,
-  calloutW: number,
-  calloutH: number,
-  vw: number,
-  vh: number,
-): ResolvedPlacement {
-  const candidates: ResolvedPlacement[] = ["bottom", "top", "right", "left"];
-  let best: ResolvedPlacement = "bottom";
-  let bestSpace = -1;
-
-  for (const candidate of candidates) {
-    const space = placementSpace(candidate, target, calloutW, calloutH, vw, vh);
-    const needed =
-      candidate === "left" || candidate === "right"
-        ? calloutW + CALLOUT_GAP
-        : calloutH + CALLOUT_GAP;
-    if (space >= needed && space > bestSpace) {
-      best = candidate;
-      bestSpace = space;
-    }
-  }
-
-  if (bestSpace >= 0) return best;
-
-  return candidates.reduce((winner, candidate) =>
-    placementSpace(candidate, target, calloutW, calloutH, vw, vh) >
-    placementSpace(winner, target, calloutW, calloutH, vw, vh)
-      ? candidate
-      : winner,
+  return (
+    calloutLeft < target.right + gap &&
+    calloutLeft + calloutW > target.left - gap &&
+    calloutTop < target.bottom + gap &&
+    calloutTop + calloutH > target.top - gap
   );
 }
 
-function pickPlacement(
-  target: DOMRect,
+function clampHorizontal(left: number, calloutW: number, vw: number): number {
+  return clamp(left, VIEWPORT_MARGIN, Math.max(VIEWPORT_MARGIN, vw - calloutW - VIEWPORT_MARGIN));
+}
+
+/**
+ * Posiciona o callout colado ao card real (acima ou abaixo).
+ * Colisão sempre usa o retângulo completo — nunca o buraco truncado.
+ * Se não cabe no viewport atual, pede scroll e mantém a posição colada
+ * (mesmo que fique parcialmente fora) até o scroll abrir espaço.
+ */
+function resolveAdjacentPlacement(
+  fullTarget: DOMRect,
   calloutW: number,
   calloutH: number,
   preferred: AnimaTourCalloutPlacement,
-): ResolvedPlacement {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  vw: number,
+  vh: number,
+  topMargin: number,
+  bottomMargin: number,
+): {
+  placement: "top" | "bottom";
+  calloutLeft: number;
+  calloutTop: number;
+  scrollDelta: number;
+} {
+  const needed = calloutH + CALLOUT_GAP;
+  const spaceAbove = fullTarget.top - topMargin;
+  const spaceBelow = vh - bottomMargin - fullTarget.bottom;
+  const usableH = vh - topMargin - bottomMargin;
 
-  if (preferred === "auto") {
-    return pickAutoPlacement(target, calloutW, calloutH, vw, vh);
+  const navChip =
+    fullTarget.height < 96 &&
+    fullTarget.top > vh * 0.55 &&
+    fullTarget.bottom > vh - bottomMargin - 24;
+
+  let side: "top" | "bottom";
+  if (navChip) {
+    side = "top";
+  } else if (preferred === "top") {
+    side = spaceAbove >= needed || spaceAbove >= spaceBelow ? "top" : "bottom";
+  } else if (preferred === "bottom") {
+    side = spaceBelow >= needed || spaceBelow >= spaceAbove ? "bottom" : "top";
+  } else if (spaceBelow >= needed && spaceAbove >= needed) {
+    side = spaceBelow >= spaceAbove ? "bottom" : "top";
+  } else if (spaceBelow >= needed) {
+    side = "bottom";
+  } else if (spaceAbove >= needed) {
+    side = "top";
+  } else if (fullTarget.height >= usableH * 0.7) {
+    // Card muito alto: callout acima do topo do card + scroll para abrir faixa.
+    side = "top";
+  } else {
+    side = spaceBelow >= spaceAbove ? "bottom" : "top";
   }
 
-  if (placementFits(preferred, target, calloutW, calloutH, vw, vh)) {
-    return preferred;
+  const centerLeft = clampHorizontal(
+    fullTarget.left + fullTarget.width / 2 - calloutW / 2,
+    calloutW,
+    vw,
+  );
+
+  const idealTop = (placement: "top" | "bottom") =>
+    placement === "top"
+      ? fullTarget.top - CALLOUT_GAP - calloutH
+      : fullTarget.bottom + CALLOUT_GAP;
+
+  let calloutTop = idealTop(side);
+  let scrollDelta = 0;
+
+  if (side === "top") {
+    // Precisa que o topo do card fique abaixo da faixa do callout.
+    const minTargetTop = topMargin + needed;
+    if (fullTarget.top < minTargetTop) {
+      scrollDelta = fullTarget.top - minTargetTop;
+    } else if (fullTarget.top > vh - bottomMargin - 80) {
+      // Card quase fora abaixo — sobe um pouco para manter contexto.
+      scrollDelta = fullTarget.top - (vh - bottomMargin - Math.min(fullTarget.height, usableH * 0.55));
+    }
+  } else {
+    // Precisa de espaço abaixo do card até a margem inferior.
+    const maxTargetBottom = vh - bottomMargin - needed;
+    if (fullTarget.bottom > maxTargetBottom) {
+      scrollDelta = fullTarget.bottom - maxTargetBottom;
+    } else if (fullTarget.bottom < topMargin + 80) {
+      scrollDelta = fullTarget.bottom - (topMargin + Math.min(fullTarget.height, usableH * 0.55));
+    }
   }
 
-  const opposite = OPPOSITE_PLACEMENT[preferred];
-  if (placementFits(opposite, target, calloutW, calloutH, vw, vh)) {
-    return opposite;
+  // Nunca clamp sobre o alvo: se o ideal estiver fora do viewport, mantém colado
+  // (o scroll corrige). Só limita horizontalmente.
+  const minTop = topMargin;
+  const maxTop = Math.max(topMargin, vh - calloutH - bottomMargin);
+  const fitsInViewport = calloutTop >= minTop && calloutTop <= maxTop;
+
+  if (fitsInViewport && overlapsTarget(centerLeft, calloutTop, calloutW, calloutH, fullTarget)) {
+    // Ideal ainda sobrepõe (edge case) — força o lado oposto colado.
+    const alt: "top" | "bottom" = side === "top" ? "bottom" : "top";
+    const altTop = idealTop(alt);
+    if (!overlapsTarget(centerLeft, altTop, calloutW, calloutH, fullTarget)) {
+      side = alt;
+      calloutTop = altTop;
+      if (alt === "top") {
+        const minTargetTop = topMargin + needed;
+        scrollDelta = fullTarget.top < minTargetTop ? fullTarget.top - minTargetTop : 0;
+      } else {
+        const maxTargetBottom = vh - bottomMargin - needed;
+        scrollDelta =
+          fullTarget.bottom > maxTargetBottom ? fullTarget.bottom - maxTargetBottom : 0;
+      }
+    }
   }
 
-  return pickAutoPlacement(target, calloutW, calloutH, vw, vh);
+  // Se após scroll pretendido ainda precisamos de clamp visual, só aplica se NÃO sobrepor.
+  if (!fitsInViewport) {
+    const clamped = clamp(calloutTop, minTop, maxTop);
+    if (!overlapsTarget(centerLeft, clamped, calloutW, calloutH, fullTarget)) {
+      calloutTop = clamped;
+    }
+    // Senão: deixa fora do viewport até o scroll abrir espaço (evita cobrir o card).
+  }
+
+  return {
+    placement: side,
+    calloutLeft: centerLeft,
+    calloutTop,
+    scrollDelta,
+  };
 }
 
 function resolveTargetAnchor(
@@ -222,18 +301,30 @@ function resolveLineStart(
 ): { x: number; y: number } {
   switch (placement) {
     case "left":
-      return { x: calloutLeft + calloutW, y: lineEnd.y };
+      return {
+        x: calloutLeft + calloutW,
+        y: clamp(lineEnd.y, calloutTop + 8, calloutTop + calloutH - 8),
+      };
     case "right":
-      return { x: calloutLeft, y: lineEnd.y };
+      return {
+        x: calloutLeft,
+        y: clamp(lineEnd.y, calloutTop + 8, calloutTop + calloutH - 8),
+      };
     case "top":
-      return { x: lineEnd.x, y: calloutTop + calloutH };
+      return {
+        x: clamp(lineEnd.x, calloutLeft + 8, calloutLeft + calloutW - 8),
+        y: calloutTop + calloutH,
+      };
     case "bottom":
-      return { x: lineEnd.x, y: calloutTop };
+      return {
+        x: clamp(lineEnd.x, calloutLeft + 8, calloutLeft + calloutW - 8),
+        y: calloutTop,
+      };
   }
 }
 
 function computeGeometry(
-  targetRect: DOMRect,
+  rawTargetRect: DOMRect,
   targetElement: Element,
   calloutRect: DOMRect,
   extraHoles: HighlightHole[],
@@ -241,81 +332,81 @@ function computeGeometry(
 ): PointerGeometry {
   const vh = window.innerHeight;
   const vw = window.innerWidth;
-  const placement = pickPlacement(targetRect, calloutRect.width, calloutRect.height, preferred);
-
-  const tcx = targetRect.left + targetRect.width / 2;
-  const tcy = targetRect.top + targetRect.height / 2;
+  const topMargin = resolveViewportTopMargin(vw);
+  const bottomMargin = resolveViewportBottomMargin(vh, vw);
   const cw = calloutRect.width;
   const ch = calloutRect.height;
 
-  let calloutLeft = 0;
-  let calloutTop = 0;
+  // Spotlight visual pode ser truncado; âncora/colisão usam o card inteiro.
+  // `data-tour-spotlight="full"` ilumina o card completo (meta + barra de dias).
+  const fullSpotlight = prefersFullSpotlight(targetElement);
+  const spotlightRect = resolveSpotlightTargetRect(rawTargetRect, vh, targetElement);
 
-  switch (placement) {
-    case "left":
-      calloutLeft = targetRect.left - CALLOUT_GAP - cw;
-      calloutTop = tcy - ch / 2;
-      break;
-    case "right":
-      calloutLeft = targetRect.right + CALLOUT_GAP;
-      calloutTop = tcy - ch / 2;
-      break;
-    case "top":
-      calloutLeft = tcx - cw / 2;
-      calloutTop = targetRect.top - CALLOUT_GAP - ch;
-      break;
-    case "bottom":
-      calloutLeft = tcx - cw / 2;
-      calloutTop = targetRect.bottom + CALLOUT_GAP;
-      break;
-  }
+  const preferredSide: AnimaTourCalloutPlacement =
+    preferred === "left" || preferred === "right"
+      ? "auto"
+      : fullSpotlight && preferred === "auto"
+        ? "top"
+        : preferred;
 
-  calloutLeft = clamp(calloutLeft, VIEWPORT_MARGIN, Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN));
-  calloutTop = clamp(calloutTop, VIEWPORT_MARGIN, Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN));
+  const resolved = resolveAdjacentPlacement(
+    rawTargetRect,
+    cw,
+    ch,
+    preferredSide,
+    vw,
+    vh,
+    topMargin,
+    bottomMargin,
+  );
 
-  // Se o card ainda cobrir o alvo após o clamp, empurra para a zona com mais espaço livre.
-  const overlapsTarget =
-    calloutLeft < targetRect.right + CALLOUT_GAP &&
-    calloutLeft + cw > targetRect.left - CALLOUT_GAP &&
-    calloutTop < targetRect.bottom + CALLOUT_GAP &&
-    calloutTop + ch > targetRect.top - CALLOUT_GAP;
+  const calloutLeft = resolved.calloutLeft;
+  const calloutTop = resolved.calloutTop;
+  const placement: ResolvedPlacement = resolved.placement;
+  let scrollDelta =
+    Math.abs(resolved.scrollDelta) > SCROLL_EPSILON ? resolved.scrollDelta : 0;
 
-  if (overlapsTarget) {
-    const spaceBelow = vh - targetRect.bottom - VIEWPORT_MARGIN;
-    const spaceAbove = targetRect.top - VIEWPORT_MARGIN;
-    if (spaceBelow >= ch + CALLOUT_GAP || spaceBelow >= spaceAbove) {
-      calloutTop = clamp(
-        targetRect.bottom + CALLOUT_GAP,
-        VIEWPORT_MARGIN,
-        Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN),
-      );
-      calloutLeft = clamp(
-        tcx - cw / 2,
-        VIEWPORT_MARGIN,
-        Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN),
-      );
-    } else if (spaceAbove >= ch + CALLOUT_GAP) {
-      calloutTop = clamp(
-        targetRect.top - CALLOUT_GAP - ch,
-        VIEWPORT_MARGIN,
-        Math.max(VIEWPORT_MARGIN, vh - ch - VIEWPORT_MARGIN),
-      );
-      calloutLeft = clamp(
-        tcx - cw / 2,
-        VIEWPORT_MARGIN,
-        Math.max(VIEWPORT_MARGIN, vw - cw - VIEWPORT_MARGIN),
-      );
+  // Card inteiro: se a base (slider/ações) ficou abaixo da margem, sobe o scroll
+  // sem empurrar o topo por cima da faixa do callout.
+  if (fullSpotlight && placement === "top") {
+    const usableBottom = vh - bottomMargin;
+    const minTargetTop = topMargin + ch + CALLOUT_GAP;
+    if (rawTargetRect.bottom > usableBottom + SCROLL_EPSILON) {
+      const needUp = rawTargetRect.bottom - usableBottom;
+      const maxUp = Math.max(0, rawTargetRect.top - minTargetTop);
+      const extra = Math.min(needUp, maxUp);
+      if (extra > SCROLL_EPSILON) {
+        scrollDelta = (scrollDelta || 0) + extra;
+      }
     }
   }
 
   const calloutCenterX = calloutLeft + cw / 2;
   const calloutCenterY = calloutTop + ch / 2;
-  const lineEnd = resolveTargetAnchor(targetRect, placement, calloutCenterX, calloutCenterY);
+  // Card completo: linha aponta o centro do alvo. Truncado: borda do buraco.
+  const lineEnd = fullSpotlight
+    ? {
+        x: clamp(
+          calloutCenterX,
+          rawTargetRect.left + TARGET_EDGE_INSET,
+          rawTargetRect.right - TARGET_EDGE_INSET,
+        ),
+        y: clamp(
+          calloutCenterY,
+          rawTargetRect.top + TARGET_EDGE_INSET,
+          rawTargetRect.bottom - TARGET_EDGE_INSET,
+        ),
+      }
+    : resolveTargetAnchor(
+        placement === "top" || placement === "bottom" ? spotlightRect : rawTargetRect,
+        placement,
+        calloutCenterX,
+        calloutCenterY,
+      );
   const lineStart = resolveLineStart(calloutLeft, calloutTop, cw, ch, placement, lineEnd);
+  const holes = [domRectToHole(spotlightRect, targetElement, HIGHLIGHT_PAD), ...extraHoles];
 
-  const holes = [domRectToHole(targetRect, targetElement, HIGHLIGHT_PAD), ...extraHoles];
-
-  return { holes, calloutLeft, calloutTop, lineStart, lineEnd, placement };
+  return { holes, calloutLeft, calloutTop, lineStart, lineEnd, placement, scrollDelta };
 }
 
 function near(a: number, b: number, tolerance = 0.5): boolean {
@@ -330,10 +421,7 @@ function holeNear(a: HighlightHole, b: HighlightHole): boolean {
   return rectNear(a, b) && a.borderRadius === b.borderRadius;
 }
 
-function pointNear(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-): boolean {
+function pointNear(a: { x: number; y: number }, b: { x: number; y: number }): boolean {
   return near(a.x, b.x) && near(a.y, b.y);
 }
 
@@ -344,6 +432,7 @@ function geometryEqual(a: PointerGeometry | null, b: PointerGeometry | null): bo
   if (a.holes.length !== b.holes.length) return false;
   if (!near(a.calloutLeft, b.calloutLeft)) return false;
   if (!near(a.calloutTop, b.calloutTop)) return false;
+  if (!near(a.scrollDelta, b.scrollDelta, 1)) return false;
   if (!pointNear(a.lineStart, b.lineStart)) return false;
   if (!pointNear(a.lineEnd, b.lineEnd)) return false;
   for (let index = 0; index < a.holes.length; index += 1) {
@@ -372,6 +461,7 @@ export function AnimaTourCallout({
   const gradientId = useId().replace(/:/g, "");
   const calloutRef = useRef<HTMLDivElement>(null);
   const geometryRef = useRef<PointerGeometry | null>(null);
+  const lastScrollAtRef = useRef(0);
   const [geometry, setGeometry] = useState<PointerGeometry | null>(null);
   const [targetReady, setTargetReady] = useState(false);
   const highlightKey = highlightSelectors.join("|");
@@ -413,23 +503,32 @@ export function AnimaTourCallout({
       .filter((hole): hole is HighlightHole => Boolean(hole));
 
     const calloutRect = callout.getBoundingClientRect();
-    commitGeometry(computeGeometry(targetRect, target, calloutRect, extraHoles, placement));
+    const next = computeGeometry(targetRect, target, calloutRect, extraHoles, placement);
+
+    if (Math.abs(next.scrollDelta) > 10) {
+      const now = Date.now();
+      if (now - lastScrollAtRef.current > 420) {
+        lastScrollAtRef.current = now;
+        window.scrollBy({ top: next.scrollDelta, behavior: "smooth" });
+      }
+    }
+
+    commitGeometry(next);
     setTargetReady((prev) => (prev ? prev : true));
   }, [active, commitGeometry, highlightKey, placement, targetSelector]);
 
   useLayoutEffect(() => {
     if (!active) {
       geometryRef.current = null;
+      lastScrollAtRef.current = 0;
       return;
     }
 
+    lastScrollAtRef.current = 0;
     let raf = 0;
-    const runSync = () => {
-      syncGeometry();
-    };
-    raf = window.requestAnimationFrame(runSync);
+    raf = window.requestAnimationFrame(() => syncGeometry());
     return () => window.cancelAnimationFrame(raf);
-  }, [active, syncGeometry]);
+  }, [active, syncGeometry, targetSelector, placement]);
 
   useEffect(() => {
     if (!active) return;
@@ -452,10 +551,6 @@ export function AnimaTourCallout({
       if (node && node !== target) elevate(node);
     }
 
-    if (target instanceof HTMLElement) {
-      target.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-    }
-
     let rafId = 0;
     const scheduleSync = () => {
       window.cancelAnimationFrame(rafId);
@@ -463,13 +558,8 @@ export function AnimaTourCallout({
     };
 
     scheduleSync();
-    const recenterTimer = window.setTimeout(() => {
-      const latest = resolveTourTargetElement(targetSelector);
-      if (latest instanceof HTMLElement) {
-        latest.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-      }
-      scheduleSync();
-    }, 360);
+    const resyncTimer = window.setTimeout(scheduleSync, 420);
+    const resyncTimer2 = window.setTimeout(scheduleSync, 900);
 
     window.addEventListener("resize", scheduleSync);
     window.addEventListener("scroll", scheduleSync, true);
@@ -483,9 +573,11 @@ export function AnimaTourCallout({
 
     const observer = new ResizeObserver(scheduleSync);
     observed.forEach((node) => observer.observe(node));
+    if (calloutRef.current) observer.observe(calloutRef.current);
 
     return () => {
-      window.clearTimeout(recenterTimer);
+      window.clearTimeout(resyncTimer);
+      window.clearTimeout(resyncTimer2);
       window.cancelAnimationFrame(rafId);
       window.removeEventListener("resize", scheduleSync);
       window.removeEventListener("scroll", scheduleSync, true);
@@ -496,7 +588,7 @@ export function AnimaTourCallout({
         node.style.removeProperty("pointer-events");
       }
     };
-  }, [active, highlightKey, syncGeometry, targetSelector, zIndex]);
+  }, [active, highlightKey, placement, syncGeometry, targetSelector, zIndex]);
 
   if (!active) return null;
 
@@ -577,7 +669,7 @@ export function AnimaTourCallout({
 
       <div
         ref={calloutRef}
-        className="anima-tour-callout pointer-events-auto fixed w-[min(100vw-1.75rem,24rem)] max-h-[min(58vh,26rem)]"
+        className="anima-tour-callout pointer-events-auto fixed flex w-[min(100vw-1.5rem,24rem)]"
         style={
           geometry
             ? { top: geometry.calloutTop, left: geometry.calloutLeft, transform: "none" }
@@ -590,6 +682,5 @@ export function AnimaTourCallout({
   );
 }
 
-/** Alias canônico de marca — mesmo componente. */
 export const AnymaTourCallout = AnimaTourCallout;
 export type AnymaTourCalloutProps = AnimaTourCalloutProps;

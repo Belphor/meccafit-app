@@ -21,45 +21,26 @@ const LEGACY_AVATAR_KEY = "current";
 export type EvolutionAvatarUpdatedDetail = {
   userId: string;
 };
-const MAX_CYCLE_SELFIES = 3;
+const MAX_CYCLE_SELFIES = 2;
 
 /**
  * Slots fixos do ciclo mensal (ids estáveis no IndexedDB).
- * Os números 1 / 15 / 30 são chaves de slot, não dias civis — o calendário
- * real do mês é resolvido por `resolveCycleSelfieCalendarDay`.
+ * 1 = início · 30 = fim. Os números são chaves de slot, não dias civis.
+ * O calendário de Brasília resolve o dia real (útil no início, último dia no fim).
  */
 export const CYCLE_SELFIE_DAY_IDS = {
   1: "cycle-selfie-day-1",
-  15: "cycle-selfie-day-15",
   30: "cycle-selfie-day-30",
 } as const;
 
 export type CycleSelfieDay = keyof typeof CYCLE_SELFIE_DAY_IDS;
 
-export const CYCLE_SELFIE_SLOTS = [1, 15, 30] as const satisfies readonly CycleSelfieDay[];
+export const CYCLE_SELFIE_SLOTS = [1, 30] as const satisfies readonly CycleSelfieDay[];
 
-/** Dias civis do mês atual para cada slot do espelho (fim = último dia do mês). */
-export function resolveCycleSelfieCalendarDay(
-  slot: CycleSelfieDay,
-  referenceDate: Date = new Date(),
-): number {
-  const daysInMonth = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth() + 1,
-    0,
-  ).getDate();
-
-  if (slot === 1) return 1;
-  if (slot === 15) return Math.min(15, daysInMonth);
-  return daysInMonth;
-}
-
-export function resolveCycleSelfieDayLabel(
-  slot: CycleSelfieDay,
-  referenceDate: Date = new Date(),
-): string {
-  return `Dia ${resolveCycleSelfieCalendarDay(slot, referenceDate)}`;
-}
+export {
+  resolveCycleSelfieCalendarDay,
+  resolveCycleSelfieDayLabel,
+} from "@/lib/cycle-selfie-calendar";
 
 export const EVOLUTION_AVATAR_UPDATED_EVENT = "meccafit:evolution-avatar-updated";
 

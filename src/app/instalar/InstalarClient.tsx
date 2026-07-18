@@ -37,8 +37,11 @@ export function InstalarClient() {
     useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    // Detecção depende de APIs do navegador; roda só no cliente após montar.
+    /* eslint-disable react-hooks/set-state-in-effect */
     setPlataforma(detectarPlataforma());
     setInstalado(estaInstalado());
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
