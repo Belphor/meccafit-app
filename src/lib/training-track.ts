@@ -162,7 +162,6 @@ export function applyPersonalPrescriptionsToSubgroup(
         currentWeight: prescription.peso_prescrito,
         targetReps: prescription.repeticoes_alvo,
         targetSets: prescription.series_alvo,
-        historicalPrWeight: prescription.peso_prescrito,
       };
     }),
   };

@@ -119,8 +119,9 @@ export function applyPrescriptionRowToSubgroup(
     repsPerSet: row.repeticoes_por_serie,
     progressionAlternatives: row.progressao_alternativas,
     video_url: row.video_url?.trim() || base.video_url || "",
+    // Peso prescrito alimenta o input da sessão; recorde histórico só vem do historico real.
     ...(row.peso_prescrito && row.peso_prescrito > 0
-      ? { currentWeight: row.peso_prescrito, historicalPrWeight: row.peso_prescrito }
-      : null),
+      ? { currentWeight: row.peso_prescrito }
+      : { currentWeight: 0 }),
   };
 }

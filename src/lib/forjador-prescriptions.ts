@@ -171,7 +171,8 @@ export function applyForjadorPrescriptionsToSubgroup(
   trainingDay?: WeekdayIndex,
 ): MuscleSubgroup {
   const scoped = resolvePrescriptionsForMuscle(prescriptions, muscle, trainingDay);
-  if (scoped.length === 0) return subgroup;
+  // Sem prescrição do forjador: lista vazia (lançamento zerado — não dump do catálogo demo).
+  if (scoped.length === 0) return { ...subgroup, exercises: [] };
 
   const exercises = scoped.map((row) => applyPrescriptionRowToSubgroup(subgroup, row));
   const seen = new Set<number>();
@@ -181,8 +182,6 @@ export function applyForjadorPrescriptionsToSubgroup(
     seen.add(exercise.id);
     return true;
   });
-
-  if (merged.length === 0) return subgroup;
 
   return { ...subgroup, exercises: merged };
 }

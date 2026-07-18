@@ -21,7 +21,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 10,
-          "seedMetric": 30,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/rT7DgCr-3pg"
         },
         {
@@ -30,7 +30,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 12,
-          "seedMetric": 22,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/8iPEnov-lmU"
         },
         {
@@ -39,7 +39,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 15,
-          "seedMetric": 25,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/Iwe6AmxVf7o"
         }
       ]
@@ -59,7 +59,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 10,
-          "seedMetric": 18,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/6Z15_WdXmVw"
         },
         {
@@ -68,7 +68,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 12,
-          "seedMetric": 10,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/3VcKaXpzqRo"
         }
       ]
@@ -88,7 +88,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 10,
-          "seedMetric": 20,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/ykJmrZ5v0Oo"
         },
         {
@@ -97,7 +97,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 12,
-          "seedMetric": 14,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/_gsao8VAMbc"
         }
       ]
@@ -117,7 +117,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 10,
-          "seedMetric": 45,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/CAwf7n6Luuc"
         },
         {
@@ -126,7 +126,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 12,
-          "seedMetric": 28,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/pYcpY20QaE8"
         }
       ]
@@ -146,7 +146,7 @@
           "metricKind": "rep_max",
           "targetSets": 4,
           "targetReps": 15,
-          "seedMetric": 20,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/Xyd_fa5zoEU"
         },
         {
@@ -155,7 +155,7 @@
           "metricKind": "duration_sec",
           "targetSets": 3,
           "targetDurationSec": 60,
-          "seedMetric": 45,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/ASdvN_XEl_c"
         }
       ]
@@ -175,7 +175,7 @@
           "metricKind": "load_kg",
           "targetSets": 4,
           "targetReps": 10,
-          "seedMetric": 60,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/ultWZbUMPL8"
         },
         {
@@ -184,7 +184,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 12,
-          "seedMetric": 120,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/IZxyjW7MPJQ"
         },
         {
@@ -193,7 +193,7 @@
           "metricKind": "load_kg",
           "targetSets": 3,
           "targetReps": 10,
-          "seedMetric": 24,
+          "seedMetric": 0,
           "video_url": "https://www.youtube.com/embed/1uDiW5-xz4E"
         }
       ]

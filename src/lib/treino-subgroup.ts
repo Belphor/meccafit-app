@@ -87,6 +87,19 @@ export function composeDayTreinoSubgroup(
     }
   }
 
+  // Planilha com grupo muscular mas sem exercícios prescritos → estado de lançamento vazio.
+  if (exercises.length === 0) {
+    const emptyAnchor = resolveSubgroupByCatalogId(MUSCLE_TO_SUBGROUP_ID.PEITO);
+    return {
+      ...emptyAnchor,
+      id: `planilha-dia-${trainingDay}`,
+      slug: `planilha-dia-${trainingDay}`,
+      name: "Sem treino prescrito",
+      monumentalTitle: "Aguardando prescrição",
+      exercises: [],
+    };
+  }
+
   const label = formatScheduleDayLabel(effectiveMuscles);
   const anchor = resolveSubgroupByCatalogId(trainingMuscleToSubgroupId(effectiveMuscles[0]));
 

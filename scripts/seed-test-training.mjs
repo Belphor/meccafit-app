@@ -28,6 +28,31 @@ function resolvePlanilhaDiaSp() {
 
 const planilhaDiaHoje = resolvePlanilhaDiaSp();
 
+/** Fallbacks quando o catálogo está zerado para lançamento (seedMetric = 0). */
+const DEMO_SEED_FALLBACK_BY_ID = {
+  1: 30,
+  2: 22,
+  3: 25,
+  4: 18,
+  5: 10,
+  6: 20,
+  7: 14,
+  8: 45,
+  9: 28,
+  10: 20,
+  11: 45,
+  12: 60,
+  13: 120,
+  14: 24,
+};
+
+function resolveSeedMetric(exercise) {
+  if (typeof exercise.seedMetric === "number" && exercise.seedMetric > 0) {
+    return exercise.seedMetric;
+  }
+  return DEMO_SEED_FALLBACK_BY_ID[exercise.id] ?? 10;
+}
+
 function loadTestUsers() {
   try {
     const raw = readFileSync(resolve(process.cwd(), "scripts/argos/test-users.json"), "utf8");
@@ -108,11 +133,12 @@ async function main() {
       continue;
     }
 
+    const seedMetric = resolveSeedMetric(exercise);
     const payload = resolveTreinoPersistPayload({
       metricKind: exercise.metricKind,
       musculo: exercise.musculo,
       exercicioId: exercise.id,
-      metricValue: exercise.seedMetric,
+      metricValue: seedMetric,
       prescribedSeries: exercise.targetSets,
     });
 
@@ -134,7 +160,7 @@ async function main() {
 
     seeded += 1;
     console.log(
-      `  OK #${exercise.id} ${exercise.name} — ${formatSeedMetricLabel(exercise)}`,
+      `  OK #${exercise.id} ${exercise.name} — ${formatSeedMetricLabel({ ...exercise, seedMetric })}`,
     );
   }
 

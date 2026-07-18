@@ -56,16 +56,12 @@ export function getHistoricalPersonalRecord(exerciseId: number): ExercisePersona
   return exercisePersonalRecordsMock[exerciseId] ?? null;
 }
 
-/** Retorna a Carga Máxima (PR) registrada — Supabase ou mock de referência. */
+/** Retorna a Carga Máxima (PR) registrada no histórico real (sem mock de catálogo). */
 export function resolveExerciseReferenceWeight(
   exercise: Pick<Exercise, "id" | "currentWeight" | "historicalPrWeight">,
 ): number {
-  const mockPr = getHistoricalPersonalRecord(exercise.id)?.topMetric ?? 0;
-  const candidates = [exercise.historicalPrWeight, mockPr].filter(
-    (value): value is number => typeof value === "number" && value > 0,
-  );
-
-  return candidates.length > 0 ? Math.max(...candidates) : 0;
+  const pr = exercise.historicalPrWeight;
+  return typeof pr === "number" && pr > 0 ? pr : 0;
 }
 
 export function formatExerciseReferenceWeight(

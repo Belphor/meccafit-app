@@ -45,7 +45,8 @@ export const TEST_EXERCISE_IDS = TEST_EXERCISE_CATALOG.subgroups.flatMap((subgro
 export function buildExerciseFromCatalog(
   subgroupId: string,
   entry: CatalogExercise,
-  currentWeight = entry.seedMetric,
+  /** Launch default: 0 kg — seedMetric is only for test/seed scripts. */
+  currentWeight = 0,
 ): Exercise {
   return {
     id: entry.id,
@@ -82,21 +83,11 @@ export const monumentalSubgroupMock: MuscleSubgroup =
 
 export const exercisesMock: Exercise[] = monumentalSubgroupMock.exercises;
 
+/** Empty at launch — PRs come only from real historico / Supabase. */
 export const exercisePersonalRecordsMock: Record<
   number,
   { exerciseId: number; topMetric: number; achievedAt: string }
-> = Object.fromEntries(
-  TEST_EXERCISE_CATALOG.subgroups.flatMap((subgroup) =>
-    subgroup.exercises.map((exercise) => [
-      exercise.id,
-      {
-        exerciseId: exercise.id,
-        topMetric: exercise.seedMetric,
-        achievedAt: "2026-05-10T14:00:00.000Z",
-      },
-    ]),
-  ),
-);
+> = {};
 
 export function findCatalogExerciseById(exerciseId: number): CatalogExercise | null {
   for (const subgroup of TEST_EXERCISE_CATALOG.subgroups) {
