@@ -3872,6 +3872,39 @@ body.anyma-touch-primary .phoenix-orb-model-contact-shadow {
   opacity: 0.35;
 }
 
+/* Câmara da esfera no mobile: mais clara atrás da Fênix, sem filter animado. */
+body.anyma-touch-primary .phoenix-fireball-mask--open {
+  animation: none;
+  filter: none;
+  opacity: 1;
+  box-shadow:
+    inset -6px -10px 16px rgba(20, 8, 2, 0.38),
+    inset 5px 6px 14px rgba(255, 251, 235, 0.22),
+    inset 0 -14px 22px rgba(30, 12, 4, 0.28),
+    0 0 18px rgba(253, 224, 71, 0.28),
+    0 0 36px rgba(249, 115, 22, 0.22);
+}
+
+body.anyma-touch-primary .anima-fireball--chamber {
+  background: radial-gradient(
+    circle at 40% 34%,
+    #fffef5 0%,
+    #fde68a 14%,
+    #fbbf24 28%,
+    #fb923c 44%,
+    #ea580c 58%,
+    #9a3412 78%,
+    #451a03 100%
+  );
+}
+
+body.anyma-touch-primary .phoenix-orb-shell--ascended {
+  box-shadow:
+    0 0 16px rgba(255, 251, 235, 0.42),
+    0 0 34px rgba(253, 224, 71, 0.32),
+    0 0 56px rgba(249, 115, 22, 0.2);
+}
+
 @media (hover: none) and (pointer: coarse) {
   .anima-hud-panel {
     -webkit-overflow-scrolling: touch;

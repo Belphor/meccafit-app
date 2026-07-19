@@ -7,9 +7,11 @@ import type { Group, Object3D, Texture } from "three";
 import {
   LinearFilter,
   LinearMipmapLinearFilter,
+  MeshLambertMaterial,
   MeshStandardMaterial,
   SRGBColorSpace,
   type Material,
+  type Mesh,
 } from "three";
 
 /** Phoenix2 — PBR Sketchfab/Blender export (Y-up, asas abertas). */
@@ -119,19 +121,28 @@ function enhanceTextureQuality(texture: Texture, anisotropy: number): void {
   enhancedTextures.add(texture);
 }
 
-function collectMagmaMaterials(root: Object3D, isMobile: boolean): MeshStandardMaterial[] {
-  const materials: MeshStandardMaterial[] = [];
-  root.traverse((node) => {
-    const mesh = node as { isMesh?: boolean; material?: Material | Material[]; frustumCulled?: boolean };
-    if (!mesh.isMesh || !mesh.material) return;
-    // Mobile: frustumCulled às vezes corta o modelo no orb pequeno.
-    mesh.frustumCulled = !isMobile;
-    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    for (const material of list) {
-      if (material instanceof MeshStandardMaterial) materials.push(material);
-    }
+/** Mobile: Lambert (shader barato) + magma emissivo estático. */
+function createMobileMagmaLambert(
+  source: MeshStandardMaterial,
+  emissiveMap: Texture,
+  isOpenOrb: boolean,
+  anisotropy: number,
+): MeshLambertMaterial {
+  if (source.map) enhanceTextureQuality(source.map, anisotropy);
+  enhanceTextureQuality(emissiveMap, anisotropy);
+
+  const lambert = new MeshLambertMaterial({
+    map: source.map,
+    color: source.color.clone(),
+    emissiveMap,
+    emissive: "#ff9a38",
+    emissiveIntensity: isOpenOrb ? 2.1 : 1.5,
+    transparent: false,
+    depthWrite: true,
   });
-  return materials;
+  lambert.needsUpdate = true;
+  source.dispose();
+  return lambert;
 }
 
 function applyPhoenixMaterials(
@@ -142,65 +153,75 @@ function applyPhoenixMaterials(
   emissiveMap: Texture,
   isMobile = false,
 ): MeshStandardMaterial[] {
-  const materials = collectMagmaMaterials(root, isMobile);
+  const pulseMaterials: MeshStandardMaterial[] = [];
 
-  for (const material of materials) {
-    const maps = [
-      material.map,
-      material.normalMap,
-      material.metalnessMap,
-      material.roughnessMap,
-      material.emissiveMap,
-      emissiveMap,
-    ];
-    for (const map of maps) {
-      if (map) enhanceTextureQuality(map, anisotropy);
-    }
+  root.traverse((node) => {
+    const mesh = node as Mesh & { isMesh?: boolean };
+    if (!mesh.isMesh || !mesh.material) return;
+    mesh.frustumCulled = !isMobile;
 
-    material.transparent = false;
-    material.depthWrite = true;
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const next: Material[] = [];
 
-    if (material.normalMap) {
+    for (const material of list) {
+      if (!(material instanceof MeshStandardMaterial)) {
+        next.push(material);
+        continue;
+      }
+
       if (isMobile && !isPunished) {
-        // Sem normal map no mobile: shading mais barato + silhueta mais luminosa.
-        material.normalMap = null;
-        material.normalScale.set(1, 1);
-      } else {
+        next.push(createMobileMagmaLambert(material, emissiveMap, isOpenOrb, anisotropy));
+        continue;
+      }
+
+      const maps = [
+        material.map,
+        material.normalMap,
+        material.metalnessMap,
+        material.roughnessMap,
+        material.emissiveMap,
+        emissiveMap,
+      ];
+      for (const map of maps) {
+        if (map) enhanceTextureQuality(map, anisotropy);
+      }
+
+      material.transparent = false;
+      material.depthWrite = true;
+
+      if (material.normalMap) {
         const n = isPunished ? 0.85 : 1.2;
         material.normalScale.set(n, n);
       }
-    }
 
-    if (isPunished) {
-      material.roughness = PHOENIX_ASH_MATERIAL.roughness;
-      material.metalness = PHOENIX_ASH_MATERIAL.metalness;
-      material.color.set("#3a3a3a");
-      material.emissiveMap = null;
-      material.emissive.set("#1a1a1a");
-      material.emissiveIntensity = 0.04;
-      material.envMapIntensity = 0.35;
-    } else {
-      // Mobile: magma mais emissivo e menos rough (brilho estático, zero animação).
-      material.roughness = isMobile
-        ? Math.max(0.22, material.roughness * 0.72)
-        : Math.max(0.32, material.roughness * 0.9);
-      material.metalness = Math.min(0.55, material.metalness + (isMobile ? 0.04 : 0.08));
-      material.emissiveMap = emissiveMap;
-      material.emissive.set(isMobile ? "#ff8a2a" : "#ff6a1a");
-      material.emissiveIntensity = isOpenOrb
-        ? isMobile
-          ? 1.85
-          : PHOENIX_MAGMA_EMISSIVE.openMin
-        : isMobile
-          ? 1.38
+      if (isPunished) {
+        material.roughness = PHOENIX_ASH_MATERIAL.roughness;
+        material.metalness = PHOENIX_ASH_MATERIAL.metalness;
+        material.color.set("#3a3a3a");
+        material.emissiveMap = null;
+        material.emissive.set("#1a1a1a");
+        material.emissiveIntensity = 0.04;
+        material.envMapIntensity = 0.35;
+      } else {
+        material.roughness = Math.max(0.32, material.roughness * 0.9);
+        material.metalness = Math.min(0.55, material.metalness + 0.08);
+        material.emissiveMap = emissiveMap;
+        material.emissive.set("#ff6a1a");
+        material.emissiveIntensity = isOpenOrb
+          ? PHOENIX_MAGMA_EMISSIVE.openMin
           : PHOENIX_MAGMA_EMISSIVE.idleMin;
-      material.envMapIntensity = isMobile ? (isOpenOrb ? 0.55 : 0.4) : isOpenOrb ? 1.05 : 0.78;
+        material.envMapIntensity = isOpenOrb ? 1.05 : 0.78;
+      }
+
+      material.needsUpdate = true;
+      pulseMaterials.push(material);
+      next.push(material);
     }
 
-    material.needsUpdate = true;
-  }
+    mesh.material = Array.isArray(mesh.material) ? next : next[0]!;
+  });
 
-  return materials;
+  return pulseMaterials;
 }
 
 function PhoenixModelMesh({
@@ -361,14 +382,14 @@ export function PhoenixModel({
   return (
     <>
       <hemisphereLight
-        intensity={isPunished ? 0.28 : isMobile ? 0.62 : 0.4}
-        color={isPunished ? "#71717a" : isMobile ? "#fff1d6" : "#fff7ed"}
+        intensity={isPunished ? 0.28 : isMobile ? 0.7 : 0.4}
+        color={isPunished ? "#71717a" : isMobile ? "#fff4e0" : "#fff7ed"}
         groundColor={isPunished ? "#27272a" : "#451a03"}
       />
       <directionalLight
         position={[2.2, 4.2, 3.4]}
-        intensity={isPunished ? 0.4 : open ? (isMobile ? 1.45 : 1.55) : isMobile ? 1.28 : 1.35}
-        color={isPunished ? "#6b7280" : isMobile ? "#ffe8c2" : "#fffbeb"}
+        intensity={isPunished ? 0.4 : isMobile ? (open ? 1.55 : 1.35) : open ? 1.55 : 1.35}
+        color={isPunished ? "#6b7280" : isMobile ? "#ffeac8" : "#fffbeb"}
       />
       {/* Fill lights só no desktop — mobile: 2 luzes + magma emissivo estático. */}
       {!isMobile ? (
