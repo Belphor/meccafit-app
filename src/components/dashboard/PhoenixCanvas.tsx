@@ -331,11 +331,15 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
               <>
                 <span
                   aria-hidden="true"
-                  className="phoenix-orb-model-aura phoenix-orb-model-aura--glow pointer-events-none absolute inset-[10%] z-[0] rounded-full"
+                  className="phoenix-orb-model-aura phoenix-orb-model-aura--glow pointer-events-none absolute inset-[8%] z-[0] rounded-full"
                 />
                 <span
                   aria-hidden="true"
-                  className="phoenix-orb-model-aura phoenix-orb-model-aura--rim pointer-events-none absolute inset-[4%] z-[1] rounded-full"
+                  className="phoenix-orb-model-aura phoenix-orb-model-aura--rim pointer-events-none absolute inset-[2%] z-[1] rounded-full"
+                />
+                <span
+                  aria-hidden="true"
+                  className="phoenix-orb-model-aura phoenix-orb-model-aura--edge pointer-events-none absolute inset-[-2%] z-[3] rounded-full"
                 />
                 <span
                   aria-hidden="true"

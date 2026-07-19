@@ -189,10 +189,10 @@ function applyPhoenixMaterials(
       material.emissive.set(isMobile ? "#ff8a2a" : "#ff6a1a");
       material.emissiveIntensity = isOpenOrb
         ? isMobile
-          ? 1.72
+          ? 1.85
           : PHOENIX_MAGMA_EMISSIVE.openMin
         : isMobile
-          ? 1.28
+          ? 1.38
           : PHOENIX_MAGMA_EMISSIVE.idleMin;
       material.envMapIntensity = isMobile ? (isOpenOrb ? 0.55 : 0.4) : isOpenOrb ? 1.05 : 0.78;
     }
