@@ -3,10 +3,10 @@
 ### Manifesto Executivo · Perfil de Mercado · Carta de Governança Perpétua
 
 **Classificação:** Institucional · Pronto para investidores e clientes premium  
-**Versão:** 1.2.0  
-**Status:** Execução imediata de alta densidade  
+**Versão:** 1.2.1  
+**Status:** Execução imediata de alta densidade · Meccafit em modo **vitrine exclusiva**  
 **Destino:** Cursor Pro · IA de engenharia e negócios · Todos os projetos FENYXIA  
-**Última revisão:** Modelo multissetorial · mitologia por sistema · Anima · PLUTUS interno
+**Última revisão:** 18/07/2026 · relatório ao cliente · vendas adiadas · DNA Meccafit 1.1.0
 
 ---
 
@@ -32,6 +32,8 @@ A **FENYXIA CO-OPS** é uma **forja institucional de luxo**: engenharia **high c
 - Um modelo de **exclusividade absoluta**: um sistema por cliente, privado e soberano
 
 O **Meccafit App** é o **primeiro sistema forjado** (projeto vitrine n.º 1). Ilustra o método. **Não define o teto** da FENYXIA.
+
+**Estado comercial vigente (Jul 2026):** o Meccafit permanece **vitrine exclusiva**, sem cobranças nem monetização dentro do altar. O capítulo de **vendas** fica para conversa futura. Documento de apresentação ao cliente: **`docs/MECCAFIT-RELATORIO-CLIENTE.md`**.
 
 ### Propósito macro
 
@@ -238,8 +240,9 @@ Qualquer agente IA sob autoridade FENYXIA deve:
 
 | Documento | Função |
 |-----------|--------|
+| `docs/MECCAFIT-RELATORIO-CLIENTE.md` | Apresentação completa ao cliente · Meccafit |
 | `docs/FENYXIA-CORPORATE-INSTITUTIONAL-REPORT.md` | Este relatório |
-| `docs/MECCAFIT-PHOENIX-DNA-REPORT.md` | DNA Fênix · Meccafit |
+| `docs/MECCAFIT-PHOENIX-DNA-REPORT.md` | DNA Fênix · Meccafit (v1.1.0) |
 | `docs/ANIMA-FENYXIA-KNOWLEDGE-BASE.md` | Base Anima · recolha |
 | `docs/PLUTUS-INFRA-SNAPSHOT.md` | Custos internos de infra |
 
@@ -259,5 +262,5 @@ O mercado está saturado de cinzas.
 
 ---
 
-*Autoridade: FENYXIA CO-OPS · Carta Institucional v1.2.0*  
+*Autoridade: FENYXIA CO-OPS · Carta Institucional v1.2.1*  
 *Orquestração: ATENA · Cursor Pro · Segurança: ARGOS*

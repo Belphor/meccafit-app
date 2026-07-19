@@ -7,12 +7,11 @@ import {
   PHOENIX_CORE_FLASH_BLOOM_MS,
   PHOENIX_DEPLOY_DURATION_S,
   PHOENIX_FLASH_FADE_MS,
-  PHOENIX_FLASH_HOLD_AFTER_MODEL_MS,
+  PHOENIX_FLASH_HOLD_MS,
   PHOENIX_GREETING_DELAY_MS,
   PHOENIX_GREETING_VISIBLE_MS,
   PHOENIX_IGNITION_DURATION_S,
   PHOENIX_MODEL_FADE_IN_MS,
-  PHOENIX_MODEL_GROW_MS,
   PHOENIX_REVEAL_TOTAL_S,
   PHOENIX_WING_CYCLE_S,
 } from "@/components/dashboard/PhoenixModel";
@@ -98,21 +97,20 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   const timersRef = useRef<number[]>([]);
 
   const showModel = isHudOpen || phase === "revealing" || phase === "awake";
-  const modelCanvasActive = phase === "igniting" || showModel;
-  const preloadModel = modelCanvasActive;
+  /** Canvas monta no ignite (preload) mas só pinta a malha depois do clarão. */
+  const mountCanvas = phase === "igniting" || showModel;
+  const modelSceneVisible =
+    isHudOpen || modelEmerging || modelRevealed || (phase === "awake" && flashHidden);
   const flashVisible =
     !flashHidden && (phase === "igniting" || (phase === "revealing" && !flashHidden));
-  const fireballIgnited = flashVisible;
-  const orbGlowActive = showModel && (modelEmerging || isHudOpen);
+  const orbGlowActive = showModel && (modelEmerging || modelRevealed || isHudOpen);
   /** Corona/rim só após o clarão — evita blur+blend empilhado com WebGL no pico. */
   const sphereAuraActive = orbGlowActive && flashHidden;
   const openFlameRings = orbGlowActive && flashHidden;
   const modelContourGlow =
-    (modelRevealed || isHudOpen) && (flashFading || !flashVisible);
+    (modelRevealed || isHudOpen) && flashHidden;
   const coreFlashVisible =
-    modelEmerging && !flashHidden && (phase === "igniting" || phase === "revealing");
-  /** Um anel basta no clarão — 3 anéis + blur travavam o compositor. */
-  const ignitionFlameRings = fireballIgnited && !flashHidden;
+    !flashHidden && (phase === "igniting" || phase === "revealing");
   const shellClass = resolveOrbShellClass(phase, isHudOpen);
   const shellTransitionMs = resolveShellTransitionMs(phase);
 
@@ -172,57 +170,16 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     };
   }, [flashHidden, isPunished, modelRevealed, onPhoenixRevealed, phase]);
 
+  /** Clarão some no próprio tempo — modelo ainda oculto. */
   useEffect(() => {
-    if (phase === "awake" || isHudOpen) {
-      queueMicrotask(() => {
-        setModelEmerging(true);
-        setModelRevealed(true);
-      });
-      return;
-    }
-
-    if (phase === "igniting" || phase === "revealing") {
-      if (modelReady) {
-        queueMicrotask(() => beginModelEmerging());
-      }
-      return;
-    }
-
-    queueMicrotask(() => {
-      setModelEmerging(false);
-      setModelRevealed(false);
-    });
-  }, [beginModelEmerging, isHudOpen, modelReady, phase]);
-
-  useEffect(() => {
-    if (!modelEmerging) {
-      queueMicrotask(() => setModelRevealed(false));
-      return;
-    }
-
-    const growMs = Math.max(PHOENIX_MODEL_FADE_IN_MS, PHOENIX_MODEL_GROW_MS);
-    if (growMs <= 0) {
-      queueMicrotask(() => setModelRevealed(true));
-      return;
-    }
-
-    const revealTimer = window.setTimeout(() => {
-      setModelRevealed(true);
-    }, growMs);
-
-    return () => window.clearTimeout(revealTimer);
-  }, [modelEmerging]);
-
-  useEffect(() => {
-    if (!modelRevealed || flashFading || flashHidden) return;
-    if (phase !== "revealing") return;
+    if (phase !== "revealing" || flashFading || flashHidden) return;
 
     const dismissTimer = window.setTimeout(() => {
       setFlashFading(true);
-    }, PHOENIX_FLASH_HOLD_AFTER_MODEL_MS);
+    }, PHOENIX_FLASH_HOLD_MS);
 
     return () => window.clearTimeout(dismissTimer);
-  }, [flashFading, flashHidden, modelRevealed, phase]);
+  }, [flashFading, flashHidden, phase]);
 
   useEffect(() => {
     if (!flashFading) return;
@@ -234,6 +191,47 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
 
     return () => window.clearTimeout(hideTimer);
   }, [flashFading]);
+
+  /** ANYMA só emerge depois do clarão sumir por completo. */
+  useEffect(() => {
+    if (isHudOpen) {
+      queueMicrotask(() => {
+        setModelEmerging(true);
+        setModelRevealed(true);
+      });
+      return;
+    }
+
+    if (flashHidden && (phase === "revealing" || phase === "awake") && modelReady) {
+      queueMicrotask(() => beginModelEmerging());
+      return;
+    }
+
+    if (phase === "orb") {
+      queueMicrotask(() => {
+        setModelEmerging(false);
+        setModelRevealed(false);
+      });
+    }
+  }, [beginModelEmerging, flashHidden, isHudOpen, modelReady, phase]);
+
+  useEffect(() => {
+    if (!modelEmerging) {
+      queueMicrotask(() => setModelRevealed(false));
+      return;
+    }
+
+    if (PHOENIX_MODEL_FADE_IN_MS <= 0) {
+      queueMicrotask(() => setModelRevealed(true));
+      return;
+    }
+
+    const revealTimer = window.setTimeout(() => {
+      setModelRevealed(true);
+    }, PHOENIX_MODEL_FADE_IN_MS);
+
+    return () => window.clearTimeout(revealTimer);
+  }, [modelEmerging]);
 
   useEffect(() => {
     if (isHudOpen) return;
@@ -284,15 +282,14 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   }, [isHudOpen, onEngage, phase, queueTimer, resetFlashState]);
 
   const resolveModelLayerClass = (): string => {
-    if (!preloadModel) return "phoenix-orb-model-layer";
+    if (!mountCanvas) return "phoenix-orb-model-layer";
     const classes = ["phoenix-orb-model-layer"];
-    if (modelRevealed || isHudOpen || phase === "awake") {
+    if (modelRevealed || isHudOpen) {
       classes.push("phoenix-orb-model-layer--emerging");
       classes.push("phoenix-orb-model-layer--revealed");
-      classes.push("phoenix-orb-model-layer--grown");
-    } else if (modelEmerging) {
+    } else if (modelEmerging && flashHidden) {
       classes.push("phoenix-orb-model-layer--emerging");
-      classes.push("phoenix-orb-model-layer--growing");
+      classes.push("phoenix-orb-model-layer--fading-in");
     } else if (phase === "revealing" || phase === "igniting") {
       classes.push("phoenix-orb-model-layer--camouflaged");
     } else {
@@ -335,7 +332,6 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
         style={{
           transitionDuration: `${shellTransitionMs}ms`,
           ["--phoenix-model-fade-ms" as string]: `${PHOENIX_MODEL_FADE_IN_MS}ms`,
-          ["--phoenix-model-grow-ms" as string]: `${PHOENIX_MODEL_GROW_MS}ms`,
           ["--phoenix-flash-fade-ms" as string]: `${PHOENIX_FLASH_FADE_MS}ms`,
           ["--phoenix-core-flash-bloom-ms" as string]: `${PHOENIX_CORE_FLASH_BLOOM_MS}ms`,
           ["--phoenix-pulse-cycle" as string]: `${PHOENIX_WING_CYCLE_S}s`,
@@ -363,16 +359,10 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
         />
 
         {sphereAuraActive ? (
-          <>
-            <span
-              aria-hidden="true"
-              className="phoenix-orb-plasma-corona pointer-events-none absolute inset-[-40%] z-[0] rounded-full"
-            />
-            <span
-              aria-hidden="true"
-              className="phoenix-orb-sphere-rim pointer-events-none absolute inset-[-4%] z-[4] rounded-full"
-            />
-          </>
+          <span
+            aria-hidden="true"
+            className="phoenix-orb-sphere-rim pointer-events-none absolute inset-[-4%] z-[4] rounded-full"
+          />
         ) : null}
 
         <span
@@ -389,24 +379,14 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
           )}`}
         />
 
-        {ignitionFlameRings ? (
-          <span aria-hidden="true" className="phoenix-flame-ring phoenix-flame-ring--one" />
-        ) : null}
-
         {openFlameRings ? (
-          <>
-            <span
-              aria-hidden="true"
-              className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--one"
-            />
-            <span
-              aria-hidden="true"
-              className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--two"
-            />
-          </>
+          <span
+            aria-hidden="true"
+            className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--one"
+          />
         ) : null}
 
-        {preloadModel ? (
+        {mountCanvas ? (
           <div className={resolveModelLayerClass()} aria-hidden={!modelEmerging}>
             {modelContourGlow ? (
               <span
@@ -417,8 +397,8 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
             <Suspense fallback={null}>
               <PhoenixCanvasDynamic
                 isPunished={isPunished}
-                isVisible={modelCanvasActive}
-                isOpenOrb={showModel}
+                isVisible={modelSceneVisible}
+                isOpenOrb={showModel && flashHidden}
                 onLoaded={handleModelLoaded}
                 onEngage={handleEngage}
               />
@@ -432,7 +412,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
             className={`phoenix-core-flash ${
               flashFading
                 ? "phoenix-core-flash--fading"
-                : modelRevealed
+                : phase === "revealing"
                   ? "phoenix-core-flash--hold"
                   : "phoenix-core-flash--bloom"
             }`}

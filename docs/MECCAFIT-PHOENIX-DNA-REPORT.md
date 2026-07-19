@@ -4,13 +4,25 @@
 **Empresa:** FENYXIA CO-OPS  
 **Projecto:** Meccafit App (vitrine n.º 1)  
 **Arquétipo mitológico:** Fênix (Morte · Renascimento · Fogo)  
-**Versão:** 1.0.0 — **Rascunho vivo**  
-**Status:** Em forja · **Actualizar integralmente no fim do projecto**  
-**Stack:** Next.js 16 · Supabase · ARGOS · IRIS
+**Versão:** 1.1.0  
+**Status:** Em forja avançada · **vitrine exclusiva · sem monetização in-app**  
+**Stack:** Next.js 16 · React 19 · Supabase · ARGOS · IRIS · ANYMA FÊNIX  
+**Relatório ao cliente:** `docs/MECCAFIT-RELATORIO-CLIENTE.md`
 
 ---
 
-> *Este documento é a constituição mitológica e de produto do Meccafit. IRIS, HERMES, ARGOS e ATENA devem alinhar-se a ele. A Anima FENYXIA (fase final) beberá daqui.*
+> *Este documento é a constituição mitológica e de produto do Meccafit. IRIS, HERMES, ARGOS e ATENA devem alinhar-se a ele. A Anima FENYXIA (fase LLM avançada) beberá daqui.*
+
+---
+
+## 0. DECISÃO COMERCIAL VIGENTE (JUL 2026)
+
+| Tema | Decisão |
+|------|--------|
+| Posicionamento | **Vitrine exclusiva** — não produto de massa |
+| Monetização in-app | **Não** — “Dentro do altar não há cobranças nem monetização.” (`fenyxia-empresa.ts`) |
+| Vendas / planos comerciais | **Adiado** — retomar em conversa futura com o cliente |
+| Documento de apresentação | `MECCAFIT-RELATORIO-CLIENTE.md` |
 
 ---
 
@@ -19,11 +31,13 @@
 | Campo | Valor |
 |-------|--------|
 | **Nome comercial** | Meccafit / Meccafit Center |
-| **Marca mãe** | FENYXIA (rodapé · ecossistema) |
+| **Nome PWA** | FENYXIA Meccafit |
+| **Marca mãe** | FENYXIA (rodapé · ecossistema · página Empresa) |
 | **Domínio** | Fitness · musculação · evolução de performance |
 | **Personagem** | **Fênix** |
 | **Promessa** | A app reflecte a verdade do treino — ascensão, estagnação e renascimento visíveis |
-| **Tipo de entrega** | Sistema único · high code · **não** produto de massa na net |
+| **Tipo de entrega** | Sistema único · high code · PWA · **não** produto de massa na net |
+| **Guia de voz** | **ANYMA FÊNIX** (TTS + órbita 3D + guias por área) |
 
 ---
 
@@ -48,12 +62,13 @@
 ### II. Fogo (Faísca → Brasa → Labareda)
 - **Significado:** trabalho activo · validação · atrito produtivo
 - **Produto:** `phase_tier` · VTC · exercícios em chamas · forjado
-- **Métricas:** VTC sessão · VTC 30 dias · séries · superação
+- **Métricas:** VTC sessão · VTC acumulados · séries · superação
 
 ### III. Magma / Fênix Cyber (Fogo Cósmico)
 - **Significado:** ápice institucional
+- **Nome de produto:** Fogo Cósmico Sagrado (`PHASE_TIER_LABELS[5]`)
 - **Visual alvo:** Azul Cobalto × Ouro Solar Líquido
-- **Status:** **A definir na criação** (tier 5 · cosmética · ritual final)
+- **Status:** tier existe no motor · **refinamento cosmética/ritual contínuo**
 
 ---
 
@@ -66,8 +81,9 @@
 | Ouro solar `#FFB800` | Métricas · ascensão |
 | Vidro fumê · brasão | Painéis · cards |
 | Plasma · brasas | Títulos · transmutação |
+| Aura forja (ciano) | Painel staff — contraste com altar âmbar |
 
-**Léxico sagrado (amostra):** Altar · Forja · Linhagem · Brasa · Renascimento · VTC · Superação · Portal de Brasa · Matrix da Alma *(rotas planeadas)*
+**Léxico sagrado:** Altar · Forja · Linhagem · Brasa · Renascimento · VTC · Superação · Portal de Brasa · ANYMA FÊNIX · Voo de Cinzas
 
 ---
 
@@ -75,20 +91,24 @@
 
 ### Fases (`phase_tier` 1–5)
 - Conquista permanente no perfil
-- Transmutação ~12s ao subir tier (olho da Fênix)
+- Transmutação visual ao subir tier (olho da Fênix / IRIS)
+- Labels: Cinzas · Faísca · Brasa · Labareda · Fogo Cósmico Sagrado
 
 ### Thermal Gravity (gravidade térmica)
-- **Faísca:** manter 4.000 kg VTC / 30 dias
-- **Labareda:** manter 16.000 kg VTC / 30 dias
-- Abaixo → degradar layout (sem apagar histórico)
-- Restauração: sessão ≥ 1.000 kg VTC → flash de brasas
+- Layout reflecte inatividade (sem apagar histórico)
+- Restauração quando o atleta volta a forjar com volume relevante
+- Regra mensal antiga de VTC 30d: **deprecated** no código — regressão por inatividade
 
 ### Superação
 - Peso acima do PR → overlay · mural (com delay ARGOS)
 
 ### Hierarquia (AIGIS)
-- Cliente · Forjador · Forjador Linhagem · Soberano
-- ARGOS: RLS · RPC-only writes
+- Cliente · Forjador · Forjador Linhagem · Forjador Soberano
+- VIP = bond pessoal activo (`forger_client_bonds`) → aba Nutrição
+- ARGOS: RLS · RPC-only writes em caminhos críticos
+
+### Entrada física
+- Balcão QR → `counter-handshake` → `/instalar` → cadastro com cookie
 
 ---
 
@@ -96,52 +116,70 @@
 
 | Camada | Ficheiros / artefactos |
 |--------|-------------------------|
-| Portal | `src/app/page.tsx` |
+| Portal | `src/app/page.tsx` · `PortalDeBrasaClient` |
 | Dashboard | `src/app/dashboard/` · `DashboardClient.tsx` |
+| Abas | `src/lib/dashboard-tabs.ts` (treino · evolução · comunidade · perfil · dieta VIP) |
 | Motor fase | `PhoenixPhaseEngine.tsx` · `thermal-gravity.ts` |
 | API bundle | `src/app/api/dashboard/bundle/route.ts` |
+| Dieta | `src/app/api/diet/bundle` · `DietaPanel` |
+| ANYMA TTS | `src/app/api/anima/tts` · `anyma-copy.ts` · `PhoenixHelper` |
+| 3D | `PhoenixCanvas.tsx` · `PhoenixModel.tsx` |
 | Config IRIS | `src/lib/dashboard-config.ts` |
-| Segurança | `supabase/migrations/*argos*` · `scripts/argos/` |
+| Empresa (copy) | `src/lib/fenyxia-empresa.ts` |
+| Segurança | `supabase/migrations/*` · `scripts/argos/` |
 | CI | `.github/workflows/argos.yml` |
+| PWA | `manifest.ts` · `public/sw.js` · `/instalar` · `/balcao` |
 
 ---
 
 ## 7. ROTAS E VISÃO (HONESTIDADE THOTH)
 
-**Implementado hoje:** `/` · `/dashboard` (abas: treino, evolução, mural)
+### Implementado
 
-**Planeado em `internal-routes.ts`:** rotas `/cliente/*` · `/forjador/*` — **ainda sem páginas**
+| Área | Rotas |
+|------|-------|
+| Entrada | `/` · `/forja` · `/criar-conta` · `/balcao` · `/instalar` · register com handshake |
+| Altar | `/dashboard` (+ onboarding, fenyxia, lexico, como-a-fenix-mede, forum-brasa-viva) |
+| Aliases | `/treino` · `/evolucao` · `/comunidade` · `/perfil` → dashboard |
+| Forja | `/dashboard/forja` · `/forjador/monitoramento` · dieta · medidas · academia |
 
-**Decisão pendente (fim de projecto):** construir · podar · ou integrar no dashboard
-
----
-
-## 8. ANIMA FENYXIA (MECCAFIT)
-
-- **Implementação:** última fase do projecto
-- **Recolha actual:** `docs/ANIMA-FENYXIA-KNOWLEDGE-BASE.md`
-- **Papel:** explicar app · imersão Fênix + musculação · ligar lore a dados do bundle
-- **Restrições ARGOS:** só dados do próprio user · sem inventar métricas
+### Deprecated / sem páginas activas
+- Rotas legado `/cliente/*` em `internal-routes.ts` — **não usar**
 
 ---
 
-## 9. REGRESSÃO E COMPAIXÃO (REVISAR NA CRIAÇÃO)
+## 8. ANYMA FÊNIX (MECCAFIT)
+
+| Camada | Status |
+|--------|--------|
+| **ANYMA FÊNIX** (voz · guias · 3D · onboarding) | **Implementada** no altar |
+| **Anima LLM conversacional completa** | Fase final · recolha em `ANIMA-FENYXIA-KNOWLEDGE-BASE.md` |
+| **Restrições ARGOS** | Só dados do próprio user · sem inventar métricas |
+
+---
+
+## 9. REGRESSÃO E COMPAIXÃO
 
 - Degradação visual = verdade térmica
-- **Revisar no fim:** janela de graça · copy compassiva · comunicação Anima
+- ANYMA: alerta suave após dias sem visita (`ANYMA_DEBT_SOFT_DAYS`)
+- Revisar continuamente: copy compassiva · janela de graça · comunicação Anima
 
 ---
 
-## 10. CHECKLIST FIM DE PROJECTO (ACTUALIZAR ESTE DOC)
+## 10. CHECKLIST FIM DE PROJECTO
 
-- [ ] Trindade visual completa incl. Fogo Cósmico
-- [ ] Rotas fantasma resolvidas
-- [ ] Subgrupos musculares populados além do peitoral
-- [ ] Forjador: esconder ou implementar
-- [ ] Deploy Vercel · URL vitrine
-- [ ] Anima implementada e alinhada a esta base
-- [ ] PLUTUS snapshot actualizado
-- [ ] Demo script 5 min documentado
+- [x] Altar com abas Treino · Evolução · Comunidade · Perfil · Nutrição VIP
+- [x] Painel Forja (treino · monitoramento · dieta · medidas · academia soberano)
+- [x] Balcão + instalar + handshake
+- [x] ANYMA FÊNIX (voz/UI/3D)
+- [x] Página Empresa · sem monetização no altar
+- [x] Relatório ao cliente (`MECCAFIT-RELATORIO-CLIENTE.md`)
+- [ ] Refinamento visual completo do Fogo Cósmico (tier 5)
+- [ ] Anima LLM alinhada a esta base (fase final)
+- [ ] Deploy vitrine oficial estável (URL de produção a confirmar)
+- [ ] PLUTUS snapshot com custos preenchidos
+- [ ] Demo script 5 min (ver roteiro no relatório ao cliente §12)
+- [ ] Capítulo **VENDAS** — só quando a casa reabrir a conversa
 
 ---
 
@@ -150,8 +188,9 @@
 | Versão | Data | Notas |
 |--------|------|-------|
 | 1.0.0 | 2026 | Criação oficial · estado mid-forge |
+| 1.1.0 | 18/07/2026 | Actualização integral: rotas reais · VIP · ANYMA · forja · decisão vitrine sem vendas · link relatório cliente |
 
 ---
 
-*Documento: FENYXIA CO-OPS · Meccafit · DNA Fênix v1.0.0*  
-*Próxima revisão: **fim do projecto***
+*Documento: FENYXIA CO-OPS · Meccafit · DNA Fênix v1.1.0*  
+*Próxima revisão: capítulo vendas **ou** fecho de Anima LLM / deploy vitrine*

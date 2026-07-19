@@ -2883,10 +2883,7 @@ body.anyma-touch-primary .anima-glass-suporte {
   animation: phoenix-orb-open-pulse var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
   opacity: 0.96;
   pointer-events: none;
-  transition:
-    opacity 0.65s ease-out,
-    filter 0.65s ease-out,
-    box-shadow 0.65s ease-out;
+  transition: opacity 0.65s ease-out;
   box-shadow:
     inset -8px -14px 22px rgba(20, 8, 2, 0.52),
     inset 6px 7px 16px rgba(255, 251, 235, 0.14),
@@ -2959,23 +2956,9 @@ body.anyma-touch-primary .anima-glass-suporte {
   0%,
   100% {
     opacity: 0.9;
-    transform: scale(0.985);
-    filter: saturate(1.32) brightness(1.02) contrast(1.02);
-    box-shadow:
-      inset -8px -14px 22px rgba(20, 8, 2, 0.48),
-      inset 6px 7px 16px rgba(255, 251, 235, 0.1),
-      inset 0 -18px 28px rgba(30, 12, 4, 0.38),
-      inset 0 0 24px rgba(42, 16, 4, 0.16);
   }
   50% {
     opacity: 1;
-    transform: scale(1.015);
-    filter: saturate(1.58) brightness(1.18) contrast(1.1);
-    box-shadow:
-      inset -8px -14px 22px rgba(20, 8, 2, 0.42),
-      inset 6px 7px 16px rgba(255, 251, 235, 0.2),
-      inset 0 -18px 28px rgba(30, 12, 4, 0.32),
-      inset 0 0 36px rgba(42, 16, 4, 0.26);
   }
 }
 
@@ -3079,12 +3062,10 @@ body.anyma-touch-primary .anima-glass-suporte {
   from {
     opacity: 0;
     transform: translateY(calc(50% + 12px));
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(50%);
-    filter: blur(0);
   }
 }
 
@@ -3092,12 +3073,10 @@ body.anyma-touch-primary .anima-glass-suporte {
   from {
     opacity: 0;
     transform: translateY(10px);
-    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -3225,7 +3204,6 @@ body.anyma-touch-primary .anima-glass-suporte {
   opacity: 0;
   contain: layout paint;
   transform: translateZ(0);
-  will-change: opacity, transform;
 }
 
 .phoenix-flash-veil--charge {
@@ -3521,7 +3499,6 @@ body.anyma-touch-primary .anima-glass-suporte {
     width ease-out,
     height ease-out,
     box-shadow ease-out;
-  will-change: width, height, box-shadow;
 }
 
 .phoenix-orb-shell--compact {
@@ -3552,24 +3529,10 @@ body.anyma-touch-primary .anima-glass-suporte {
 }
 
 .phoenix-orb-shell--ascended {
-  animation: phoenix-orb-shell-plasma-ascended var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
-}
-
-.phoenix-orb-plasma-corona {
-  background: radial-gradient(
-    circle at 50% 42%,
-    transparent 54%,
-    rgba(255, 255, 255, 0.06) 58%,
-    rgba(255, 255, 255, 0.42) 66%,
-    rgba(254, 249, 195, 0.38) 72%,
-    rgba(255, 255, 255, 0.22) 78%,
-    rgba(254, 249, 195, 0.1) 84%,
-    transparent 92%
-  );
-  mix-blend-mode: screen;
-  opacity: 0.92;
-  animation: phoenix-orb-plasma-corona var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
-  will-change: opacity, transform;
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.48),
+    0 0 42px rgba(254, 249, 195, 0.36),
+    0 0 72px rgba(255, 255, 255, 0.18);
 }
 
 .phoenix-orb-sphere-rim {
@@ -3586,46 +3549,15 @@ body.anyma-touch-primary .anima-glass-suporte {
   opacity: 0.88;
   animation: phoenix-orb-sphere-rim var(--phoenix-pulse-cycle, 7.1s) ease-in-out infinite;
   pointer-events: none;
-  will-change: opacity, transform;
 }
 
 @keyframes phoenix-orb-sphere-rim {
   0%,
   100% {
     opacity: 0.64;
-    transform: scale(0.97);
   }
   50% {
     opacity: 0.98;
-    transform: scale(1.05);
-  }
-}
-
-@keyframes phoenix-orb-plasma-corona {
-  0%,
-  100% {
-    opacity: 0.68;
-    transform: scale(0.97);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.06);
-  }
-}
-
-@keyframes phoenix-orb-shell-plasma-ascended {
-  0%,
-  100% {
-    box-shadow:
-      0 0 18px rgba(255, 255, 255, 0.42),
-      0 0 38px rgba(254, 249, 195, 0.32),
-      0 0 68px rgba(255, 255, 255, 0.16);
-  }
-  50% {
-    box-shadow:
-      0 0 24px rgba(255, 255, 255, 0.55),
-      0 0 48px rgba(254, 249, 195, 0.42),
-      0 0 82px rgba(255, 255, 255, 0.22);
   }
 }
 
@@ -3789,102 +3721,60 @@ body.anyma-touch-primary .anima-glass-suporte {
   opacity: 0;
   pointer-events: none;
   overflow: visible;
-  transform-origin: 50% 52%;
-  transform: translateZ(0) scale(0.06);
-  will-change: transform, opacity;
+  transform-origin: 50% 50%;
+  transform: translate3d(0, 0, 0) scale(1);
+  contain: layout paint;
 }
 
 .phoenix-orb-model-layer--preloading {
   opacity: 0;
   pointer-events: none;
-  transform: translateZ(0) scale(0.06);
+  transform: translate3d(0, 0, 0) scale(1);
 }
 
 .phoenix-orb-model-layer--camouflaged {
   opacity: 0;
   pointer-events: none;
-  transform: translateZ(0) scale(0.06);
+  transform: translate3d(0, 0, 0) scale(1);
+  visibility: hidden;
 }
 
 .phoenix-orb-model-layer--emerging {
-  opacity: 1;
   pointer-events: auto;
+  visibility: visible;
 }
 
-/* Começa minúscula no centro quando o clarão brilha; cresce até o tamanho atual. */
-.phoenix-orb-model-layer--growing {
-  animation: phoenix-model-emerge-grow var(--phoenix-model-grow-ms, 920ms) cubic-bezier(0.16, 0.84, 0.28, 1)
-    forwards;
+/* Aparece no centro no tamanho final — só opacidade, sem scale/movimento. */
+.phoenix-orb-model-layer--fading-in {
+  animation: phoenix-model-fade-in var(--phoenix-model-fade-ms, 320ms) ease-out forwards;
 }
 
-.phoenix-orb-model-layer--grown,
 .phoenix-orb-model-layer--revealed {
   opacity: 1;
   pointer-events: auto;
-  transform: translateZ(0) scale(1);
+  visibility: visible;
+  transform: translate3d(0, 0, 0) scale(1);
   transition: none;
 }
 
-@keyframes phoenix-model-emerge-grow {
+@keyframes phoenix-model-fade-in {
   0% {
-    opacity: 0.55;
-    transform: translateZ(0) scale(0.06);
-  }
-  18% {
-    opacity: 1;
-    transform: translateZ(0) scale(0.18);
-  }
-  100% {
-    opacity: 1;
-    transform: translateZ(0) scale(1);
-  }
-}
-
-/* Brilho em CSS separado (opacity) — não anima filter no canvas WebGL. */
-.phoenix-orb-model-layer--growing::before {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset: 18%;
-  z-index: 1;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 48%,
-    rgba(255, 255, 255, 0.72) 0%,
-    rgba(253, 230, 138, 0.42) 28%,
-    rgba(249, 115, 22, 0.22) 48%,
-    transparent 68%
-  );
-  mix-blend-mode: screen;
-  animation: phoenix-model-grow-glow var(--phoenix-model-grow-ms, 920ms) ease-out forwards;
-}
-
-@keyframes phoenix-model-grow-glow {
-  0% {
-    opacity: 0.35;
-    transform: scale(0.4);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-  100% {
     opacity: 0;
-    transform: scale(1.35);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 /* Contorno fino da ANYMA — borda luminosa de chamas (só no modelo, não na bola).
-   Filter estático no WebGL: animar filter a cada frame forçava re-raster do canvas.
-   O pulso vivo fica no ::after (opacity/scale — barato no compositor). */
+   Poucos drop-shadows estáticos: animar filter no canvas WebGL mata o FPS. */
 .phoenix-orb-model-layer--contoured {
   filter:
-    drop-shadow(0 0 0.6px rgba(255, 251, 235, 0.95))
-    drop-shadow(0 0 1.2px rgba(253, 224, 71, 1))
-    drop-shadow(0 0 3px rgba(251, 146, 60, 0.98))
-    drop-shadow(0 0 7px rgba(249, 115, 22, 0.88))
-    drop-shadow(0 0 14px rgba(234, 88, 12, 0.62))
-    drop-shadow(0 0 24px rgba(194, 65, 12, 0.38));
+    drop-shadow(0 0 1.5px rgba(253, 224, 71, 0.95))
+    drop-shadow(0 0 8px rgba(249, 115, 22, 0.85))
+    drop-shadow(0 0 16px rgba(234, 88, 12, 0.45));
 }
 
 .phoenix-orb-model-contact-shadow {
@@ -3927,33 +3817,9 @@ body.anyma-touch-primary .anima-glass-suporte {
   0%,
   100% {
     opacity: 0.78;
-    transform: scale(0.97);
   }
   50% {
     opacity: 1;
-    transform: scale(1.04);
-  }
-}
-
-@keyframes phoenix-model-contour-pulse {
-  0%,
-  100% {
-    filter:
-      drop-shadow(0 0 0.5px rgba(255, 251, 235, 0.82))
-      drop-shadow(0 0 1px rgba(253, 224, 71, 0.9))
-      drop-shadow(0 0 2.5px rgba(251, 146, 60, 0.85))
-      drop-shadow(0 0 6px rgba(249, 115, 22, 0.72))
-      drop-shadow(0 0 12px rgba(234, 88, 12, 0.48))
-      drop-shadow(0 0 20px rgba(194, 65, 12, 0.28));
-  }
-  50% {
-    filter:
-      drop-shadow(0 0 0.75px rgba(255, 251, 235, 1))
-      drop-shadow(0 0 1.5px rgba(254, 243, 199, 1))
-      drop-shadow(0 0 4px rgba(251, 191, 36, 1))
-      drop-shadow(0 0 9px rgba(249, 115, 22, 0.95))
-      drop-shadow(0 0 18px rgba(234, 88, 12, 0.78))
-      drop-shadow(0 0 30px rgba(194, 65, 12, 0.48));
   }
 }
 
@@ -3982,13 +3848,13 @@ body.anyma-hud-open main * {
 /* Celular: contorno mais leve no canvas WebGL + anéis CSS seguem vivos. */
 body.anyma-touch-primary .phoenix-orb-model-layer--contoured {
   filter:
-    drop-shadow(0 0 1px rgba(253, 224, 71, 0.95))
-    drop-shadow(0 0 6px rgba(249, 115, 22, 0.85))
-    drop-shadow(0 0 14px rgba(234, 88, 12, 0.45));
+    drop-shadow(0 0 1px rgba(253, 224, 71, 0.9))
+    drop-shadow(0 0 8px rgba(249, 115, 22, 0.75));
 }
 
-body.anyma-touch-primary .phoenix-orb-plasma-corona {
-  will-change: auto;
+body.anyma-touch-primary .phoenix-orb-model-layer--contoured::after {
+  animation: none;
+  opacity: 0.85;
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -3998,7 +3864,23 @@ body.anyma-touch-primary .phoenix-orb-plasma-corona {
   }
 
   body.anyma-hud-open .phoenix-flame-ring--ambient {
-    opacity: 0.32;
+    opacity: 0.28;
+    animation: none;
+  }
+
+  body.anyma-hud-open .phoenix-fireball-mask--open {
+    animation: none;
+    opacity: 0.96;
+  }
+
+  body.anyma-hud-open .phoenix-orb-sphere-rim {
+    animation: none;
+    opacity: 0.8;
+  }
+
+  body.anyma-hud-open .phoenix-orb-cast-shadow--awake,
+  body.anyma-hud-open .phoenix-orb-cast-shadow--idle {
+    animation: none;
   }
 }
 
@@ -4068,32 +3950,27 @@ body.anyma-touch-primary .phoenix-orb-plasma-corona {
   .phoenix-orb-cast-shadow--idle,
   .phoenix-orb-cast-shadow--awake,
   .phoenix-orb-shell--ascended,
-  .phoenix-orb-plasma-corona,
   .phoenix-orb-sphere-rim,
   .phoenix-orb-greeting,
   .phoenix-orb-model-layer--contoured,
   .phoenix-orb-model-layer--contoured::after,
   .phoenix-orb-model-layer--contoured .phoenix-model-canvas,
-  .phoenix-orb-model-layer--growing,
-  .phoenix-orb-model-layer--growing::before,
+  .phoenix-orb-model-layer--fading-in,
   .brasa-phoenix-glow {
     animation: none;
   }
 
-  .phoenix-orb-model-layer--growing,
-  .phoenix-orb-model-layer--grown,
+  .phoenix-orb-model-layer--fading-in,
   .phoenix-orb-model-layer--revealed {
     opacity: 1;
-    transform: translateZ(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 
   .phoenix-orb-model-layer--contoured {
     filter:
-      drop-shadow(0 0 0.6px rgba(255, 251, 235, 0.95))
-      drop-shadow(0 0 1.2px rgba(253, 224, 71, 1))
-      drop-shadow(0 0 4px rgba(251, 146, 60, 0.95))
-      drop-shadow(0 0 10px rgba(249, 115, 22, 0.82))
-      drop-shadow(0 0 20px rgba(234, 88, 12, 0.5));
+      drop-shadow(0 0 1.5px rgba(253, 224, 71, 0.95))
+      drop-shadow(0 0 8px rgba(249, 115, 22, 0.85))
+      drop-shadow(0 0 16px rgba(234, 88, 12, 0.45));
   }
 
   .phoenix-orb-model-layer--contoured::after {

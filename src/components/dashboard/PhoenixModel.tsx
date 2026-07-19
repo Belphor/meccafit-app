@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { Bounds, Center, ContactShadows, useGLTF, useTexture } from "@react-three/drei";
+import { Bounds, Center, useGLTF, useTexture } from "@react-three/drei";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import type { Group, Object3D, Texture } from "three";
 import {
@@ -22,29 +22,28 @@ export const PHOENIX_DRACO_DECODER_PATH = "/draco/gltf/" as const;
 
 export const PHOENIX_IGNITION_DURATION_S = 0.95;
 export const PHOENIX_DEPLOY_DURATION_S = 1.85;
-/** Modelo começa a emergir assim que o reveal abre (opaco por trás do clarão). */
+/** @deprecated — modelo só emerge após o clarão sumir. */
 export const PHOENIX_MODEL_EMERGE_MS = 0;
-/**
- * Crescimento da ANYMA no centro da esfera (mínúscula → tamanho atual),
- * sincronizado com o clarão. Só opacity/transform — sem filter animado.
- */
-export const PHOENIX_MODEL_GROW_MS = 920;
-/** Modelo fica opaco no início do grow (brilho do clarão cobre o scale). */
-export const PHOENIX_MODEL_FADE_IN_MS = 0;
-/** Modelo já no tamanho final antes do clarão começar a sumir. */
-export const PHOENIX_FLASH_HOLD_AFTER_MODEL_MS = 1100;
+/** Grow removido: ANYMA aparece no tamanho final no centro (sem movimento). */
+export const PHOENIX_MODEL_GROW_MS = 0;
+/** Fade-in só de opacidade no centro — depois do clarão. */
+export const PHOENIX_MODEL_FADE_IN_MS = 320;
+/** Pico do clarão antes de sumir — modelo ainda oculto. */
+export const PHOENIX_FLASH_HOLD_MS = 720;
+/** Alias legado — hold do clarão (não depende mais do modelo). */
+export const PHOENIX_FLASH_HOLD_AFTER_MODEL_MS = PHOENIX_FLASH_HOLD_MS;
 /** Clarão some só por opacidade — transição suave (sem blur animado). */
-export const PHOENIX_FLASH_FADE_MS = 520;
-/** Clarão núcleo — bloom rápido sobre o modelo ao emergir. */
-export const PHOENIX_CORE_FLASH_BLOOM_MS = 420;
+export const PHOENIX_FLASH_FADE_MS = 480;
+/** Clarão núcleo — bloom rápido no pico do flash. */
+export const PHOENIX_CORE_FLASH_BLOOM_MS = 360;
 /** Balão + voz após o clarão ceder e a Fênix estar visível. */
-export const PHOENIX_GREETING_DELAY_MS = 380;
+export const PHOENIX_GREETING_DELAY_MS = 280;
 export const PHOENIX_GREETING_VISIBLE_MS = 9200;
 
 /** Respiração da ANYMA (rad/s) — flutuação Y + pulso de magma no mesmo ciclo. */
-export const PHOENIX_WING_FLAP_SPEED = 1.05;
+export const PHOENIX_WING_FLAP_SPEED = 0.85;
 /** Amplitude de flutuação no eixo Y (world units ≈ poucos pixels no orb). */
-export const PHOENIX_FLOAT_AMPLITUDE = 0.038;
+export const PHOENIX_FLOAT_AMPLITUDE = 0.028;
 /** @deprecated alias — mantido para sync CSS do ciclo via --phoenix-pulse-cycle. */
 export const PHOENIX_WING_FLAP_AMPLITUDE = PHOENIX_FLOAT_AMPLITUDE;
 export const PHOENIX_WING_CYCLE_S = (2 * Math.PI) / PHOENIX_WING_FLAP_SPEED;
@@ -52,9 +51,9 @@ export const PHOENIX_WING_CYCLE_S = (2 * Math.PI) / PHOENIX_WING_FLAP_SPEED;
 /** Pulso luminoso do shader de magma (emissiveIntensity). */
 export const PHOENIX_MAGMA_EMISSIVE = {
   idleMin: 0.72,
-  idleMax: 1.18,
+  idleMax: 1.05,
   openMin: 1.05,
-  openMax: 1.92,
+  openMax: 1.55,
 } as const;
 
 /** Escala contextual da ANYMA dentro do orb (não altera o shell CSS). */
@@ -69,20 +68,18 @@ export const PHOENIX_BOUNDS_MARGIN = {
   open: 1.25,
 } as const;
 
-/** ~30fps desktop / ~18fps mobile compact / ~12fps mobile HUD — barato e visível. */
-const PHOENIX_RENDER_INTERVAL_MS = 1000 / 30;
-const PHOENIX_RENDER_INTERVAL_MOBILE_MS = 1000 / 18;
-const PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS = 1000 / 12;
+/** ~24fps desktop / ~12fps mobile compact / ~10fps mobile HUD. */
+const PHOENIX_RENDER_INTERVAL_MS = 1000 / 24;
+const PHOENIX_RENDER_INTERVAL_MOBILE_MS = 1000 / 12;
+const PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS = 1000 / 10;
 /** Anisotropy — orb pequeno no celular não ganha com 4+. */
-const PHOENIX_TEXTURE_ANISOTROPY = 4;
-const PHOENIX_TEXTURE_ANISOTROPY_MOBILE = 2;
+const PHOENIX_TEXTURE_ANISOTROPY = 2;
+const PHOENIX_TEXTURE_ANISOTROPY_MOBILE = 1;
 
-/** Tempo total do clarão após o modelo emergir (grow + hold + fade-out). */
+/** Clarão (hold + fade) + fade-in do modelo após o clarão. */
 export const PHOENIX_FLASH_TOTAL_AFTER_EMERGE_MS =
-  Math.max(PHOENIX_MODEL_FADE_IN_MS, PHOENIX_MODEL_GROW_MS) +
-  PHOENIX_FLASH_HOLD_AFTER_MODEL_MS +
-  PHOENIX_FLASH_FADE_MS;
-/** Até o clarão sumir por completo (ignição + fade-in do modelo + hold + fade-out). */
+  PHOENIX_FLASH_HOLD_MS + PHOENIX_FLASH_FADE_MS + PHOENIX_MODEL_FADE_IN_MS;
+/** Até o clarão sumir e a ANYMA aparecer (ignição + hold + fade + model fade). */
 export const PHOENIX_REVEAL_TOTAL_S =
   PHOENIX_IGNITION_DURATION_S + PHOENIX_FLASH_TOTAL_AFTER_EMERGE_MS / 1000;
 
@@ -108,9 +105,9 @@ function enhanceTextureQuality(texture: Texture, anisotropy: number): void {
   if (enhancedTextures.has(texture)) return;
   texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = anisotropy;
-  texture.minFilter = LinearMipmapLinearFilter;
+  texture.minFilter = anisotropy > 1 ? LinearMipmapLinearFilter : LinearFilter;
   texture.magFilter = LinearFilter;
-  texture.generateMipmaps = true;
+  texture.generateMipmaps = anisotropy > 1;
   texture.needsUpdate = true;
   enhancedTextures.add(texture);
 }
@@ -252,6 +249,8 @@ function PhoenixModelMesh({
     let cancelled = false;
     let timer = 0;
     let last = performance.now();
+    // Mobile: só flutua — pulso emissivo por material mata FPS no orb.
+    const pulseEmissive = !isMobile;
 
     const tick = () => {
       if (cancelled) return;
@@ -262,28 +261,26 @@ function PhoenixModelMesh({
 
       breathPhaseRef.current += delta * PHOENIX_WING_FLAP_SPEED;
       const wave = Math.sin(breathPhaseRef.current);
-      const breath = 0.5 + 0.5 * wave;
 
       const root = rootRef.current;
       if (root) {
         root.position.y = wave * PHOENIX_FLOAT_AMPLITUDE;
       }
 
-      const open = isOpenOrbRef.current;
-      const emissiveMin = open
-        ? isMobile
-          ? 1.25
-          : PHOENIX_MAGMA_EMISSIVE.openMin
-        : PHOENIX_MAGMA_EMISSIVE.idleMin;
-      const emissiveMax = open
-        ? isMobile
-          ? 1.85
-          : PHOENIX_MAGMA_EMISSIVE.openMax
-        : PHOENIX_MAGMA_EMISSIVE.idleMax;
-      const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
+      if (pulseEmissive) {
+        const breath = 0.5 + 0.5 * wave;
+        const open = isOpenOrbRef.current;
+        const emissiveMin = open
+          ? PHOENIX_MAGMA_EMISSIVE.openMin
+          : PHOENIX_MAGMA_EMISSIVE.idleMin;
+        const emissiveMax = open
+          ? PHOENIX_MAGMA_EMISSIVE.openMax
+          : PHOENIX_MAGMA_EMISSIVE.idleMax;
+        const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
 
-      for (const material of magmaMaterialsRef.current) {
-        material.emissiveIntensity = emissiveIntensity;
+        for (const material of magmaMaterialsRef.current) {
+          material.emissiveIntensity = emissiveIntensity;
+        }
       }
 
       invalidate();
@@ -341,57 +338,37 @@ export function PhoenixModel({
   return (
     <>
       <hemisphereLight
-        intensity={isPunished ? 0.22 : open ? 0.42 : 0.34}
+        intensity={isPunished ? 0.22 : open ? (isMobile ? 0.48 : 0.4) : 0.34}
         color={isPunished ? "#71717a" : "#fff7ed"}
         groundColor={isPunished ? "#27272a" : "#451a03"}
       />
       <directionalLight
         position={[2.2, 4.2, 3.4]}
-        intensity={isPunished ? 0.45 : open ? 1.55 : 1.4}
+        intensity={isPunished ? 0.45 : open ? (isMobile ? 1.35 : 1.5) : 1.35}
         color={isPunished ? "#6b7280" : "#fffbeb"}
       />
-      <directionalLight
-        position={[-3.2, 2.4, -1.6]}
-        intensity={isPunished ? 0.15 : open ? 0.52 : 0.48}
-        color={isPunished ? "#52525b" : "#fdba74"}
-      />
-      <directionalLight
-        position={[0.15, 2.4, -4.2]}
-        intensity={isPunished ? 0.08 : open ? 0.78 : 0.48}
-        color={isPunished ? "#52525b" : "#ea580c"}
-      />
+      {/* Fill light só no desktop — cada luz extra custa fill+fragment no mobile. */}
+      {!isMobile ? (
+        <directionalLight
+          position={[-3.2, 2.4, -1.6]}
+          intensity={isPunished ? 0.15 : open ? 0.48 : 0.42}
+          color={isPunished ? "#52525b" : "#fdba74"}
+        />
+      ) : null}
       <pointLight
-        position={[0, -0.6, 2.0]}
-        intensity={isPunished ? 0.18 : open ? 1.65 : 0.85}
+        position={[0, 0.15, 2.1]}
+        intensity={isPunished ? 0.16 : open ? (isMobile ? 1.15 : 1.45) : 0.75}
         color="#f97316"
-        distance={open ? 8.5 : 6.5}
+        distance={open ? 7.5 : 6}
         decay={2}
       />
-      <pointLight
-        position={[0, 0.55, 2.4]}
-        intensity={isPunished ? 0.08 : open ? 0.85 : 0.58}
-        color="#fde68a"
-        distance={6}
-        decay={2}
-      />
-      <pointLight
-        position={[0, 0.35, -2.2]}
-        intensity={isPunished ? 0.08 : open ? 0.72 : 0.95}
-        color="#fde68a"
-        distance={7}
-        decay={2}
-      />
-      {/* ContactShadows no mobile custa demais — CSS cobre a sombra. */}
-      {open && !isMobile ? (
-        <ContactShadows
-          position={[0, -0.62, 0]}
-          opacity={0.4}
-          scale={3.4}
-          blur={2.4}
-          far={1.4}
-          color="#120804"
-          frames={1}
-          resolution={256}
+      {!isMobile ? (
+        <pointLight
+          position={[0, 0.4, -2.0]}
+          intensity={isPunished ? 0.08 : open ? 0.65 : 0.55}
+          color="#fde68a"
+          distance={6.5}
+          decay={2}
         />
       ) : null}
       <PhoenixModelMesh

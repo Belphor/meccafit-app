@@ -4,15 +4,18 @@
 **Empresa:** FENYXIA CO-OPS  
 **Propósito:** Saber quanto custa manter os sistemas **mesmo sem cobrar clientes**  
 **Regra:** Documento **interno** · não comercial · não partilhar com clientes  
-**Última actualização:** *(preencher data)*
+**Última actualização:** 18/07/2026 · Meccafit em vitrine exclusiva · vendas adiadas
 
 ---
 
 ## Fase actual da empresa
 
 - Entrada no mercado · projectos vitrine · **receita cliente: R$ 0 ou simbólica**
+- Meccafit: **vitrine exclusiva** · sem monetização in-app · **vendas adiadas** (Jul 2026)
 - Infra real existe e deve ser monitorizada
 - Passo mais difícil: **entrar** — PLUTUS protege o fundador de surpresas
+
+**Última actualização:** 18/07/2026
 
 ---
 

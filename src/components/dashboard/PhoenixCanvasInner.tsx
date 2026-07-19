@@ -62,7 +62,7 @@ export function PhoenixCanvasInner({
         depth: true,
         preserveDrawingBuffer: false,
       }}
-      dpr={isMobile ? 1 : isOpenOrb ? [1, 1.25] : [1, 1.5]}
+      dpr={isMobile ? 1 : [1, 1.15]}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.toneMapping = ACESFilmicToneMapping;
@@ -70,11 +70,11 @@ export function PhoenixCanvasInner({
           ? 0.9
           : isMobile
             ? isOpenOrb
-              ? 1.28
-              : 1.22
+              ? 1.22
+              : 1.18
             : isOpenOrb
-              ? 1.18
-              : 1.2;
+              ? 1.15
+              : 1.18;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
