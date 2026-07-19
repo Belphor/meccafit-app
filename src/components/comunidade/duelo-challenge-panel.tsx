@@ -201,7 +201,9 @@ export function DueloChallengePanel({
                         : "border-neutral-800 text-neutral-400"
                     }`}
                   >
-                    {option === "SUPERIORES" ? "Superiores · 3 dias" : "Inferiores · 2 dias"}
+                    {option === "SUPERIORES"
+                      ? "Superiores · peito, ombros, braços · 3 dias"
+                      : "Inferiores · pernas · 2 dias"}
                   </button>
                 ))}
               </div>

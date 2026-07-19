@@ -16,7 +16,9 @@ type DueloConviteHostProps = {
 };
 
 function labelTipo(tipo: DueloConvitePendente["tipo_confronto"]): string {
-  return tipo === "SUPERIORES" ? "Superiores (3 dias)" : "Inferiores (2 dias)";
+  return tipo === "SUPERIORES"
+    ? "Superiores · peito, ombros, braços (3 dias)"
+    : "Inferiores · pernas (2 dias)";
 }
 
 export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps) {

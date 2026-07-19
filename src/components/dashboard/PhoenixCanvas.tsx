@@ -12,6 +12,7 @@ import {
   PHOENIX_GREETING_VISIBLE_MS,
   PHOENIX_IGNITION_DURATION_S,
   PHOENIX_MODEL_FADE_IN_MS,
+  PHOENIX_MODEL_GROW_MS,
   PHOENIX_REVEAL_TOTAL_S,
   PHOENIX_WING_CYCLE_S,
 } from "@/components/dashboard/PhoenixModel";
@@ -103,11 +104,15 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     !flashHidden && (phase === "igniting" || (phase === "revealing" && !flashHidden));
   const fireballIgnited = flashVisible;
   const orbGlowActive = showModel && (modelEmerging || isHudOpen);
+  /** Corona/rim só após o clarão — evita blur+blend empilhado com WebGL no pico. */
+  const sphereAuraActive = orbGlowActive && flashHidden;
   const openFlameRings = orbGlowActive && flashHidden;
   const modelContourGlow =
     (modelRevealed || isHudOpen) && (flashFading || !flashVisible);
   const coreFlashVisible =
     modelEmerging && !flashHidden && (phase === "igniting" || phase === "revealing");
+  /** Um anel basta no clarão — 3 anéis + blur travavam o compositor. */
+  const ignitionFlameRings = fireballIgnited && !flashHidden;
   const shellClass = resolveOrbShellClass(phase, isHudOpen);
   const shellTransitionMs = resolveShellTransitionMs(phase);
 
@@ -195,14 +200,15 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
       return;
     }
 
-    if (PHOENIX_MODEL_FADE_IN_MS <= 0) {
+    const growMs = Math.max(PHOENIX_MODEL_FADE_IN_MS, PHOENIX_MODEL_GROW_MS);
+    if (growMs <= 0) {
       queueMicrotask(() => setModelRevealed(true));
       return;
     }
 
     const revealTimer = window.setTimeout(() => {
       setModelRevealed(true);
-    }, PHOENIX_MODEL_FADE_IN_MS);
+    }, growMs);
 
     return () => window.clearTimeout(revealTimer);
   }, [modelEmerging]);
@@ -283,8 +289,10 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     if (modelRevealed || isHudOpen || phase === "awake") {
       classes.push("phoenix-orb-model-layer--emerging");
       classes.push("phoenix-orb-model-layer--revealed");
+      classes.push("phoenix-orb-model-layer--grown");
     } else if (modelEmerging) {
       classes.push("phoenix-orb-model-layer--emerging");
+      classes.push("phoenix-orb-model-layer--growing");
     } else if (phase === "revealing" || phase === "igniting") {
       classes.push("phoenix-orb-model-layer--camouflaged");
     } else {
@@ -327,6 +335,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
         style={{
           transitionDuration: `${shellTransitionMs}ms`,
           ["--phoenix-model-fade-ms" as string]: `${PHOENIX_MODEL_FADE_IN_MS}ms`,
+          ["--phoenix-model-grow-ms" as string]: `${PHOENIX_MODEL_GROW_MS}ms`,
           ["--phoenix-flash-fade-ms" as string]: `${PHOENIX_FLASH_FADE_MS}ms`,
           ["--phoenix-core-flash-bloom-ms" as string]: `${PHOENIX_CORE_FLASH_BLOOM_MS}ms`,
           ["--phoenix-pulse-cycle" as string]: `${PHOENIX_WING_CYCLE_S}s`,
@@ -353,7 +362,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
           }`}
         />
 
-        {orbGlowActive ? (
+        {sphereAuraActive ? (
           <>
             <span
               aria-hidden="true"
@@ -380,12 +389,8 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
           )}`}
         />
 
-        {fireballIgnited ? (
-          <>
-            <span aria-hidden="true" className="phoenix-flame-ring phoenix-flame-ring--one" />
-            <span aria-hidden="true" className="phoenix-flame-ring phoenix-flame-ring--two" />
-            <span aria-hidden="true" className="phoenix-flame-ring phoenix-flame-ring--three" />
-          </>
+        {ignitionFlameRings ? (
+          <span aria-hidden="true" className="phoenix-flame-ring phoenix-flame-ring--one" />
         ) : null}
 
         {openFlameRings ? (
@@ -397,10 +402,6 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
             <span
               aria-hidden="true"
               className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--two"
-            />
-            <span
-              aria-hidden="true"
-              className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--three"
             />
           </>
         ) : null}

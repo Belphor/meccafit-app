@@ -66,6 +66,7 @@ export function collectAvatarPathsFromRankings(
   addEntries(rankings.vtc_global);
   addEntries(rankings.vtc_por_membro.peito);
   addEntries(rankings.vtc_por_membro.ombros);
+  addEntries(rankings.vtc_por_membro.bracos);
   addEntries(rankings.vtc_por_membro.costas);
   addEntries(rankings.vtc_por_membro.pernas);
   addEntries(rankings.vtc_faixa?.superiores ?? []);

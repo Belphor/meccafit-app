@@ -27,7 +27,7 @@ type RankingsThothPanelProps = {
 };
 
 type GeneroTab = ProfileSexo;
-type MuscleTabKey = "superiores" | "pernas" | "global" | "peito" | "ombros" | "costas";
+type MuscleTabKey = "superiores" | "pernas" | "global" | "peito" | "ombros" | "bracos" | "costas";
 
 const GENERO_TABS: { key: GeneroTab; label: string }[] = [
   { key: "masculino", label: "Masculino" },
@@ -40,6 +40,7 @@ const MUSCLE_TABS: { key: MuscleTabKey; label: string; rei?: boolean }[] = [
   { key: "global", label: "Global" },
   { key: "peito", label: "Peito" },
   { key: "ombros", label: "Ombros" },
+  { key: "bracos", label: "Braços" },
   { key: "costas", label: "Costas" },
 ];
 

@@ -24,14 +24,19 @@ export const PHOENIX_IGNITION_DURATION_S = 0.95;
 export const PHOENIX_DEPLOY_DURATION_S = 1.85;
 /** Modelo começa a emergir assim que o reveal abre (opaco por trás do clarão). */
 export const PHOENIX_MODEL_EMERGE_MS = 0;
-/** Modelo fica opaco instantaneamente por trás do clarão (sem fade visível). */
+/**
+ * Crescimento da ANYMA no centro da esfera (mínúscula → tamanho atual),
+ * sincronizado com o clarão. Só opacity/transform — sem filter animado.
+ */
+export const PHOENIX_MODEL_GROW_MS = 920;
+/** Modelo fica opaco no início do grow (brilho do clarão cobre o scale). */
 export const PHOENIX_MODEL_FADE_IN_MS = 0;
-/** Modelo já opaco antes do clarão começar a sumir. */
-export const PHOENIX_FLASH_HOLD_AFTER_MODEL_MS = 1400;
-/** Clarão some só por opacidade — transição suave. */
-export const PHOENIX_FLASH_FADE_MS = 680;
+/** Modelo já no tamanho final antes do clarão começar a sumir. */
+export const PHOENIX_FLASH_HOLD_AFTER_MODEL_MS = 1100;
+/** Clarão some só por opacidade — transição suave (sem blur animado). */
+export const PHOENIX_FLASH_FADE_MS = 520;
 /** Clarão núcleo — bloom rápido sobre o modelo ao emergir. */
-export const PHOENIX_CORE_FLASH_BLOOM_MS = 480;
+export const PHOENIX_CORE_FLASH_BLOOM_MS = 420;
 /** Balão + voz após o clarão ceder e a Fênix estar visível. */
 export const PHOENIX_GREETING_DELAY_MS = 380;
 export const PHOENIX_GREETING_VISIBLE_MS = 9200;
@@ -72,9 +77,11 @@ const PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS = 1000 / 12;
 const PHOENIX_TEXTURE_ANISOTROPY = 4;
 const PHOENIX_TEXTURE_ANISOTROPY_MOBILE = 2;
 
-/** Tempo total do clarão após o modelo emergir (fade-in + hold + fade-out). */
+/** Tempo total do clarão após o modelo emergir (grow + hold + fade-out). */
 export const PHOENIX_FLASH_TOTAL_AFTER_EMERGE_MS =
-  PHOENIX_MODEL_FADE_IN_MS + PHOENIX_FLASH_HOLD_AFTER_MODEL_MS + PHOENIX_FLASH_FADE_MS;
+  Math.max(PHOENIX_MODEL_FADE_IN_MS, PHOENIX_MODEL_GROW_MS) +
+  PHOENIX_FLASH_HOLD_AFTER_MODEL_MS +
+  PHOENIX_FLASH_FADE_MS;
 /** Até o clarão sumir por completo (ignição + fade-in do modelo + hold + fade-out). */
 export const PHOENIX_REVEAL_TOTAL_S =
   PHOENIX_IGNITION_DURATION_S + PHOENIX_FLASH_TOTAL_AFTER_EMERGE_MS / 1000;

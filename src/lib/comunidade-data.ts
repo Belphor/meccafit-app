@@ -96,6 +96,7 @@ export type RankingsThothSlice = {
   vtc_por_membro: {
     peito: RankingVtcEntry[];
     ombros: RankingVtcEntry[];
+    bracos: RankingVtcEntry[];
     costas: RankingVtcEntry[];
     pernas: RankingVtcEntry[];
   };
@@ -229,6 +230,7 @@ function parseRankingsThothSlice(payload: unknown): RankingsThothSlice | null {
     vtc_por_membro: {
       peito: mapList("peito"),
       ombros: mapList("ombros"),
+      bracos: mapList("bracos"),
       costas: mapList("costas"),
       pernas: mapList("pernas"),
     },
