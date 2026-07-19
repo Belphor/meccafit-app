@@ -58,10 +58,10 @@ export const PHOENIX_MAGMA_EMISSIVE = {
   openMax: 1.35,
 } as const;
 
-/** Escala contextual da ANYMA dentro do orb (não altera o shell CSS). */
+/** Escala contextual da ANYMA dentro do orb (encaixa na esfera sem Bounds). */
 export const PHOENIX_CONTEXT_SCALE = {
-  compact: 1.05,
-  open: 1.2,
+  compact: 0.68,
+  open: 0.78,
 } as const;
 
 /** @deprecated — Bounds removido (causava salto do canto). */
@@ -310,7 +310,7 @@ function PhoenixModelMesh({
 
   // Center fixo — sem Bounds.fit (o fit da câmera fazia a ANYMA “voar” do canto).
   return (
-    <group position={[0, -0.06, 0]} scale={contextScale}>
+    <group position={[0, -0.04, 0]} scale={contextScale}>
       <Center>
         <group ref={rootRef}>
           <primitive

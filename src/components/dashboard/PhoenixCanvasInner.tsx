@@ -39,7 +39,7 @@ export function PhoenixCanvasInner({
     <Canvas
       frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
-      camera={{ position: [0, 0.1, 3.4], fov: 36, near: 0.1, far: 40 }}
+      camera={{ position: [0, 0.08, 3.55], fov: 34, near: 0.1, far: 40 }}
       gl={{
         alpha: true,
         premultipliedAlpha: false,

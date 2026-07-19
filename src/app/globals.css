@@ -3712,21 +3712,21 @@ body.anyma-touch-primary .anima-glass-suporte {
   transform: translate3d(0, 0, 0);
 }
 
-/* Contorno leve — 2 drop-shadows no máximo. */
+/* Contorno suave: 1–2 drop-shadows estáticos + halo CSS (só opacity). */
 .phoenix-orb-model-layer--contoured {
   filter:
-    drop-shadow(0 0 2px rgba(253, 224, 71, 0.9))
-    drop-shadow(0 0 10px rgba(249, 115, 22, 0.7));
+    drop-shadow(0 0 1.25px rgba(255, 251, 235, 0.7))
+    drop-shadow(0 0 7px rgba(249, 115, 22, 0.42));
 }
 
 .phoenix-orb-model-contact-shadow {
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(26, 10, 3, 0.45) 0%,
-    rgba(42, 16, 4, 0.2) 45%,
+    rgba(26, 10, 3, 0.4) 0%,
+    rgba(42, 16, 4, 0.16) 45%,
     transparent 72%
   );
-  opacity: 0.65;
+  opacity: 0.55;
 }
 
 .phoenix-orb-model-layer--contoured .phoenix-model-canvas {
@@ -3734,8 +3734,52 @@ body.anyma-touch-primary .anima-glass-suporte {
   filter: none;
 }
 
+.phoenix-orb-model-layer--contoured::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 18%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(255, 251, 235, 0.14) 0%,
+    rgba(253, 230, 138, 0.1) 34%,
+    rgba(249, 115, 22, 0.08) 52%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
 .phoenix-orb-model-layer--contoured::after {
-  display: none;
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 8%;
+  z-index: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 46%,
+    transparent 48%,
+    rgba(255, 251, 235, 0.16) 54%,
+    rgba(253, 224, 71, 0.28) 58%,
+    rgba(249, 115, 22, 0.22) 64%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.72;
+  animation: phoenix-contour-soft-pulse var(--phoenix-pulse-cycle, 9s) ease-in-out infinite;
+}
+
+@keyframes phoenix-contour-soft-pulse {
+  0%,
+  100% {
+    opacity: 0.52;
+  }
+  50% {
+    opacity: 0.82;
+  }
 }
 
 .phoenix-model-canvas {
@@ -3760,16 +3804,20 @@ body.anyma-hud-open main * {
   animation-play-state: paused !important;
 }
 
-/* Celular: contorno mais leve no canvas WebGL + anéis CSS seguem vivos. */
+/* Celular: contorno estático mais leve — sem pulse no compositor. */
 body.anyma-touch-primary .phoenix-orb-model-layer--contoured {
   filter:
-    drop-shadow(0 0 1px rgba(253, 224, 71, 0.9))
-    drop-shadow(0 0 8px rgba(249, 115, 22, 0.75));
+    drop-shadow(0 0 1px rgba(255, 251, 235, 0.65))
+    drop-shadow(0 0 5px rgba(249, 115, 22, 0.38));
+}
+
+body.anyma-touch-primary .phoenix-orb-model-layer--contoured::before {
+  opacity: 0.4;
 }
 
 body.anyma-touch-primary .phoenix-orb-model-layer--contoured::after {
   animation: none;
-  opacity: 0.85;
+  opacity: 0.62;
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -3883,8 +3931,14 @@ body.anyma-touch-primary .phoenix-orb-model-layer--contoured::after {
 
   .phoenix-orb-model-layer--contoured {
     filter:
-      drop-shadow(0 0 2px rgba(253, 224, 71, 0.9))
-      drop-shadow(0 0 10px rgba(249, 115, 22, 0.7));
+      drop-shadow(0 0 1.25px rgba(255, 251, 235, 0.7))
+      drop-shadow(0 0 7px rgba(249, 115, 22, 0.42));
+  }
+
+  .phoenix-orb-model-layer--contoured::before,
+  .phoenix-orb-model-layer--contoured::after {
+    animation: none;
+    opacity: 0.65;
   }
 
   .phoenix-orb-model-layer--contoured::after {
