@@ -39,27 +39,39 @@ export function PhoenixCanvasInner({
     <Canvas
       frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
-      camera={{ position: [0, 0.08, 3.55], fov: 34, near: 0.1, far: 40 }}
+      camera={
+        isMobile
+          ? { position: [0, 0.08, 3.55], fov: 34, near: 0.1, far: 40 }
+          : { position: [0, 0.12, 3.45], fov: 36, near: 0.1, far: 80 }
+      }
       gl={{
         alpha: true,
         premultipliedAlpha: false,
-        antialias: false,
-        powerPreference: "low-power",
+        antialias: !isMobile,
+        powerPreference: isMobile ? "low-power" : "high-performance",
         stencil: false,
         depth: true,
         preserveDrawingBuffer: false,
       }}
-      dpr={1}
+      dpr={isMobile ? 1 : isOpenOrb ? [1, 1.5] : [1, 1.35]}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
-        // Tone mapping ACES custa no mobile; NoToneMapping + exposição manual.
+        // Mobile: NoToneMapping barato. Desktop: ACES para magma rico.
         gl.toneMapping = isMobile ? NoToneMapping : ACESFilmicToneMapping;
-        gl.toneMappingExposure = isPunished ? 0.9 : isMobile ? 1.35 : isOpenOrb ? 1.12 : 1.15;
+        gl.toneMappingExposure = isPunished
+          ? 0.9
+          : isMobile
+            ? 1.32
+            : isOpenOrb
+              ? 1.18
+              : 1.2;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
       <PhoenixFrameKick isVisible={isVisible} />
-      <ambientLight intensity={isPunished ? 0.4 : isMobile ? 0.58 : 0.38} />
+      <ambientLight
+        intensity={isPunished ? 0.36 : isMobile ? 0.55 : isOpenOrb ? 0.32 : 0.4}
+      />
       <PhoenixModel
         isPunished={isPunished}
         isVisible={isVisible}

@@ -17,8 +17,8 @@ type DueloConviteHostProps = {
 
 function labelTipo(tipo: DueloConvitePendente["tipo_confronto"]): string {
   return tipo === "SUPERIORES"
-    ? "Superiores · peito, ombros, braços, costas (3 dias)"
-    : "Inferiores · pernas (2 dias)";
+    ? "Superiores, peito, ombros, braços e costas, até completar na semana"
+    : "Inferiores, pernas, até completar na semana";
 }
 
 export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps) {
@@ -118,7 +118,7 @@ export function DueloConviteHost({ userId, onResponded }: DueloConviteHostProps)
           {convite.desafiante_nome} desafiou você
         </h2>
         <p id="duelo-convite-desc" className="mt-2 text-sm leading-relaxed text-neutral-300">
-          Faixa: {labelTipo(convite.tipo_confronto)}. Aceite para iniciar a contagem de pontos ou
+          Faixa {labelTipo(convite.tipo_confronto)}. Aceite para iniciar a contagem de VTC ou
           recuse para encerrar o convite. Esta decisão é obrigatória.
         </p>
 

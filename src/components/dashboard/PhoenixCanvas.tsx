@@ -328,10 +328,20 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
         {mountCanvas ? (
           <div className={resolveModelLayerClass()} aria-hidden={!modelVisible}>
             {orbSettled || isHudOpen ? (
-              <span
-                aria-hidden="true"
-                className="phoenix-orb-model-contact-shadow pointer-events-none absolute left-1/2 bottom-[2%] z-[0] h-[14%] w-[58%] -translate-x-1/2 rounded-full"
-              />
+              <>
+                <span
+                  aria-hidden="true"
+                  className="phoenix-orb-model-aura phoenix-orb-model-aura--glow pointer-events-none absolute inset-[10%] z-[0] rounded-full"
+                />
+                <span
+                  aria-hidden="true"
+                  className="phoenix-orb-model-aura phoenix-orb-model-aura--rim pointer-events-none absolute inset-[4%] z-[1] rounded-full"
+                />
+                <span
+                  aria-hidden="true"
+                  className="phoenix-orb-model-contact-shadow pointer-events-none absolute left-1/2 bottom-[2%] z-[0] h-[14%] w-[58%] -translate-x-1/2 rounded-full"
+                />
+              </>
             ) : null}
             <Suspense fallback={null}>
               <PhoenixCanvasDynamic

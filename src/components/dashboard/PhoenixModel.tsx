@@ -50,18 +50,24 @@ export const PHOENIX_WING_CYCLE_S = (2 * Math.PI) / PHOENIX_WING_FLAP_SPEED;
 /** Aguarda o paint estável antes de flutuar (evita “luta” com o clarão). */
 const PHOENIX_MOTION_SETTLE_MS = 900;
 
-/** Pulso luminoso do shader de magma (emissiveIntensity). */
+/** Pulso luminoso do shader de magma (emissiveIntensity) — desktop rico. */
 export const PHOENIX_MAGMA_EMISSIVE = {
-  idleMin: 0.72,
-  idleMax: 0.95,
-  openMin: 1.05,
-  openMax: 1.35,
+  idleMin: 0.78,
+  idleMax: 1.15,
+  openMin: 1.12,
+  openMax: 1.72,
 } as const;
 
-/** Escala contextual da ANYMA dentro do orb (encaixa na esfera sem Bounds). */
+/** Escala desktop — preenche bem a esfera. */
 export const PHOENIX_CONTEXT_SCALE = {
-  compact: 0.68,
-  open: 0.78,
+  compact: 0.82,
+  open: 0.94,
+} as const;
+
+/** Escala mobile — menor para caber no orb sem estourar FPS. */
+export const PHOENIX_CONTEXT_SCALE_MOBILE = {
+  compact: 0.62,
+  open: 0.72,
 } as const;
 
 /** @deprecated — Bounds removido (causava salto do canto). */
@@ -70,11 +76,11 @@ export const PHOENIX_BOUNDS_MARGIN = {
   open: 1.25,
 } as const;
 
-/** ~16fps desktop / ~8fps mobile — respiração barata. */
-const PHOENIX_RENDER_INTERVAL_MS = 1000 / 16;
+/** Desktop ~30fps · mobile ~8fps (só se houver motion). */
+const PHOENIX_RENDER_INTERVAL_MS = 1000 / 30;
 const PHOENIX_RENDER_INTERVAL_MOBILE_MS = 1000 / 8;
 const PHOENIX_RENDER_INTERVAL_MOBILE_OPEN_MS = 1000 / 8;
-const PHOENIX_TEXTURE_ANISOTROPY = 1;
+const PHOENIX_TEXTURE_ANISOTROPY = 4;
 const PHOENIX_TEXTURE_ANISOTROPY_MOBILE = 1;
 
 /** Clarão (hold + fade) após ignição. */
@@ -205,8 +211,9 @@ function PhoenixModelMesh({
   const scene = useMemo(() => gltf.scene.clone(true) as Group, [gltf.scene]);
 
   // Sempre anima quando visível — no mobile aberto só reduz FPS (não congela / não some).
-  const lifeMotionActive = isVisible && !isPunished;
-  const contextScale = isOpenOrb ? PHOENIX_CONTEXT_SCALE.open : PHOENIX_CONTEXT_SCALE.compact;
+  const lifeMotionActive = isVisible && !isPunished && !isMobile;
+  const scaleTable = isMobile ? PHOENIX_CONTEXT_SCALE_MOBILE : PHOENIX_CONTEXT_SCALE;
+  const contextScale = isOpenOrb ? scaleTable.open : scaleTable.compact;
   const anisotropy = isMobile ? PHOENIX_TEXTURE_ANISOTROPY_MOBILE : PHOENIX_TEXTURE_ANISOTROPY;
   const renderIntervalMs = isMobile
     ? isOpenOrb
@@ -250,9 +257,6 @@ function PhoenixModelMesh({
     let cancelled = false;
     let timer = 0;
     let last = performance.now();
-    // Desktop: flutuação leve. Mobile: estático (FPS).
-    const allowFloat = !isMobile;
-    const pulseEmissive = !isMobile;
 
     const startMotion = () => {
       if (cancelled) return;
@@ -266,28 +270,24 @@ function PhoenixModelMesh({
 
         breathPhaseRef.current += delta * PHOENIX_WING_FLAP_SPEED;
         const wave = Math.sin(breathPhaseRef.current);
+        const breath = 0.5 + 0.5 * wave;
 
-        if (allowFloat) {
-          const root = rootRef.current;
-          if (root) {
-            root.position.y = wave * PHOENIX_FLOAT_AMPLITUDE;
-          }
+        const root = rootRef.current;
+        if (root) {
+          root.position.y = wave * PHOENIX_FLOAT_AMPLITUDE;
         }
 
-        if (pulseEmissive) {
-          const breath = 0.5 + 0.5 * wave;
-          const open = isOpenOrbRef.current;
-          const emissiveMin = open
-            ? PHOENIX_MAGMA_EMISSIVE.openMin
-            : PHOENIX_MAGMA_EMISSIVE.idleMin;
-          const emissiveMax = open
-            ? PHOENIX_MAGMA_EMISSIVE.openMax
-            : PHOENIX_MAGMA_EMISSIVE.idleMax;
-          const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
+        const open = isOpenOrbRef.current;
+        const emissiveMin = open
+          ? PHOENIX_MAGMA_EMISSIVE.openMin
+          : PHOENIX_MAGMA_EMISSIVE.idleMin;
+        const emissiveMax = open
+          ? PHOENIX_MAGMA_EMISSIVE.openMax
+          : PHOENIX_MAGMA_EMISSIVE.idleMax;
+        const emissiveIntensity = emissiveMin + (emissiveMax - emissiveMin) * breath;
 
-          for (const material of magmaMaterialsRef.current) {
-            material.emissiveIntensity = emissiveIntensity;
-          }
+        for (const material of magmaMaterialsRef.current) {
+          material.emissiveIntensity = emissiveIntensity;
         }
 
         invalidate();
@@ -304,7 +304,7 @@ function PhoenixModelMesh({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [invalidate, isMobile, lifeMotionActive, renderIntervalMs]);
+  }, [invalidate, lifeMotionActive, renderIntervalMs]);
 
   if (!isVisible) return null;
 
@@ -349,23 +349,38 @@ export function PhoenixModel({
   return (
     <>
       <hemisphereLight
-        intensity={isPunished ? 0.28 : isMobile ? 0.5 : 0.42}
+        intensity={isPunished ? 0.28 : isMobile ? 0.48 : 0.4}
         color={isPunished ? "#71717a" : "#fff7ed"}
         groundColor={isPunished ? "#27272a" : "#451a03"}
       />
       <directionalLight
         position={[2.2, 4.2, 3.4]}
-        intensity={isPunished ? 0.4 : open ? (isMobile ? 1.25 : 1.45) : 1.25}
+        intensity={isPunished ? 0.4 : open ? (isMobile ? 1.2 : 1.55) : isMobile ? 1.15 : 1.35}
         color={isPunished ? "#6b7280" : "#fffbeb"}
       />
+      {/* Fill lights só no desktop — mobile fica com iluminação mínima. */}
       {!isMobile ? (
-        <pointLight
-          position={[0, 0.15, 2.1]}
-          intensity={open ? 1.15 : 0.65}
-          color="#f97316"
-          distance={7}
-          decay={2}
-        />
+        <>
+          <directionalLight
+            position={[-3.2, 2.4, -1.6]}
+            intensity={isPunished ? 0.15 : open ? 0.5 : 0.42}
+            color={isPunished ? "#52525b" : "#fdba74"}
+          />
+          <pointLight
+            position={[0, 0.15, 2.1]}
+            intensity={open ? 1.35 : 0.75}
+            color="#f97316"
+            distance={7.5}
+            decay={2}
+          />
+          <pointLight
+            position={[0, 0.4, -2.0]}
+            intensity={open ? 0.7 : 0.5}
+            color="#fde68a"
+            distance={6.5}
+            decay={2}
+          />
+        </>
       ) : null}
       <PhoenixModelMesh
         isPunished={isPunished}

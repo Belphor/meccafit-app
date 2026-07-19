@@ -33,8 +33,8 @@ type DuelosArenaPanelProps = {
 
 function labelTipo(tipo: ComunidadeDueloAtivo["tipo_confronto"]): string {
   return tipo === "SUPERIORES"
-    ? "Superiores · peito, ombros, braços, costas (3 dias)"
-    : "Inferiores · pernas (2 dias)";
+    ? "Superiores, peito, ombros, braços e costas, até completar na semana"
+    : "Inferiores, pernas, até completar na semana";
 }
 
 function formatFim(iso: string): string {
@@ -128,9 +128,10 @@ export function DuelosArenaPanel({
           Desafie alguém pelo cinturão
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Duelo um contra um: quem somar mais VTC na faixa ganha. Superiores = peito, ombros,
-          braços e costas. Inferiores = pernas. Abdômen não conta. O cinturão fica com você até
-          outra pessoa vencer em um novo duelo.
+          Duelo um contra um. Quem somar mais VTC na faixa ganha. Em Superiores contam peito,
+          ombros, braços e costas. Em Inferiores contam só as pernas. Abdômen não entra. O placar
+          usa o melhor pico de cada grupo. O duelo vai até o domingo ou até os dois completarem
+          todos os grupos da faixa. O cinturão fica com o vencedor até outro duelo.
         </p>
       </header>
 
@@ -162,7 +163,7 @@ export function DuelosArenaPanel({
           <div className="h-20 animate-pulse rounded-xl bg-neutral-900/60" aria-hidden />
         ) : duelos.length === 0 ? (
           <p className="rounded-xl border border-dashed border-neutral-800 p-4 text-center text-[11px] leading-relaxed text-neutral-500">
-            Nenhum duelo a decorrer. Desafia um atleta da mesma faixa (superiores ou pernas) para
+            Nenhum duelo a decorrer. Desafie um atleta na faixa de superiores ou de pernas para
             disputar o cinturão.
           </p>
         ) : (
@@ -190,7 +191,7 @@ export function DuelosArenaPanel({
                     {labelTipo(duelo.tipo_confronto)}
                   </span>
                   <time className="min-w-0 break-words text-[9px] uppercase tracking-[0.08em] text-neutral-500 xs:tracking-[0.1em]">
-                    Fim: {formatFim(duelo.fim_em)}
+                    Fim em {formatFim(duelo.fim_em)}
                   </time>
                 </div>
 

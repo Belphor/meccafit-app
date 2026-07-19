@@ -202,8 +202,8 @@ export function DueloChallengePanel({
                     }`}
                   >
                     {option === "SUPERIORES"
-                      ? "Superiores · VTC peito+ombros+braços+costas · 3 dias"
-                      : "Inferiores · VTC pernas · 2 dias"}
+                      ? "Superiores, peito, ombros, braços e costas, até completar na semana"
+                      : "Inferiores, pernas, até completar na semana"}
                   </button>
                 ))}
               </div>
@@ -290,7 +290,7 @@ export function DueloChallengePanel({
                   Anterior
                 </button>
                 <p className="text-[10px] tabular-nums text-neutral-500">
-                  Página {page + 1} de {totalPages} · {total} clientes
+                  Página {page + 1} de {totalPages}, {total} clientes
                 </p>
                 <button
                   type="button"
