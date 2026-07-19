@@ -61,7 +61,7 @@ export function PhoenixCanvasInner({
         gl.toneMappingExposure = isPunished
           ? 0.9
           : isMobile
-            ? 1.32
+            ? 1.52
             : isOpenOrb
               ? 1.18
               : 1.2;
@@ -70,7 +70,7 @@ export function PhoenixCanvasInner({
     >
       <PhoenixFrameKick isVisible={isVisible} />
       <ambientLight
-        intensity={isPunished ? 0.36 : isMobile ? 0.55 : isOpenOrb ? 0.32 : 0.4}
+        intensity={isPunished ? 0.36 : isMobile ? 0.72 : isOpenOrb ? 0.32 : 0.4}
       />
       <PhoenixModel
         isPunished={isPunished}

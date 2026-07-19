@@ -161,7 +161,14 @@ function applyPhoenixMaterials(
     material.depthWrite = true;
 
     if (material.normalMap) {
-      material.normalScale.set(isPunished ? 0.85 : 1.2, isPunished ? 0.85 : 1.2);
+      if (isMobile && !isPunished) {
+        // Sem normal map no mobile: shading mais barato + silhueta mais luminosa.
+        material.normalMap = null;
+        material.normalScale.set(1, 1);
+      } else {
+        const n = isPunished ? 0.85 : 1.2;
+        material.normalScale.set(n, n);
+      }
     }
 
     if (isPunished) {
@@ -173,16 +180,21 @@ function applyPhoenixMaterials(
       material.emissiveIntensity = 0.04;
       material.envMapIntensity = 0.35;
     } else {
-      material.roughness = Math.max(0.32, material.roughness * 0.9);
-      material.metalness = Math.min(0.55, material.metalness + 0.08);
+      // Mobile: magma mais emissivo e menos rough (brilho estático, zero animação).
+      material.roughness = isMobile
+        ? Math.max(0.22, material.roughness * 0.72)
+        : Math.max(0.32, material.roughness * 0.9);
+      material.metalness = Math.min(0.55, material.metalness + (isMobile ? 0.04 : 0.08));
       material.emissiveMap = emissiveMap;
-      material.emissive.set("#ff6a1a");
+      material.emissive.set(isMobile ? "#ff8a2a" : "#ff6a1a");
       material.emissiveIntensity = isOpenOrb
         ? isMobile
-          ? 1.25
+          ? 1.72
           : PHOENIX_MAGMA_EMISSIVE.openMin
-        : PHOENIX_MAGMA_EMISSIVE.idleMin;
-      material.envMapIntensity = isOpenOrb ? 1.05 : 0.78;
+        : isMobile
+          ? 1.28
+          : PHOENIX_MAGMA_EMISSIVE.idleMin;
+      material.envMapIntensity = isMobile ? (isOpenOrb ? 0.55 : 0.4) : isOpenOrb ? 1.05 : 0.78;
     }
 
     material.needsUpdate = true;
@@ -349,16 +361,16 @@ export function PhoenixModel({
   return (
     <>
       <hemisphereLight
-        intensity={isPunished ? 0.28 : isMobile ? 0.48 : 0.4}
-        color={isPunished ? "#71717a" : "#fff7ed"}
+        intensity={isPunished ? 0.28 : isMobile ? 0.62 : 0.4}
+        color={isPunished ? "#71717a" : isMobile ? "#fff1d6" : "#fff7ed"}
         groundColor={isPunished ? "#27272a" : "#451a03"}
       />
       <directionalLight
         position={[2.2, 4.2, 3.4]}
-        intensity={isPunished ? 0.4 : open ? (isMobile ? 1.2 : 1.55) : isMobile ? 1.15 : 1.35}
-        color={isPunished ? "#6b7280" : "#fffbeb"}
+        intensity={isPunished ? 0.4 : open ? (isMobile ? 1.45 : 1.55) : isMobile ? 1.28 : 1.35}
+        color={isPunished ? "#6b7280" : isMobile ? "#ffe8c2" : "#fffbeb"}
       />
-      {/* Fill lights só no desktop — mobile fica com iluminação mínima. */}
+      {/* Fill lights só no desktop — mobile: 2 luzes + magma emissivo estático. */}
       {!isMobile ? (
         <>
           <directionalLight
