@@ -17,7 +17,7 @@ type DueloConviteHostProps = {
 
 function labelTipo(tipo: DueloConvitePendente["tipo_confronto"]): string {
   return tipo === "SUPERIORES"
-    ? "Superiores · peito, ombros, braços (3 dias)"
+    ? "Superiores · peito, ombros, braços, costas (3 dias)"
     : "Inferiores · pernas (2 dias)";
 }
 

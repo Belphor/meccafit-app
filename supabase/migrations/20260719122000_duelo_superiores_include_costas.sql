@@ -1,6 +1,5 @@
--- Duelos SUPERIORES: peito + ombros + braços + costas (alinha aos treinos da semana).
--- Duelos INFERIORES: pernas (inalterado).
--- Faixa Superiores (ranking / Rei) segue a mesma composição.
+-- Garante COSTAS na faixa SUPERIORES (peito + ombros + braços + costas).
+-- Idempotente se 20260719120000 / 20260719121000 já incluírem COSTAS.
 
 CREATE OR REPLACE FUNCTION public.comunidade_grupo_elegivel_duelo(
   p_tipo public.tipo_confronto_duelo,

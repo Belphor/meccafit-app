@@ -1,4 +1,4 @@
--- Align ranking Superiores + fecho Rei com PEITO+OMBROS+BRACOS (duelo semana).
+-- Align ranking Superiores + fecho Rei com PEITO+OMBROS+BRACOS+COSTAS (duelo semana).
 
 CREATE OR REPLACE FUNCTION public.comunidade_ranking_slice_por_sexo(p_sexo public.profile_sexo)
 RETURNS jsonb
@@ -156,7 +156,8 @@ BEGIN
       AND hc.grupo_muscular IN (
         'PEITO'::public.grupo_muscular_evolucao,
         'OMBROS'::public.grupo_muscular_evolucao,
-        'BRACOS'::public.grupo_muscular_evolucao
+        'BRACOS'::public.grupo_muscular_evolucao,
+        'COSTAS'::public.grupo_muscular_evolucao
       )
     GROUP BY 1, 2, 3
   ),
@@ -274,7 +275,7 @@ BEGIN
           WHERE hc.data_registro >= v_inicio AND hc.data_registro < v_fim
             AND p.sexo = 'masculino'::public.profile_sexo
             AND p.perfil_identidade_confirmada = true
-            AND hc.grupo_muscular IN ('PEITO'::public.grupo_muscular_evolucao, 'OMBROS'::public.grupo_muscular_evolucao, 'BRACOS'::public.grupo_muscular_evolucao)
+            AND hc.grupo_muscular IN ('PEITO'::public.grupo_muscular_evolucao, 'OMBROS'::public.grupo_muscular_evolucao, 'BRACOS'::public.grupo_muscular_evolucao, 'COSTAS'::public.grupo_muscular_evolucao)
           GROUP BY 1, 2, 3, 4
         ) peaks GROUP BY 1, 2
       ) vtc_por_atleta_grupo GROUP BY 1
@@ -299,7 +300,7 @@ BEGIN
           WHERE hc.data_registro >= v_inicio AND hc.data_registro < v_fim
             AND p.sexo = 'feminino'::public.profile_sexo
             AND p.perfil_identidade_confirmada = true
-            AND hc.grupo_muscular IN ('PEITO'::public.grupo_muscular_evolucao, 'OMBROS'::public.grupo_muscular_evolucao, 'BRACOS'::public.grupo_muscular_evolucao)
+            AND hc.grupo_muscular IN ('PEITO'::public.grupo_muscular_evolucao, 'OMBROS'::public.grupo_muscular_evolucao, 'BRACOS'::public.grupo_muscular_evolucao, 'COSTAS'::public.grupo_muscular_evolucao)
           GROUP BY 1, 2, 3, 4
         ) peaks GROUP BY 1, 2
       ) vtc_por_atleta_grupo GROUP BY 1
