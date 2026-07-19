@@ -4,14 +4,11 @@ import dynamic from "next/dynamic";
 import { Suspense, memo, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  PHOENIX_CORE_FLASH_BLOOM_MS,
-  PHOENIX_DEPLOY_DURATION_S,
   PHOENIX_FLASH_FADE_MS,
   PHOENIX_FLASH_HOLD_MS,
   PHOENIX_GREETING_DELAY_MS,
   PHOENIX_GREETING_VISIBLE_MS,
   PHOENIX_IGNITION_DURATION_S,
-  PHOENIX_MODEL_FADE_IN_MS,
   PHOENIX_REVEAL_TOTAL_S,
   PHOENIX_WING_CYCLE_S,
 } from "@/components/dashboard/PhoenixModel";
@@ -26,11 +23,9 @@ const PHOENIX_ANCHOR_STYLE = {
 
 type PhoenixOrbPhase = "orb" | "igniting" | "revealing" | "awake";
 
+/** Sem estágio intermediário — evita resize brigando com o clarão. */
 function resolveOrbShellClass(phase: PhoenixOrbPhase, isHudOpen: boolean): string {
-  if (isHudOpen || phase === "revealing" || phase === "awake") {
-    return "phoenix-orb-shell--awake";
-  }
-  if (phase === "igniting") return "phoenix-orb-shell--igniting";
+  if (isHudOpen || phase !== "orb") return "phoenix-orb-shell--awake";
   return "phoenix-orb-shell--compact";
 }
 
@@ -42,21 +37,19 @@ function resolveFireballClass(
   showModel: boolean,
   modelReady: boolean,
 ): string {
-  if (flashFading) return "phoenix-fireball-mask--nova-fading";
+  if (flashFading) return "phoenix-fireball-mask--flash-fade";
   if (flashHidden && showModel) return "phoenix-fireball-mask--open";
-  if (phase === "igniting") return "phoenix-fireball-mask--ignited";
-  if (flashVisible && phase === "revealing") {
-    return "phoenix-fireball-mask--nova";
-  }
-  if (showModel) return "phoenix-fireball-mask--radiant";
+  if (flashVisible) return "phoenix-fireball-mask--flash";
+  if (showModel) return "phoenix-fireball-mask--open";
   if (modelReady) return "phoenix-fireball-mask--idle";
   return "phoenix-fireball-mask--boot";
 }
 
 function resolveShellTransitionMs(phase: PhoenixOrbPhase): number {
-  if (phase === "igniting") return PHOENIX_IGNITION_DURATION_S * 1000;
-  if (phase === "revealing" || phase === "awake") return PHOENIX_DEPLOY_DURATION_S * 1000;
-  return PHOENIX_DEPLOY_DURATION_S * 1000;
+  // Sem resize animado no clarão — evita luta visual e custo de layout.
+  if (phase === "igniting" || phase === "revealing") return 0;
+  if (phase === "awake") return 280;
+  return 280;
 }
 
 const PhoenixCanvasDynamic = dynamic(
@@ -87,8 +80,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<PhoenixOrbPhase>("orb");
   const [modelReady, setModelReady] = useState(false);
-  const [modelEmerging, setModelEmerging] = useState(false);
-  const [modelRevealed, setModelRevealed] = useState(false);
+  const [modelVisible, setModelVisible] = useState(false);
   const [flashFading, setFlashFading] = useState(false);
   const [flashHidden, setFlashHidden] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
@@ -96,21 +88,11 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   const lastGreetedCycleRef = useRef(-1);
   const timersRef = useRef<number[]>([]);
 
-  const showModel = isHudOpen || phase === "revealing" || phase === "awake";
-  /** Canvas monta no ignite (preload) mas só pinta a malha depois do clarão. */
-  const mountCanvas = phase === "igniting" || showModel;
-  const modelSceneVisible =
-    isHudOpen || modelEmerging || modelRevealed || (phase === "awake" && flashHidden);
-  const flashVisible =
-    !flashHidden && (phase === "igniting" || (phase === "revealing" && !flashHidden));
-  const orbGlowActive = showModel && (modelEmerging || modelRevealed || isHudOpen);
-  /** Corona/rim só após o clarão — evita blur+blend empilhado com WebGL no pico. */
-  const sphereAuraActive = orbGlowActive && flashHidden;
-  const openFlameRings = orbGlowActive && flashHidden;
-  const modelContourGlow =
-    (modelRevealed || isHudOpen) && flashHidden;
-  const coreFlashVisible =
-    !flashHidden && (phase === "igniting" || phase === "revealing");
+  const showShellOpen = isHudOpen || phase === "revealing" || phase === "awake" || phase === "igniting";
+  const flashVisible = !flashHidden && (phase === "igniting" || phase === "revealing");
+  /** WebGL só depois do clarão — zero contexto 3D durante o flash. */
+  const mountCanvas = isHudOpen || (flashHidden && (phase === "revealing" || phase === "awake"));
+  const orbSettled = flashHidden && (modelVisible || isHudOpen);
   const shellClass = resolveOrbShellClass(phase, isHudOpen);
   const shellTransitionMs = resolveShellTransitionMs(phase);
 
@@ -122,9 +104,10 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   }, []);
 
   useEffect(() => {
-    // Guarda de hidratação SSR: só marca montado no cliente (canvas 3D não renderiza no servidor).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
+    // Prefetch do módulo/GLB sem criar contexto WebGL.
+    void import("@/components/dashboard/PhoenixModel");
   }, []);
 
   const queueTimer = useCallback((fn: () => void, delayMs: number) => {
@@ -138,17 +121,12 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     setFlashHidden(false);
   }, []);
 
-  const beginModelEmerging = useCallback(() => {
-    if (!modelReady) return;
-    setModelEmerging(true);
-  }, [modelReady]);
-
   const handleModelLoaded = useCallback(() => {
     setModelReady(true);
   }, []);
 
   useEffect(() => {
-    if (isPunished || !flashHidden || !modelRevealed) return;
+    if (isPunished || !flashHidden || !modelVisible) return;
     if (phase !== "revealing" && phase !== "awake") return;
     if (lastGreetedCycleRef.current === revealCycleRef.current) return;
 
@@ -168,9 +146,9 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
       window.clearTimeout(showTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [flashHidden, isPunished, modelRevealed, onPhoenixRevealed, phase]);
+  }, [flashHidden, isPunished, modelVisible, onPhoenixRevealed, phase]);
 
-  /** Clarão some no próprio tempo — modelo ainda oculto. */
+  /** Clarão: hold → fade → gone. Sem WebGL neste intervalo. */
   useEffect(() => {
     if (phase !== "revealing" || flashFading || flashHidden) return;
 
@@ -192,46 +170,22 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     return () => window.clearTimeout(hideTimer);
   }, [flashFading]);
 
-  /** ANYMA só emerge depois do clarão sumir por completo. */
+  /** ANYMA aparece só após clarão — tamanho final, sem fade/scale. */
   useEffect(() => {
     if (isHudOpen) {
-      queueMicrotask(() => {
-        setModelEmerging(true);
-        setModelRevealed(true);
-      });
+      queueMicrotask(() => setModelVisible(true));
       return;
     }
 
-    if (flashHidden && (phase === "revealing" || phase === "awake") && modelReady) {
-      queueMicrotask(() => beginModelEmerging());
+    if (flashHidden && (phase === "revealing" || phase === "awake")) {
+      queueMicrotask(() => setModelVisible(true));
       return;
     }
 
     if (phase === "orb") {
-      queueMicrotask(() => {
-        setModelEmerging(false);
-        setModelRevealed(false);
-      });
+      queueMicrotask(() => setModelVisible(false));
     }
-  }, [beginModelEmerging, flashHidden, isHudOpen, modelReady, phase]);
-
-  useEffect(() => {
-    if (!modelEmerging) {
-      queueMicrotask(() => setModelRevealed(false));
-      return;
-    }
-
-    if (PHOENIX_MODEL_FADE_IN_MS <= 0) {
-      queueMicrotask(() => setModelRevealed(true));
-      return;
-    }
-
-    const revealTimer = window.setTimeout(() => {
-      setModelRevealed(true);
-    }, PHOENIX_MODEL_FADE_IN_MS);
-
-    return () => window.clearTimeout(revealTimer);
-  }, [modelEmerging]);
+  }, [flashHidden, isHudOpen, phase]);
 
   useEffect(() => {
     if (isHudOpen) return;
@@ -241,8 +195,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
     queueMicrotask(() => {
       setShowGreeting(false);
       setPhase("orb");
-      setModelEmerging(false);
-      setModelRevealed(false);
+      setModelVisible(false);
       resetFlashState();
     });
   }, [clearTimers, isHudOpen, phase, resetFlashState]);
@@ -262,13 +215,11 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
       return;
     }
 
-    // Abre o painel e dispara a voz no gesto do toque (necessário para TTS no browser).
     onEngage?.();
 
     setShowGreeting(false);
     revealCycleRef.current += 1;
-    setModelEmerging(false);
-    setModelRevealed(false);
+    setModelVisible(false);
     resetFlashState();
     setPhase("igniting");
 
@@ -284,19 +235,11 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
   const resolveModelLayerClass = (): string => {
     if (!mountCanvas) return "phoenix-orb-model-layer";
     const classes = ["phoenix-orb-model-layer"];
-    if (modelRevealed || isHudOpen) {
-      classes.push("phoenix-orb-model-layer--emerging");
+    if (modelVisible) {
       classes.push("phoenix-orb-model-layer--revealed");
-    } else if (modelEmerging && flashHidden) {
-      classes.push("phoenix-orb-model-layer--emerging");
-      classes.push("phoenix-orb-model-layer--fading-in");
-    } else if (phase === "revealing" || phase === "igniting") {
-      classes.push("phoenix-orb-model-layer--camouflaged");
+      if (orbSettled) classes.push("phoenix-orb-model-layer--contoured");
     } else {
-      classes.push("phoenix-orb-model-layer--preloading");
-    }
-    if (modelContourGlow) {
-      classes.push("phoenix-orb-model-layer--contoured");
+      classes.push("phoenix-orb-model-layer--camouflaged");
     }
     return classes.join(" ");
   };
@@ -317,7 +260,7 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
           role="status"
           aria-live="polite"
         >
-          <p className="rounded-2xl border border-amber-400/30 bg-neutral-950/92 px-4 py-3 text-left text-xs leading-relaxed text-amber-50/95 shadow-[0_0_28px_rgba(255,255,255,0.18)] backdrop-blur-md">
+          <p className="rounded-2xl border border-amber-400/30 bg-neutral-950/92 px-4 py-3 text-left text-xs leading-relaxed text-amber-50/95 shadow-[0_0_28px_rgba(255,255,255,0.18)]">
             {greetingCopy}
           </p>
         </div>
@@ -327,68 +270,64 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
         type="button"
         onClick={handleEngage}
         aria-label={ariaLabel}
-        data-phoenix-deployed={showModel ? "true" : "false"}
+        data-phoenix-deployed={orbSettled || isHudOpen ? "true" : "false"}
         data-phoenix-phase={phase}
         style={{
           transitionDuration: `${shellTransitionMs}ms`,
-          ["--phoenix-model-fade-ms" as string]: `${PHOENIX_MODEL_FADE_IN_MS}ms`,
           ["--phoenix-flash-fade-ms" as string]: `${PHOENIX_FLASH_FADE_MS}ms`,
-          ["--phoenix-core-flash-bloom-ms" as string]: `${PHOENIX_CORE_FLASH_BLOOM_MS}ms`,
           ["--phoenix-pulse-cycle" as string]: `${PHOENIX_WING_CYCLE_S}s`,
         }}
         className={`phoenix-orb-shell ${shellClass} ${
-          orbGlowActive
-            ? `phoenix-orb-shell--open${
-                modelContourGlow ? " phoenix-orb-shell--ascended" : ""
-              }`
-            : "phoenix-orb-shell--lit"
+          orbSettled || isHudOpen ? "phoenix-orb-shell--open phoenix-orb-shell--ascended" : "phoenix-orb-shell--lit"
         } focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60`}
       >
         <span
           aria-hidden="true"
           className={`phoenix-orb-cast-shadow ${
-            orbGlowActive ? "phoenix-orb-cast-shadow--awake" : "phoenix-orb-cast-shadow--idle"
+            orbSettled || isHudOpen
+              ? "phoenix-orb-cast-shadow--awake"
+              : "phoenix-orb-cast-shadow--idle"
           }`}
         />
 
         <span
           aria-hidden="true"
           className={`phoenix-orb-radiance ${
-            showModel ? "phoenix-orb-radiance--rim" : "phoenix-orb-radiance--idle"
+            showShellOpen ? "phoenix-orb-radiance--rim" : "phoenix-orb-radiance--idle"
           }`}
         />
-
-        {sphereAuraActive ? (
-          <span
-            aria-hidden="true"
-            className="phoenix-orb-sphere-rim pointer-events-none absolute inset-[-4%] z-[4] rounded-full"
-          />
-        ) : null}
 
         <span
           aria-hidden="true"
           className={`anima-fireball phoenix-fireball-mask absolute inset-0 z-[2] rounded-full${
-            flashHidden && showModel ? " anima-fireball--chamber" : ""
+            flashHidden && (orbSettled || isHudOpen) ? " anima-fireball--chamber" : ""
           } ${resolveFireballClass(
             phase,
             flashVisible,
             flashHidden,
             flashFading,
-            showModel,
+            modelVisible || isHudOpen,
             modelReady,
           )}`}
         />
 
-        {openFlameRings ? (
+        {/* Um único véu de clarão — só opacity, sem filter/scale/WebGL. */}
+        {flashVisible ? (
           <span
             aria-hidden="true"
-            className="phoenix-flame-ring phoenix-flame-ring--ambient phoenix-flame-ring--one"
+            className={`phoenix-flash-veil ${
+              phase === "igniting"
+                ? "phoenix-flash-veil--charge"
+                : flashFading
+                  ? "phoenix-flash-veil--fading"
+                  : "phoenix-flash-veil--nova"
+            }`}
           />
         ) : null}
 
         {mountCanvas ? (
-          <div className={resolveModelLayerClass()} aria-hidden={!modelEmerging}>
-            {modelContourGlow ? (
+          <div className={resolveModelLayerClass()} aria-hidden={!modelVisible}>
+            {orbSettled || isHudOpen ? (
               <span
                 aria-hidden="true"
                 className="phoenix-orb-model-contact-shadow pointer-events-none absolute left-1/2 bottom-[2%] z-[0] h-[14%] w-[58%] -translate-x-1/2 rounded-full"
@@ -397,35 +336,13 @@ export const PhoenixCanvas = memo(function PhoenixCanvas({
             <Suspense fallback={null}>
               <PhoenixCanvasDynamic
                 isPunished={isPunished}
-                isVisible={modelSceneVisible}
-                isOpenOrb={showModel && flashHidden}
+                isVisible={modelVisible || isHudOpen}
+                isOpenOrb={isHudOpen || modelVisible}
                 onLoaded={handleModelLoaded}
                 onEngage={handleEngage}
               />
             </Suspense>
           </div>
-        ) : null}
-
-        {coreFlashVisible ? (
-          <span
-            aria-hidden="true"
-            className={`phoenix-core-flash ${
-              flashFading
-                ? "phoenix-core-flash--fading"
-                : phase === "revealing"
-                  ? "phoenix-core-flash--hold"
-                  : "phoenix-core-flash--bloom"
-            }`}
-          />
-        ) : null}
-
-        {flashVisible ? (
-          <span
-            aria-hidden="true"
-            className={`phoenix-flash-veil ${
-              phase === "igniting" ? "phoenix-flash-veil--charge" : "phoenix-flash-veil--nova"
-            } ${flashFading ? "phoenix-flash-veil--fading" : ""}`}
-          />
         ) : null}
 
         {isPunished ? (

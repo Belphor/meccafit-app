@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { ACESFilmicToneMapping, SRGBColorSpace } from "three";
+import { ACESFilmicToneMapping, NoToneMapping, SRGBColorSpace } from "three";
 import { PhoenixModel } from "@/components/dashboard/PhoenixModel";
 import { useTouchPrimaryDevice } from "@/hooks/useTouchPrimaryDevice";
 
@@ -14,27 +14,15 @@ export type PhoenixCanvasInnerProps = {
   onEngage?: () => void;
 };
 
-/** Força paints ao mudar estado — evita canvas preto no mobile. */
-function PhoenixFrameKick({
-  isVisible,
-  isOpenOrb,
-  isMobile,
-}: {
-  isVisible: boolean;
-  isOpenOrb: boolean;
-  isMobile: boolean;
-}) {
+/** Poucos paints iniciais — evita canvas preto sem martelar o compositor. */
+function PhoenixFrameKick({ isVisible }: { isVisible: boolean }) {
   const invalidate = useThree((state) => state.invalidate);
   useEffect(() => {
     if (!isVisible) return;
     invalidate();
-    const t1 = window.setTimeout(() => invalidate(), 32);
-    const t2 = window.setTimeout(() => invalidate(), 120);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [invalidate, isMobile, isOpenOrb, isVisible]);
+    const t1 = window.setTimeout(() => invalidate(), 48);
+    return () => window.clearTimeout(t1);
+  }, [invalidate, isVisible]);
   return null;
 }
 
@@ -49,39 +37,29 @@ export function PhoenixCanvasInner({
 
   return (
     <Canvas
-      // Sempre demand quando visível — "never" no mobile apagava a fênix antes do paint.
       frameloop={isVisible ? "demand" : "never"}
       className="phoenix-model-canvas"
-      camera={{ position: [0, 0.14, 3.55], fov: 38, near: 0.1, far: 100 }}
+      camera={{ position: [0, 0.1, 3.4], fov: 36, near: 0.1, far: 40 }}
       gl={{
         alpha: true,
         premultipliedAlpha: false,
-        antialias: !isMobile,
-        powerPreference: isMobile ? "low-power" : "high-performance",
+        antialias: false,
+        powerPreference: "low-power",
         stencil: false,
         depth: true,
         preserveDrawingBuffer: false,
       }}
-      dpr={isMobile ? 1 : [1, 1.15]}
+      dpr={1}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
-        gl.toneMapping = ACESFilmicToneMapping;
-        gl.toneMappingExposure = isPunished
-          ? 0.9
-          : isMobile
-            ? isOpenOrb
-              ? 1.22
-              : 1.18
-            : isOpenOrb
-              ? 1.15
-              : 1.18;
+        // Tone mapping ACES custa no mobile; NoToneMapping + exposição manual.
+        gl.toneMapping = isMobile ? NoToneMapping : ACESFilmicToneMapping;
+        gl.toneMappingExposure = isPunished ? 0.9 : isMobile ? 1.35 : isOpenOrb ? 1.12 : 1.15;
         gl.outputColorSpace = SRGBColorSpace;
       }}
     >
-      <PhoenixFrameKick isVisible={isVisible} isOpenOrb={isOpenOrb} isMobile={isMobile} />
-      <ambientLight
-        intensity={isPunished ? 0.36 : isMobile ? (isOpenOrb ? 0.48 : 0.42) : isOpenOrb ? 0.3 : 0.4}
-      />
+      <PhoenixFrameKick isVisible={isVisible} />
+      <ambientLight intensity={isPunished ? 0.4 : isMobile ? 0.58 : 0.38} />
       <PhoenixModel
         isPunished={isPunished}
         isVisible={isVisible}

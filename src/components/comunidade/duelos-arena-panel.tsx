@@ -128,9 +128,9 @@ export function DuelosArenaPanel({
           Desafie alguém pelo cinturão
         </h3>
         <p className={`mt-1 ${COMUNIDADE_BODY_TEXT}`}>
-          Duelo rápido um contra um: quem somar mais pontos (peso vezes repetições) na faixa ganha.
-          O cinturão fica com você até outra pessoa vencer em um novo duelo. Não expira no fim do
-          mês.
+          Duelo um contra um: quem somar mais VTC na faixa ganha. Superiores = peito, ombros,
+          braços e costas. Inferiores = pernas. Abdômen não conta. O cinturão fica com você até
+          outra pessoa vencer em um novo duelo.
         </p>
       </header>
 
@@ -234,8 +234,8 @@ export function DuelosArenaPanel({
                     />
                   </div>
                   <div className="mt-1 flex justify-between font-mono text-[10px] tabular-nums text-neutral-500">
-                    <span>{Math.round(duelo.vtc_desafiante)} pts</span>
-                    <span>{Math.round(duelo.vtc_desafiado)} pts</span>
+                    <span>{Math.round(duelo.vtc_desafiante)} kg VTC</span>
+                    <span>{Math.round(duelo.vtc_desafiado)} kg VTC</span>
                   </div>
                 </div>
               </article>
